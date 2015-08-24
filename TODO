@@ -27,3 +27,23 @@ compile to javascript
 
 
 self-extensible browser-based editor
+  text-like editor mode
+    present an AST-editing interface that feels like text editing
+    how to move subterms to remote locations?
+      name-based contexts
+      how to close terms? is it even necessary anymore? probably only upon extraction, which shouldn't be a problem
+    left/right arrow keys navigate per-char; up/down quickly jump parent/child expressions, remembering last-visited child?
+      shift+arrow for larger movements
+      some way to toggle/reorder siblings, sort of like reversing a subrange of widgets
+    unit acts like a typing context, space opens a new such context
+    typing the first character in a new context should clearly indicate its syntactic category
+    numeric characters do the usual
+    alphabetic characters start a new variable
+      only prefixes for in-scope vars will work (open up an auto-complete list)
+      should have some way to start variable for non-alpha chars
+    { opens new pair; } leaves it
+    ( opens a new application; ) in the final context leaves it
+    \ begins a lambda, moving into the arg list (while showing "(lambda (")
+      ) leaves arg list; ) again leaves lam body
+      new contexts inside the arg list are like lam-wrapping
+      removing var applies that lam to unit
