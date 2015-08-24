@@ -1,7 +1,29 @@
 text-based bootstrap
-high-level language design example
+
+
+high-level language design
+  should serve as an example of creating an ina backend for a HLL
+
+  basic concepts
+    syntactic fexprs, procedures, unit, booleans (if0, if), pairs (head, tail), nil, bitstrings/numbers/chars/strings, arrays, tagging (private injected symbols) and case-analysis (in terms of record dispatch?), records/modules (private injected symbols for internal field names, mapped to public symbols), injected symbols, bare vs. value-coupled symbols (for convenient empty-env eval implementation)
+
+  required effects
+    produce/ffi, errors, ports/input/output (preferably high-level versions in addition to bit-level streams), mutable cells/arrays (possibly single-assignable to represent late-bound immutables), generated symbols, delimited continuations, random number generation, time, other system utilities
+
+  more ambitious effects
+    actual concurrency, CAS, channels, thread-local mutable data
+
+
 simple compilation to racket
+
+
 attempt high-level machine model/repr for improved compilation
+
+
 database/repository system
+
+
 compile to javascript
+
+
 self-extensible browser-based editor
