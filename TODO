@@ -18,6 +18,9 @@ simple compilation to racket
 
 
 attempt high-level machine model/repr for improved compilation
+  potentially-related references:
+    http://repository.readscheme.org/ftp/papers/vlisp-lasc/prescheme.pdf
+    https://cakeml.org/
 
 
 database/repository system
