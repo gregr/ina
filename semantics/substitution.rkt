@@ -5,6 +5,7 @@
   )
 
 (require
+  "annotation.rkt"
   "term.rkt"
   gregr-misc/list
   gregr-misc/sugar
@@ -37,6 +38,7 @@
 
 (define (substitute-value sub val)
   (match val
+    ((v-ann ann v) (annotate-value ann (substitute-value sub v)))
     ((v-pair l r)  (apply-map* v-pair (curry substitute-value sub) l r))
     ((v-var index) (substitute-var sub index))
     ((v-lam body)
@@ -52,6 +54,7 @@
 (define (substitute sub tm)
   (define sub-value (curry substitute-value sub))
   (match tm
+    ((t-ann ann tm)     (annotate ann (substitute sub tm)))
     ((t-subst inner tm) (t-subst (substitute-subst sub inner) tm))
     ((t-value val)      (t-value (sub-value val)))
     ((t-unpair idx pr)  (apply-map* t-unpair sub-value idx pr))
