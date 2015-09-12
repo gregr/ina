@@ -1,6 +1,4 @@
 semantics
-  annotations as sets
-  denotation.rkt
   operation.rkt
     step on term: operational step
     step on cursor: supports operational step and a standardized calculus step
