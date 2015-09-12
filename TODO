@@ -1,4 +1,21 @@
+semantics
+  annotations as sets
+  denotation.rkt
+  operation.rkt
+    step on term: operational step
+    step on cursor: supports operational step and a standardized calculus step
+
+
 text-based bootstrap
+  applicative syntax
+    term/value annotator, re-annotator + annotation-mapping
+    specials
+      application, pair, pair-access, lambda, if, cond(?), let[*], letrec, quote (must build tagged data), quasiquote
+    literals (separately support a safe layer without literal untagged literals)
+      unit [un]tagged, bits [un]tagged, nil/lists, characters as ascii/utf8 bit encodings, nats/strings as lists?, symbols as strings with alternative tagging, booleans as bits with alternative tagging?
+  s0, s0-p, s1-p-sr-c-m, s1-p-sr-c-m-safe
+  s1 term syntax
+    intended to support an effectful calculus with a compatible step relation (fully Church-Rosser as in Shutt's vau calculi, not just satisfying Felleisen's diamond property)
 
 
 high-level language design
