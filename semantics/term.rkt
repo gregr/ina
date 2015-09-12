@@ -3,13 +3,16 @@
   b-0
   b-1
 
+  s-ann
   subst
 
+  t-ann
   t-subst
   t-value
   t-unpair
   t-apply
 
+  v-ann
   v-unit
   v-bit
   v-pair
