@@ -7,7 +7,7 @@
 (require
   "substitution.rkt"
   "term.rkt"
-  racket/function
+  racket/format
   racket/match
   )
 
@@ -18,7 +18,7 @@
 (define env-ref list-ref)
 (define (env-add env v) (cons v env))
 
-(define (denote tm (annotate (const "")) (scope 0) (path '()))
+(define (denote tm (annotate ~a) (scope 0) (path '()))
   (define (denote-value val scope path)
     (match val
       ((v-lam body) (let ((db (denote-term
@@ -63,7 +63,7 @@
 (module+ test
   (define dt (denote (t-value (v-pair
                                 (v-var 0) (v-pair (v-bit (b-0)) (v-unit))))
-                     (const "") 1))
+                     ~a 1))
   (check-equal? (dt (env-add env-empty 'a))
                 '(a 0)))
 
