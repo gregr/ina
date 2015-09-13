@@ -5,7 +5,6 @@
   )
 
 (require
-  "annotation.rkt"
   "term.rkt"
   gregr-misc/list
   gregr-misc/sugar
@@ -28,9 +27,7 @@
 (def (substitute-var (subst bindings lift) idx)
   binding-count = (length bindings)
   (if (< idx binding-count)
-    (match (list-ref bindings idx)
-      ((s-ann _ v) v)
-      (v v))
+    (list-ref bindings idx)
     (v-var (+ lift (- idx binding-count)))))
 
 (define v0 (v-var 0))
@@ -38,7 +35,6 @@
 
 (define (substitute-value sub val)
   (match val
-    ((v-ann ann v) (annotate-value ann (substitute-value sub v)))
     ((v-pair l r)  (apply-map* v-pair (curry substitute-value sub) l r))
     ((v-var index) (substitute-var sub index))
     ((v-lam body)
@@ -46,15 +42,13 @@
            (v-lam (t-subst (subst (list* v0 bindings) lift) body))))
     ((? value?)    val)))
 
-(define (apply->subst proc arg (ann #f))
+(define (apply->subst proc arg)
   (match proc
-    ((s-ann ann proc) (apply->subst proc arg ann))
-    ((v-lam body)     (subst (list (if ann (s-ann ann arg) arg)) 0) body)))
+    ((v-lam body)     (subst (list arg) 0) body)))
 
 (define (substitute sub tm)
   (define sub-value (curry substitute-value sub))
   (match tm
-    ((t-ann ann tm)     (annotate ann (substitute sub tm)))
     ((t-subst inner tm) (t-subst (substitute-subst sub inner) tm))
     ((t-value val)      (t-value (sub-value val)))
     ((t-unpair idx pr)  (apply-map* t-unpair sub-value idx pr))
