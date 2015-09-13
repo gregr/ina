@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  apply->subst
+  subst-single
   substitute
   )
 
@@ -32,6 +32,7 @@
 
 (define v0 (v-var 0))
 (define sub-lift-1 (subst '() 1))
+(define (subst-single arg) (subst (list arg) 0))
 
 (define (substitute-value sub val)
   (match val
@@ -41,10 +42,6 @@
      (lets (subst bindings lift) = (substitute-subst sub-lift-1 sub)
            (v-lam (t-subst (subst (list* v0 bindings) lift) body))))
     ((? value?)    val)))
-
-(define (apply->subst proc arg)
-  (match proc
-    ((v-lam body)     (subst (list arg) 0) body)))
 
 (define (substitute sub tm)
   (define sub-value (curry substitute-value sub))
