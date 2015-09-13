@@ -44,9 +44,8 @@
     ((? value?)    val)))
 
 (define (substitute sub tm)
-  (define sub-value (curry substitute-value sub))
   (match tm
     ((t-subst inner tm) (t-subst (substitute-subst sub inner) tm))
-    ((t-value val)      (t-value (sub-value val)))
-    ((t-unpair idx pr)  (apply-map* t-unpair sub-value idx pr))
+    ((t-value val)      (t-value (substitute-value sub val)))
+    ((t-unpair idx pr)  (apply-map* t-unpair (curry t-subst sub) idx pr))
     ((t-apply proc arg) (apply-map* t-apply (curry t-subst sub) proc arg))))
