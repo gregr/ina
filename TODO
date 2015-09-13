@@ -1,9 +1,3 @@
-semantics
-  operation.rkt
-    step on term: operational step
-    step on cursor: supports operational step and a standardized calculus step
-
-
 text-based bootstrap
   applicative syntax
     term/value annotator, re-annotator + annotation-mapping
