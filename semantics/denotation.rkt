@@ -68,6 +68,10 @@
                 '(a 0)))
 
 (module+ test
+  (require
+    "operation.rkt"
+    gregr-misc/maybe
+    )
   (define test-term-0
     (t-apply
       (t-value (v-lam (t-unpair
@@ -78,4 +82,5 @@
   (define test-term-1
     (t-apply (t-value (v-lam test-term-0)) (t-value (v-bit (b-1)))))
   (define completed ((denote test-term-1) env-empty))
+  (check-equal? ((denote (just-x (step test-term-1))) env-empty) completed)
   (check-equal? completed '(1 . 1)))
