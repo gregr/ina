@@ -5,8 +5,8 @@
   )
 
 (require
-  "substitution.rkt"
   "term.rkt"
+  gregr-misc/sugar
   racket/format
   racket/match
   )
@@ -17,6 +17,7 @@
 (define env-empty '())
 (define env-ref list-ref)
 (define (env-add env v) (cons v env))
+(define (env-extend env vs) (append vs env))
 
 (define (denote tm (annotate ~a) (scope 0) (path '()))
   (define (denote-value val scope path)
@@ -35,7 +36,19 @@
                                      scope idx (annotate path)))))))
   (define (denote-term tm scope path)
     (match tm
-      ((t-subst sub tm) (denote-term (substitute sub tm) scope path))
+      ((t-subst (subst bindings lift) tm)
+       (lets (values dbindings _) =
+             (forf result = '() sub-path = (list* 'first path)
+                   val <- bindings
+                   (values (list* (denote-value
+                                    val scope (list* 's 'bindings sub-path))
+                                  result)
+                           (list* 'rest sub-path)))
+             dbody = (denote-term tm (+ (length bindings) scope)
+                                  (list* 't path))
+             (lambda (env)
+               (dbody (env-extend env (reverse (forl dval <- dbindings
+                                                     (dval env))))))))
       ((t-value val)    (denote-value val scope (list* 'v path)))
       ((t-unpair tbit tpair)
        (let ((dbit (denote-term tbit scope (list* 'bit path)))
