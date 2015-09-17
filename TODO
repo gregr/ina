@@ -21,6 +21,14 @@ text-based bootstrap
         boolean: boolean->case to support 'if'
         arbitrary-length binary int: int-compare->case (with 3 choices), +, -, *
 
+  unsafe1: for implementing unsafe2 evaluator and support
+    syntax
+      (combiner operand ...), literals (boolean, integer), lambda, (), (bit 0), (bit 1), pair, unpair, if, let[*], quote, quasiquote/unquote
+    operations:
+      fix, head, tail, foldl, foldr, map, append, apply,
+      tuple-empty?, tuple-pair?, symbol?, symbol=?, assoc/? (will take symbol=? as an arg),
+      env-empty, env-get, env-add, unsafe2-eval, $lambda, $lambda$
+
   future bootstrap goals:
     characters as ascii/utf8 bit encodings, symbols as strings with alternative tagging rather than injected binaries
     CPS transform to support system interaction (aka produce)
