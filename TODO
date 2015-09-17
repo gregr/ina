@@ -1,4 +1,9 @@
 text-based bootstrap
+  annotation tree manipulations
+    step-continuation to find path before applying step
+    visit same path in annotation tree
+    manipulate tree in a way that corresponds to step-execute
+
   applicative syntax
     term/value annotator, re-annotator + annotation-mapping
 
