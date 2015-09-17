@@ -47,6 +47,12 @@ text-based bootstrap
     where do records/modules fit?
     extended numeric literals (rational, floating point, complex), characters as ascii/utf8 bit encodings, symbols as strings with alternative tagging rather than injected binaries
     CPS transform to support system interaction (aka produce)
+    use annotation manipulations for debug/editor support
+      track variable names, comments and other source metadata
+      trace data flow and dependencies, even through applications of eval to quoted data
+        when navigating/editing a program that has been partially reduced
+          editor should be able to map residual program locations to original program locations
+          only reduced terms that interact with edited portions need to be updated
 
   goals after bootstrap:
     effectful calculus with a compatible step relation (fully Church-Rosser as in Shutt's vau calculi, not just satisfying Felleisen's diamond property)
