@@ -29,6 +29,15 @@ text-based bootstrap
       tuple-empty?, tuple-pair?, symbol?, symbol=?, assoc/? (will take symbol=? as an arg),
       env-empty, env-get, env-add, unsafe2-eval, $lambda, $lambda$
 
+  unsafe2: to bootstrap safe languages
+    syntax
+      (combiner operand ...), literals (boolean, integer), ()
+    primitive operatives:
+      lambda, lambda$, bit, pair, unpair, quote, quasiquote/unquote,
+    provides:
+      fix*, if, cond, let[*], let$, letrec, match, quasiquote/unquote/unquote-splicing(new!), $, @, list, list*, apply*,
+      filter, reverse, not?, and?, or?, and-map?, or-map?, datum->tag (tag as a symbol)
+
   future bootstrap goals:
     characters as ascii/utf8 bit encodings, symbols as strings with alternative tagging rather than injected binaries
     CPS transform to support system interaction (aka produce)
