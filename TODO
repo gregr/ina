@@ -1,13 +1,33 @@
 text-based bootstrap
   applicative syntax
     term/value annotator, re-annotator + annotation-mapping
-    specials
-      application, pair, pair-access, lambda, if, cond(?), let[*], letrec, quote (must build tagged data), quasiquote
-    literals (separately support a safe layer without literal untagged literals)
-      unit [un]tagged, bits [un]tagged, nil/lists, characters as ascii/utf8 bit encodings, nats/strings as lists?, symbols as strings with alternative tagging, booleans as bits with alternative tagging?
-  s0, s0-p, s1-p-sr-c-m, s1-p-sr-c-m-safe
-  s1 term syntax
-    intended to support an effectful calculus with a compatible step relation (fully Church-Rosser as in Shutt's vau calculi, not just satisfying Felleisen's diamond property)
+
+  racket codecs
+    tuples
+    unary nats
+    bitstrings
+    symbols
+
+  unsafe0: for implementing primitives needed to bootstrap unsafe1
+    syntax
+      (combiner operand ...), lambda, (), 0, 1, pair, unpair, if0, let[*]
+    provides:
+      data representations to support unsafe1 literals and quotation:
+        tagged data: symbol, nil/cons, boolean, integer
+      operations:
+        tag-compare->case, tagged, tagged->tag, tagged->payload
+        symbol (externally-chosen and injected binaries): symbol-compare->case
+        nil/cons: tuple->case (where cons case deconstructs)
+        boolean: boolean->case to support 'if'
+        arbitrary-length binary int: int-compare->case (with 3 choices), +, -, *
+
+  future bootstrap goals:
+    characters as ascii/utf8 bit encodings, symbols as strings with alternative tagging rather than injected binaries
+    CPS transform to support system interaction (aka produce)
+
+  goals after bootstrap:
+    effectful calculus with a compatible step relation (fully Church-Rosser as in Shutt's vau calculi, not just satisfying Felleisen's diamond property)
+      shift/reset, constant, mutable ref
 
 
 high-level language design
