@@ -39,7 +39,8 @@ text-based bootstrap
       filter, reverse, not?, and?, or?, and-map?, or-map?, datum->tag (tag as a symbol)
 
   future bootstrap goals:
-    characters as ascii/utf8 bit encodings, symbols as strings with alternative tagging rather than injected binaries
+    where do records/modules fit?
+    extended numeric literals (rational, floating point, complex), characters as ascii/utf8 bit encodings, symbols as strings with alternative tagging rather than injected binaries
     CPS transform to support system interaction (aka produce)
 
   goals after bootstrap:
