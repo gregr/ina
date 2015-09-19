@@ -1,9 +1,10 @@
 // colour definitions
-//@light: #ABD5F5;
 @light: #E1F1FD;
+//@light: #ABD5F5;
 //@light: #2F8DD5;
 @med: #0463AB;
 @dark: #163E67;
+@lightgray: #EEEEEE;
 
 // reusable
 body {
@@ -45,7 +46,7 @@ p {
   margin: 0px;
   padding-top: 20px;
   padding-bottom: 20px;
-  background-color: #EEEEEE;
+  background-color: @lightgray;
 
   .logo-container {
     img.logo {
@@ -117,4 +118,17 @@ p {
   padding-top: 20px;
   padding-bottom: 20px;
   background-color: @light;
+}
+
+
+
+
+
+.footer {
+  margin: 0px;
+  margin-top: 100px;
+  padding-top: 20px;
+  padding-bottom: 10px;
+  background-color: @lightgray;
+  text-align: center;
 }

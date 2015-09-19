@@ -29,7 +29,7 @@ p {
   margin: 0px;
   padding-top: 20px;
   padding-bottom: 20px;
-  background-color: #EEEEEE;
+  background-color: #eeeeee;
 }
 .header .logo-container img.logo {
   width: 200px;
@@ -93,4 +93,12 @@ p {
   padding-top: 20px;
   padding-bottom: 20px;
   background-color: #e1f1fd;
+}
+.footer {
+  margin: 0px;
+  margin-top: 100px;
+  padding-top: 20px;
+  padding-bottom: 10px;
+  background-color: #eeeeee;
+  text-align: center;
 }
