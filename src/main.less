@@ -1,5 +1,7 @@
 // colour definitions
-@light: #2F8DD5;
+//@light: #ABD5F5;
+@light: #E1F1FD;
+//@light: #2F8DD5;
 @med: #0463AB;
 @dark: #163E67;
 
@@ -19,6 +21,22 @@ body {
 a {
   font-weight: bold;
   color: @dark;
+}
+
+.cleardiv {
+  display: block;
+  clear: both;
+}
+
+.heading {
+  font-weight: bold;
+  font-size: 1.5em;
+}
+
+p {
+  max-width: 800px;
+  font-size: 1em;
+  line-height: 2em;
 }
 
 // sections-specfici
@@ -65,7 +83,8 @@ a {
 
 .elevator {
   // elevator pitch
-  padding-top: 50px;
+  padding-top: 80px;
+  padding-bottom: 80px;
   .one-liner {
     display: inline-block;
     padding-top: 10px;
@@ -75,10 +94,9 @@ a {
     line-height: 1.5em;
   }
   .call-to-action-container {
-    position: relative;
-    top: 50px;
-    left: 250px;
     display: block;
+    margin-top: 30px;
+    margin-left: 250px;
     clear: both;
     float: left;
     .call-to-action-btn {
@@ -93,3 +111,10 @@ a {
   }
 }
 
+
+.about {
+  margin: 0px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  background-color: @light;
+}

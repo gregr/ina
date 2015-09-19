@@ -12,6 +12,19 @@ a {
   font-weight: bold;
   color: #163e67;
 }
+.cleardiv {
+  display: block;
+  clear: both;
+}
+.heading {
+  font-weight: bold;
+  font-size: 1.5em;
+}
+p {
+  max-width: 800px;
+  font-size: 1em;
+  line-height: 2em;
+}
 .header {
   margin: 0px;
   padding-top: 20px;
@@ -48,7 +61,8 @@ a {
   color: white;
 }
 .elevator {
-  padding-top: 50px;
+  padding-top: 80px;
+  padding-bottom: 80px;
 }
 .elevator .one-liner {
   display: inline-block;
@@ -59,10 +73,9 @@ a {
   line-height: 1.5em;
 }
 .elevator .call-to-action-container {
-  position: relative;
-  top: 50px;
-  left: 250px;
   display: block;
+  margin-top: 30px;
+  margin-left: 250px;
   clear: both;
   float: left;
 }
@@ -74,4 +87,10 @@ a {
 }
 .elevator .call-to-action-container .call-to-action-btn a {
   color: white;
+}
+.about {
+  margin: 0px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  background-color: #e1f1fd;
 }
