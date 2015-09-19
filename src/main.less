@@ -3,6 +3,7 @@
 @med: #0463AB;
 @dark: #163E67;
 
+// reusable
 body {
   font-family: 'Open Sans', serif;
   font-size: 0.8em;
@@ -15,7 +16,14 @@ body {
   margin: auto;
 }
 
+a {
+  font-weight: bold;
+  color: @dark;
+}
+
+// sections-specfici
 .header{
+  // header logo & nav links
   margin: 0px;
   padding-top: 20px;
   padding-bottom: 20px;
@@ -41,11 +49,7 @@ body {
       display: inline;
       float: left;
       padding: 20px;
-      a {
-        font-size: 1em;
-        font-weight: bold;
-        color: @dark;
-      }
+      font-size: 1em;
       &:hover {
         background-color: @dark;
         cursor: hand;
@@ -58,3 +62,34 @@ body {
     }
   }
 }
+
+.elevator {
+  // elevator pitch
+  padding-top: 50px;
+  .one-liner {
+    display: inline-block;
+    padding-top: 10px;
+    float: left;
+    width: 500px;
+    font-size: 2em;
+    line-height: 1.5em;
+  }
+  .call-to-action-container {
+    position: relative;
+    top: 50px;
+    left: 250px;
+    display: block;
+    clear: both;
+    float: left;
+    .call-to-action-btn {
+      width: 200px;
+      background-color: @dark;
+      text-align: center;
+      padding: 10px;
+      a {
+        color: white;
+      }
+    }
+  }
+}
+

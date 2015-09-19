@@ -8,6 +8,10 @@ body {
   max-width: 1000px;
   margin: auto;
 }
+a {
+  font-weight: bold;
+  color: #163e67;
+}
 .header {
   margin: 0px;
   padding-top: 20px;
@@ -33,11 +37,7 @@ body {
   display: inline;
   float: left;
   padding: 20px;
-}
-.header .nav-container .nav-item a {
   font-size: 1em;
-  font-weight: bold;
-  color: #163e67;
 }
 .header .nav-container .nav-item:hover {
   background-color: #163e67;
@@ -45,5 +45,33 @@ body {
   cursor: pointer;
 }
 .header .nav-container .nav-item:hover a {
+  color: white;
+}
+.elevator {
+  padding-top: 50px;
+}
+.elevator .one-liner {
+  display: inline-block;
+  padding-top: 10px;
+  float: left;
+  width: 500px;
+  font-size: 2em;
+  line-height: 1.5em;
+}
+.elevator .call-to-action-container {
+  position: relative;
+  top: 50px;
+  left: 250px;
+  display: block;
+  clear: both;
+  float: left;
+}
+.elevator .call-to-action-container .call-to-action-btn {
+  width: 200px;
+  background-color: #163e67;
+  text-align: center;
+  padding: 10px;
+}
+.elevator .call-to-action-container .call-to-action-btn a {
   color: white;
 }
