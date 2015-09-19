@@ -1,0 +1,12 @@
+# SETUP
+
+`npm install`
+`npm install grunt-cli`
+`grunt`
+
+# EDITING FILES
+
+Do not edit the html and javascript files.
+
+Normally you should only have to edit the files in `src/`
+

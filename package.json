@@ -1,0 +1,17 @@
+{
+  "name": "InaProjectHomepage",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+    "coffee-script": "~1.6.3",
+    "grunt": "~0.4.1",
+    "grunt-cli": "~0.1.9",
+    "grunt-contrib-less": "~0.7.0",
+    "grunt-contrib-jade": "~0.4.0",
+    "grunt-contrib-watch": "~0.5.1"
+  }
+}
