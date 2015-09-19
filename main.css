@@ -1,19 +1,49 @@
 body {
   font-family: 'Open Sans', serif;
   font-size: 0.8em;
+  margin: 0px;
+  padding: 0px;
 }
-.container {
+.content {
   max-width: 1000px;
   margin: auto;
-  margin-top: 20px;
 }
 .header {
-  margin-top: 20px;
-  text-align: center;
+  margin: 0px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  background-color: #EEEEEE;
 }
-.header img.logo {
-  width: 250px;
+.header .logo-container img.logo {
+  width: 200px;
 }
-.header .logo-caption {
+.header .logo-container .logoB {
+  display: none;
+}
+.header .logo-container .logo-caption {
   font-size: 1.5em;
+}
+.header .nav-container {
+  display: block;
+  float: right;
+  position: relative;
+  bottom: 40px;
+}
+.header .nav-container .nav-item {
+  display: inline;
+  float: left;
+  padding: 20px;
+}
+.header .nav-container .nav-item a {
+  font-size: 1em;
+  font-weight: bold;
+  color: #163e67;
+}
+.header .nav-container .nav-item:hover {
+  background-color: #163e67;
+  cursor: hand;
+  cursor: pointer;
+}
+.header .nav-container .nav-item:hover a {
+  color: white;
 }

@@ -1,22 +1,60 @@
+// colour definitions
+@light: #2F8DD5;
+@med: #0463AB;
+@dark: #163E67;
+
 body {
   font-family: 'Open Sans', serif;
   font-size: 0.8em;
+  margin: 0px;
+  padding: 0px;
 }
 
-.container {
+.content {
   max-width: 1000px;
   margin: auto;
-  margin-top: 20px;
 }
 
 .header{
-  margin-top: 20px;
-  text-align: center;
-  img.logo {
-    width: 250px;
-  }
-  .logo-caption{
-    font-size: 1.5em;
+  margin: 0px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  background-color: #EEEEEE;
+
+  .logo-container {
+    img.logo {
+      width: 200px;
+    }
+    //.logoA { display: none; }
+    .logoB { display: none; }
+    .logo-caption{
+      font-size: 1.5em;
+    }
   }
 
+  .nav-container {
+    display: block;
+    float: right;
+    position: relative;
+    bottom: 40px;
+    .nav-item {
+      display: inline;
+      float: left;
+      padding: 20px;
+      a {
+        font-size: 1em;
+        font-weight: bold;
+        color: @dark;
+      }
+      &:hover {
+        background-color: @dark;
+        cursor: hand;
+        cursor: pointer;
+
+        a {
+          color: white;
+        }
+      }
+    }
+  }
 }

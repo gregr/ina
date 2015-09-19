@@ -20,15 +20,24 @@ module.exports = (grunt) ->
           , dest: "index.html" }
         ]
 
+    coffee:
+      main:
+        files: [
+          { src: [ "src/main.coffee" ]
+          , dest: "main.js" }
+        ]
+
+
     #### Task to watch files
     watch:
       files: ["src/*"]
-      tasks: ["less", "jade"]
+      tasks: ["less", "jade", "coffee"]
 
   #### Load third party tasks
   grunt.loadNpmTasks 'grunt-contrib-jade'
   grunt.loadNpmTasks 'grunt-contrib-less'
   grunt.loadNpmTasks 'grunt-contrib-watch'
+  grunt.loadNpmTasks 'grunt-contrib-coffee'
 
   grunt.registerTask 'server', "Run server", () ->
     done = @async()
@@ -46,6 +55,7 @@ module.exports = (grunt) ->
   grunt.registerTask 'default', [
     'less'
     'jade'
+    'coffee'
     'server'
     'watch'
   ]
