@@ -87,6 +87,7 @@ p {
 }
 .elevator .call-to-action-container .call-to-action-btn a {
   color: white;
+  text-decoration: none;
 }
 .about {
   margin: 0px;
