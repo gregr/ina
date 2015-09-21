@@ -7,6 +7,7 @@
 (require
   "operation.rkt"
   "parsing.rkt"
+  "substitution.rkt"
   "term.rkt"
   gregr-misc/sugar
   racket/function
@@ -84,6 +85,6 @@
   names = (forl (list name expr) <- bindings name)
   body = (foldr (lambda (name acc) `(pair ,name ,acc)) '() names)
   prog = (unsafe0-parse `(let* ,bindings ,body))
-  vals = (tuple0->list (t-value-v (step-complete prog)))
+  vals = (tuple0->list (t-value-v (substitute-full (step-complete prog))))
   assocs = (forl name <- names val <- vals (cons name val))
   (make-immutable-hash assocs))

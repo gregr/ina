@@ -166,39 +166,20 @@
 (module+ test
   (require
     "denotation.rkt"
-    "operation.rkt"
-    "substitution.rkt"
     "term.rkt"
     rackunit
     )
   (check-equal?
-    ((denote (step-complete
-               (t-apply (t-value (std0 'identity)) (t-value (v-unit)))))
+    ((denote (t-apply (t-value (std0 'identity)) (t-value (v-unit))))
      env-empty)
     '())
   (check-equal?
-    ((denote (substitute-full
-               (t-apply (t-value (std0 'identity)) (t-value (v-unit)))))
-     env-empty)
-    '())
-  (check-equal?
-    ((denote (step-complete
-               (t-apply (t-value (std0 'psecond))
-                        (t-value (v-pair (v-pair (v-bit (b-1))
-                                                 (v-bit (b-0)))
-                                         (v-pair (v-pair (v-bit (b-0))
-                                                         (v-bit (b-1)))
-                                                 (v-unit)))))))
-     env-empty)
-    '(0 . 1))
-  (check-equal?
-    ((denote (substitute-full
-               (t-apply (t-value (std0 'psecond))
-                        (t-value (v-pair (v-pair (v-bit (b-1))
-                                                 (v-bit (b-0)))
-                                         (v-pair (v-pair (v-bit (b-0))
-                                                         (v-bit (b-1)))
-                                                 (v-unit)))))))
+    ((denote (t-apply (t-value (std0 'psecond))
+                      (t-value (v-pair (v-pair (v-bit (b-1))
+                                               (v-bit (b-0)))
+                                       (v-pair (v-pair (v-bit (b-0))
+                                                       (v-bit (b-1)))
+                                               (v-unit))))))
      env-empty)
     '(0 . 1))
   )
