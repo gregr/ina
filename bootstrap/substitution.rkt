@@ -2,6 +2,7 @@
 (provide
   subst-single
   substitute
+  substitute-full
   )
 
 (require
@@ -49,3 +50,13 @@
     ((t-value val)      (t-value (substitute-value sub val)))
     ((t-unpair idx pr)  (apply-map* t-unpair (curry t-subst sub) idx pr))
     ((t-apply proc arg) (apply-map* t-apply (curry t-subst sub) proc arg))))
+
+(define (substitute-full tv)
+  (match tv
+    ((t-subst sub tm)   (substitute-full (substitute sub tm)))
+    ((t-value v)        (t-value (substitute-full v)))
+    ((t-unpair idx pr)  (apply-map* t-unpair substitute-full idx pr))
+    ((t-apply proc arg) (apply-map* t-apply substitute-full proc arg))
+    ((v-pair l r)       (apply-map* v-pair substitute-full l r))
+    ((v-lam body)       (v-lam (substitute-full body)))
+    ((? value?)         tv)))
