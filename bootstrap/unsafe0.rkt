@@ -1,11 +1,14 @@
 #lang racket/base
 (provide
   unsafe0-parse
+  unsafe0-module
   )
 
 (require
+  "operation.rkt"
   "parsing.rkt"
   "term.rkt"
+  gregr-misc/sugar
   racket/function
   racket/match
   )
@@ -71,3 +74,8 @@
         x0))))
   (check-equal? ((denote tt-3) env-empty) '(1 . 0))
   )
+
+(def (unsafe0-module bindings)
+  names = (forl (list name expr) <- bindings name)
+  body = (foldr (lambda (name acc) `(pair ,name ,acc)) '() names)
+  (step-complete (unsafe0-parse `(let* ,bindings ,body))))
