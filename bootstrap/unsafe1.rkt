@@ -4,9 +4,10 @@
 
 (require
   "unsafe0.rkt"
+  racket/function
   )
 
-(define std0 (unsafe0-module
+(define std0-module (unsafe0-module
   '((identity (lambda (x) x))
     (const    (lambda (k _) k))
     (compose  (lambda (f g x) (f (g x))))
@@ -159,3 +160,45 @@
     (tuple-empty? (has-tag? tag:nil))
     (tuple-pair?  (has-tag? tag:cons))
     )))
+
+(define std0 (curry hash-ref std0-module))
+
+(module+ test
+  (require
+    "denotation.rkt"
+    "operation.rkt"
+    "substitution.rkt"
+    "term.rkt"
+    rackunit
+    )
+  (check-equal?
+    ((denote (step-complete
+               (t-apply (t-value (std0 'identity)) (t-value (v-unit)))))
+     env-empty)
+    '())
+  (check-equal?
+    ((denote (substitute-full
+               (t-apply (t-value (std0 'identity)) (t-value (v-unit)))))
+     env-empty)
+    '())
+  (check-equal?
+    ((denote (step-complete
+               (t-apply (t-value (std0 'psecond))
+                        (t-value (v-pair (v-pair (v-bit (b-1))
+                                                 (v-bit (b-0)))
+                                         (v-pair (v-pair (v-bit (b-0))
+                                                         (v-bit (b-1)))
+                                                 (v-unit)))))))
+     env-empty)
+    '(0 . 1))
+  (check-equal?
+    ((denote (substitute-full
+               (t-apply (t-value (std0 'psecond))
+                        (t-value (v-pair (v-pair (v-bit (b-1))
+                                                 (v-bit (b-0)))
+                                         (v-pair (v-pair (v-bit (b-0))
+                                                         (v-bit (b-1)))
+                                                 (v-unit)))))))
+     env-empty)
+    '(0 . 1))
+  )
