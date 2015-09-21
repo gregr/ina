@@ -75,7 +75,15 @@
   (check-equal? ((denote tt-3) env-empty) '(1 . 0))
   )
 
+(define (tuple0->list tup)
+  (match tup
+    ((v-unit)     '())
+    ((v-pair l r) (list* l (tuple0->list r)))))
+
 (def (unsafe0-module bindings)
   names = (forl (list name expr) <- bindings name)
   body = (foldr (lambda (name acc) `(pair ,name ,acc)) '() names)
-  (step-complete (unsafe0-parse `(let* ,bindings ,body))))
+  prog = (unsafe0-parse `(let* ,bindings ,body))
+  vals = (tuple0->list (t-value-v (step-complete prog)))
+  assocs = (forl name <- names val <- vals (cons name val))
+  (make-immutable-hash assocs))
