@@ -3,6 +3,7 @@
   )
 
 (require
+  "term.rkt"
   "unsafe0.rkt"
   racket/function
   )
@@ -161,20 +162,19 @@
     (tuple-pair?  (has-tag? tag:cons))
     )))
 
-(define std0 (curry hash-ref std0-module))
+(define std0 (compose t-value (curry hash-ref std0-module)))
 
 (module+ test
   (require
     "denotation.rkt"
-    "term.rkt"
     rackunit
     )
   (check-equal?
-    ((denote (t-apply (t-value (std0 'identity)) (t-value (v-unit))))
+    ((denote (t-apply (std0 'identity) (t-value (v-unit))))
      env-empty)
     '())
   (check-equal?
-    ((denote (t-apply (t-value (std0 'psecond))
+    ((denote (t-apply (std0 'psecond)
                       (t-value (v-pair (v-pair (v-bit (b-1))
                                                (v-bit (b-0)))
                                        (v-pair (v-pair (v-bit (b-0))
