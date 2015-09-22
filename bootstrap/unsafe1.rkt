@@ -70,14 +70,14 @@
 
     (true           (bit->boolean 0))
     (false          (bit->boolean 1))
-    (boolean->bit   (tagged-map tag:boolean tagged->payload))
+    (boolean->bit   (tagged-map tag:boolean identity))
     (not?           (compose not?0 boolean->bit) )
     (boolean-unpair (lambda (b pr) (unpair (boolean->bit b) pr)))
     (boolean?       (has-tag? tag:boolean))
 
     (bits-nil   ,bits-nil)
     (bits       ,bits)
-    (bits-nil?0 (lambda (bs)    (phead bs)))
+    (bits-nil?0 (lambda (bs) (phead bs)))
     (bits-head  psecond)
     (bits-tail  (compose ptail ptail))
     (bits-cocase
