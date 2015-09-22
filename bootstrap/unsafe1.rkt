@@ -92,6 +92,10 @@
                        (if0 (bits-head bs1)
                             (c10 (bits-tail bs0) (bits-tail bs1))
                             (c11 (bits-tail bs0) (bits-tail bs1))))))))
+    (bits-invert
+      (fix (lambda (bits-invert bs)
+        (if0 (bits-nil?0 bs) bs
+             (bits (not?0 (bits-head bs)) (bits-invert (bits-tail bs)))))))
     (bits=? (fix (lambda (bits=? bs0 bs1)
                    (bits-cocase (const true) (const false) (const false)
                                 bits=? (const (const false))
@@ -170,6 +174,19 @@
                        (trimmed/f add 0 1 carry)
                        (trimmed/f add 1 1 carry)))))))
             (tagged tag:integer (return (add 0 (ptail ir0) (ptail ir1))))))))
+    (integer-invert-naive
+      (tagged-map
+        tag:integer
+        (lambda (ir) (tagged tag:integer (pcons (not?0 (phead ir))
+                                                (bits-invert (ptail ir)))))))
+    (zero         (tagged tag:integer (pcons 0 bits-nil)))
+    (negative-one (tagged tag:integer (pcons 1 bits-nil)))
+    (positive-one (tagged tag:integer (pcons 0 (bits 1 bits-nil))))
+    (integer-invert
+      (lambda (int)
+        (if0 (boolean->bit (integer<=? zero int))
+             (integer-invert-naive (integer+ negative-one int))
+             (integer+ positive-one (integer-invert-naive int)))))
 
     (nil     (tagged tag:nil ()))
     (cons    (lambda (hd tl) (tagged tag:cons (pcons hd tl))))
@@ -288,4 +305,13 @@
                    'integer+))
      env-empty)
     ((denote (unsafe0-parse (int->integer 0))) env-empty))
+
+  (check-equal?
+    ((denote (std0-apply `(lambda (iop) (iop ,(int->integer 5)))
+                         'integer-invert)) env-empty)
+    ((denote (unsafe0-parse (int->integer -5))) env-empty))
+  (check-equal?
+    ((denote (std0-apply `(lambda (iop) (iop (iop ,(int->integer -5))))
+                         'integer-invert)) env-empty)
+    ((denote (unsafe0-parse (int->integer -5))) env-empty))
   )
