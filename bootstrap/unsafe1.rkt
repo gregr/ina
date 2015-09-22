@@ -92,12 +92,11 @@
                        (if0 (bits-head bs1)
                             (c10 (bits-tail bs0) (bits-tail bs1))
                             (c11 (bits-tail bs0) (bits-tail bs1))))))))
-    (bits=?
-      (fix (lambda (bits=?0 bs0 bs1)
-             (bits-cocase (const true) (const false) (const false)
-                          bits=?0 (const (const false))
-                          (const (const false)) bits=?0
-                          bs0 bs1))))
+    (bits=? (fix (lambda (bits=? bs0 bs1)
+                   (bits-cocase (const true) (const false) (const false)
+                                bits=? (const (const false))
+                                (const (const false)) bits=?
+                                bs0 bs1))))
 
     (symbol   (tagged tag:symbol))
     (symbol?  (has-tag? tag:symbol))
@@ -112,14 +111,14 @@
           (lambda (ir0 ir1)
             (let ((<case (if0 (phead ir0) <case >case))
                   (>case (if0 (phead ir0) >case <case))
-                  (cmp
-                     (fix (lambda (cmp)
-                            (bits-cocase
-                              (const =case) (const <case)
-                              (const >case) cmp (const (const >case))
-                              (const (const <case)) cmp)))))
+                  (cmp (fix (lambda (cmp =case <case >case bs0 bs1)
+                              (bits-cocase
+                                (const =case) (const <case) (const >case)
+                                (cmp =case <case >case) (cmp >case <case >case)
+                                (cmp <case <case >case) (cmp =case <case >case)
+                                bs0 bs1)))))
               (if0 (bit=?0 (phead ir0) (phead ir1))
-                   (cmp (ptail ir0) (ptail ir1))
+                   (cmp =case <case >case (ptail ir0) (ptail ir1))
                    >case))))))
     (integer=?  (integer-compare->case true false false))
     (integer<?  (integer-compare->case false true false))
@@ -217,9 +216,43 @@
     ((denote (std0 'true)) env-empty))
 
   (check-equal?
+    ((denote (std0-apply
+               `(lambda (pcons bits=?)
+                  (pcons (bits=? ,(nat->bits 3) ,(nat->bits 6))
+                         (bits=? ,(nat->bits 6) ,(nat->bits 6))))
+               'pcons 'bits=?))
+     env-empty)
+    ((denote (std0-apply `(lambda (true false) (pair false true))
+                         'true 'false)) env-empty))
+
+  (check-equal?
     ((denote
        (std0-apply `(lambda (iop) (iop ,(int->integer -1) ,(int->integer 1)))
                    'integer<?))
      env-empty)
     ((denote (std0 'true)) env-empty))
+  (check-equal?
+    ((denote
+       (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 6)))
+                   'integer=?))
+     env-empty)
+    ((denote (std0 'true)) env-empty))
+  (check-equal?
+    ((denote
+       (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 7)))
+                   'integer=?))
+     env-empty)
+    ((denote (std0 'false)) env-empty))
+  (check-equal?
+    ((denote
+       (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 3)))
+                   'integer>?))
+     env-empty)
+    ((denote (std0 'true)) env-empty))
+  (check-equal?
+    ((denote
+       (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 3)))
+                   'integer<=?))
+     env-empty)
+    ((denote (std0 'false)) env-empty))
   )
