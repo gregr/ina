@@ -158,8 +158,8 @@
     (head    (tagged-map tag:cons phead))
     (tail    (tagged-map tag:cons ptail))
     (uncurry (lambda (f) ((tagged-map tag:cons (puncurry f)))))
-    (tuple-empty? (has-tag? tag:nil))
-    (tuple-pair?  (has-tag? tag:cons))
+    (nil?    (has-tag? tag:nil))
+    (cons?   (has-tag? tag:cons))
     )))
 
 (define std0 (compose t-value (curry hash-ref std0-module)))
@@ -182,4 +182,19 @@
                                                (v-unit))))))
      env-empty)
     '(0 . 1))
+  (check-equal?
+    ((denote (t-apply (std0 'cons?)
+                      (t-apply
+                        (t-apply (std0 'cons) (t-value (v-unit)))
+                        (t-value (v-unit)))))
+     env-empty)
+    ((denote (std0 'true)) env-empty))
+  (check-equal?
+    ((denote (t-apply (std0 'nil?)
+                      (t-apply (std0 'tail)
+                               (t-apply (t-apply (std0 'cons)
+                                                 (t-value (v-unit)))
+                                        (std0 'nil)))))
+     env-empty)
+    ((denote (std0 'true)) env-empty))
   )
