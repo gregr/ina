@@ -8,14 +8,31 @@
   racket/function
   )
 
+(define pcons '(lambda (hd tl) (pair hd tl)))
+
+(define tag:integer '(pair 1 (pair 0 (pair 0 ()))))
+
+(define bits-nil '(pair 0 ()))
+(define bits '(lambda (b0 bs) (pair 1 (pair b0 bs))))
+
+(define (nat->bits n (invert? #f))
+  (if (= 0 n) bits-nil
+    `(,bits ,(if ((if invert? not identity) (= 0 (modulo n 2))) 0 1)
+            ,(nat->bits (quotient n 2) invert?))))
+
+(define (int->integer i)
+  `(,pcons ,tag:integer (,pcons ,(if (< i 0) 1 0)
+                                ,(nat->bits (if (< i 0) (- (+ i 1)) i)
+                                            (< i 0)))))
+
 (define std0-module (unsafe0-module
-  '((identity (lambda (x) x))
+  `((identity (lambda (x) x))
     (const    (lambda (k _) k))
     (compose  (lambda (f g x) (f (g x))))
     (fix (lambda (f) ((lambda (d) (d d))
                       (lambda (x) (f (lambda (a) (x x a)))))))
 
-    (pcons    (lambda (hd tl) (pair hd tl)))
+    (pcons    ,pcons)
     (phead    (lambda (pr)    (unpair 0 pr)))
     (ptail    (lambda (pr)    (unpair 1 pr)))
     (psecond  (lambda (pr)    (phead (ptail pr))))
@@ -29,7 +46,7 @@
     (tag:boolean (pair 0 (pair 0 (pair 1 ()))))
     (tag:nil     (pair 0 (pair 1 (pair 0 ()))))
     (tag:cons    (pair 0 (pair 1 (pair 1 ()))))
-    (tag:integer (pair 1 (pair 0 (pair 0 ()))))
+    (tag:integer ,tag:integer)
     (tag=?0 (lambda (t0 t1)
               (if0 (bit=?0 (phead t0) (phead t1))
                    (if0 (bit=?0 (psecond t0) (psecond t1))
@@ -58,8 +75,8 @@
     (boolean-unpair (lambda (b pr) (unpair (boolean->bit b) pr)))
     (boolean?       (has-tag? tag:boolean))
 
-    (bits-nil   (pair 0 ()))
-    (bits       (lambda (b0 bs) (pair 1 (pair b0 bs))))
+    (bits-nil   ,bits-nil)
+    (bits       ,bits)
     (bits-nil?0 (lambda (bs)    (phead bs)))
     (bits-head  psecond)
     (bits-tail  (compose ptail ptail))
@@ -93,9 +110,9 @@
         (tagged-binop
           tag:integer
           (lambda (ir0 ir1)
-            (let* ((<case (if0 (phead ir0) <case >case))
-                   (>case (if0 (phead ir0) >case <case))
-                   (cmp
+            (let ((<case (if0 (phead ir0) <case >case))
+                  (>case (if0 (phead ir0) >case <case))
+                  (cmp
                      (fix (lambda (cmp)
                             (bits-cocase
                               (const =case) (const <case)
@@ -106,7 +123,7 @@
                    >case))))))
     (integer=?  (integer-compare->case true false false))
     (integer<?  (integer-compare->case false true false))
-    (integer<=? (integer-compare->case false true false))
+    (integer<=? (integer-compare->case true true false))
     (integer>?  (integer-compare->case true false true))
     (integer>=? (integer-compare->case true false true))
     (integer+
@@ -196,6 +213,13 @@
     ((denote
        (std0-apply '(lambda (cons nil tail nil?) (nil? (tail (cons () nil))))
                    'cons 'nil 'tail 'nil?))
+     env-empty)
+    ((denote (std0 'true)) env-empty))
+
+  (check-equal?
+    ((denote
+       (std0-apply `(lambda (iop) (iop ,(int->integer -1) ,(int->integer 1)))
+                   'integer<?))
      env-empty)
     ((denote (std0 'true)) env-empty))
   )
