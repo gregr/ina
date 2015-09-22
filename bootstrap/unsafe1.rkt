@@ -167,34 +167,35 @@
 (module+ test
   (require
     "denotation.rkt"
+    gregr-misc/sugar
     rackunit
     )
+
+  (define (std0-apply stx . std0-idents)
+    (forf proc = (unsafe0-parse stx)
+          ident <- std0-idents
+          (t-apply proc (std0 ident))))
+
   (check-equal?
     ((denote (t-apply (std0 'identity) (t-value (v-unit))))
      env-empty)
     '())
   (check-equal?
-    ((denote (t-apply (std0 'psecond)
-                      (t-value (v-pair (v-pair (v-bit (b-1))
-                                               (v-bit (b-0)))
-                                       (v-pair (v-pair (v-bit (b-0))
-                                                       (v-bit (b-1)))
-                                               (v-unit))))))
+    ((denote
+       (std0-apply '(lambda (psecond)
+                      (psecond (pair (pair 1 0) (pair (pair 0 1) ()))))
+                   'psecond))
      env-empty)
     '(0 . 1))
   (check-equal?
-    ((denote (t-apply (std0 'cons?)
-                      (t-apply
-                        (t-apply (std0 'cons) (t-value (v-unit)))
-                        (t-value (v-unit)))))
+    ((denote
+       (std0-apply '(lambda (cons cons?) (cons? (cons () ()))) 'cons 'cons?))
      env-empty)
     ((denote (std0 'true)) env-empty))
   (check-equal?
-    ((denote (t-apply (std0 'nil?)
-                      (t-apply (std0 'tail)
-                               (t-apply (t-apply (std0 'cons)
-                                                 (t-value (v-unit)))
-                                        (std0 'nil)))))
+    ((denote
+       (std0-apply '(lambda (cons nil tail nil?) (nil? (tail (cons () nil))))
+                   'cons 'nil 'tail 'nil?))
      env-empty)
     ((denote (std0 'true)) env-empty))
   )
