@@ -133,7 +133,7 @@
             ((ext0 (phead ir0))
              (ext1 (phead ir1))
              (add3 (lambda (b0 b1 carry)
-                     (if0 b0 (if0 b1 carry
+                     (if0 b0 (if0 b1 (pair carry 0)
                                   (if0 carry (pair 1 0) (pair 0 1)))
                           (if0 b1 (if0 carry (pair 1 0) (pair 0 1))
                                (pair carry 1)))))
@@ -141,8 +141,7 @@
                (lambda (current rest)
                  (if0 (phead rest)
                       (pcons 0 (pcons (phead (ptail rest))
-                                      (bits current
-                                            (ptail (ptail rest)))))
+                                      (bits current (ptail (ptail rest)))))
                       (if0 (bit=?0 current (ptail rest)) rest
                            (pcons
                              0 (pcons (ptail rest)
@@ -153,21 +152,24 @@
              (add
                (fix
                  (lambda (add carry)
-                   (let ((trimmed-add
-                           (lambda (b0 b1 carry bs0 bs1)
-                             (let* ((rc (add3 1 0 carry))
+                   (let ((trimmed/f
+                           (lambda (f b0 b1 carry bs0 bs1)
+                             (let* ((rc (add3 b0 b1 carry))
                                     (result (phead rc))
                                     (carry  (ptail rc)))
-                               (trimmed result (add carry bs0 bs1))))))
+                               (trimmed result (f carry bs0 bs1))))))
                      (bits-cocase
-                       (lambda (_) (pcons 1 (phead (add3 ext0 ext1 carry))))
+                       (lambda (_)
+                         (trimmed/f (lambda (carry _ _)
+                                      (pcons 1 (phead (add3 ext0 ext1 carry))))
+                                    ext0 ext1 carry () ()))
                        (lambda (bs1) (add carry (bits ext0 bits-nil) bs1))
                        (lambda (bs0) (add carry bs0 (bits ext1 bits-nil)))
-                       (lambda (bs0 bs1) (trimmed-add 0 0 carry bs0 bs1))
-                       (lambda (bs0 bs1) (trimmed-add 1 0 carry bs0 bs1))
-                       (lambda (bs0 bs1) (trimmed-add 0 1 carry bs0 bs1))
-                       (lambda (bs0 bs1) (trimmed-add 1 1 carry bs0 bs1))))))))
-            (return (add 0 (ptail ir0) (ptail ir1)))))))
+                       (trimmed/f add 0 0 carry)
+                       (trimmed/f add 1 0 carry)
+                       (trimmed/f add 0 1 carry)
+                       (trimmed/f add 1 1 carry)))))))
+            (tagged tag:integer (return (add 0 (ptail ir0) (ptail ir1))))))))
 
     (nil     (tagged tag:nil ()))
     (cons    (lambda (hd tl) (tagged tag:cons (pcons hd tl))))
@@ -255,4 +257,35 @@
                    'integer<=?))
      env-empty)
     ((denote (std0 'false)) env-empty))
+
+  (check-equal?
+    ((denote
+       (std0-apply `(lambda (iop) (iop ,(int->integer 1) ,(int->integer 2)))
+                   'integer+))
+     env-empty)
+    ((denote (unsafe0-parse (int->integer 3))) env-empty))
+  (check-equal?
+    ((denote
+       (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 3)))
+                   'integer+))
+     env-empty)
+    ((denote (unsafe0-parse (int->integer 9))) env-empty))
+  (check-equal?
+    ((denote
+       (std0-apply `(lambda (iop) (iop ,(int->integer -7) ,(int->integer 3)))
+                   'integer+))
+     env-empty)
+    ((denote (unsafe0-parse (int->integer -4))) env-empty))
+  (check-equal?
+    ((denote
+       (std0-apply `(lambda (iop) (iop ,(int->integer -2) ,(int->integer -5)))
+                   'integer+))
+     env-empty)
+    ((denote (unsafe0-parse (int->integer -7))) env-empty))
+  (check-equal?
+    ((denote
+       (std0-apply `(lambda (iop) (iop ,(int->integer 5) ,(int->integer -5)))
+                   'integer+))
+     env-empty)
+    ((denote (unsafe0-parse (int->integer 0))) env-empty))
   )
