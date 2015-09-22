@@ -123,7 +123,7 @@
     (integer=?  (integer-compare->case true false false))
     (integer<?  (integer-compare->case false true false))
     (integer<=? (integer-compare->case true true false))
-    (integer>?  (integer-compare->case true false true))
+    (integer>?  (integer-compare->case false false true))
     (integer>=? (integer-compare->case true false true))
     (integer+
       (tagged-binop
