@@ -8,23 +8,9 @@ text-based bootstrap
     term/value annotator, re-annotator + annotation-mapping
 
   racket codecs
-    tuples
-    unary nats
-    bitstrings
-    symbols
+    symbol mapping and injection
 
-  unsafe0: for implementing primitives needed to bootstrap unsafe1
-    syntax
-      (combiner operand ...), lambda, (), 0, 1, pair, unpair, if0, let[*]
-    provides:
-      data representations to support unsafe1 literals and quotation:
-        tagged data: symbol, nil/cons, boolean, integer
-      operations:
-        tag-compare->case, tagged, tagged->tag, tagged->payload
-        symbol (externally-chosen and injected binaries): symbol-compare->case
-        nil/cons: tuple->case (where cons case deconstructs)
-        boolean: boolean->case to support 'if'
-        arbitrary-length binary int: int-compare->case (with 3 choices), +, -, *
+  std0: integer*
 
   unsafe1: for implementing unsafe2 evaluator and support
     syntax
