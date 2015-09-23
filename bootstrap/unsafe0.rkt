@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  tuple0->list
   unsafe0-parse
   unsafe0-module
   )
@@ -81,6 +82,7 @@
     ((v-unit)     '())
     ((v-pair l r) (list* l (tuple0->list r)))))
 
+; bindings must not redefine 'pair'
 (def (unsafe0-module bindings)
   names = (forl (list name expr) <- bindings name)
   body = (foldr (lambda (name acc) `(pair ,name ,acc)) '() names)
