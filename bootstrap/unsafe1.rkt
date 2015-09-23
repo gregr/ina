@@ -8,12 +8,23 @@
   "parsing.rkt"
   "term.rkt"
   "unsafe0.rkt"
+  gregr-misc/dict
+  gregr-misc/maybe
+  gregr-misc/record
+  gregr-misc/sugar
   racket/function
   racket/match
   )
 
+(module+ test
+  (require
+    "denotation.rkt"
+    rackunit
+    ))
+
 (define pcons '(lambda (hd tl) (pair hd tl)))
 
+(define tag:symbol '(pair 0 (pair 0 (pair 0 ()))))
 (define tag:integer '(pair 1 (pair 0 (pair 0 ()))))
 
 (define bits-nil '(pair 0 ()))
@@ -23,6 +34,8 @@
   (if (= 0 n) bits-nil
     `(,bits ,(if ((if invert? not identity) (= 0 (modulo n 2))) 0 1)
             ,(nat->bits (quotient n 2) invert?))))
+
+(define (nat->symbol n) `(,pcons ,tag:symbol ,(nat->bits n)))
 
 (define (int->integer i)
   `(,pcons ,tag:integer (,pcons ,(if (< i 0) 1 0)
@@ -46,7 +59,7 @@
     (not?0  (lambda (b0)    (if0 b0 1 0)))
     (bit=?0 (lambda (b0 b1) (if0 b0 (if0 b1 0 1) (if0 b1 1 0))))
 
-    (tag:symbol  (pair 0 (pair 0 (pair 0 ()))))
+    (tag:symbol  ,tag:symbol)
     (tag:boolean (pair 0 (pair 0 (pair 1 ()))))
     (tag:nil     (pair 0 (pair 1 (pair 0 ()))))
     (tag:cons    (pair 0 (pair 1 (pair 1 ()))))
@@ -204,12 +217,6 @@
 (define std0 (compose t-value (curry hash-ref std0-module)))
 
 (module+ test
-  (require
-    "denotation.rkt"
-    gregr-misc/sugar
-    rackunit
-    )
-
   (define (std0-apply stx . std0-idents)
     (forf proc = (unsafe0-parse stx)
           ident <- std0-idents
@@ -345,13 +352,31 @@
               (t-value (v-unit))))
     (_ (error (format "invalid if: ~a" `(,head . ,tail))))))
 
+(record symbol-table symbol->value count->symbol)
+(define symbol-table-empty (symbol-table (hash) (hash)))
+(def (symbol-table-get st sym)
+  (symbol-table s->v c->s) = st
+  (match (hash-get s->v sym)
+    ((nothing) (lets count = (hash-count s->v)
+                     c->s = (hash-set c->s count sym)
+                     val = (step-complete (unsafe0-parse (nat->symbol count)))
+                     s->v = (hash-set s->v sym val)
+                     (values (symbol-table s->v c->s) val)))
+    ((just val) (values st val))))
+(define *symbol-table* (box symbol-table-empty))
+(def ((boxed-symbol-table-get bx) sym)
+  (values st result) = (symbol-table-get (unbox bx) sym)
+  _ = (set-box! bx st)
+  result)
+(define symbol->value! (boxed-symbol-table-get *symbol-table*))
+
 (define (parse-quoted senv stx)
   (match stx
     (`(,hd . ,tl)
       (t-apply (t-apply (std0 'cons) (parse-quoted senv hd))
                (parse-quoted senv tl)))
     ('() (std0 'nil))
-    ; TODO: symbol
+    ((? symbol?) (symbol->value! stx))
     (_ (parse-extra senv stx))))
 
 (define (parse-quote senv head tail)
@@ -385,4 +410,15 @@
                                   (cons (cons zero (cons one nil)) nil)))
                          'nil 'cons 'true 'false 'zero 'positive-one))
      env-empty))
+  (check-equal?
+    ((denote (unsafe1-parse ''(a b c b a c))) env-empty)
+    (forf
+      result = ((denote
+                  (std0-apply
+                    '(lambda (nil cons a b c)
+                       (cons a (cons b (cons c (cons
+                                                 b (cons a (cons c nil)))))))
+                    'nil 'cons)) env-empty)
+      sym <- '(a b c)
+      (result ((denote (symbol->value! sym)) env-empty))))
   )
