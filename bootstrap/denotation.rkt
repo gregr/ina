@@ -1,7 +1,6 @@
 #lang racket/base
 (provide
   denote
-  env-empty
   )
 
 (require
@@ -72,8 +71,8 @@
                                  val scope (annotate path))))))))))
   (pre-denote-term tm scope path))
 
-(define ((denote term (annotate ~a)) (env env-empty))
-  ((pre-denote term annotate 0 '()) env))
+(define (denote term (annotate ~a))
+  ((pre-denote term annotate 0 '()) env-empty))
 
 (module+ test
   (define dt
@@ -96,6 +95,6 @@
       (t-value (v-var 0))))
   (define test-term-1
     (t-apply (t-value (v-lam test-term-0)) (t-value (v-bit (b-1)))))
-  (define completed ((denote test-term-1)))
-  (check-equal? ((denote (just-x (step test-term-1)))) completed)
+  (define completed (denote test-term-1))
+  (check-equal? (denote (just-x (step test-term-1))) completed)
   (check-equal? completed '(1 . 1)))

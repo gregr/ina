@@ -223,108 +223,93 @@
           (t-apply proc (std0 ident))))
 
   (check-equal?
-    ((denote (t-apply (std0 'identity) (t-value (v-unit))))
-     env-empty)
+    (denote (t-apply (std0 'identity) (t-value (v-unit))))
     '())
   (check-equal?
-    ((denote
+    (denote
        (std0-apply '(lambda (psecond)
                       (psecond (pair (pair 1 0) (pair (pair 0 1) ()))))
                    'psecond))
-     env-empty)
     '(0 . 1))
   (check-equal?
-    ((denote
+    (denote
        (std0-apply '(lambda (cons cons?) (cons? (cons () ()))) 'cons 'cons?))
-     env-empty)
-    ((denote (std0 'true)) env-empty))
+    (denote (std0 'true)))
   (check-equal?
-    ((denote
+    (denote
        (std0-apply '(lambda (cons nil tail nil?) (nil? (tail (cons () nil))))
                    'cons 'nil 'tail 'nil?))
-     env-empty)
-    ((denote (std0 'true)) env-empty))
+    (denote (std0 'true)))
 
   (check-equal?
-    ((denote (std0-apply
+    (denote (std0-apply
                `(lambda (pcons bits=?)
                   (pcons (bits=? ,(nat->bits 3) ,(nat->bits 6))
                          (bits=? ,(nat->bits 6) ,(nat->bits 6))))
                'pcons 'bits=?))
-     env-empty)
-    ((denote (std0-apply `(lambda (true false) (pair false true))
-                         'true 'false)) env-empty))
+    (denote (std0-apply `(lambda (true false) (pair false true))
+                         'true 'false)))
 
   (check-equal?
-    ((denote
+    (denote
        (std0-apply `(lambda (iop) (iop ,(int->integer -1) ,(int->integer 1)))
                    'integer<?))
-     env-empty)
-    ((denote (std0 'true)) env-empty))
+    (denote (std0 'true)))
   (check-equal?
-    ((denote
+    (denote
        (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 6)))
                    'integer=?))
-     env-empty)
-    ((denote (std0 'true)) env-empty))
+    (denote (std0 'true)))
   (check-equal?
-    ((denote
+    (denote
        (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 7)))
                    'integer=?))
-     env-empty)
-    ((denote (std0 'false)) env-empty))
+    (denote (std0 'false)))
   (check-equal?
-    ((denote
+    (denote
        (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 3)))
                    'integer>?))
-     env-empty)
-    ((denote (std0 'true)) env-empty))
+    (denote (std0 'true)))
   (check-equal?
-    ((denote
+    (denote
        (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 3)))
                    'integer<=?))
-     env-empty)
-    ((denote (std0 'false)) env-empty))
+    (denote (std0 'false)))
 
   (check-equal?
-    ((denote
+    (denote
        (std0-apply `(lambda (iop) (iop ,(int->integer 1) ,(int->integer 2)))
                    'integer+))
-     env-empty)
-    ((denote (unsafe0-parse (int->integer 3))) env-empty))
+    (denote (unsafe0-parse (int->integer 3))))
   (check-equal?
-    ((denote
+    (denote
        (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 3)))
                    'integer+))
-     env-empty)
-    ((denote (unsafe0-parse (int->integer 9))) env-empty))
+    (denote (unsafe0-parse (int->integer 9))))
   (check-equal?
-    ((denote
+    (denote
        (std0-apply `(lambda (iop) (iop ,(int->integer -7) ,(int->integer 3)))
                    'integer+))
-     env-empty)
-    ((denote (unsafe0-parse (int->integer -4))) env-empty))
+    (denote (unsafe0-parse (int->integer -4))))
   (check-equal?
-    ((denote
+    (denote
        (std0-apply `(lambda (iop) (iop ,(int->integer -2) ,(int->integer -5)))
                    'integer+))
-     env-empty)
-    ((denote (unsafe0-parse (int->integer -7))) env-empty))
+    (denote (unsafe0-parse (int->integer -7))))
   (check-equal?
-    ((denote
+    (denote
        (std0-apply `(lambda (iop) (iop ,(int->integer 5) ,(int->integer -5)))
                    'integer+))
-     env-empty)
-    ((denote (unsafe0-parse (int->integer 0))) env-empty))
+    (denote (unsafe0-parse (int->integer 0))))
 
   (check-equal?
-    ((denote (std0-apply `(lambda (iop) (iop ,(int->integer 5)))
-                         'integer-invert)) env-empty)
-    ((denote (unsafe0-parse (int->integer -5))) env-empty))
+    (denote (std0-apply `(lambda (iop) (iop ,(int->integer 5)))
+                         'integer-invert))
+    (denote (unsafe0-parse (int->integer -5))))
   (check-equal?
-    ((denote (std0-apply `(lambda (iop) (iop (iop ,(int->integer -5))))
-                         'integer-invert)) env-empty)
-    ((denote (unsafe0-parse (int->integer -5))) env-empty))
+    (denote (std0-apply `(lambda (iop) (iop (iop ,(int->integer -5))))
+                         'integer-invert))
+    (denote (unsafe0-parse (int->integer -5))))
   )
 
 (define (parse-extra senv stx)
@@ -400,25 +385,24 @@
 
 (module+ test
   (check-equal?
-    ((denote (unsafe1-parse '((lambda (a b) (pair a b))
-                              (if #t 5 7) (if #f (bit 0) (bit 1))))) env-empty)
-    `(,((denote (unsafe0-parse (int->integer 5))) env-empty) . 1))
+    (denote (unsafe1-parse '((lambda (a b) (pair a b))
+                              (if #t 5 7) (if #f (bit 0) (bit 1)))))
+    `(,(denote (unsafe0-parse (int->integer 5))) . 1))
   (check-equal?
-    ((denote (unsafe1-parse ''((#t #f) (0 1)))) env-empty)
-    ((denote (std0-apply '(lambda (nil cons true false zero one)
+    (denote (unsafe1-parse ''((#t #f) (0 1))))
+    (denote (std0-apply '(lambda (nil cons true false zero one)
                             (cons (cons true (cons false nil))
                                   (cons (cons zero (cons one nil)) nil)))
-                         'nil 'cons 'true 'false 'zero 'positive-one))
-     env-empty))
+                         'nil 'cons 'true 'false 'zero 'positive-one)))
   (check-equal?
-    ((denote (unsafe1-parse ''(a b c b a c))) env-empty)
+    (denote (unsafe1-parse ''(a b c b a c)))
     (forf
-      result = ((denote
+      result = (denote
                   (std0-apply
                     '(lambda (nil cons a b c)
                        (cons a (cons b (cons c (cons
                                                  b (cons a (cons c nil)))))))
-                    'nil 'cons)) env-empty)
+                    'nil 'cons))
       sym <- '(a b c)
-      (result ((denote (symbol->value! sym)) env-empty))))
+      (result (denote (symbol->value! sym)))))
   )

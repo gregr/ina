@@ -57,23 +57,23 @@
         ((lambda (b0) (unpair b0 (pair () (pair b0 (pair x0 x1)))))
          x0))
       1 0)))
-  (check-equal? ((denote tt-0) env-empty) '(1 1 . 0))
+  (check-equal? (denote tt-0) '(1 1 . 0))
   (define tt-1 (unsafe0-parse
     '((lambda (x0 x1)
         ((lambda (b0) (if0 b0 b0 (pair x0 x1)))
          x0))
       1 0)))
-  (check-equal? ((denote tt-1) env-empty) '(1 . 0))
+  (check-equal? (denote tt-1) '(1 . 0))
   (define tt-2 (unsafe0-parse
     '(let ((x0 1) (x1 0))
        ((lambda (b0) (if0 b0 b0 (pair x0 x1)))
         x0))))
-  (check-equal? ((denote tt-2) env-empty) '(1 . 0))
+  (check-equal? (denote tt-2) '(1 . 0))
   (define tt-3 (unsafe0-parse
     '(let* ((x0 1) (x1 0) (p0 (pair x0 x1)))
        ((lambda (b0) (if0 (unpair b0 p0) p0 b0))
         x0))))
-  (check-equal? ((denote tt-3) env-empty) '(1 . 0))
+  (check-equal? (denote tt-3) '(1 . 0))
   )
 
 (define (tuple0->list tup)
