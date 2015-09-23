@@ -218,9 +218,7 @@
 
 (module+ test
   (define (std0-apply stx . std0-idents)
-    (forf proc = (unsafe0-parse stx)
-          ident <- std0-idents
-          (t-apply proc (std0 ident))))
+    (build-apply (unsafe0-parse stx) (map std0 std0-idents)))
 
   (check-equal?
     (denote (t-apply (std0 'identity) (t-value (v-unit))))

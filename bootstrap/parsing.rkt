@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  build-apply
   parse
   parse-lambda
   parse-let
@@ -36,7 +37,7 @@
     ((nothing) (error (format "undefined identifier: ~a" ident)))
     ((just val) val)))
 
-(define (build-application proc args)
+(define (build-apply proc args)
   (foldl (lambda (arg proc) (t-apply proc arg)) proc args))
 
 (def (build-lambda parse senv params body)
@@ -61,7 +62,7 @@
     ((cons head tail)
      (match (if (symbol? head) (senv-get senv head) (nothing))
        ((just (? procedure? special)) (special senv head tail))
-       (_ (build-application (self senv head) (map (curry self senv) tail)))))
+       (_ (build-apply (self senv head) (map (curry self senv) tail)))))
     ('()         (t-value (v-unit)))
     ((? symbol?) (parse-identifier senv stx))
     (_           (parse-extra senv stx))))
@@ -101,7 +102,7 @@
     ((list (? non-empty-list? bindings) body)
      (lets (values params args) = (unzip-bindings err bindings)
            proc = (build-lambda parse senv params body)
-           (build-application proc (map (curry parse senv) args))))
+           (build-apply proc (map (curry parse senv) args))))
     (_ (err))))
 (define ((parse-let* parse) senv head tail)
   (define (err) (error (format "invalid let*: ~a" `(,head . ,tail))))
