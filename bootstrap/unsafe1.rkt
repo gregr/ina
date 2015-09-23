@@ -57,7 +57,6 @@
     (ptail    (lambda (pr)    (unpair 1 pr)))
     (psecond  (lambda (pr)    (phead (ptail pr))))
     (pthird   (lambda (pr)    (phead (ptail (ptail pr)))))
-    (puncurry (lambda (f pr)  (f (phead pr) (ptail pr))))
 
     (not?0  (lambda (b0)    (if0 b0 1 0)))
     (bit=?0 (lambda (b0 b1) (if0 b0 (if0 b1 0 1) (if0 b1 1 0))))
@@ -91,8 +90,6 @@
     (true           (bit->boolean 0))
     (false          (bit->boolean 1))
     (boolean->bit   (tagged-map tag:boolean identity))
-    (not?           (compose not?0 boolean->bit) )
-    (boolean-unpair (lambda (b pr) (unpair (boolean->bit b) pr)))
     (boolean?       (has-tag? tag:boolean))
 
     (bits-nil   ,bits-nil)
@@ -212,7 +209,6 @@
     (cons    (lambda (hd tl) (tagged tag:cons (pcons hd tl))))
     (head    (tagged-map tag:cons phead))
     (tail    (tagged-map tag:cons ptail))
-    (uncurry (lambda (f) ((tagged-map tag:cons (puncurry f)))))
     (nil?    (has-tag? tag:nil))
     (cons?   (has-tag? tag:cons))
     )))
