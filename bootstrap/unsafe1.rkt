@@ -1,11 +1,15 @@
 #lang racket/base
 (provide
+  unsafe1-parse
   )
 
 (require
+  "operation.rkt"
+  "parsing.rkt"
   "term.rkt"
   "unsafe0.rkt"
   racket/function
+  racket/match
   )
 
 (define pcons '(lambda (hd tl) (pair hd tl)))
@@ -314,4 +318,71 @@
     ((denote (std0-apply `(lambda (iop) (iop (iop ,(int->integer -5))))
                          'integer-invert)) env-empty)
     ((denote (unsafe0-parse (int->integer -5))) env-empty))
+  )
+
+(define (parse-extra senv stx)
+  (match stx
+    (#t           (std0 'true))
+    (#f           (std0 'false))
+    ((? integer?) (step-complete (unsafe0-parse (int->integer stx))))
+    (_            (error (format "invalid syntax: ~a" stx)))))
+
+(define parse-term (parse parse-extra))
+(define parse-val (parse-value parse-term))
+
+(define (parse-bit senv head tail)
+  (match tail
+    ((list 0) (t-value (v-bit (b-0))))
+    ((list 1) (t-value (v-bit (b-1))))
+    (_        (error (format "invalid bit: ~a" `(,head . ,tail))))))
+
+(define (parse-if senv head tail)
+  (define (pthunk stx) ((parse-thunk parse-term) senv stx))
+  (match tail
+    ((list cnd tcase fcase)
+     (t-apply (t-unpair (t-apply (std0 'boolean->bit) (parse-term senv cnd))
+                        (t-value (v-pair (pthunk tcase) (pthunk fcase))))
+              (t-value (v-unit))))
+    (_ (error (format "invalid if: ~a" `(,head . ,tail))))))
+
+(define (parse-quoted senv stx)
+  (match stx
+    (`(,hd . ,tl)
+      (t-apply (t-apply (std0 'cons) (parse-quoted senv hd))
+               (parse-quoted senv tl)))
+    ('() (std0 'nil))
+    ; TODO: symbol
+    (_ (parse-extra senv stx))))
+
+(define (parse-quote senv head tail)
+  (match tail
+    ((list stx) (parse-quoted senv stx))
+    (_ (error (format "invalid quote: ~a" `(,head . ,tail))))))
+
+(define unsafe1-specials `(
+  (quote      . ,parse-quote)
+  (lambda     . ,(parse-lambda parse-term))
+  (bit        . ,parse-bit)
+  (pair       . ,(parse-pair parse-val))
+  (unpair     . ,(parse-unpair parse-term))
+  (if         . ,parse-if)
+  (let        . ,(parse-let parse-term))
+  (let*       . ,(parse-let* parse-term))
+  ))
+
+(define unsafe1-senv-empty (senv-new unsafe1-specials))
+(define unsafe1-parse (curry parse-term unsafe1-senv-empty))
+
+(module+ test
+  (check-equal?
+    ((denote (unsafe1-parse '((lambda (a b) (pair a b))
+                              (if #t 5 7) (if #f (bit 0) (bit 1))))) env-empty)
+    `(,((denote (unsafe0-parse (int->integer 5))) env-empty) . 1))
+  (check-equal?
+    ((denote (unsafe1-parse ''((#t #f) (0 1)))) env-empty)
+    ((denote (std0-apply '(lambda (nil cons true false zero one)
+                            (cons (cons true (cons false nil))
+                                  (cons (cons zero (cons one nil)) nil)))
+                         'nil 'cons 'true 'false 'zero 'positive-one))
+     env-empty))
   )
