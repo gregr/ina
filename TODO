@@ -7,12 +7,7 @@ text-based bootstrap
   applicative syntax
     term/value annotator, re-annotator + annotation-mapping
 
-  racket codecs
-    symbol mapping and injection
-
   unsafe1: for implementing unsafe2 evaluator and support
-    syntax
-      (combiner operand ...), literals (boolean, integer), lambda, (), (bit 0), (bit 1), pair, unpair, if, let[*], quote, quasiquote/unquote
     operations:
       fix, head, tail, foldl, foldr, map, append, apply,
       tuple-empty?, tuple-pair?, symbol?, symbol=?, assoc/? (will take symbol=? as an arg),
