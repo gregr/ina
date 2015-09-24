@@ -38,7 +38,8 @@
     `(,bits ,(if ((if invert? not identity) (= 0 (modulo n 2))) 0 1)
             ,(nat->bits (quotient n 2) invert?))))
 
-(define (nat->symbol n) `(,pcons ,tag:symbol ,(nat->bits n)))
+(define (nat->symbol n)
+  (step-complete (unsafe0-parse `(,pcons ,tag:symbol ,(nat->bits n)))))
 
 (define (int->integer i)
   `(,pcons ,tag:integer (,pcons ,(if (< i 0) 1 0)
@@ -341,7 +342,7 @@
   (match (hash-get s->v sym)
     ((nothing) (lets count = (hash-count s->v)
                      c->s = (hash-set c->s count sym)
-                     val = (step-complete (unsafe0-parse (nat->symbol count)))
+                     val = (nat->symbol count)
                      s->v = (hash-set s->v sym val)
                      (values (symbol-table s->v c->s) val)))
     ((just val) (values st val))))
