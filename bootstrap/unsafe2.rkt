@@ -10,6 +10,8 @@
 
 (module+ test
   (require
+    "denotation.rkt"
+    "parsing.rkt"
     rackunit
     ))
 
@@ -69,4 +71,31 @@
 (define std1 (compose t-value (curry hash-ref std1-module)))
 
 (module+ test
+  (define ((std1-apply stx . std1-idents) . args)
+    (denote (build-apply
+              (build-apply (unsafe1-parse stx) (map std1 std1-idents)) args)))
+
+  (check-equal?
+    ((std1-apply '(lambda (append)
+                    (append '((a 1) (b 2)) '((c 3) (d 4)))) 'append))
+    (denote (unsafe1-parse ''((a 1) (b 2) (c 3) (d 4)))))
+  (check-equal?
+    ((std1-apply '(lambda (map +) (map (+ 1) '(-2 -1 0))) 'map '+))
+    (denote (unsafe1-parse ''(-1 0 1))))
+  (check-equal?
+    ((std1-apply '(lambda (apply +) (apply + '(-1 1))) 'apply '+))
+    (denote (unsafe1-parse 0)))
+
+  (check-equal?
+    ((std1-apply '(lambda (eval env-empty env-add +)
+                    ((eval (env-add env-empty 'i+ #f +) '(i+ 2)) 5))
+                 'eval 'env-empty 'env-add '+))
+    (denote (unsafe1-parse 7)))
+  (check-equal?
+    ((std1-apply '(lambda ($lambda env-empty env-add +)
+                    (($lambda (env-add env-empty 'i+ #f +)
+                              '((i0 i1) (i+ (i+ i0 i1) 1)))
+                     3 2))
+                 '$lambda 'env-empty 'env-add '+))
+    (denote (unsafe1-parse 6)))
   )
