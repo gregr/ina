@@ -7,11 +7,8 @@ text-based bootstrap
   applicative syntax
     term/value annotator, re-annotator + annotation-mapping
 
-  unsafe1: for implementing unsafe2 evaluator and support
-    operations:
-      fix, head, tail, foldl, foldr, map, append, apply,
-      tuple-empty?, tuple-pair?, symbol?, symbol=?, assoc/? (will take symbol=? as an arg),
-      env-empty, env-get, env-add, unsafe2-eval, $lambda, $lambda$
+  simple program/module definition and linking
+    generalize unsafeX-module
 
   unsafe2: to bootstrap safe languages
     syntax
