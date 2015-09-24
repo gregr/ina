@@ -42,9 +42,10 @@
   (step-complete (unsafe0-parse `(,pcons ,tag:symbol ,(nat->bits n)))))
 
 (define (int->integer i)
-  `(,pcons ,tag:integer (,pcons ,(if (< i 0) 1 0)
-                                ,(nat->bits (if (< i 0) (- (+ i 1)) i)
-                                            (< i 0)))))
+  (step-complete (unsafe0-parse
+    `(,pcons ,tag:integer
+       (,pcons ,(if (< i 0) 1 0)
+         ,(nat->bits (if (< i 0) (- (+ i 1)) i) (< i 0)))))))
 
 (define std0-module (unsafe0-module
   `((identity (lambda (x) x))
@@ -217,104 +218,64 @@
 (define std0 (compose t-value (curry hash-ref std0-module)))
 
 (module+ test
-  (define (std0-apply stx . std0-idents)
-    (build-apply (unsafe0-parse stx) (map std0 std0-idents)))
+  (define ((std0-apply stx . std0-idents) . args)
+    (denote (build-apply
+              (build-apply (unsafe0-parse stx) (map std0 std0-idents)) args)))
 
   (check-equal?
     (denote (t-apply (std0 'identity) (t-value (v-unit))))
     '())
   (check-equal?
-    (denote
-       (std0-apply '(lambda (psecond)
-                      (psecond (pair (pair 1 0) (pair (pair 0 1) ()))))
-                   'psecond))
+    ((std0-apply
+       '(lambda (psecond) (psecond (pair (pair 1 0) (pair (pair 0 1) ()))))
+       'psecond))
     '(0 . 1))
   (check-equal?
-    (denote
-       (std0-apply '(lambda (cons cons?) (cons? (cons () ()))) 'cons 'cons?))
+    ((std0-apply '(lambda (cons cons?) (cons? (cons () ()))) 'cons 'cons?))
     (denote (std0 'true)))
   (check-equal?
-    (denote
-       (std0-apply '(lambda (cons nil tail nil?) (nil? (tail (cons () nil))))
+    ((std0-apply '(lambda (cons nil tail nil?) (nil? (tail (cons () nil))))
                    'cons 'nil 'tail 'nil?))
     (denote (std0 'true)))
 
   (check-equal?
-    (denote (std0-apply
-               `(lambda (pcons bits=?)
-                  (pcons (bits=? ,(nat->bits 3) ,(nat->bits 6))
-                         (bits=? ,(nat->bits 6) ,(nat->bits 6))))
-               'pcons 'bits=?))
-    (denote (std0-apply `(lambda (true false) (pair false true))
-                         'true 'false)))
+    ((std0-apply `(lambda (pcons bits=?)
+                    (pcons (bits=? ,(nat->bits 3) ,(nat->bits 6))
+                           (bits=? ,(nat->bits 6) ,(nat->bits 6))))
+                 'pcons 'bits=?))
+    ((std0-apply `(lambda (true false) (pair false true))'true 'false)))
+
+  (define (run-iop2 iop-name i0 i1)
+    ((std0-apply `(lambda (iop i0 i1) (iop i0 i1)) iop-name)
+     (int->integer i0) (int->integer i1)))
+
+  (check-equal? (run-iop2 'integer<? -1 1) (denote (std0 'true)))
+  (check-equal? (run-iop2 'integer=? 6 6) (denote (std0 'true)))
+  (check-equal? (run-iop2 'integer=? 6 7) (denote (std0 'false)))
+  (check-equal? (run-iop2 'integer>? 6 3) (denote (std0 'true)))
+  (check-equal? (run-iop2 'integer<=? 6 3) (denote (std0 'false)))
+  (check-equal? (run-iop2 'integer+ 1 2) (denote (int->integer 3)))
+  (check-equal? (run-iop2 'integer+ 6 3) (denote (int->integer 9)))
+  (check-equal? (run-iop2 'integer+ -7 3) (denote (int->integer -4)))
+  (check-equal? (run-iop2 'integer+ -2 -5) (denote (int->integer -7)))
+  (check-equal? (run-iop2 'integer+ 5 -5) (denote (int->integer 0)))
 
   (check-equal?
-    (denote
-       (std0-apply `(lambda (iop) (iop ,(int->integer -1) ,(int->integer 1)))
-                   'integer<?))
-    (denote (std0 'true)))
-  (check-equal?
-    (denote
-       (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 6)))
-                   'integer=?))
-    (denote (std0 'true)))
-  (check-equal?
-    (denote
-       (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 7)))
-                   'integer=?))
-    (denote (std0 'false)))
-  (check-equal?
-    (denote
-       (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 3)))
-                   'integer>?))
-    (denote (std0 'true)))
-  (check-equal?
-    (denote
-       (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 3)))
-                   'integer<=?))
-    (denote (std0 'false)))
+    ((std0-apply `(lambda (iop int) (iop int)) 'integer-invert)
+     (int->integer 5))
+    (denote (int->integer -5)))
 
   (check-equal?
-    (denote
-       (std0-apply `(lambda (iop) (iop ,(int->integer 1) ,(int->integer 2)))
-                   'integer+))
-    (denote (unsafe0-parse (int->integer 3))))
-  (check-equal?
-    (denote
-       (std0-apply `(lambda (iop) (iop ,(int->integer 6) ,(int->integer 3)))
-                   'integer+))
-    (denote (unsafe0-parse (int->integer 9))))
-  (check-equal?
-    (denote
-       (std0-apply `(lambda (iop) (iop ,(int->integer -7) ,(int->integer 3)))
-                   'integer+))
-    (denote (unsafe0-parse (int->integer -4))))
-  (check-equal?
-    (denote
-       (std0-apply `(lambda (iop) (iop ,(int->integer -2) ,(int->integer -5)))
-                   'integer+))
-    (denote (unsafe0-parse (int->integer -7))))
-  (check-equal?
-    (denote
-       (std0-apply `(lambda (iop) (iop ,(int->integer 5) ,(int->integer -5)))
-                   'integer+))
-    (denote (unsafe0-parse (int->integer 0))))
-
-  (check-equal?
-    (denote (std0-apply `(lambda (iop) (iop ,(int->integer 5)))
-                         'integer-invert))
-    (denote (unsafe0-parse (int->integer -5))))
-  (check-equal?
-    (denote (std0-apply `(lambda (iop) (iop (iop ,(int->integer -5))))
-                         'integer-invert))
-    (denote (unsafe0-parse (int->integer -5))))
+    ((std0-apply `(lambda (iop int) (iop (iop int))) 'integer-invert)
+     (int->integer -5))
+    (denote (int->integer -5)))
   )
 
 (define (parse-extra senv stx)
   (match stx
     (#t           (std0 'true))
     (#f           (std0 'false))
-    ((? integer?) (step-complete (unsafe0-parse (int->integer stx))))
+    ((? integer?) (int->integer stx))
     (_            (error (format "invalid syntax: ~a" stx)))))
 
 (define parse-term (parse parse-extra))
@@ -385,22 +346,20 @@
   (check-equal?
     (denote (unsafe1-parse '((lambda (a b) (pair a b))
                               (if #t 5 7) (if #f (bit 0) (bit 1)))))
-    `(,(denote (unsafe0-parse (int->integer 5))) . 1))
+    `(,(denote (int->integer 5)) . 1))
   (check-equal?
     (denote (unsafe1-parse ''((#t #f) (0 1))))
-    (denote (std0-apply '(lambda (nil cons true false zero one)
-                            (cons (cons true (cons false nil))
-                                  (cons (cons zero (cons one nil)) nil)))
-                         'nil 'cons 'true 'false 'zero 'positive-one)))
+    ((std0-apply '(lambda (nil cons true false zero one)
+                    (cons (cons true (cons false nil))
+                          (cons (cons zero (cons one nil)) nil)))
+                 'nil 'cons 'true 'false 'zero 'positive-one)))
   (check-equal?
     (denote (unsafe1-parse ''(a b c b a c)))
     (forf
-      result = (denote
-                  (std0-apply
-                    '(lambda (nil cons a b c)
-                       (cons a (cons b (cons c (cons
-                                                 b (cons a (cons c nil)))))))
-                    'nil 'cons))
+      result = ((std0-apply
+                  '(lambda (nil cons a b c)
+                     (cons a (cons b (cons c (cons b (cons a (cons c nil)))))))
+                  'nil 'cons))
       sym <- '(a b c)
       (result (denote (symbol->value! sym)))))
   )
