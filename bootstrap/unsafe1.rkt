@@ -373,7 +373,7 @@
             ((? symbol?)               (list import (std0 import)))
             ((list name original-name) (list name (std0 original-name)))
             (_ (error (format "invalid import: ~a" import))))))
-  names = (forl (list name expr) <- bindings name)
+  names = (append import-params (forl (list name expr) <- bindings name))
   body = (foldr (lambda (name acc) `(pair ,name ,acc)) '() names)
   pre-module = (unsafe1-parse `(lambda ,import-params (let* ,bindings ,body)))
   prog = (build-apply pre-module import-args)
