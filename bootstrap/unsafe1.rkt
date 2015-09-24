@@ -5,13 +5,12 @@
   )
 
 (require
+  "linking.rkt"
   "operation.rkt"
   "parsing.rkt"
-  "substitution.rkt"
   "term.rkt"
   "unsafe0.rkt"
   gregr-misc/dict
-  gregr-misc/list
   gregr-misc/maybe
   gregr-misc/record
   gregr-misc/sugar
@@ -364,22 +363,8 @@
       (result (denote (symbol->value! sym)))))
   )
 
-; bindings must not redefine 'pair'
-(def (unsafe1-module std0-imports bindings)
-  (list import-params import-args) =
-  (zip-default '(() ())
-    (forl import <- std0-imports
-          (match import
-            ((? symbol?)               (list import (std0 import)))
-            ((list name original-name) (list name (std0 original-name)))
-            (_ (error (format "invalid import: ~a" import))))))
-  names = (append import-params (forl (list name expr) <- bindings name))
-  body = (foldr (lambda (name acc) `(pair ,name ,acc)) '() names)
-  pre-module = (unsafe1-parse `(lambda ,import-params (let* ,bindings ,body)))
-  prog = (build-apply pre-module import-args)
-  vals = (tuple0->list (t-value-v (substitute-full (step-complete prog))))
-  assocs = (forl name <- names val <- vals (cons name val))
-  (make-immutable-hash assocs))
+(define (unsafe1-module std0-imports bindings)
+  ((link-module unsafe1-parse) (open-module std0 std0-imports) bindings))
 
 (module+ test
   (lets

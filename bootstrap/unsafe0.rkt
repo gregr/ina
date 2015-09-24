@@ -1,16 +1,13 @@
 #lang racket/base
 (provide
-  tuple0->list
   unsafe0-parse
   unsafe0-module
   )
 
 (require
-  "operation.rkt"
+  "linking.rkt"
   "parsing.rkt"
-  "substitution.rkt"
   "term.rkt"
-  gregr-misc/sugar
   racket/function
   racket/match
   )
@@ -77,16 +74,4 @@
   (check-equal? (denote tt-3) '(1 . 0))
   )
 
-(define (tuple0->list tup)
-  (match tup
-    ((v-unit)     '())
-    ((v-pair l r) (list* l (tuple0->list r)))))
-
-; bindings must not redefine 'pair'
-(def (unsafe0-module bindings)
-  names = (forl (list name expr) <- bindings name)
-  body = (foldr (lambda (name acc) `(pair ,name ,acc)) '() names)
-  prog = (unsafe0-parse `(let* ,bindings ,body))
-  vals = (tuple0->list (t-value-v (substitute-full (step-complete prog))))
-  assocs = (forl name <- names val <- vals (cons name val))
-  (make-immutable-hash assocs))
+(define unsafe0-module (curry (link-module unsafe0-parse) '()))
