@@ -7,9 +7,6 @@ text-based bootstrap
   applicative syntax
     term/value annotator, re-annotator + annotation-mapping
 
-  simple program/module definition and linking
-    generalize unsafeX-module
-
   unsafe2: to bootstrap safe languages
     syntax
       (combiner operand ...), literals (boolean, integer), ()
