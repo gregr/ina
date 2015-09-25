@@ -16,6 +16,19 @@ text-based bootstrap
       fix*, if, cond, let[*], let$, letrec, match, quasiquote/unquote/unquote-splicing(new!), $, @, list, list*, apply*,
       filter, reverse, not?, and?, or?, and-map?, or-map?, datum->tag (tag as a symbol)
 
+  statically-generated unique symbols
+  non-primitive tagged data
+
+  self-hosted semantics
+    term
+    denotation
+    substitution
+    operation
+    parsing
+      unsafe0
+      unsafe1
+    linking
+
   future bootstrap goals:
     where do records/modules fit?
     extended numeric literals (rational, floating point, complex), characters as ascii/utf8 bit encodings, symbols as strings with alternative tagging rather than injected binaries
