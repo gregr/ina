@@ -44,6 +44,24 @@ text-based bootstrap
     effectful calculus with a compatible step relation (fully Church-Rosser as in Shutt's vau calculi, not just satisfying Felleisen's diamond property)
       shift/reset, constant, mutable ref
 
+  automated optimization ideas (in case bootstrapped system is unusably slow):
+    make sure to check terms for size explosion after using any of these
+
+    simply-typed termination-checking normalization
+      naively repeat simple-typing during normalization until/unless occurs-check fails
+      could also be applied bottom-up with rank-1 intersections/unions
+
+    well-quasi-order termination-checking normalization
+      repeating program-point patterns
+        tag-bags as in http://research.microsoft.com/en-us/um/people/simonpj/papers/supercompilation/termination-combinators.pdf)
+          subsumes homeomorphic embeddings
+      lexicographic order measure-tracking across cyclic application paths
+
+    supercompilation
+      not exactly low-hanging fruit, so would prefer to save this until later
+      the above solutions already correspond to driving, so this would add splitting,
+      context injection, and cyclic memoization (extraction of recursive state machines)
+
 
 high-level language design
   should serve as an example of creating an ina backend for a HLL
