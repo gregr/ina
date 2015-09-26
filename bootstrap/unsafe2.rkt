@@ -1,11 +1,19 @@
 #lang racket/base
 (provide
+  std1
+  std1-module
+  std1-applicatives
+  std1-operatives
+  unsafe2-program
   )
 
 (require
+  "linking.rkt"
   "term.rkt"
   "unsafe1.rkt"
+  gregr-misc/sugar
   racket/function
+  racket/match
   )
 
 (module+ test
@@ -99,3 +107,25 @@
                  '$lambda 'env-empty 'env-add '+))
     (denote (unsafe1-parse 6)))
   )
+
+(define std1-applicatives (open-module std1
+  '(identity const compose fix
+    true false cons symbol? boolean? nil? cons? integer? symbol=? head tail
+    (=? integer=?) (<? integer<?) (<=? integer<=?)
+    (>? integer>?) (>=? integer>=?) + *-1 -
+    foldl foldr map append
+    assoc/? env-empty env-add env-get syntactic? apply eval
+    )))
+(define std1-operatives (open-module std1
+  '((lambda $lambda) (lambda$ $lambda$))))
+
+(define ((unsafe2-program (applicatives std1-applicatives)
+                          (operatives std1-operatives)) body)
+  (lets
+    imports = (append applicatives operatives)
+    typed-names = (append (forl (list name _) <- applicatives (list #f name))
+                          (forl (list name _) <- operatives (list #t name)))
+    env = (forf env = 'env-empty
+                (list stype name) <- typed-names
+                `(env-add ,env ,stype ,name))
+    ((link-program unsafe1-parse) imports `(eval ,env ',body))))
