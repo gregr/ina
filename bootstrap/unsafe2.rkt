@@ -127,5 +127,5 @@
                           (forl (list name _) <- operatives (list #t name)))
     env = (forf env = 'env-empty
                 (list stype name) <- typed-names
-                `(env-add ,env ,stype ,name))
+                `(env-add ,env ',name ,stype ,name))
     ((link-program unsafe1-parse) imports `(eval ,env ',body))))
