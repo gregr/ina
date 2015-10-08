@@ -25,12 +25,14 @@
 
 (define std1-module (unsafe1-module
   '(identity const compose fix
-    true false cons
+    boolean->bit pcons true false cons
     symbol? boolean? nil? cons? integer?
     symbol=? head tail
     integer=? integer<? integer<=? integer>? integer>=?
     (+ integer+) (*-1 integer-invert))
-  `((- (lambda (i0 i1) (+ i0 (*-1 i1))))
+  `((bit0 (bit 0)) (bit1 (bit 1)) (unpair (lambda (bt pr) (unpair bt pr)))
+
+    (- (lambda (i0 i1) (+ i0 (*-1 i1))))
 
     (foldl (fix (lambda (foldl f acc xs)
                   (if (nil? xs) acc (foldl f (f (head xs) acc) (tail xs))))))
@@ -109,7 +111,7 @@
   )
 
 (define std1-applicatives (open-module std1
-  '(identity const compose fix
+  '(bit0 bit1 (pair pcons) unpair boolean->bit identity const compose fix
     true false cons symbol? boolean? nil? cons? integer? symbol=? head tail
     (=? integer=?) (<? integer<?) (<=? integer<=?)
     (>? integer>?) (>=? integer>=?) + *-1 -
