@@ -131,3 +131,21 @@
                 (list stype name) <- typed-names
                 `(env-add ,env ',name ,stype ,name))
     ((link-program unsafe1-parse) imports `(eval ,env ',body))))
+
+(define unsafe2-std-program (unsafe2-program))
+
+(module+ test
+  (check-equal?
+    (denote (unsafe2-std-program '(pair (unpair bit1 (pair bit1 bit0))
+                                        (unpair bit0 (pair bit1 bit0)))))
+    '(0 . 1))
+  (check-equal?
+    (denote (unsafe2-std-program
+              '((lambda (x f) (f x)) (cons false true) head)))
+    (denote (std1 'false)))
+  (check-equal?
+    (denote (unsafe2-std-program
+              '((lambda$ (x f) (f x)) (cons false true)
+                                      (lambda (_ t) (head t)))))
+    (denote (unsafe1-parse ''x)))
+  )
