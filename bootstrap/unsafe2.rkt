@@ -149,3 +149,100 @@
                                       (lambda (_ t) (head t)))))
     (denote (unsafe1-parse ''x)))
   )
+
+; TODO:
+; quasiquote/unquote/unquote-splicing,
+; cond, match,
+; and-map?, or-map?, datum->tag (tag as a symbol)
+; equalities?
+; match versions of let[rec][$][*], lambda[$]
+
+(define (unsafe2-std2-program body)
+  (unsafe2-std1-program
+    `((lambda (let/binder let*/syntax-type fix* first second third reverse)
+        ((lambda$ (@ $ let let$ let* let$* quote if list list*)
+           (let$* ((letrec (lambda (env stx)
+                             (let* ((defs (first stx))
+                                    (body (second stx))
+                                    (names (map (lambda (def)
+                                                  (head (first def))) defs))
+                                    (procs-raw
+                                      (map (lambda (def)
+                                             (@ lambda env
+                                                (list
+                                                  (append
+                                                    names (tail (first def)))
+                                                  (second def)))) defs))
+                                    (procs-final (fix* procs-raw)))
+                               (apply (@ lambda env (list names body))
+                                      procs-final)))))
+             (let* ((filter (lambda (keep? xs)
+                              (foldr (lambda (x ys)
+                                       (if (keep? x) (cons x ys) ys)) () xs)))
+                    (not? (lambda (b) (if b #f #t)))
+                    (and? (lambda (a b) (if a (if b #t #f) #f)))
+                    (or?  (lambda (a b) (if a (if b #t #t) (if b #t #f)))))
+               ,body)))
+         ; @
+         (lambda (env stx)
+           (apply (eval env (head stx)) (map (eval env) (tail stx))))
+         (lambda (env stx) ((eval env (head stx)) env (tail stx))) ; $
+         (let/binder lambda) ; let
+         (let/binder lambda$) ; let$
+         (let*/syntax-type #f) ; let*
+         (let*/syntax-type #t) ; let$*
+         (lambda (_ stx) (head stx)) ; quote
+         ; if
+         (lambda (env stx)
+           ((unpair (boolean->bit (eval env (first stx)))
+                    (pair (lambda (_) (eval env (second stx)))
+                          (lambda (_) (eval env (third stx))))) unit))
+         ; list
+         (lambda (env stx) (map (eval env) stx))
+         ; list*
+         (lambda (env stx)
+           ((lambda (rargs) (foldl cons (head rargs) (tail rargs)))
+            (reverse (map (eval env) stx))))
+         ))
+      ; let/binder
+      (lambda (binder env stx)
+        ((lambda (params args body)
+           (apply (binder env (cons params (cons body ())))
+                  (map (eval env) args)))
+         (map head (head stx))
+         (map (compose head tail) (head stx))
+         (head (tail stx))))
+      ; let*/syntax-type
+      (lambda (syntax-type env stx)
+        (eval (foldl (lambda (binding env)
+                       (env-add env (head binding) syntax-type
+                                (eval env (head (tail binding)))))
+                     env (head stx))
+              (head (tail stx))))
+      ; fix*
+      (fix (lambda (self ps)
+             (map (lambda (pi x) ((apply pi (self ps)) x)) ps)))
+      head ; first
+      (compose head tail) ; second
+      (compose (compose head tail) tail) ; third
+      (foldl cons ()) ; reverse
+      )))
+
+(module+ test
+  (check-equal?
+    (denote (unsafe2-std2-program '(head '(a b))))
+    (denote (unsafe1-parse ''a)))
+  (check-equal?
+    (denote (unsafe2-std2-program '(if (head (cons #t #f))
+                                     (if (tail (cons #t #f)) 'a 'b) 'c)))
+    (denote (unsafe1-parse ''b)))
+  (check-equal?
+    (denote (unsafe2-std2-program '(third (list* 'a 'b '(c d)))))
+    (denote (unsafe1-parse ''c)))
+  (check-equal?
+    (denote (unsafe2-std2-program
+              '(letrec (((even? n) (if (=? 0 n) #t (odd? (- n 1))))
+                        ((odd? n) (if (=? 0 n) #f (even? (- n 1)))))
+                 (list (even? 3) (odd? 3)))))
+    (denote (unsafe1-parse ''(#f #t))))
+  )
