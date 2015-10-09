@@ -25,7 +25,7 @@
 
 (define std1-module (unsafe1-module
   '(identity const compose fix
-    boolean->bit pcons true false cons
+    boolean->bit pcons cons
     symbol? boolean? nil? cons? integer?
     symbol=? head tail
     integer=? integer<? integer<=? integer>? integer>=?
@@ -112,7 +112,7 @@
 
 (define std1-applicatives (open-module std1
   '(bit0 bit1 (pair pcons) unpair boolean->bit identity const compose fix
-    true false cons symbol? boolean? nil? cons? integer? symbol=? head tail
+    cons symbol? boolean? nil? cons? integer? symbol=? head tail
     (=? integer=?) (<? integer<?) (<=? integer<=?)
     (>? integer>?) (>=? integer>=?) + *-1 -
     foldl foldr map append
@@ -132,20 +132,20 @@
                 `(env-add ,env ',name ,stype ,name))
     ((link-program unsafe1-parse) imports `(eval ,env ',body))))
 
-(define unsafe2-std-program (unsafe2-program))
+(define unsafe2-std1-program (unsafe2-program))
 
 (module+ test
   (check-equal?
-    (denote (unsafe2-std-program '(pair (unpair bit1 (pair bit1 bit0))
-                                        (unpair bit0 (pair bit1 bit0)))))
+    (denote (unsafe2-std1-program '(pair (unpair bit1 (pair bit1 bit0))
+                                         (unpair bit0 (pair bit1 bit0)))))
     '(0 . 1))
   (check-equal?
-    (denote (unsafe2-std-program
-              '((lambda (x f) (f x)) (cons false true) head)))
-    (denote (std1 'false)))
+    (denote (unsafe2-std1-program
+              '((lambda (x f) (f x)) (cons #f #t) head)))
+    (denote (unsafe1-parse #f)))
   (check-equal?
-    (denote (unsafe2-std-program
-              '((lambda$ (x f) (f x)) (cons false true)
+    (denote (unsafe2-std1-program
+              '((lambda$ (x f) (f x)) (cons #f #t)
                                       (lambda (_ t) (head t)))))
     (denote (unsafe1-parse ''x)))
   )
