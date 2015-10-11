@@ -25,7 +25,7 @@
 
 (define std1-module (unsafe1-module
   '(identity const compose fix
-    boolean->bit pcons cons
+    boolean->bit pcons nil cons
     symbol? boolean? nil? cons? integer?
     symbol=? head tail
     integer=? integer<? integer<=? integer>? integer>=?
@@ -112,7 +112,7 @@
 
 (define std1-applicatives (open-module std1
   '(unit bit0 bit1 (pair pcons) unpair boolean->bit identity const compose fix
-    cons symbol? boolean? nil? cons? integer? symbol=? head tail
+    nil cons symbol? boolean? nil? cons? integer? symbol=? head tail
     (=? integer=?) (<? integer<?) (<=? integer<=?)
     (>? integer>?) (>=? integer>=?) + *-1 -
     foldl foldr map append
@@ -178,7 +178,7 @@
                                       procs-final)))))
              (let* ((filter (lambda (keep? xs)
                               (foldr (lambda (x ys)
-                                       (if (keep? x) (cons x ys) ys)) () xs)))
+                                       (if (keep? x) (cons x ys) ys)) '() xs)))
                     (not? (lambda (b) (if b #f #t)))
                     (and? (lambda (a b) (if a (if b #t #f) #f)))
                     (or?  (lambda (a b) (if a (if b #t #t) (if b #t #f)))))
@@ -207,7 +207,7 @@
       ; let/binder
       (lambda (binder env stx)
         ((lambda (params args body)
-           (apply (binder env (cons params (cons body ())))
+           (apply (binder env (cons params (cons body nil)))
                   (map (eval env) args)))
          (map head (head stx))
          (map (compose head tail) (head stx))
@@ -225,7 +225,7 @@
       head ; first
       (compose head tail) ; second
       (compose (compose head tail) tail) ; third
-      (foldl cons ()) ; reverse
+      (foldl cons nil) ; reverse
       )))
 
 (module+ test
