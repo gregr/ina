@@ -131,6 +131,10 @@
   (define test-complete-4 (t-value (v-bit (b-0))))
   (define test-term-5 (t-value (v-lam test-term-4)))
   (define test-normalized-5 (t-value (v-lam test-complete-4)))
+  (define test-omega
+    (t-apply
+      (t-value (v-lam (t-apply (t-value (v-var 0)) (t-value (v-var 0)))))
+      (t-value (v-lam (t-apply (t-value (v-var 0)) (t-value (v-var 0)))))))
   (define terms*completes*normal0s*normals
     `((,test-term-1 ,test-complete-1 ,test-complete-1 ,test-complete-1)
       (,test-term-2 ,test-term-2 ,test-term-2 ,test-term-2)
@@ -144,6 +148,9 @@
           (check-equal? (drive 0 0 tt) tn0)
           (check-equal? (drive #f #f tt) tn)
           ))
+  (check-equal?
+    (drive 1 100 test-omega 1)
+    test-omega)
   (define completed (step-complete test-term-1))
   (check-match
     (step test-term-1)
