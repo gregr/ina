@@ -14,7 +14,10 @@
   )
 
 (module+ test
-  (require rackunit))
+  (require
+    gregr-misc/sugar
+    rackunit
+    ))
 
 (define (step-continuation-downward cterm)
   (define (sub-cont choice)
@@ -70,10 +73,38 @@
       (t-value (v-var 0))))
   (define test-term-1
     (t-apply (t-value (v-lam test-term-0)) (t-value (v-bit (b-1)))))
+  (define test-complete-1 (t-value (v-pair (v-bit (b-1)) (v-bit (b-1)))))
+  (define test-term-2
+    (t-value (v-pair (v-bit (b-1))
+                     (v-lam (t-value (v-pair (v-bit (b-1)) (v-bit (b-0))))))))
+  (define test-term-3
+    (t-value (v-pair (v-bit (b-1))
+                     (v-lam (t-unpair (t-value (v-bit (b-1)))
+                                      (t-value (v-pair (v-bit (b-1))
+                                                       (v-bit (b-0)))))))))
+  (define test-normalized-3
+    (t-value (v-pair (v-bit (b-1)) (v-lam (t-value (v-bit (b-0)))))))
+  (define test-term-4
+    (t-apply
+      (t-value (v-lam (t-unpair (t-value (v-var 0))
+                                (t-value (v-pair (v-bit (b-1))
+                                                 (v-bit (b-0)))))))
+      (t-value (v-bit (b-1)))))
+  (define test-complete-4 (t-value (v-bit (b-0))))
+  (define test-term-5 (t-value (v-lam test-term-4)))
+  (define test-normalized-5 (t-value (v-lam test-complete-4)))
+  (define terms*completes*normal0s*normals
+    `((,test-term-1 ,test-complete-1 ,test-complete-1 ,test-complete-1)
+      (,test-term-2 ,test-term-2 ,test-term-2 ,test-term-2)
+      (,test-term-3 ,test-term-3 ,test-normalized-3 ,test-normalized-3)
+      (,test-term-4 ,test-complete-4 ,test-complete-4 ,test-complete-4)
+      (,test-term-5 ,test-term-5 ,test-term-5 ,test-normalized-5)
+      ))
+  (for_ (list tt tc tn0 tn) <- terms*completes*normal0s*normals
+        (begin
+          (check-equal? (step-complete tt) tc)
+          ))
   (define completed (step-complete test-term-1))
-  (check-equal?
-    completed
-    (t-value (v-pair (v-bit (b-1)) (v-bit (b-1)))))
   (check-match
     (step test-term-1)
     (just _))
