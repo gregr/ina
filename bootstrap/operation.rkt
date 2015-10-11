@@ -64,7 +64,7 @@
 (define (step term) (maybe-map ::^*. (step-once (::0 term))))
 (define step-complete (compose1 ::^*. step-full ::0))
 
-(define (drive tm max-depth max-span (depth 0) (span 0))
+(define (drive max-depth max-span tm (depth 0) (span 0))
   (define (drive-value full? depth span val)
     (match val
       ((v-unit)       val)
@@ -141,8 +141,8 @@
   (for_ (list tt tc tn0 tn) <- terms*completes*normal0s*normals
         (begin
           (check-equal? (step-complete tt) tc)
-          (check-equal? (drive tt 0 0) tn0)
-          (check-equal? (drive tt #f #f) tn)
+          (check-equal? (drive 0 0 tt) tn0)
+          (check-equal? (drive #f #f tt) tn)
           ))
   (define completed (step-complete test-term-1))
   (check-match
