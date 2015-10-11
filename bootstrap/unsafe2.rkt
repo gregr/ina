@@ -199,7 +199,20 @@
                                      (if (integer? lhs)
                                        (if (integer? rhs) (=? lhs rhs) #f)
                                        #f)))))))))
-               (eval (env-current)))))
+               (let$* ((and (lambda (env stx)
+                              ((fix (lambda (self prev stx)
+                                      (if (nil? stx) prev
+                                        (if (equal? #f prev) #f
+                                          (self (eval env (head stx))
+                                                (tail stx)))))) #t stx)))
+                       (or (lambda (env stx)
+                             ((fix (lambda (self prev stx)
+                                     (if (nil? stx) prev
+                                       (if (equal? #f prev)
+                                         (self (eval env (head stx))
+                                               (tail stx))
+                                         prev)))) #f stx))))
+                      (eval (env-current))))))
          ; @
          (lambda (env stx)
            (apply (eval env (head stx)) (map (eval env) (tail stx))))
@@ -273,4 +286,20 @@
     (unsafe2-std2-denote
       '(equal? '(a (() (#f . 1))) '(a (() (#t . 1)))))
     (denote (unsafe1-parse #f)))
+  (check-equal?
+    (unsafe2-std2-denote
+      '(and 2 ()))
+    (denote (unsafe1-parse '())))
+  (check-equal?
+    (unsafe2-std2-denote
+      '(and 2 #f () ()))
+    (denote (unsafe1-parse #f)))
+  (check-equal?
+    (unsafe2-std2-denote
+      '(or 2 () ()))
+    (denote (unsafe1-parse 2)))
+  (check-equal?
+    (unsafe2-std2-denote
+      '(or #f ()))
+    (denote (unsafe1-parse '())))
   )
