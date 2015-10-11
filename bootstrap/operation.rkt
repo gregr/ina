@@ -1,7 +1,9 @@
 #lang racket/base
 (provide
+  drive
   step
   step-complete
+  step-continuation
   )
 
 (require
