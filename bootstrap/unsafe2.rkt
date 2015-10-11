@@ -30,7 +30,7 @@
     symbol=? head tail
     integer=? integer<? integer<=? integer>? integer>=?
     (+ integer+) (*-1 integer-invert))
-  `((unit ()) (bit0 (bit 0)) (bit1 (bit 1)) (unpair (lambda (bt pr) (unpair bt pr)))
+  `((bit0 (bit 0)) (bit1 (bit 1)) (unpair (lambda (bt pr) (unpair bt pr)))
 
     (- (lambda (i0 i1) (+ i0 (*-1 i1))))
 
@@ -63,7 +63,8 @@
                                         (if (syntactic? env (head stx))
                                           (cons env (cons (tail stx) '()))
                                           (map (eval env) (tail stx))))
-                   (if (symbol? stx) (tail (env-get env stx)) stx)))))
+                   (if (symbol? stx) (tail (env-get env stx))
+                     (if (nil? stx) () stx))))))
 
     ($lambda/syntax-type
       (lambda (syntax-type env stx)
@@ -111,7 +112,7 @@
   )
 
 (define std1-applicatives (open-module std1
-  '(unit bit0 bit1 (pair pcons) unpair boolean->bit identity const compose fix
+  '(bit0 bit1 (pair pcons) unpair boolean->bit identity const compose fix
     nil cons symbol? boolean? nil? cons? integer? symbol=? head tail
     (=? integer=?) (<? integer<?) (<=? integer<=?)
     (>? integer>?) (>=? integer>=?) + *-1 -
@@ -196,7 +197,7 @@
          (lambda (env stx)
            ((unpair (boolean->bit (eval env (first stx)))
                     (pair (lambda (_) (eval env (second stx)))
-                          (lambda (_) (eval env (third stx))))) unit))
+                          (lambda (_) (eval env (third stx))))) ()))
          ; list
          (lambda (env stx) (map (eval env) stx))
          ; list*
