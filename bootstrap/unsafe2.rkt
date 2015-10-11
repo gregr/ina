@@ -157,9 +157,9 @@
 ; and-map?, or-map?, datum->tag (tag as a symbol)
 ; match versions of let[rec][$][*], lambda[$]
 
-(define (unsafe2-std2-program body)
+(define unsafe2-std2-eval
   (unsafe2-std1-program
-    `((lambda (let/binder let*/syntax-type fix* first second third reverse)
+    '((lambda (let/binder let*/syntax-type fix* first second third reverse)
         ((lambda$ (@ $ let let$ let* let$* quote if list list*)
            (let$* ((letrec (lambda (env stx)
                              (let* ((defs (first stx))
@@ -175,7 +175,8 @@
                                                   (second def)))) defs))
                                     (procs-final (fix* procs-raw)))
                                (apply (@ lambda env (list names body))
-                                      procs-final)))))
+                                      procs-final))))
+                   (env-current (lambda (env _) env)))
              (let* ((filter (lambda (keep? xs)
                               (foldr (lambda (x ys)
                                        (if (keep? x) (cons x ys) ys)) '() xs)))
@@ -198,7 +199,7 @@
                                      (if (integer? lhs)
                                        (if (integer? rhs) (=? lhs rhs) #f)
                                        #f)))))))))
-               ,body)))
+               (eval (env-current)))))
          ; @
          (lambda (env stx)
            (apply (eval env (head stx)) (map (eval env) (tail stx))))
@@ -245,28 +246,31 @@
       )))
 
 (module+ test
+  (define unsafe2-std2-eval-denoted (denote unsafe2-std2-eval))
+  (define (unsafe2-std2-denote body)
+    (unsafe2-std2-eval-denoted (denote (unsafe1-parse (list 'quote body)))))
   (check-equal?
-    (denote (unsafe2-std2-program '(head '(a b))))
+    (unsafe2-std2-denote '(head '(a b)))
     (denote (unsafe1-parse ''a)))
   (check-equal?
-    (denote (unsafe2-std2-program '(if (head (cons #t #f))
-                                     (if (tail (cons #t #f)) 'a 'b) 'c)))
+    (unsafe2-std2-denote '(if (head (cons #t #f))
+                            (if (tail (cons #t #f)) 'a 'b) 'c))
     (denote (unsafe1-parse ''b)))
   (check-equal?
-    (denote (unsafe2-std2-program '(third (list* 'a 'b '(c d)))))
+    (unsafe2-std2-denote '(third (list* 'a 'b '(c d))))
     (denote (unsafe1-parse ''c)))
   (check-equal?
-    (denote (unsafe2-std2-program
-              '(letrec (((even? n) (if (=? 0 n) #t (odd? (- n 1))))
-                        ((odd? n) (if (=? 0 n) #f (even? (- n 1)))))
-                 (list (even? 3) (odd? 3)))))
+    (unsafe2-std2-denote
+      '(letrec (((even? n) (if (=? 0 n) #t (odd? (- n 1))))
+                ((odd? n) (if (=? 0 n) #f (even? (- n 1)))))
+         (list (even? 3) (odd? 3))))
     (denote (unsafe1-parse ''(#f #t))))
   (check-equal?
-    (denote (unsafe2-std2-program
-              '(equal? '(a (() (#f . 1))) '(a (() (#f . 1))))))
+    (unsafe2-std2-denote
+      '(equal? '(a (() (#f . 1))) '(a (() (#f . 1)))))
     (denote (unsafe1-parse #t)))
   (check-equal?
-    (denote (unsafe2-std2-program
-              '(equal? '(a (() (#f . 1))) '(a (() (#t . 1))))))
+    (unsafe2-std2-denote
+      '(equal? '(a (() (#f . 1))) '(a (() (#t . 1)))))
     (denote (unsafe1-parse #f)))
   )
