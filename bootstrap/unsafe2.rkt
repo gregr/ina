@@ -155,7 +155,6 @@
 ; quasiquote/unquote/unquote-splicing,
 ; cond, match,
 ; and-map?, or-map?, datum->tag (tag as a symbol)
-; equalities?
 ; match versions of let[rec][$][*], lambda[$]
 
 (define (unsafe2-std2-program body)
@@ -182,7 +181,23 @@
                                        (if (keep? x) (cons x ys) ys)) '() xs)))
                     (not? (lambda (b) (if b #f #t)))
                     (and? (lambda (a b) (if a (if b #t #f) #f)))
-                    (or?  (lambda (a b) (if a (if b #t #t) (if b #t #f)))))
+                    (or?  (lambda (a b) (if a (if b #t #t) (if b #t #f))))
+                    (boolean=? (lambda (lhs rhs) (if lhs rhs (not? rhs))))
+                    (equal?
+                      (fix (lambda (equal? lhs rhs)
+                             (if (symbol? lhs)
+                               (if (symbol? rhs) (symbol=? lhs rhs) #f)
+                               (if (boolean? lhs)
+                                 (if (boolean? rhs) (boolean=? lhs rhs) #f)
+                                 (if (nil? lhs) (nil? rhs)
+                                   (if (cons? lhs)
+                                     (if (cons? rhs)
+                                       (and? (equal? (head lhs) (head rhs))
+                                             (equal? (tail lhs) (tail rhs)))
+                                       #f)
+                                     (if (integer? lhs)
+                                       (if (integer? rhs) (=? lhs rhs) #f)
+                                       #f)))))))))
                ,body)))
          ; @
          (lambda (env stx)
@@ -246,4 +261,12 @@
                         ((odd? n) (if (=? 0 n) #f (even? (- n 1)))))
                  (list (even? 3) (odd? 3)))))
     (denote (unsafe1-parse ''(#f #t))))
+  (check-equal?
+    (denote (unsafe2-std2-program
+              '(equal? '(a (() (#f . 1))) '(a (() (#f . 1))))))
+    (denote (unsafe1-parse #t)))
+  (check-equal?
+    (denote (unsafe2-std2-program
+              '(equal? '(a (() (#f . 1))) '(a (() (#t . 1))))))
+    (denote (unsafe1-parse #f)))
   )
