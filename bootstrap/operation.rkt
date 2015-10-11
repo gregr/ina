@@ -8,6 +8,7 @@
   "substitution.rkt"
   "term.rkt"
   gregr-misc/cursor
+  gregr-misc/list
   gregr-misc/maybe
   racket/function
   racket/match
@@ -63,6 +64,38 @@
 (define (step term) (maybe-map ::^*. (step-once (::0 term))))
 (define step-complete (compose1 ::^*. step-full ::0))
 
+(define (drive tm max-depth max-span (depth 0) (span 0))
+  (define (drive-value depth span val)
+    (match val
+      ((v-unit)       val)
+      ((v-bit  b)     val)
+      ((v-var  index) val)
+      ((v-pair l r)   (apply-map* v-pair (curry drive-value depth span) l r))
+      ((v-lam  body)  (v-lam (drive-term (+ 1 depth) 0 body)))))
+  (define (drive-term depth span tm)
+    (match tm
+      ((t-value  v) (t-value (drive-value depth span v)))
+      ((t-subst  s t)
+       (match t
+         ((t-value (v-var _)) (substitute s t))
+         (_                   (drive-term depth span (substitute s t)))))
+      ((t-unpair bit pair)
+       (match* ((drive-term depth span bit) (drive-term depth span pair))
+         (((t-value (v-bit bt)) (t-value (v-pair p0 p1)))
+          (t-value (match bt ((b-0) p0) ((b-1) p1))))
+         ((t0 t1) (t-unpair t0 t1))))
+      ((t-apply  proc arg)
+       (let* ((t0 (drive-term depth span proc))
+              (t1 (drive-term depth span arg))
+              (span (if (= 0 depth) span (+ span 1))))
+         (if (or (and max-span (< max-span span))
+                 (and max-depth (< max-depth depth))) (t-apply t0 t1)
+           (match* (t0 t1)
+             (((t-value (v-lam body)) (t-value varg))
+              (drive-term depth span (t-subst (subst-single varg) body)))
+             ((t0 t1) (t-apply t0 t1))))))))
+  (drive-term depth span tm))
+
 (module+ test
   (define test-term-0
     (t-apply
@@ -103,6 +136,8 @@
   (for_ (list tt tc tn0 tn) <- terms*completes*normal0s*normals
         (begin
           (check-equal? (step-complete tt) tc)
+          (check-equal? (drive tt 0 0) tn0)
+          (check-equal? (drive tt #f #f) tn)
           ))
   (define completed (step-complete test-term-1))
   (check-match
