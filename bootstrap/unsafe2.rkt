@@ -198,7 +198,8 @@
                                        #f)
                                      (if (integer? lhs)
                                        (if (integer? rhs) (=? lhs rhs) #f)
-                                       #f)))))))))
+                                       #f))))))))
+                    (assoc (assoc/? equal?)))
                (let$* ((and (lambda (env stx)
                               ((fix (lambda (self prev stx)
                                       (if (nil? stx) prev
@@ -280,14 +281,6 @@
     (denote (unsafe1-parse ''(#f #t))))
   (check-equal?
     (unsafe2-std2-denote
-      '(equal? '(a (() (#f . 1))) '(a (() (#f . 1)))))
-    (denote (unsafe1-parse #t)))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(equal? '(a (() (#f . 1))) '(a (() (#t . 1)))))
-    (denote (unsafe1-parse #f)))
-  (check-equal?
-    (unsafe2-std2-denote
       '(and 2 ()))
     (denote (unsafe1-parse '())))
   (check-equal?
@@ -302,4 +295,10 @@
     (unsafe2-std2-denote
       '(or #f ()))
     (denote (unsafe1-parse '())))
+  (check-equal?
+    (unsafe2-std2-denote
+      '(tail (assoc '(a (() (#f . 1))) '(((a (() (#t . 1))) . one)
+                                         ((a (() (#f . 1))) . two)
+                                         ((a (() (#f . 1))) . three)))))
+    (denote (unsafe1-parse ''two)))
   )
