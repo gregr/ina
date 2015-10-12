@@ -4,6 +4,7 @@
   subst-single
   substitute
   substitute-full
+  substitute-value
   )
 
 (require

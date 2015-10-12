@@ -80,6 +80,12 @@
        (if (and full? (not (and max-depth (<= max-depth depth))))
          (v-lam (drive-term #t (+ 1 depth) 0 body))
          val))))
+  (define (drive-value-subst full? depth span s v)
+    (match v
+      ((v-var _) (substitute-value s v))
+      ((v-pair l r)
+       (apply-map* v-pair (curry drive-value-subst full? depth span s) l r))
+      (_ (drive-value full? depth span (substitute-value s v)))))
   (define (drive-term full? depth span tm)
     (define self (curry drive-term full? depth span))
     (match tm
@@ -87,8 +93,8 @@
       ((t-dsubst dsub tm) (self (dsubst->t-subst dsub tm)))
       ((t-subst  s t)
        (match t
-         ((t-value (v-var _)) (substitute s t))
-         (_                   (self (substitute s t)))))
+         ((t-value v) (t-value (drive-value-subst full? depth span s v)))
+         (_           (self (substitute s t)))))
       ((t-unpair bit pair)
        (match* ((self bit) (self pair))
          (((t-value (v-bit bt)) (t-value (v-pair p0 p1)))
