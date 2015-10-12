@@ -53,6 +53,7 @@
   (maybe-map
     (curry ::=* cterm)
     (match (::.* cterm)
+      ((t-dsubst dsub tm) (just (dsubst->t-subst dsub tm)))
       ((t-subst sub tm) (just (substitute sub tm)))
       ((t-unpair (t-value (v-bit bt)) (t-value (v-pair p0 p1)))
        (just (t-value (match bt ((b-0) p0) ((b-1) p1)))))
@@ -83,6 +84,7 @@
     (define self (curry drive-term full? depth span))
     (match tm
       ((t-value  v) (t-value (drive-value full? depth span v)))
+      ((t-dsubst dsub tm) (self (dsubst->t-subst dsub tm)))
       ((t-subst  s t)
        (match t
          ((t-value (v-var _)) (substitute s t))
@@ -136,6 +138,23 @@
   (define test-complete-4 (t-value (v-bit (b-0))))
   (define test-term-5 (t-value (v-lam test-term-4)))
   (define test-normalized-5 (t-value (v-lam test-complete-4)))
+  (define test-term-6 (t-apply test-term-5 (t-value (v-unit))))
+  (define test-complete-6 test-complete-4)
+  (define test-term-7
+    (t-apply
+      (t-value (v-lam (t-value (v-lam (t-unpair (t-value (v-var 1))
+                                                (t-value (v-pair
+                                                           (v-bit (b-1))
+                                                           (v-bit (b-0)))))))))
+      (t-value (v-bit (b-1)))))
+  (define test-complete-7
+    (t-value
+      (v-lam (t-dsubst (subst (list (v-bit (b-1))) 0)
+                       (t-unpair (t-value (v-var 1))
+                                 (t-value (v-pair
+                                            (v-bit (b-1))
+                                            (v-bit (b-0)))))))))
+  (define test-normalized-7 (t-value (v-lam (t-value (v-bit (b-0))))))
   (define test-omega
     (t-apply
       (t-value (v-lam (t-apply (t-value (v-var 0)) (t-value (v-var 0)))))
@@ -146,6 +165,8 @@
       (,test-term-3 ,test-term-3 ,test-normalized-3)
       (,test-term-4 ,test-complete-4 ,test-complete-4)
       (,test-term-5 ,test-term-5 ,test-normalized-5)
+      (,test-term-6 ,test-complete-6 ,test-complete-6)
+      (,test-term-7 ,test-complete-7 ,test-normalized-7)
       ))
   (for_ (list tt tc tn) <- terms*completes*normals
         (begin

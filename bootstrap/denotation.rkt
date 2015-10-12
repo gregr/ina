@@ -4,6 +4,7 @@
   )
 
 (require
+  "substitution.rkt"
   "term.rkt"
   gregr-misc/sugar
   racket/format
@@ -35,6 +36,8 @@
                                      scope idx (annotate path)))))))
   (define (pre-denote-term tm scope path)
     (match tm
+      ((t-dsubst dsub tm)
+       (pre-denote-term (dsubst->t-subst dsub tm) scope path))
       ((t-subst (subst bindings lift) tm)
        (lets (values dbindings _) =
              (forf result = '() sub-path = (list* 'first path)
