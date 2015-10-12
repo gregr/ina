@@ -72,8 +72,9 @@
       ((v-unit)       val)
       ((v-bit  b)     val)
       ((v-var  index) val)
-      ((v-pair l r)   (apply-map*
-                        v-pair (curry drive-value full? depth span) l r))
+      ((v-pair l r)
+       (if full? (apply-map* v-pair (curry drive-value full? depth span) l r)
+         val))
       ((v-lam  body)  (if full? (v-lam (drive-term #t (+ 1 depth) 0 body))
                         val))))
   (define (drive-term full? depth span tm)
