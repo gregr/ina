@@ -75,8 +75,10 @@
       ((v-pair l r)
        (if full? (apply-map* v-pair (curry drive-value full? depth span) l r)
          val))
-      ((v-lam  body)  (if full? (v-lam (drive-term #t (+ 1 depth) 0 body))
-                        val))))
+      ((v-lam  body)
+       (if (and full? (not (and max-depth (<= max-depth depth))))
+         (v-lam (drive-term #t (+ 1 depth) 0 body))
+         val))))
   (define (drive-term full? depth span tm)
     (define self (curry drive-term full? depth span))
     (match tm
@@ -138,17 +140,17 @@
     (t-apply
       (t-value (v-lam (t-apply (t-value (v-var 0)) (t-value (v-var 0)))))
       (t-value (v-lam (t-apply (t-value (v-var 0)) (t-value (v-var 0)))))))
-  (define terms*completes*normal0s*normals
-    `((,test-term-1 ,test-complete-1 ,test-complete-1 ,test-complete-1)
-      (,test-term-2 ,test-term-2 ,test-term-2 ,test-term-2)
-      (,test-term-3 ,test-term-3 ,test-normalized-3 ,test-normalized-3)
-      (,test-term-4 ,test-complete-4 ,test-complete-4 ,test-complete-4)
-      (,test-term-5 ,test-term-5 ,test-term-5 ,test-normalized-5)
+  (define terms*completes*normals
+    `((,test-term-1 ,test-complete-1 ,test-complete-1)
+      (,test-term-2 ,test-term-2 ,test-term-2)
+      (,test-term-3 ,test-term-3 ,test-normalized-3)
+      (,test-term-4 ,test-complete-4 ,test-complete-4)
+      (,test-term-5 ,test-term-5 ,test-normalized-5)
       ))
-  (for_ (list tt tc tn0 tn) <- terms*completes*normal0s*normals
+  (for_ (list tt tc tn) <- terms*completes*normals
         (begin
           (check-equal? (step-complete tt) tc)
-          (check-equal? (drive 0 0 tt) tn0)
+          (check-equal? (drive 0 0 tt) tc)
           (check-equal? (drive #f #f tt) tn)
           ))
   (check-equal?
