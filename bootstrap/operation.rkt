@@ -76,7 +76,7 @@
       ((v-pair l r) (apply-map* v-pair (curry drive-value #t depth span) l r))
       ((v-lam  body)
        (if (and full? (not (and max-depth (<= max-depth depth))))
-         (v-lam (drive-term #t (+ 1 depth) 0 body))
+         (v-lam (drive-term #t (+ 1 depth) span body))
          val))))
   (define (drive-value-subst full? depth span s v)
     (match v
