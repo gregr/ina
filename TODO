@@ -114,6 +114,59 @@ self-extensible browser-based editor
       removing var applies that lam to unit
 
 
+logic
+  proof-checking decision procedure: (proof? proposition candidate-proof) : Boolean
+  basic props and inference rules include some minimal mix of: ->, ->*, |->, |->*, ~=, term induction
+    bracketing (see Boyer-Moore translations) needs reformulation as a meta-level operator
+      requires everything to be quoted another level
+      decision procedures all the way down until term induction
+    term induction
+      a special case of universal quantifier proof (all t:Term. P(t))
+        doesn't require decision procedure for quantifier bounds checking
+        inference rule requires a way to hypothesize smaller induction proofs
+    can BHK interpretation ideas be used to manipulate Boyer-Moore style proofs?
+      BHK versions shown for comparison below are not the same structures as the Boyer-Moore proofs
+    Boyer-Moore style proofs
+      p. proof of #"A and B" where
+        (proof? #"(and (proof? A ...) (proof? B ...)) ->* #t" p)
+        BHK: p = (pair a b) where #"(proof? A a) ->* #t" and #"(proof? B b) ->* #t"
+      p. proof of #"A or B" where
+        (proof? #"(or (proof? A ...) (proof? B ...)) ->* #t" p)
+        BHK: p = (pair 0 a) where #"(proof? A a) ->* #t"
+               | (pair 1 b) where #"(proof? B b) ->* #t"
+      p. proof of #"all x : S. P(x)" where
+        (proof? #"(lam (x)
+                    (if (equal? (bracket #t)
+                                (step-complete #"(S #,(bracket x))"))
+                      (proof? #"P(#,(bracket x))" ... x ...)
+                      #t)) ->* (lam (x) #t)"
+                p)
+        note the bracket operation, which can only exist as a meta-level operation
+        extra level of quotation/bracketing necessary to verify well-definedness via step-complete
+          if checking "x is an S" gets stuck or infinite loops then all bets are off
+            so S pretty much has to be a decision procedure because step-complete is *not*
+            bounds checking analogous to type/kind checking
+        BHK: p is a dependent product of the same form as described by the proven formula
+      p. proof of #"A -> B" where
+        (proof? #"(lam (a)
+                    (if (equal? (bracket #t)
+                                (step-complete #"(proof? A #,(bracket a))"))
+                      (proof? B ... a ...)
+                      #t)) ->* (lam (a) #t)"
+                p)
+        It can be seen that #"A -> B" = #"all a:(proof? A). B"
+          implies the right BHK interpretation
+      p. proof of #"not A" where
+        (proof? #"(lam (x)
+                    (if (equal? (bracket #t)
+                                (step-complete #"(proof? A #,(bracket x))"))
+                      'False'
+                      #t)) ->* (lam (x) #t)"
+                p)
+        can be seen as: all x:(proof? A). 'False'
+        BHK: substitute any prop 'False' you'd like; if handed a (proof? A), suddenly you've proven 'False'
+
+
 ================
 long-term vision
 ================
