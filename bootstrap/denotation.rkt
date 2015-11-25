@@ -32,7 +32,7 @@
                               ((b-1) (lambda (env) 1))))
       ((v-unit)     (lambda (env) '()))
       ((v-var idx)  (if (< idx scope) (lambda (env) (env-ref env idx))
-                      (error (format "unbound variable; depth=~a index=~a; ~a"
+                      (error (format "unbound variable; depth=~s index=~s; ~s"
                                      scope idx (annotate path)))))))
   (define (pre-denote-term tm scope path)
     (match tm
@@ -60,9 +60,9 @@
              ((cons pl pr)
               (match (dbit env) (0 pl) (1 pr)
                 (val (error
-                       (format "cannot unpair with non-bit ~v; depth=~a; ~a"
+                       (format "cannot unpair with non-bit ~v; depth=~s; ~s"
                                val scope (annotate path))))))
-             (val (error (format "cannot unpair non-pair ~v; depth=~a; ~a"
+             (val (error (format "cannot unpair non-pair ~v; depth=~s; ~s"
                                  val scope (annotate path))))))))
       ((t-apply tproc targ)
        (let ((dproc (pre-denote-term tproc scope (list* 'proc path)))
@@ -70,17 +70,17 @@
          (lambda (env)
            (match (dproc env)
              ((? procedure? proc) (proc (darg env)))
-             (val (error (format "cannot apply non-procedure ~v; depth=~a; ~a"
+             (val (error (format "cannot apply non-procedure ~v; depth=~s; ~s"
                                  val scope (annotate path))))))))))
   (pre-denote-term tm scope path))
 
-(define (denote term (annotate ~a))
+(define (denote term (annotate ~s))
   ((pre-denote term annotate 0 '()) env-empty))
 
 (module+ test
   (define dt
     (pre-denote (t-value (v-pair (v-var 0) (v-pair (v-bit (b-0)) (v-unit))))
-                ~a 1 '()))
+                ~s 1 '()))
   (check-equal? (dt (env-add env-empty 'a))
                 '(a 0)))
 

@@ -277,7 +277,7 @@
     (#t           (std0 'true))
     (#f           (std0 'false))
     ((? integer?) (int->integer stx))
-    (_            (error (format "invalid syntax: ~a" stx)))))
+    (_            (error (format "invalid syntax: ~s" stx)))))
 
 (define parse-term (parse parse-extra))
 (define parse-val (parse-value parse-term))
@@ -286,7 +286,7 @@
   (match tail
     ((list 0) (t-value (v-bit (b-0))))
     ((list 1) (t-value (v-bit (b-1))))
-    (_        (error (format "invalid bit: ~a" `(,head . ,tail))))))
+    (_        (error (format "invalid bit: ~s" `(,head . ,tail))))))
 
 (define (parse-if senv head tail)
   (define (pthunk stx) ((parse-thunk parse-term) senv stx))
@@ -295,7 +295,7 @@
      (t-apply (t-unpair (t-apply (std0 'boolean->bit) (parse-term senv cnd))
                         (t-value (v-pair (pthunk tcase) (pthunk fcase))))
               (t-value (v-unit))))
-    (_ (error (format "invalid if: ~a" `(,head . ,tail))))))
+    (_ (error (format "invalid if: ~s" `(,head . ,tail))))))
 
 (record symbol-table symbol->value count->symbol)
 (define symbol-table-empty (symbol-table (hash) (hash)))
@@ -327,7 +327,7 @@
 (define (parse-quote senv head tail)
   (match tail
     ((list stx) (parse-quoted senv stx))
-    (_ (error (format "invalid quote: ~a" `(,head . ,tail))))))
+    (_ (error (format "invalid quote: ~s" `(,head . ,tail))))))
 
 (define unsafe1-specials `(
   (quote      . ,parse-quote)

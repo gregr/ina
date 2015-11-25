@@ -29,7 +29,7 @@
         (match spec
           ((? symbol?)               (list spec (mod spec)))
           ((list name original-name) (list name (mod original-name)))
-          (_ (error (format "invalid open-module spec: ~a" spec))))))
+          (_ (error (format "invalid open-module spec: ~s" spec))))))
 
 (def ((link-program parse) imports body)
   (list import-params import-args) = (zip-default '(() ()) imports)

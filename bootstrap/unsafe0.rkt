@@ -19,7 +19,7 @@
   (match stx
     (0 (t-value (v-bit (b-0))))
     (1 (t-value (v-bit (b-1))))
-    (_ (error (format "invalid syntax: ~a" stx)))))
+    (_ (error (format "invalid syntax: ~s" stx)))))
 
 (define parse-term (parse parse-extra))
 (define parse-val (parse-value parse-term))
@@ -32,7 +32,7 @@
        (t-unpair (parse-term senv cnd)
                  (t-value (v-pair (pthunk case0) (pthunk case1))))
        (t-value (v-unit))))
-    (_ (error (format "invalid if0: ~a" `(,head . ,tail))))))
+    (_ (error (format "invalid if0: ~s" `(,head . ,tail))))))
 
 (define unsafe0-specials `(
   (lambda . ,(parse-lambda parse-term))
