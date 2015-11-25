@@ -9,6 +9,8 @@
 
 (require
   "linking.rkt"
+  "operation.rkt"
+  "substitution.rkt"
   "term.rkt"
   "unsafe1.rkt"
   gregr-misc/sugar
@@ -260,45 +262,75 @@
       )))
 
 (module+ test
-  (define unsafe2-std2-eval-denoted (denote unsafe2-std2-eval))
+  ;(define unsafe2-std2-eval-denoted (denote unsafe2-std2-eval))
+  ;(define unsafe2-std2-eval-denoted (substitute-full unsafe2-std2-eval))
+  ;(define unsafe2-std2-eval-denoted (step-complete unsafe2-std2-eval))
+  ;(define unsafe2-std2-eval-denoted (time (drive 0 0 unsafe2-std2-eval)))
+  ;(define unsafe2-std2-eval-denoted (time (drive 3 #f unsafe2-std2-eval)))
+  ;(define unsafe2-std2-eval-denoted (time (drive 4 #f unsafe2-std2-eval)))
+  ;(define unsafe2-std2-eval-denoted (substitute-full (drive 0 0 unsafe2-std2-eval)))
+  ;(define unsafe2-std2-eval-denoted (denote (substitute-full (step-complete unsafe2-std2-eval))))
+  ;(define unsafe2-std2-eval-denoted (denote (substitute-full unsafe2-std2-eval)))
+  ;(define unsafe2-std2-eval-denoted (denote (drive 0 0 unsafe2-std2-eval)))
+  ;(define (unsafe2-std2-denote body)
+    ;(unsafe2-std2-eval-denoted (denote (unsafe1-parse (list 'quote body)))))
+  ;(define (unsafe2-std2-denote body)
+    ;(time (denote (drive 0 0 (t-apply unsafe2-std2-eval-denoted (unsafe1-parse (list 'quote body)))))))
+  ;(define (unsafe2-std2-denote body)
+    ;(drive 0 0 (t-apply unsafe2-std2-eval (unsafe1-parse (list 'quote body)))))
   (define (unsafe2-std2-denote body)
-    (unsafe2-std2-eval-denoted (denote (unsafe1-parse (list 'quote body)))))
-  (check-equal?
-    (unsafe2-std2-denote '(head '(a b)))
-    (denote (unsafe1-parse ''a)))
-  (check-equal?
-    (unsafe2-std2-denote '(if (head (cons #t #f))
-                            (if (tail (cons #t #f)) 'a 'b) 'c))
-    (denote (unsafe1-parse ''b)))
-  (check-equal?
-    (unsafe2-std2-denote '(third (list* 'a 'b '(c d))))
-    (denote (unsafe1-parse ''c)))
-  (check-equal?
-    (unsafe2-std2-denote
+    (drive 0 #f (t-apply unsafe2-std2-eval (unsafe1-parse (list 'quote body)))))
+  ;(define (unsafe2-std2-denote body)
+    ;(drive 4 #f (t-apply unsafe2-std2-eval (unsafe1-parse (list 'quote body)))))
+  ;(check-equal?
+    ;(unsafe2-std2-denote '(head '(a b)))
+    ;(denote (unsafe1-parse ''a)))
+  ;(check-equal?
+    ;(unsafe2-std2-denote '(if (head (cons #t #f))
+                            ;(if (tail (cons #t #f)) 'a 'b) 'c))
+    ;(denote (unsafe1-parse ''b)))
+  ;(check-equal?
+    ;(unsafe2-std2-denote '(third (list* 'a 'b '(c d))))
+    ;(denote (unsafe1-parse ''c)))
+  ;(for_ _ <- '(1 2 3 4 5)
+    ;(check-equal?
+      ;(unsafe2-std2-denote
+        ;'(letrec (((even? n) (if (=? 0 n) #t (odd? (- n 1))))
+                  ;((odd? n) (if (=? 0 n) #f (even? (- n 1)))))
+           ;(list (even? 3) (odd? 3))))
+      ;(denote (unsafe1-parse ''(#f #t)))))
+  (define unsafe2-even
+    (time (unsafe2-std2-denote
       '(letrec (((even? n) (if (=? 0 n) #t (odd? (- n 1))))
                 ((odd? n) (if (=? 0 n) #f (even? (- n 1)))))
-         (list (even? 3) (odd? 3))))
-    (denote (unsafe1-parse ''(#f #t))))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(and 2 ()))
-    (denote (unsafe1-parse '())))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(and 2 #f () ()))
-    (denote (unsafe1-parse #f)))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(or 2 () ()))
-    (denote (unsafe1-parse 2)))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(or #f ()))
-    (denote (unsafe1-parse '())))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(tail (assoc '(a (() (#f . 1))) '(((a (() (#t . 1))) . one)
-                                         ((a (() (#f . 1))) . two)
-                                         ((a (() (#f . 1))) . three)))))
-    (denote (unsafe1-parse ''two)))
+         even?))))
+  ;(check-equal?
+    ;unsafe2-even
+    ;'())
+  ;(for_ _ <- '(1 2 3 4 5)
+    ;(check-equal?
+      ;(denote (time (drive 0 0 (t-apply unsafe2-even (unsafe1-parse 3)))))
+      ;(denote (unsafe1-parse #f))))
+  ;(check-equal?
+    ;(unsafe2-std2-denote
+      ;'(and 2 ()))
+    ;(denote (unsafe1-parse '())))
+  ;(check-equal?
+    ;(unsafe2-std2-denote
+      ;'(and 2 #f () ()))
+    ;(denote (unsafe1-parse #f)))
+  ;(check-equal?
+    ;(unsafe2-std2-denote
+      ;'(or 2 () ()))
+    ;(denote (unsafe1-parse 2)))
+  ;(check-equal?
+    ;(unsafe2-std2-denote
+      ;'(or #f ()))
+    ;(denote (unsafe1-parse '())))
+  ;(check-equal?
+    ;(unsafe2-std2-denote
+      ;'(tail (assoc '(a (() (#f . 1))) '(((a (() (#t . 1))) . one)
+                                         ;((a (() (#f . 1))) . two)
+                                         ;((a (() (#f . 1))) . three)))))
+    ;(denote (unsafe1-parse ''two)))
   )
