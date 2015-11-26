@@ -50,35 +50,63 @@
                       (if (cons? kvs) (if (match? key (head (head kvs)))
                                         (head kvs) (assoc key (tail kvs)))
                         #f)))))
-    (env-empty '())
-    (env-add (lambda (env key syntax-type val)
-               (cons (cons key (cons syntax-type val)) env)))
-    (env-get (lambda (env key) (let ((found (assoc/? symbol=? key env)))
-                                 (if (cons? found) (tail found) #f))))
-    (syntactic? (lambda (env key)
+    (sdefer (lambda (pos senv)
+              (let ((index (list-ref-tail senv pos)))
+                (lambda (stx renv) ((list-ref renv index) senv stx renv)))))
+    (senv-empty '())
+    (renv-empty '())
+    (renv-add (lambda (renv val) (cons val renv)))
+    (senv-add (lambda (senv key actual-op? op)
+                (let* ((pos (cons () senv))
+                       (op (if actual-op? (cons #t op)
+                             (if op (cons #t (sdefer pos)) (cons #f ())))))
+                  (cons (cons key (cons op pos)) senv))))
+    (senv-get (lambda (senv key) (let ((found (assoc/? symbol=? key senv)))
+                                   (if (cons? found) (tail found) #f))))
+    (senv-get/f (lambda (hit miss senv key)
                   (if (symbol? key)
-                    (let ((assignment (env-get env key)))
-                      (if (cons? assignment) (head assignment) #f))
-                    #f)))
+                    (let ((assignment (senv-get senv key)))
+                      (if (cons? assignment) (hit assignment) miss))
+                    miss)))
+    (sym->operative (senv-get/f head (cons #f ())))
+    (sym->index (lambda (senv key)
+                  (senv-get/f (compose (list-ref-tail senv) tail) #f
+                              senv key)))
 
     (apply (foldl (lambda (arg f) (f arg))))
-    (eval (fix (lambda (eval env stx)
-                 (if (cons? stx) (apply (eval env (head stx))
-                                        (if (syntactic? env (head stx))
-                                          (cons env (cons (tail stx) '()))
-                                          (map (eval env) (tail stx))))
-                   (if (symbol? stx) (tail (env-get env stx))
-                     (if (nil? stx) () stx))))))
+    (seval (fix (lambda (seval senv stx)
+                  (if (cons? stx)
+                    (let ((?op (sym->operative senv (head stx))))
+                      (if (head ?op)
+                        ((tail ?op) senv (tail stx))
+                        (let ((pvs (map (seval senv) stx)))
+                          (lambda (renv)
+                            (let ((proc*args (map (lambda (pv) (pv renv)) pvs)))
+                              (apply (head proc*args) (tail proc*args)))))))
+                    (if (symbol? stx)
+                      (let ((index (sym->index senv stx)))
+                        (if (boolean? index)
+                          (error (cons 'undefined-identifier stx))
+                          (lambda (renv) (list-ref renv index))))
+                      (const (if (nil? stx) () stx)))))))
+
+    (env-empty (cons senv-empty renv-empty))
+    (env-add (lambda (env key syntax-type val)
+               (let ((senv (head env)) (renv (tail env)))
+                 (cons (senv-add senv key syntax-type (if syntax-type val #f))
+                       (renv-add renv val)))))
+    (eval (lambda (env stx) (seval (head env) stx (tail env))))
 
     ($lambda/syntax-type
-      (lambda (syntax-type env stx)
-        ((let ((params (head stx))
-               (body   (head (tail stx))))
-            (foldr (lambda (param body env arg)
-                     (body (env-add env param syntax-type arg)))
-                   (lambda (env) (eval env body))
-                   params))
-         env)))
+      (lambda (syntax-type senv stx)
+        ((let* ((params (head stx))
+                (body   (head (tail stx)))
+                (senv (foldl (lambda (param senv)
+                               (senv-add senv param #f syntax-type))
+                             senv params))
+                (body (seval senv body)))
+           (foldr (lambda (param body env arg)
+                    (body (cons arg env))) body params)))))
     ($lambda  ($lambda/syntax-type #f))
     ($lambda$ ($lambda/syntax-type #t))
     )))
@@ -107,11 +135,11 @@
                  'eval 'env-empty 'env-add '+))
     (denote (unsafe1-parse 7)))
   (check-equal?
-    ((std1-apply '(lambda ($lambda env-empty env-add +)
-                    (($lambda (env-add env-empty 'i+ #f +)
+    ((std1-apply '(lambda ($lambda senv-empty senv-add renv-empty renv-add +)
+                    (($lambda (senv-add senv-empty 'i+ #f #f)
                               '((i0 i1) (i+ (i+ i0 i1) 1)))
-                     3 2))
-                 '$lambda 'env-empty 'env-add '+))
+                     (renv-add renv-empty +) 3 2))
+                 '$lambda 'senv-empty 'senv-add 'renv-empty 'renv-add '+))
     (denote (unsafe1-parse 6)))
   )
 
@@ -120,8 +148,8 @@
     nil cons symbol? boolean? nil? cons? integer? symbol=? head tail
     (=? integer=?) (<? integer<?) (<=? integer<=?)
     (>? integer>?) (>=? integer>=?) + *-1 -
-    foldl foldr map append
-    assoc/? env-empty env-add env-get syntactic? apply eval
+    foldl foldr map append assoc/?
+    senv-empty senv-add renv-empty renv-add env-empty env-add apply eval
     )))
 (define std1-operatives (open-module std1
   '((lambda $lambda) (lambda$ $lambda$))))
@@ -145,13 +173,11 @@
                                          (unpair bit0 (pair bit1 bit0)))))
     '(0 . 1))
   (check-equal?
-    (denote (unsafe2-std1-program
-              '((lambda (x f) (f x)) (cons #f #t) head)))
+    (denote (unsafe2-std1-program '((lambda (x f) (f x)) (cons #f #t) head)))
     (denote (unsafe1-parse #f)))
   (check-equal?
     (denote (unsafe2-std1-program
-              '((lambda$ (x f) (f x)) (cons #f #t)
-                                      (lambda (_ t) (head t)))))
+              '((lambda$ (x f) (f x)) (cons #f #t) (lambda (_ t _) (head t)))))
     (denote (unsafe1-parse ''x)))
   )
 
@@ -161,148 +187,148 @@
 ; and-map?, or-map?, datum->tag (tag as a symbol)
 ; match versions of let[rec][$][*], lambda[$]
 
-(define unsafe2-std2-eval
-  (unsafe2-std1-program
-    '((lambda (let/binder let*/syntax-type fix* first second third reverse)
-        ((lambda$ (@ $ let let$ let* let$* quote if list list*)
-           (let$* ((letrec (lambda (env stx)
-                             (let* ((defs (first stx))
-                                    (body (second stx))
-                                    (names (map (lambda (def)
-                                                  (head (first def))) defs))
-                                    (procs-raw
-                                      (map (lambda (def)
-                                             (@ lambda env
-                                                (list
-                                                  (append
-                                                    names (tail (first def)))
-                                                  (second def)))) defs))
-                                    (procs-final (fix* procs-raw)))
-                               (apply (@ lambda env (list names body))
-                                      procs-final))))
-                   (env-current (lambda (env _) env)))
-             (let* ((filter (lambda (keep? xs)
-                              (foldr (lambda (x ys)
-                                       (if (keep? x) (cons x ys) ys)) '() xs)))
-                    (not? (lambda (b) (if b #f #t)))
-                    (and? (lambda (a b) (if a (if b #t #f) #f)))
-                    (or?  (lambda (a b) (if a (if b #t #t) (if b #t #f))))
-                    (boolean=? (lambda (lhs rhs) (if lhs rhs (not? rhs))))
-                    (equal?
-                      (fix (lambda (equal? lhs rhs)
-                             (if (symbol? lhs)
-                               (if (symbol? rhs) (symbol=? lhs rhs) #f)
-                               (if (boolean? lhs)
-                                 (if (boolean? rhs) (boolean=? lhs rhs) #f)
-                                 (if (nil? lhs) (nil? rhs)
-                                   (if (cons? lhs)
-                                     (if (cons? rhs)
-                                       (and? (equal? (head lhs) (head rhs))
-                                             (equal? (tail lhs) (tail rhs)))
-                                       #f)
-                                     (if (integer? lhs)
-                                       (if (integer? rhs) (=? lhs rhs) #f)
-                                       #f))))))))
-                    (assoc (assoc/? equal?)))
-               (let$* ((and (lambda (env stx)
-                              ((fix (lambda (self prev stx)
-                                      (if (nil? stx) prev
-                                        (if (equal? #f prev) #f
-                                          (self (eval env (head stx))
-                                                (tail stx)))))) #t stx)))
-                       (or (lambda (env stx)
-                             ((fix (lambda (self prev stx)
-                                     (if (nil? stx) prev
-                                       (if (equal? #f prev)
-                                         (self (eval env (head stx))
-                                               (tail stx))
-                                         prev)))) #f stx))))
-                      (eval (env-current))))))
-         ; @
-         (lambda (env stx)
-           (apply (eval env (head stx)) (map (eval env) (tail stx))))
-         (lambda (env stx) ((eval env (head stx)) env (tail stx))) ; $
-         (let/binder lambda) ; let
-         (let/binder lambda$) ; let$
-         (let*/syntax-type #f) ; let*
-         (let*/syntax-type #t) ; let$*
-         (lambda (_ stx) (head stx)) ; quote
-         ; if
-         (lambda (env stx)
-           ((unpair (boolean->bit (eval env (first stx)))
-                    (pair (lambda (_) (eval env (second stx)))
-                          (lambda (_) (eval env (third stx))))) ()))
-         ; list
-         (lambda (env stx) (map (eval env) stx))
-         ; list*
-         (lambda (env stx)
-           ((lambda (rargs) (foldl cons (head rargs) (tail rargs)))
-            (reverse (map (eval env) stx))))
-         ))
-      ; let/binder
-      (lambda (binder env stx)
-        ((lambda (params args body)
-           (apply (binder env (cons params (cons body nil)))
-                  (map (eval env) args)))
-         (map head (head stx))
-         (map (compose head tail) (head stx))
-         (head (tail stx))))
-      ; let*/syntax-type
-      (lambda (syntax-type env stx)
-        (eval (foldl (lambda (binding env)
-                       (env-add env (head binding) syntax-type
-                                (eval env (head (tail binding)))))
-                     env (head stx))
-              (head (tail stx))))
-      ; fix*
-      (fix (lambda (self ps)
-             (map (lambda (pi x) ((apply pi (self ps)) x)) ps)))
-      head ; first
-      (compose head tail) ; second
-      (compose (compose head tail) tail) ; third
-      (foldl cons nil) ; reverse
-      )))
+;(define unsafe2-std2-eval
+  ;(unsafe2-std1-program
+    ;'((lambda (let/binder let*/syntax-type fix* first second third reverse)
+        ;((lambda$ (@ $ let let$ let* let$* quote if list list*)
+           ;(let$* ((letrec (lambda (env stx)
+                             ;(let* ((defs (first stx))
+                                    ;(body (second stx))
+                                    ;(names (map (lambda (def)
+                                                  ;(head (first def))) defs))
+                                    ;(procs-raw
+                                      ;(map (lambda (def)
+                                             ;(@ lambda env
+                                                ;(list
+                                                  ;(append
+                                                    ;names (tail (first def)))
+                                                  ;(second def)))) defs))
+                                    ;(procs-final (fix* procs-raw)))
+                               ;(apply (@ lambda env (list names body))
+                                      ;procs-final))))
+                   ;(env-current (lambda (env _) env)))
+             ;(let* ((filter (lambda (keep? xs)
+                              ;(foldr (lambda (x ys)
+                                       ;(if (keep? x) (cons x ys) ys)) '() xs)))
+                    ;(not? (lambda (b) (if b #f #t)))
+                    ;(and? (lambda (a b) (if a (if b #t #f) #f)))
+                    ;(or?  (lambda (a b) (if a (if b #t #t) (if b #t #f))))
+                    ;(boolean=? (lambda (lhs rhs) (if lhs rhs (not? rhs))))
+                    ;(equal?
+                      ;(fix (lambda (equal? lhs rhs)
+                             ;(if (symbol? lhs)
+                               ;(if (symbol? rhs) (symbol=? lhs rhs) #f)
+                               ;(if (boolean? lhs)
+                                 ;(if (boolean? rhs) (boolean=? lhs rhs) #f)
+                                 ;(if (nil? lhs) (nil? rhs)
+                                   ;(if (cons? lhs)
+                                     ;(if (cons? rhs)
+                                       ;(and? (equal? (head lhs) (head rhs))
+                                             ;(equal? (tail lhs) (tail rhs)))
+                                       ;#f)
+                                     ;(if (integer? lhs)
+                                       ;(if (integer? rhs) (=? lhs rhs) #f)
+                                       ;#f))))))))
+                    ;(assoc (assoc/? equal?)))
+               ;(let$* ((and (lambda (env stx)
+                              ;((fix (lambda (self prev stx)
+                                      ;(if (nil? stx) prev
+                                        ;(if (equal? #f prev) #f
+                                          ;(self (eval env (head stx))
+                                                ;(tail stx)))))) #t stx)))
+                       ;(or (lambda (env stx)
+                             ;((fix (lambda (self prev stx)
+                                     ;(if (nil? stx) prev
+                                       ;(if (equal? #f prev)
+                                         ;(self (eval env (head stx))
+                                               ;(tail stx))
+                                         ;prev)))) #f stx))))
+                      ;(eval (env-current))))))
+         ;; @
+         ;(lambda (env stx)
+           ;(apply (eval env (head stx)) (map (eval env) (tail stx))))
+         ;(lambda (env stx) ((eval env (head stx)) env (tail stx))) ; $
+         ;(let/binder lambda) ; let
+         ;(let/binder lambda$) ; let$
+         ;(let*/syntax-type #f) ; let*
+         ;(let*/syntax-type #t) ; let$*
+         ;(lambda (_ stx) (head stx)) ; quote
+         ;; if
+         ;(lambda (env stx)
+           ;((unpair (boolean->bit (eval env (first stx)))
+                    ;(pair (lambda (_) (eval env (second stx)))
+                          ;(lambda (_) (eval env (third stx))))) ()))
+         ;; list
+         ;(lambda (env stx) (map (eval env) stx))
+         ;; list*
+         ;(lambda (env stx)
+           ;((lambda (rargs) (foldl cons (head rargs) (tail rargs)))
+            ;(reverse (map (eval env) stx))))
+         ;))
+      ;; let/binder
+      ;(lambda (binder env stx)
+        ;((lambda (params args body)
+           ;(apply (binder env (cons params (cons body nil)))
+                  ;(map (eval env) args)))
+         ;(map head (head stx))
+         ;(map (compose head tail) (head stx))
+         ;(head (tail stx))))
+      ;; let*/syntax-type
+      ;(lambda (syntax-type env stx)
+        ;(eval (foldl (lambda (binding env)
+                       ;(env-add env (head binding) syntax-type
+                                ;(eval env (head (tail binding)))))
+                     ;env (head stx))
+              ;(head (tail stx))))
+      ;; fix*
+      ;(fix (lambda (self ps)
+             ;(map (lambda (pi x) ((apply pi (self ps)) x)) ps)))
+      ;head ; first
+      ;(compose head tail) ; second
+      ;(compose (compose head tail) tail) ; third
+      ;(foldl cons nil) ; reverse
+      ;)))
 
-(module+ test
-  (define unsafe2-std2-eval-denoted (denote unsafe2-std2-eval))
-  (define (unsafe2-std2-denote body)
-    (unsafe2-std2-eval-denoted (denote (unsafe1-parse (list 'quote body)))))
-  (check-equal?
-    (unsafe2-std2-denote '(head '(a b)))
-    (denote (unsafe1-parse ''a)))
-  (check-equal?
-    (unsafe2-std2-denote '(if (head (cons #t #f))
-                            (if (tail (cons #t #f)) 'a 'b) 'c))
-    (denote (unsafe1-parse ''b)))
-  (check-equal?
-    (unsafe2-std2-denote '(third (list* 'a 'b '(c d))))
-    (denote (unsafe1-parse ''c)))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(letrec (((even? n) (if (=? 0 n) #t (odd? (- n 1))))
-                ((odd? n) (if (=? 0 n) #f (even? (- n 1)))))
-         (list (even? 3) (odd? 3))))
-    (denote (unsafe1-parse ''(#f #t))))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(and 2 ()))
-    (denote (unsafe1-parse '())))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(and 2 #f () ()))
-    (denote (unsafe1-parse #f)))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(or 2 () ()))
-    (denote (unsafe1-parse 2)))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(or #f ()))
-    (denote (unsafe1-parse '())))
-  (check-equal?
-    (unsafe2-std2-denote
-      '(tail (assoc '(a (() (#f . 1))) '(((a (() (#t . 1))) . one)
-                                         ((a (() (#f . 1))) . two)
-                                         ((a (() (#f . 1))) . three)))))
-    (denote (unsafe1-parse ''two)))
-  )
+;(module+ test
+  ;(define unsafe2-std2-eval-denoted (denote unsafe2-std2-eval))
+  ;(define (unsafe2-std2-denote body)
+    ;(unsafe2-std2-eval-denoted (denote (unsafe1-parse (list 'quote body)))))
+  ;(check-equal?
+    ;(unsafe2-std2-denote '(head '(a b)))
+    ;(denote (unsafe1-parse ''a)))
+  ;(check-equal?
+    ;(unsafe2-std2-denote '(if (head (cons #t #f))
+                            ;(if (tail (cons #t #f)) 'a 'b) 'c))
+    ;(denote (unsafe1-parse ''b)))
+  ;(check-equal?
+    ;(unsafe2-std2-denote '(third (list* 'a 'b '(c d))))
+    ;(denote (unsafe1-parse ''c)))
+  ;(check-equal?
+    ;(unsafe2-std2-denote
+      ;'(letrec (((even? n) (if (=? 0 n) #t (odd? (- n 1))))
+                ;((odd? n) (if (=? 0 n) #f (even? (- n 1)))))
+         ;(list (even? 3) (odd? 3))))
+    ;(denote (unsafe1-parse ''(#f #t))))
+  ;(check-equal?
+    ;(unsafe2-std2-denote
+      ;'(and 2 ()))
+    ;(denote (unsafe1-parse '())))
+  ;(check-equal?
+    ;(unsafe2-std2-denote
+      ;'(and 2 #f () ()))
+    ;(denote (unsafe1-parse #f)))
+  ;(check-equal?
+    ;(unsafe2-std2-denote
+      ;'(or 2 () ()))
+    ;(denote (unsafe1-parse 2)))
+  ;(check-equal?
+    ;(unsafe2-std2-denote
+      ;'(or #f ()))
+    ;(denote (unsafe1-parse '())))
+  ;(check-equal?
+    ;(unsafe2-std2-denote
+      ;'(tail (assoc '(a (() (#f . 1))) '(((a (() (#t . 1))) . one)
+                                         ;((a (() (#f . 1))) . two)
+                                         ;((a (() (#f . 1))) . three)))))
+    ;(denote (unsafe1-parse ''two)))
+  ;)
