@@ -42,6 +42,7 @@
     (foldr (fix (lambda (foldr f acc xs)
                   (if (nil? xs) acc (f (head xs) (foldr f acc (tail xs)))))))
     (map (lambda (f) (foldr (compose cons f) '())))
+    (reverse (foldl cons '()))
     (append (fswap (foldr cons)))
     (list-ref-tail (foldl (const tail)))
     (list-ref (lambda (xs index) (head (list-ref-tail xs index))))
@@ -151,7 +152,7 @@
     nil cons symbol? boolean? nil? cons? integer? symbol=? head tail
     (=? integer=?) (<? integer<?) (<=? integer<=?)
     (>? integer>?) (>=? integer>=?) + *-1 -
-    foldl foldr map append assoc/?
+    foldl foldr map reverse append assoc/?
     senv-empty senv-add renv-empty renv-add env-empty env-add apply-to apply
     seval eval
     )))
@@ -193,7 +194,7 @@
 
 (define unsafe2-std2-eval
   (unsafe2-std1-program
-    '((lambda (let/binder let*/syntax-type fix* first second third reverse)
+    '((lambda (let/binder let*/syntax-type fix* first second third)
         ((lambda$ (@ $ let let$ let* let$* quote if list list*)
            (let$* ((letrec (lambda (senv stx)
                              (let* ((defs (first stx))
@@ -213,7 +214,6 @@
                                  (apply (body-proc renv)
                                         (fix* (map (apply-to renv)
                                                    procs-raw)))))))
-
                    (env-current (lambda (senv _ renv) (cons senv renv))))
 
              (let* ((filter (lambda (keep? xs)
@@ -321,7 +321,6 @@
       head ; first
       (compose head tail) ; second
       (compose (compose head tail) tail) ; third
-      (foldl cons nil) ; reverse
       )))
 
 (module+ test
