@@ -34,12 +34,16 @@
 
     (- (lambda (i0 i1) (+ i0 (*-1 i1))))
 
+    (error (lambda (msg) (() msg)))  ; intentionally break
+
     (foldl (fix (lambda (foldl f acc xs)
                   (if (nil? xs) acc (foldl f (f (head xs) acc) (tail xs))))))
     (foldr (fix (lambda (foldr f acc xs)
                   (if (nil? xs) acc (f (head xs) (foldr f acc (tail xs)))))))
     (map    (lambda (f xs) (foldr (compose cons f) '() xs)))
     (append (lambda (xs ys) (foldr cons ys xs)))
+    (list-ref-tail (foldl (const tail)))
+    (list-ref (lambda (xs index) (head (list-ref-tail xs index))))
 
     (assoc/? (lambda (match?)
                (fix (lambda (assoc key kvs)
