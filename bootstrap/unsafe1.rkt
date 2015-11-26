@@ -2,11 +2,13 @@
 (provide
   std0
   std0-module
+  symbol-table-string
   unsafe1-parse
   unsafe1-module
   )
 
 (require
+  "denotation.rkt"
   "linking.rkt"
   "operation.rkt"
   "parsing.rkt"
@@ -18,11 +20,11 @@
   gregr-misc/sugar
   racket/function
   racket/match
+  racket/string
   )
 
 (module+ test
   (require
-    "denotation.rkt"
     rackunit
     ))
 
@@ -314,6 +316,11 @@
   _ = (set-box! bx st)
   result)
 (define symbol->value! (boxed-symbol-table-get *symbol-table*))
+(define (symbol-table-string)
+  (string-join
+    (forl (values sym val) <- (symbol-table-symbol->value
+                                (unbox *symbol-table*))
+          (format "~s = ~v" sym (denote val))) "\n"))
 
 (define (parse-quoted senv stx)
   (match stx
