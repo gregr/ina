@@ -31,6 +31,7 @@
     integer=? integer<? integer<=? integer>? integer>=?
     (+ integer+) (*-1 integer-invert))
   `((bit0 (bit 0)) (bit1 (bit 1)) (unpair (lambda (bt pr) (unpair bt pr)))
+    (fswap (lambda (f x y) (f y x)))
 
     (- (lambda (i0 i1) (+ i0 (*-1 i1))))
 
@@ -40,8 +41,8 @@
                   (if (nil? xs) acc (foldl f (f (head xs) acc) (tail xs))))))
     (foldr (fix (lambda (foldr f acc xs)
                   (if (nil? xs) acc (f (head xs) (foldr f acc (tail xs)))))))
-    (map    (lambda (f xs) (foldr (compose cons f) '() xs)))
-    (append (lambda (xs ys) (foldr cons ys xs)))
+    (map (lambda (f) (foldr (compose cons f) '())))
+    (append (fswap (foldr cons)))
     (list-ref-tail (foldl (const tail)))
     (list-ref (lambda (xs index) (head (list-ref-tail xs index))))
 
@@ -55,7 +56,7 @@
                 (lambda (stx renv) ((list-ref renv index) senv stx renv)))))
     (senv-empty '())
     (renv-empty '())
-    (renv-add (lambda (renv val) (cons val renv)))
+    (renv-add (fswap cons))
     (senv-add (lambda (senv key actual-op? op)
                 (let* ((pos (cons () senv))
                        (op (if actual-op? (cons #t op)
@@ -145,7 +146,8 @@
   )
 
 (define std1-applicatives (open-module std1
-  '(bit0 bit1 (pair pcons) unpair boolean->bit identity const compose fix
+  '(bit0 bit1 (pair pcons) unpair boolean->bit
+    identity const compose fix fswap
     nil cons symbol? boolean? nil? cons? integer? symbol=? head tail
     (=? integer=?) (<? integer<?) (<=? integer<=?)
     (>? integer>?) (>=? integer>=?) + *-1 -
