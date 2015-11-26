@@ -68,10 +68,13 @@
        (let ((dproc (pre-denote-term tproc scope (list* 'proc path)))
              (darg (pre-denote-term targ scope (list* 'arg path))))
          (lambda (env)
-           (match (dproc env)
-             ((? procedure? proc) (proc (darg env)))
-             (val (error (format "cannot apply non-procedure ~v; depth=~s; ~s"
-                                 val scope (annotate path))))))))))
+           (let ((proc (dproc env)) (arg (darg env)))
+             (match proc
+               ((? procedure? proc) (proc arg))
+               (val (error
+                      (format
+                        "cannot apply non-procedure ~v to ~v; depth=~s; ~s"
+                        val arg scope (annotate path)))))))))))
   (pre-denote-term tm scope path))
 
 (define (denote term (annotate ~s))
