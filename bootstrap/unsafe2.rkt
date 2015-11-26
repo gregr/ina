@@ -73,6 +73,7 @@
                   (senv-get/f (compose (list-ref-tail senv) tail) #f
                               senv key)))
 
+    (apply-to (lambda (arg proc) (proc arg)))
     (apply (foldl (lambda (arg f) (f arg))))
     (seval (fix (lambda (seval senv stx)
                   (if (cons? stx)
@@ -81,7 +82,7 @@
                         ((tail ?op) senv (tail stx))
                         (let ((pvs (map (seval senv) stx)))
                           (lambda (renv)
-                            (let ((proc*args (map (lambda (pv) (pv renv)) pvs)))
+                            (let ((proc*args (map (apply-to renv) pvs)))
                               (apply (head proc*args) (tail proc*args)))))))
                     (if (symbol? stx)
                       (let ((index (sym->index senv stx)))
@@ -149,7 +150,8 @@
     (=? integer=?) (<? integer<?) (<=? integer<=?)
     (>? integer>?) (>=? integer>=?) + *-1 -
     foldl foldr map append assoc/?
-    senv-empty senv-add renv-empty renv-add env-empty env-add apply eval
+    senv-empty senv-add renv-empty renv-add env-empty env-add apply-to apply
+    seval eval
     )))
 (define std1-operatives (open-module std1
   '((lambda $lambda) (lambda$ $lambda$))))
