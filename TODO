@@ -62,6 +62,17 @@ text-based bootstrap
       the above solutions already correspond to driving, so this would add splitting,
       context injection, and cyclic memoization (extraction of recursive state machines)
 
+  restore monolithic eval (it's simpler than seval) once it's clearly affordable
+    monolithic eval benchmark:
+      pre-processing: cpu time: 220 real time: 214 gc time: 60
+      cpu time: 284 real time: 283 gc time: 0
+      cpu time: 1804 real time: 1809 gc time: 0
+      user    0m5.884s
+    seval benchmark:
+      pre-processing: cpu time: 728 real time: 727 gc time: 136
+      cpu time: 88 real time: 90 gc time: 4
+      cpu time: 432 real time: 430 gc time: 28
+      user    0m4.452s
 
 high-level language design
   should serve as an example of creating an ina backend for a HLL
