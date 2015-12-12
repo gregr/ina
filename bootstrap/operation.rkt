@@ -2,7 +2,6 @@
 (provide
   step
   step-complete
-  step-continuation
   )
 
 (require
