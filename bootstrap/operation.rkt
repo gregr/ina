@@ -2,68 +2,47 @@
 (provide
   step
   step-complete
+  step*
   )
 
 (require
   "substitution.rkt"
   "term.rkt"
-  gregr-misc/cursor
-  gregr-misc/list
   gregr-misc/maybe
-  racket/function
+  gregr-misc/sugar
   racket/match
   )
 
 (module+ test
   (require
-    gregr-misc/sugar
     rackunit
     ))
 
-(define (step-continuation-downward cterm)
-  (define (sub-cont choice)
-    (step-continuation-downward (::@ cterm (list choice))))
-  (match (::.* cterm)
-    ((? t-subst?)  (just cterm))
-    ((? t-value?)  (nothing))
-    ((? t-unpair?) (maybe-or (sub-cont 'bit) (sub-cont 'pair) (just cterm)))
-    ((? t-apply?)  (maybe-or (sub-cont 'proc) (sub-cont 'arg) (just cterm)))))
-
-(define (step-continuation-upward-with key cterm)
-  (match* (key (::.* cterm))
-    (('bit  (? t-unpair?)) (just (::@ cterm '(pair))))
-    (('pair (? t-unpair?)) (just cterm))
-    (('proc (? t-apply?))  (just (::@ cterm '(arg))))
-    (('arg  (? t-apply?))  (just cterm))
-    ((_     _)             (step-continuation-upward cterm))))
-
-(define (step-continuation-upward cterm)
-  (match (cursor-trail cterm)
-    ('()          (nothing))
-    ((cons key _) (step-continuation-upward-with key (::^ cterm)))))
-
-(define (step-continuation cterm)
-  (maybe-or
-    (step-continuation-downward cterm)
-    (maybe-fold1 step-continuation (step-continuation-upward cterm))))
-
-(define (step-execute cterm)
-  (maybe-map
-    (curry ::=* cterm)
-    (match (::.* cterm)
-      ((t-dsubst dsub tm) (just (dsubst->t-subst dsub tm)))
-      ((t-subst sub tm) (just (substitute sub tm)))
+(define (step* step-count term)
+  (define (step-execute step-count term)
+    (define step-count-next (and step-count (- step-count 1)))
+    (match term
+      ((t-dsubst sub tm) (step* step-count-next (dsubst->t-subst sub tm)))
+      ((t-subst  sub tm) (step* step-count-next (substitute sub tm)))
       ((t-unpair (t-value (v-bit bt)) (t-value (v-pair p0 p1)))
-       (just (t-value (match bt ((b-0) p0) ((b-1) p1)))))
+       (step* step-count-next (t-value (match bt ((b-0) p0) ((b-1) p1)))))
       ((t-apply (t-value (v-lam body)) (t-value arg))
-       (just (t-subst (subst-single arg) body)))
-      ((? term?) (nothing)))))
+       (step* step-count-next (t-subst (subst-single arg) body)))
+      ((? term?) (values step-count term))))
+  (def (step-seq-execute k t0 t1)
+    (values sc0 t0) = (step* step-count t0)
+    (values sc1 t1) = (step* sc0 t1)
+    (step-execute sc1 (k t0 t1)))
+  (if (eq? 0 step-count) (values 0 term)
+    (match term
+      ((t-unpair t0 t1) (step-seq-execute t-unpair t0 t1))
+      ((t-apply t0 t1) (step-seq-execute t-apply t0 t1))
+      (_ (step-execute step-count term)))))
 
-(define (step-once cterm) (maybe-fold1 step-execute (step-continuation cterm)))
-(define step-full (curry maybe-iterate step-once))
-
-(define (step term) (maybe-map ::^*. (step-once (::0 term))))
-(define step-complete (compose1 ::^*. step-full ::0))
+(def (step term)
+     (values remaining result) = (step* 1 term)
+     (if (= 0 remaining) (just result) (nothing)))
+(def (step-complete term) (values _ result) = (step* #f term) result)
 
 (module+ test
   (define test-term-0
