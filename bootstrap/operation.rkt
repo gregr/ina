@@ -1,6 +1,5 @@
 #lang racket/base
 (provide
-  drive
   step
   step-complete
   step-continuation
@@ -67,51 +66,6 @@
 (define (step term) (maybe-map ::^*. (step-once (::0 term))))
 (define step-complete (compose1 ::^*. step-full ::0))
 
-(define (drive max-depth max-span tm (depth 0) (span 0))
-  (define (drive-value full? depth span val)
-    (match val
-      ((v-unit)       val)
-      ((v-bit  b)     val)
-      ((v-var  index) val)
-      ((v-pair l r) (apply-map* v-pair (curry drive-value #t depth span) l r))
-      ((v-lam  body)
-       (if (and full? (not (and max-depth (<= max-depth depth))))
-         (v-lam (drive-term #t (+ 1 depth) span body))
-         val))))
-  (define (drive-value-subst full? depth span s v)
-    (match v
-      ((v-var _) (substitute-value s v))
-      ((v-pair l r)
-       (apply-map* v-pair (curry drive-value-subst #t depth span s) l r))
-      (_ (drive-value full? depth span (substitute-value s v)))))
-  (define (drive-term full? depth span tm)
-    (define self (curry drive-term full? depth span))
-    (match tm
-      ((t-value  v) (t-value (drive-value full? depth span v)))
-      ((t-dsubst dsub tm) (self (dsubst->t-subst dsub tm)))
-      ((t-subst  s t)
-       (match t
-         ((t-value v) (t-value (drive-value-subst full? depth span s v)))
-         (_           (self (substitute s t)))))
-      ((t-unpair bit pair)
-       (match* ((self bit) (self pair))
-         (((t-value (v-bit bt)) (t-value (v-pair p0 p1)))
-          (t-value (match bt ((b-0) p0) ((b-1) p1))))
-         ((t0 t1) (t-unpair t0 t1))))
-      ((t-apply  proc arg)
-       (let* ((span-next (if (= 0 depth) span (+ span 1)))
-              (exceeded? (and max-span (< 0 depth) (<= max-span span-next)))
-              (t1 (drive-term #t depth span arg))
-              (varg (match t1 ((t-value varg) varg) (_ #f)))
-              (stop? (or exceeded? (not varg)))
-              (t0 (drive-term stop? depth span proc))
-              (body (and (not stop?)
-                         (match t0 ((t-value (v-lam body)) body) (_ #f)))))
-         (if body (drive-term full? depth span-next
-                              (t-subst (subst-single varg) body))
-           (t-apply t0 t1))))))
-  (drive-term #t depth span tm))
-
 (module+ test
   (define test-term-0
     (t-apply
@@ -175,12 +129,7 @@
   (for_ (list tt tc tn) <- terms*completes*normals
         (begin
           (check-equal? (step-complete tt) tc)
-          (check-equal? (drive 0 0 tt) tc)
-          (check-equal? (drive #f #f tt) tn)
           ))
-  (check-equal?
-    (drive 1 100 test-omega 1)
-    test-omega)
   (define completed (step-complete test-term-1))
   (check-match
     (step test-term-1)
