@@ -20,8 +20,19 @@
 (define (env-extend env vs) (append vs env))
 
 (define (pre-denote tm annotate scope path)
+  (def (pre-denote-subst pdbody (subst bindings lift) body body-key)
+    (values dbindings _) =
+    (forf result = '() sub-path = (list* 'first path)
+          val <- bindings
+          (values (list* (pre-denote-value
+                           val scope (list* 's 'bindings sub-path)) result)
+                  (list* 'rest sub-path)))
+    dbody = (pdbody body (+ (length bindings) scope) (list* body-key path))
+    (lambda (env)
+      (dbody (env-extend env (reverse (forl dval <- dbindings (dval env)))))))
   (define (pre-denote-value val scope path)
     (match val
+      ((v-subst sub val) (pre-denote-subst pre-denote-value sub val 'v))
       ((v-lam body) (let ((db (pre-denote-term
                                 body (+ 1 scope) (list* 'body path))))
                       (lambda (env) (lambda (arg) (db (env-add env arg))))))
@@ -38,19 +49,7 @@
     (match tm
       ((t-dsubst dsub tm)
        (pre-denote-term (dsubst->t-subst dsub tm) scope path))
-      ((t-subst (subst bindings lift) tm)
-       (lets (values dbindings _) =
-             (forf result = '() sub-path = (list* 'first path)
-                   val <- bindings
-                   (values (list* (pre-denote-value
-                                    val scope (list* 's 'bindings sub-path))
-                                  result)
-                           (list* 'rest sub-path)))
-             dbody = (pre-denote-term tm (+ (length bindings) scope)
-                                  (list* 't path))
-             (lambda (env)
-               (dbody (env-extend env (reverse (forl dval <- dbindings
-                                                     (dval env))))))))
+      ((t-subst sub tm) (pre-denote-subst pre-denote-term sub tm 't))
       ((t-value val)    (pre-denote-value val scope (list* 'v path)))
       ((t-unpair tbit tpair)
        (let ((dbit (pre-denote-term tbit scope (list* 'bit path)))

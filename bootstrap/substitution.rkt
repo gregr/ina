@@ -3,7 +3,6 @@
   dsubst->t-subst
   subst-empty
   subst-extend
-  subst-single
   substitute
   substitute-full
   substitute-value
@@ -42,7 +41,6 @@
 (define subst-empty (subst '() 0))
 (define subst-lift-1 (subst '() 1))
 (def (subst-extend (subst bindings k) arg) (subst (list* arg bindings) k))
-(define (subst-single arg) (subst-extend subst-empty arg))
 (def (undefer-dsubst sub)
   (subst bindings lift) = (substitute-subst subst-lift-1 sub)
   (subst (list* v0 bindings) lift))
@@ -55,9 +53,10 @@
 
 (define (substitute-value sub val)
   (match val
+    ((v-subst _ _) (v-subst sub val))
+    ((v-lam _)     (v-subst sub val))
     ((v-pair l r)  (apply-map* v-pair (curry substitute-value sub) l r))
     ((v-var index) (substitute-var sub index))
-    ((v-lam body)  (v-lam (t-dsubst sub body)))
     ((? value?)    val)))
 
 (define (substitute sub tm)
@@ -69,15 +68,19 @@
     ((t-apply proc arg) (apply-map* t-apply (curry t-subst sub) proc arg))))
 
 (define (substitute-full tv)
-  (match tv
-    ((t-dsubst sub tm)  (substitute-full (dsubst->t-subst sub tm)))
-    ((t-subst sub tm)   (substitute-full (substitute sub tm)))
-    ((t-value v)        (t-value (substitute-full v)))
-    ((t-unpair idx pr)  (apply-map* t-unpair substitute-full idx pr))
-    ((t-apply proc arg) (apply-map* t-apply substitute-full proc arg))
-    ((v-pair l r)       (apply-map* v-pair substitute-full l r))
-    ((v-lam body)       (v-lam (substitute-full body)))
-    ((? value?)         tv)))
+  (define (self sub tv)
+    (match tv
+      ((t-dsubst inner t) (self sub (dsubst->t-subst inner t)))
+      ((t-subst inner t) (self (if sub (substitute-subst sub inner) inner) t))
+      ((t-value v) (t-value (self sub v)))
+      ((t-unpair idx pr) (apply-map* t-unpair (curry self sub) idx pr))
+      ((t-apply proc arg) (apply-map* t-apply (curry self sub) proc arg))
+      ((v-subst inner v) (self (if sub (substitute-subst sub inner) inner) v))
+      ((v-pair l r) (apply-map* v-pair (curry self sub) l r))
+      ((v-lam body) (v-lam (self #f (if sub (t-dsubst sub body) body))))
+      ((v-var index) (if sub (self #f (substitute-var sub index)) tv))
+      ((? value?) tv)))
+  (self #f tv))
 
 (module+ test
   (check-equal?

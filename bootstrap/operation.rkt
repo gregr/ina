@@ -21,13 +21,24 @@
 (define (step* step-count term)
   (define (step-execute step-count term)
     (define step-count-next (and step-count (- step-count 1)))
+    (define (step-apply sub arg body)
+      (step* step-count-next (t-subst (subst-extend sub arg) body)))
+    (define (step-unpair sub bt p0 p1)
+      (define px (match bt ((b-0) p0) ((b-1) p1)))
+      (values step-count-next (t-value (if sub (substitute-value sub px) px))))
     (match term
       ((t-dsubst sub tm) (step* step-count-next (dsubst->t-subst sub tm)))
       ((t-subst  sub tm) (step* step-count-next (substitute sub tm)))
+      ((t-unpair (t-value (v-bit bt)) (t-value (v-subst sub (v-pair p0 p1))))
+       (step-unpair sub bt p0 p1))
       ((t-unpair (t-value (v-bit bt)) (t-value (v-pair p0 p1)))
-       (step* step-count-next (t-value (match bt ((b-0) p0) ((b-1) p1)))))
+       (step-unpair #f bt p0 p1))
+      ((t-apply (t-value (v-subst sub (v-lam body))) (t-value arg))
+       (step-apply sub arg body))
       ((t-apply (t-value (v-lam body)) (t-value arg))
-       (step* step-count-next (t-subst (subst-single arg) body)))
+       (step-apply subst-empty arg body))
+      ((t-value (v-subst sub (? v-subst? val)))
+       (step* step-count-next (t-value (substitute-value sub val))))
       ((? term?) (values step-count term))))
   (def (step-seq-execute k t0 t1)
     (values sc0 t0) = (step* step-count t0)
@@ -85,11 +96,11 @@
       (t-value (v-bit (b-1)))))
   (define test-complete-7
     (t-value
-      (v-lam (t-dsubst (subst (list (v-bit (b-1))) 0)
-                       (t-unpair (t-value (v-var 1))
-                                 (t-value (v-pair
-                                            (v-bit (b-1))
-                                            (v-bit (b-0)))))))))
+      (v-subst (subst (list (v-bit (b-1))) 0)
+               (v-lam (t-unpair (t-value (v-var 1))
+                                (t-value (v-pair
+                                           (v-bit (b-1))
+                                           (v-bit (b-0)))))))))
   (define test-normalized-7 (t-value (v-lam (t-value (v-bit (b-0))))))
   (define test-omega
     (t-apply

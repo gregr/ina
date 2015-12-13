@@ -13,6 +13,7 @@
   (struct-out t-apply)
   term?
 
+  (struct-out v-subst)
   (struct-out v-unit)
   (struct-out v-bit)
   (struct-out v-pair)
@@ -33,6 +34,7 @@
   (t-apply  proc arg))
 
 (records value
+  (v-subst s v)
   (v-unit)
   (v-bit  b)
   (v-pair l r)
