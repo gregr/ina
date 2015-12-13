@@ -27,7 +27,6 @@
       (define px (match bt ((b-0) p0) ((b-1) p1)))
       (values step-count-next (t-value (if sub (substitute-value sub px) px))))
     (match term
-      ((t-dsubst sub tm) (step* step-count-next (dsubst->t-subst sub tm)))
       ((t-subst  sub tm) (step* step-count-next (substitute sub tm)))
       ((t-unpair (t-value (v-bit bt)) (t-value (v-subst sub (v-pair p0 p1))))
        (step-unpair sub bt p0 p1))

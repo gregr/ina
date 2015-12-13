@@ -6,7 +6,6 @@
 
   (struct-out subst)
 
-  (struct-out t-dsubst)
   (struct-out t-subst)
   (struct-out t-value)
   (struct-out t-unpair)
@@ -27,7 +26,6 @@
   )
 
 (records term
-  (t-dsubst s t)
   (t-subst  s t)
   (t-value  v)
   (t-unpair bit pair)

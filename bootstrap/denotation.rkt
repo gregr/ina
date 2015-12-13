@@ -47,8 +47,6 @@
                                      scope idx (annotate path)))))))
   (define (pre-denote-term tm scope path)
     (match tm
-      ((t-dsubst dsub tm)
-       (pre-denote-term (dsubst->t-subst dsub tm) scope path))
       ((t-subst sub tm) (pre-denote-subst pre-denote-term sub tm 't))
       ((t-value val)    (pre-denote-value val scope (list* 'v path)))
       ((t-unpair tbit tpair)

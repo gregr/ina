@@ -1,6 +1,5 @@
 #lang racket/base
 (provide
-  dsubst->t-subst
   subst-empty
   subst-extend
   substitute
@@ -41,15 +40,9 @@
 (define subst-empty (subst '() 0))
 (define subst-lift-1 (subst '() 1))
 (def (subst-extend (subst bindings k) arg) (subst (list* arg bindings) k))
-(def (undefer-dsubst sub)
+(def (subst-descend sub)
   (subst bindings lift) = (substitute-subst subst-lift-1 sub)
   (subst (list* v0 bindings) lift))
-(def (complete-dsubst sub dsub)
-  (subst bindings lift) = dsub
-  (match sub
-    ((subst (list a0) 0) (subst-extend dsub a0))
-    (_ (substitute-subst sub (undefer-dsubst dsub)))))
-(define (dsubst->t-subst dsub tm) (t-subst (undefer-dsubst dsub) tm))
 
 (define (substitute-value sub val)
   (match val
@@ -61,7 +54,6 @@
 
 (define (substitute sub tm)
   (match tm
-    ((t-dsubst dsub tm) (t-subst (complete-dsubst sub dsub) tm))
     ((t-subst inner tm) (t-subst (substitute-subst sub inner) tm))
     ((t-value val)      (t-value (substitute-value sub val)))
     ((t-unpair idx pr)  (apply-map* t-unpair (curry t-subst sub) idx pr))
@@ -70,14 +62,14 @@
 (define (substitute-full tv)
   (define (self sub tv)
     (match tv
-      ((t-dsubst inner t) (self sub (dsubst->t-subst inner t)))
       ((t-subst inner t) (self (if sub (substitute-subst sub inner) inner) t))
       ((t-value v) (t-value (self sub v)))
       ((t-unpair idx pr) (apply-map* t-unpair (curry self sub) idx pr))
       ((t-apply proc arg) (apply-map* t-apply (curry self sub) proc arg))
       ((v-subst inner v) (self (if sub (substitute-subst sub inner) inner) v))
       ((v-pair l r) (apply-map* v-pair (curry self sub) l r))
-      ((v-lam body) (v-lam (self #f (if sub (t-dsubst sub body) body))))
+      ((v-lam body)
+       (v-lam (self #f (if sub (t-subst (subst-descend sub) body) body))))
       ((v-var index) (if sub (self #f (substitute-var sub index)) tv))
       ((? value?) tv)))
   (self #f tv))
