@@ -1,6 +1,8 @@
 #lang racket/base
 (provide
   dsubst->t-subst
+  subst-empty
+  subst-extend
   subst-single
   substitute
   substitute-full
@@ -15,6 +17,9 @@
   racket/list
   racket/match
   )
+
+(module+ test
+  (require rackunit))
 
 (def (substitute-lift (subst bindings k) count)
   binding-count = (length bindings)
@@ -34,15 +39,17 @@
     (v-var (+ lift (- idx binding-count)))))
 
 (define v0 (v-var 0))
-(define sub-lift-1 (subst '() 1))
-(define (subst-single arg) (subst (list arg) 0))
+(define subst-empty (subst '() 0))
+(define subst-lift-1 (subst '() 1))
+(def (subst-extend (subst bindings k) arg) (subst (list* arg bindings) k))
+(define (subst-single arg) (subst-extend subst-empty arg))
 (def (undefer-dsubst sub)
-  (subst bindings lift) = (substitute-subst sub-lift-1 sub)
+  (subst bindings lift) = (substitute-subst subst-lift-1 sub)
   (subst (list* v0 bindings) lift))
 (def (complete-dsubst sub dsub)
   (subst bindings lift) = dsub
   (match sub
-    ((subst (list a0) 0) (subst (list* a0 bindings) lift))
+    ((subst (list a0) 0) (subst-extend dsub a0))
     (_ (substitute-subst sub (undefer-dsubst dsub)))))
 (define (dsubst->t-subst dsub tm) (t-subst (undefer-dsubst dsub) tm))
 
@@ -71,3 +78,18 @@
     ((v-pair l r)       (apply-map* v-pair substitute-full l r))
     ((v-lam body)       (v-lam (substitute-full body)))
     ((? value?)         tv)))
+
+(module+ test
+  (check-equal?
+    (substitute-full
+      (t-subst (subst (list (v-pair (v-unit) (v-lam (t-value (v-unit))))
+                            (v-bit (b-1))) 0)
+        (t-apply (t-value (v-lam (t-unpair (t-value (v-var 1))
+                                           (t-value (v-var 2)))))
+                 (t-value (v-bit (b-0))))))
+    (t-apply (t-value (v-lam (t-unpair (t-value (v-pair
+                                                  (v-unit)
+                                                  (v-lam (t-value (v-unit)))))
+                                       (t-value (v-bit (b-1))))))
+             (t-value (v-bit (b-0)))))
+  )
