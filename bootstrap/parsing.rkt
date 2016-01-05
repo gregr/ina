@@ -1,5 +1,8 @@
 #lang racket/base
 (provide
+  (struct-out annotated)
+  (struct-out ann-source)
+  annotate/source
   build-apply
   error-parse
   parse
@@ -15,6 +18,7 @@
 
 (require
   "term.rkt"
+  gregr-misc/cursor
   gregr-misc/dict
   gregr-misc/list
   gregr-misc/maybe
@@ -24,6 +28,23 @@
   racket/function
   racket/match
   )
+
+(record annotated ann term)
+(records annotation
+  (ann-source cstx))
+
+(define ((annotate/f f) stx)
+  (define (self cstx) (annotated (f cstx) (match (::.* cstx)
+                                            ((? pair?) (annotate-pair cstx))
+                                            (atom atom))))
+  (define (annotate-pair cp)
+    (define ctail (::@* cp 1))
+    (cons (self (::@* cp 0)) (match (::.* ctail)
+                               ((? pair?) (annotate-pair ctail))
+                               ('() '())
+                               (atom (annotated (f ctail) atom)))))
+  (self (::0 stx)))
+(define annotate/source (annotate/f ann-source))
 
 ;(define context->string #f)
 (define context->string ~s)
