@@ -11,6 +11,7 @@
   "linking.rkt"
   "term.rkt"
   "unsafe1.rkt"
+  gregr-misc/either
   gregr-misc/sugar
   racket/function
   racket/match
@@ -23,7 +24,7 @@
     rackunit
     ))
 
-(define std1-module (unsafe1-module
+(define std1-module (right-x (unsafe1-module
   '(identity const compose fix
     boolean->bit pcons nil cons
     symbol? boolean? nil? cons? integer?
@@ -119,38 +120,38 @@
              (build (map (fswap cons ()) params)))))))
     ($lambda  ($lambda/syntax-type #f))
     ($lambda$ ($lambda/syntax-type #t))
-    )))
+    ))))
 
 (define std1 (compose t-value (curry hash-ref std1-module)))
 
 (module+ test
   (define ((std1-apply stx . std1-idents) . args)
     (denote (build-apply
-              (build-apply (unsafe1-parse stx) (map std1 std1-idents)) args)))
+              (build-apply (right-x (unsafe1-parse stx)) (map std1 std1-idents)) args)))
 
   (check-equal?
     ((std1-apply '(lambda (append)
                     (append '((a 1) (b 2)) '((c 3) (d 4)))) 'append))
-    (denote (unsafe1-parse ''((a 1) (b 2) (c 3) (d 4)))))
+    (denote (right-x (unsafe1-parse ''((a 1) (b 2) (c 3) (d 4))))))
   (check-equal?
     ((std1-apply '(lambda (map +) (map (+ 1) '(-2 -1 0))) 'map '+))
-    (denote (unsafe1-parse ''(-1 0 1))))
+    (denote (right-x (unsafe1-parse ''(-1 0 1)))))
   (check-equal?
     ((std1-apply '(lambda (apply +) (apply + '(-1 1))) 'apply '+))
-    (denote (unsafe1-parse 0)))
+    (denote (right-x (unsafe1-parse 0))))
 
   (check-equal?
     ((std1-apply '(lambda (eval env-empty env-add +)
                     ((eval (env-add env-empty 'i+ #f +) '(i+ 2)) 5))
                  'eval 'env-empty 'env-add '+))
-    (denote (unsafe1-parse 7)))
+    (denote (right-x (unsafe1-parse 7))))
   (check-equal?
     ((std1-apply '(lambda ($lambda senv-empty senv-add renv-empty renv-add +)
                     (($lambda (senv-add senv-empty 'i+ #f ())
                               '((i0 i1) (i+ (i+ i0 i1) 1)))
                      (renv-add renv-empty +) 3 2))
                  '$lambda 'senv-empty 'senv-add 'renv-empty 'renv-add '+))
-    (denote (unsafe1-parse 6)))
+    (denote (right-x (unsafe1-parse 6))))
   )
 
 (define std1-applicatives (open-module std1
@@ -181,16 +182,19 @@
 
 (module+ test
   (check-equal?
-    (denote (unsafe2-std1-program '(pair (unpair bit1 (pair bit1 bit0))
-                                         (unpair bit0 (pair bit1 bit0)))))
+    (denote (right-x (unsafe2-std1-program
+                       '(pair (unpair bit1 (pair bit1 bit0))
+                              (unpair bit0 (pair bit1 bit0))))))
     '(0 . 1))
   (check-equal?
-    (denote (unsafe2-std1-program '((lambda (x f) (f x)) (cons #f #t) head)))
-    (denote (unsafe1-parse #f)))
+    (denote (right-x (unsafe2-std1-program
+                       '((lambda (x f) (f x)) (cons #f #t) head))))
+    (denote (right-x (unsafe1-parse #f))))
   (check-equal?
-    (denote (unsafe2-std1-program
-              '((lambda$ (x f) (f x)) (cons #f #t) (lambda (_ t _) (head t)))))
-    (denote (unsafe1-parse ''x)))
+    (denote (right-x (unsafe2-std1-program
+                       '((lambda$ (x f) (f x))
+                         (cons #f #t) (lambda (_ t _) (head t))))))
+    (denote (right-x (unsafe1-parse ''x))))
   )
 
 ; TODO:
@@ -200,7 +204,7 @@
 ; match versions of let[rec][$][*], lambda[$]
 
 (define unsafe2-std2-eval
-  (unsafe2-std1-program
+  (right-x (unsafe2-std1-program
     '((lambda (let/binder let*/syntax-type fix* first second third)
         ((lambda$ (@ $ let let$ let* let$* quote if list list*)
            (let$* ((letrec (lambda (senv stx)
@@ -332,48 +336,49 @@
       head ; first
       (compose head tail) ; second
       (compose (compose head tail) tail) ; third
-      )))
+      ))))
 
 (module+ test
   (define unsafe2-std2-eval-denoted (denote unsafe2-std2-eval))
   (define (unsafe2-std2-denote body)
-    (unsafe2-std2-eval-denoted (denote (unsafe1-parse (list 'quote body)))))
+    (unsafe2-std2-eval-denoted (denote (right-x (unsafe1-parse
+                                                  (list 'quote body))))))
   (check-equal?
     (unsafe2-std2-denote '(head '(a b)))
-    (denote (unsafe1-parse ''a)))
+    (denote (right-x (unsafe1-parse ''a))))
   (check-equal?
     (unsafe2-std2-denote '(if (head (cons #t #f))
                             (if (tail (cons #t #f)) 'a 'b) 'c))
-    (denote (unsafe1-parse ''b)))
+    (denote (right-x (unsafe1-parse ''b))))
   (check-equal?
     (unsafe2-std2-denote '(third (list* 'a 'b '(c d))))
-    (denote (unsafe1-parse ''c)))
+    (denote (right-x (unsafe1-parse ''c))))
   (check-equal?
     (unsafe2-std2-denote
       '(letrec (((even? n) (if (=? 0 n) #t (odd? (- n 1))))
                 ((odd? n) (if (=? 0 n) #f (even? (- n 1)))))
          (list (even? 3) (odd? 3))))
-    (denote (unsafe1-parse ''(#f #t))))
+    (denote (right-x (unsafe1-parse ''(#f #t)))))
   (check-equal?
     (unsafe2-std2-denote
       '(and 2 ()))
-    (denote (unsafe1-parse '())))
+    (denote (right-x (unsafe1-parse '()))))
   (check-equal?
     (unsafe2-std2-denote
       '(and 2 #f () ()))
-    (denote (unsafe1-parse #f)))
+    (denote (right-x (unsafe1-parse #f))))
   (check-equal?
     (unsafe2-std2-denote
       '(or 2 () ()))
-    (denote (unsafe1-parse 2)))
+    (denote (right-x (unsafe1-parse 2))))
   (check-equal?
     (unsafe2-std2-denote
       '(or #f ()))
-    (denote (unsafe1-parse '())))
+    (denote (right-x (unsafe1-parse '()))))
   (check-equal?
     (unsafe2-std2-denote
       '(tail (assoc '(a (() (#f . 1))) '(((a (() (#t . 1))) . one)
                                          ((a (() (#f . 1))) . two)
                                          ((a (() (#f . 1))) . three)))))
-    (denote (unsafe1-parse ''two)))
+    (denote (right-x (unsafe1-parse ''two))))
   )

@@ -15,8 +15,10 @@
 (require
   "term.rkt"
   gregr-misc/dict
+  gregr-misc/either
   gregr-misc/list
   gregr-misc/maybe
+  gregr-misc/monad
   gregr-misc/record
   gregr-misc/sugar
   racket/function
@@ -33,9 +35,8 @@
   (senv (dict-join mp specials) scope))
 (define senv-new (curry senv-add-specials senv-empty))
 (define (senv-lookup senv ident)
-  (match (senv-get senv ident)
-    ((nothing) (error (format "undefined identifier: ~s" ident)))
-    ((just val) val)))
+  (maybe->either (format "undefined identifier: ~s" ident)
+                 (senv-get senv ident)))
 
 (define (build-apply proc args)
   (foldl (lambda (arg proc) (t-apply proc arg)) proc args))
@@ -44,78 +45,95 @@
   senv = (forf senv = senv
                param <- params
                (senv-add senv param))
-  (forf body = (parse senv body)
-        _ <- params
-        (t-value (v-lam body))))
+  (either-map (lambda (body) (forf body = body
+                                   _ <- params
+                                   (t-value (v-lam body))))
+              (parse senv body)))
 
 (define ((parse-thunk parse) senv stx)
-  (v-lam (parse (senv-add-anonymous senv) stx)))
+  (either-map v-lam (parse (senv-add-anonymous senv) stx)))
 
 (define (parse-identifier senv ident)
-  (match (senv-lookup senv ident)
-    ((? integer? ridx) (t-value (v-var (- (senv-scope senv) ridx 1))))
-    (_ (error (format "invalid use of special identifier: ~s" ident)))))
+  (either-fold identity
+    (match-lambda
+      ((? integer? ri) (right (t-value (v-var (- (senv-scope senv) ri 1)))))
+      (_ (left (format "invalid use of special identifier: ~s" ident))))
+    (senv-lookup senv ident)))
 
 (define ((parse parse-extra) senv stx)
   (define self (parse parse-extra))
+  (define (parse-application senv head tail)
+    (begin/with-monad either-monad
+      proc <- (self senv head)
+      args <- (monad-map either-monad (curry self senv) tail)
+      (pure (build-apply proc args))))
   (match stx
     ((cons head tail)
      (match (if (symbol? head) (senv-get senv head) (nothing))
        ((just (? procedure? special)) (special senv head tail))
-       (_ (build-apply (self senv head) (map (curry self senv) tail)))))
-    ('()         (t-value (v-unit)))
+       (_ (parse-application senv head tail))))
+    ('()         (right (t-value (v-unit))))
     ((? symbol?) (parse-identifier senv stx))
     (_           (parse-extra senv stx))))
 
 (define ((parse-value parse) senv stx)
-  (match (parse senv stx)
-    ((t-value val) val)
-    (_ (error (format "invalid value syntax: ~s" stx)))))
+  (either-fold identity
+               (match-lambda
+                 ((t-value val) (right val))
+                 (_ (left (format "invalid value syntax: ~s" stx))))
+               (parse senv stx)))
 
 (define ((parse-lambda parse) senv head tail)
   (match tail
     ((list (? non-empty-list? params) body)
      (build-lambda parse senv params body))
-    (_ (error (format "invalid lambda: ~s" `(,head . ,tail))))))
+    (_ (left (format "invalid lambda: ~s" `(,head . ,tail))))))
 (define ((parse-pair parse-value) senv head tail)
   (match tail
-    ((list l r) (t-value (apply v-pair (map (curry parse-value senv) tail))))
-    (_ (error (format "invalid pair: ~s" `(,head . ,tail))))))
+    ((list l r) (begin/with-monad either-monad
+                                  vl <- (parse-value senv l)
+                                  vr <- (parse-value senv r)
+                                  (pure (t-value (v-pair vl vr)))))
+    (_ (left (format "invalid pair: ~s" `(,head . ,tail))))))
 (define ((parse-unpair parse) senv head tail)
   (match tail
-    ((list bt pr) (t-unpair (parse senv bt) (parse senv pr)))
-    (_ (error (format "invalid unpair: ~s" `(,head . ,tail))))))
+    ((list bt pr) (begin/with-monad either-monad
+                                    vb <- (parse senv bt)
+                                    vp <- (parse senv pr)
+                                    (pure (t-unpair vb vp))))
+    (_ (left (format "invalid unpair: ~s" `(,head . ,tail))))))
 
-(def (unzip-bindings err bindings)
-  (values params args) =
-  (forf params = '() args = '()
-        binding <- bindings
-        (match binding
-          ((list param arg) (values (list* param params)
-                                    (list* arg args)))
-          (_ (err))))
-  (values (reverse params) (reverse args)))
+(define (unzip-bindings err bindings)
+  (begin/with-monad either-monad
+    _ <- (for/list/monad either-monad ((binding bindings))
+           (match binding ((list param arg) (right (void))) (_ (err))))
+    (pure (zip-default '(() ()) bindings))))
 
 (define ((parse-let parse) senv head tail)
-  (define (err) (error (format "invalid let: ~s" `(,head . ,tail))))
+  (define (err) (left (format "invalid let: ~s" `(,head . ,tail))))
   (match tail
     ((list (? non-empty-list? bindings) body)
-     (lets (values params args) = (unzip-bindings err bindings)
-           proc = (build-lambda parse senv params body)
-           (build-apply proc (map (curry parse senv) args))))
+     (begin/with-monad either-monad
+                       (list params args) <- (unzip-bindings err bindings)
+                       proc <- (build-lambda parse senv params body)
+                       args <- (monad-map either-monad (curry parse senv) args)
+                       (pure (build-apply proc args))))
     (_ (err))))
 (define ((parse-let* parse) senv head tail)
-  (define (err) (error (format "invalid let*: ~s" `(,head . ,tail))))
+  (define (err) (left (format "invalid let*: ~s" `(,head . ,tail))))
   (match tail
     ((list (? non-empty-list? bindings) body)
-     (lets (values params args) = (unzip-bindings err bindings)
-           (values senv parsed-args) =
-           (forf senv = senv parsed-args = '()
-                 param <- params
-                 arg <- args
-                 (values (senv-add senv param)
-                         (list* (parse senv arg) parsed-args)))
-           (forf body = (parse senv body)
-                 arg <- parsed-args
-                 (t-apply (t-value (v-lam body)) arg))))
+     (begin/with-monad either-monad
+                       (list params args) <- (unzip-bindings err bindings)
+                       (list senv parsed-args) <-
+                       (for/fold/monad either-monad
+                         (list senv parsed-args) (list senv '())
+                         ((param params) (arg args))
+                         parg <- (parse senv arg)
+                         (pure (list (senv-add senv param)
+                                     (list* parg parsed-args))))
+                       body <- (parse senv body)
+                       (pure (forf body = body
+                                   arg <- parsed-args
+                                   (t-apply (t-value (v-lam body)) arg)))))
     (_ (err))))

@@ -15,7 +15,9 @@
   "term.rkt"
   "unsafe0.rkt"
   gregr-misc/dict
+  gregr-misc/either
   gregr-misc/maybe
+  gregr-misc/monad
   gregr-misc/record
   gregr-misc/sugar
   racket/function
@@ -42,15 +44,16 @@
             ,(nat->bits (quotient n 2) invert?))))
 
 (define (nat->symbol n)
-  (step-complete (unsafe0-parse `(,pcons ,tag:symbol ,(nat->bits n)))))
+  (step-complete
+    (right-x (unsafe0-parse `(,pcons ,tag:symbol ,(nat->bits n))))))
 
 (define (int->integer i)
-  (step-complete (unsafe0-parse
+  (step-complete (right-x (unsafe0-parse
     `(,pcons ,tag:integer
        (,pcons ,(if (< i 0) 1 0)
-         ,(nat->bits (if (< i 0) (- (+ i 1)) i) (< i 0)))))))
+         ,(nat->bits (if (< i 0) (- (+ i 1)) i) (< i 0))))))))
 
-(define std0-module (unsafe0-module
+(define std0-module (right-x (unsafe0-module
   `((identity (lambda (x) x))
     (const    (lambda (k _) k))
     (compose  (lambda (f g x) (f (g x))))
@@ -216,15 +219,15 @@
     (tail    (tagged-map tag:cons ptail))
     (nil?    (has-tag? tag:nil))
     (cons?   (has-tag? tag:cons))
-    )))
+    ))))
 
 (define std0 (compose t-value (curry hash-ref std0-module)))
 
 (module+ test
   (define ((std0-apply stx . std0-idents) . args)
     (denote (build-apply
-              (build-apply (unsafe0-parse stx) (map std0 std0-idents)) args)))
-
+              (build-apply (right-x (unsafe0-parse stx))
+                           (map std0 std0-idents)) args)))
   (check-equal?
     (denote (t-apply (std0 'identity) (t-value (v-unit))))
     '())
@@ -276,28 +279,32 @@
 
 (define (parse-extra senv stx)
   (match stx
-    (#t           (std0 'true))
-    (#f           (std0 'false))
-    ((? integer?) (int->integer stx))
-    (_            (error (format "invalid syntax: ~s" stx)))))
+    (#t           (right (std0 'true)))
+    (#f           (right (std0 'false)))
+    ((? integer?) (right (int->integer stx)))
+    (_            (left (format "invalid syntax: ~s" stx)))))
 
 (define parse-term (parse parse-extra))
 (define parse-val (parse-value parse-term))
 
 (define (parse-bit senv head tail)
   (match tail
-    ((list 0) (t-value (v-bit (b-0))))
-    ((list 1) (t-value (v-bit (b-1))))
-    (_        (error (format "invalid bit: ~s" `(,head . ,tail))))))
+    ((list 0) (right (t-value (v-bit (b-0)))))
+    ((list 1) (right (t-value (v-bit (b-1)))))
+    (_        (left (format "invalid bit: ~s" `(,head . ,tail))))))
 
 (define (parse-if senv head tail)
   (define (pthunk stx) ((parse-thunk parse-term) senv stx))
   (match tail
     ((list cnd tcase fcase)
-     (t-apply (t-unpair (t-apply (std0 'boolean->bit) (parse-term senv cnd))
-                        (t-value (v-pair (pthunk tcase) (pthunk fcase))))
-              (t-value (v-unit))))
-    (_ (error (format "invalid if: ~s" `(,head . ,tail))))))
+     (begin/with-monad either-monad
+       pcnd <- (parse-term senv cnd)
+       pt <- (pthunk tcase)
+       pf <- (pthunk fcase)
+       (pure (t-apply (t-unpair (t-apply (std0 'boolean->bit) pcnd)
+                                (t-value (v-pair pt pf)))
+                      (t-value (v-unit))))))
+    (_ (left (format "invalid if: ~s" `(,head . ,tail))))))
 
 (record symbol-table symbol->value count->symbol)
 (define symbol-table-empty (symbol-table (hash) (hash)))
@@ -324,11 +331,12 @@
 
 (define (parse-quoted senv stx)
   (match stx
-    (`(,hd . ,tl)
-      (t-apply (t-apply (std0 'cons) (parse-quoted senv hd))
-               (parse-quoted senv tl)))
-    ('() (std0 'nil))
-    ((? symbol?) (symbol->value! stx))
+    (`(,hd . ,tl) (begin/with-monad either-monad
+                    phd <- (parse-quoted senv hd)
+                    ptl <- (parse-quoted senv tl)
+                    (pure (t-apply (t-apply (std0 'cons) phd) ptl))))
+    ('() (right (std0 'nil)))
+    ((? symbol?) (right (symbol->value! stx)))
     (_ (parse-extra senv stx))))
 
 (define (parse-quote senv head tail)
@@ -352,17 +360,17 @@
 
 (module+ test
   (check-equal?
-    (denote (unsafe1-parse '((lambda (a b) (pair a b))
-                              (if #t 5 7) (if #f (bit 0) (bit 1)))))
+    (denote (right-x (unsafe1-parse '((lambda (a b) (pair a b))
+                                      (if #t 5 7) (if #f (bit 0) (bit 1))))))
     `(,(denote (int->integer 5)) . 1))
   (check-equal?
-    (denote (unsafe1-parse ''((#t #f) (0 1))))
+    (denote (right-x (unsafe1-parse ''((#t #f) (0 1)))))
     ((std0-apply '(lambda (nil cons true false zero one)
                     (cons (cons true (cons false nil))
                           (cons (cons zero (cons one nil)) nil)))
                  'nil 'cons 'true 'false 'zero 'positive-one)))
   (check-equal?
-    (denote (unsafe1-parse ''(a b c b a c)))
+    (denote (right-x (unsafe1-parse ''(a b c b a c))))
     (forf
       result = ((std0-apply
                   '(lambda (nil cons a b c)
@@ -377,14 +385,14 @@
 
 (module+ test
   (lets
-    mod = (unsafe1-module
+    mod = (right-x (unsafe1-module
             '(pcons (rest ptail) head tail (eq? symbol=?))
             '((datum (pcons () '(a b a)))
               (d0 (head (rest datum)))
               (d1 (head (tail (rest datum))))
               (d2 (head (tail (tail (rest datum)))))
               (eq01? (eq? d0 d1))
-              (eq02? (eq? d0 d2))))
+              (eq02? (eq? d0 d2)))))
     export = (compose t-value (curry hash-ref mod))
     (begin
       (check-equal?
