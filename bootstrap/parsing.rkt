@@ -20,14 +20,16 @@
   gregr-misc/maybe
   gregr-misc/record
   gregr-misc/sugar
+  racket/format
   racket/function
   racket/match
   )
 
-(define context->string #f)
-(define parse-context (make-parameter #f))
+;(define context->string #f)
+(define context->string ~s)
+(define current-context (make-parameter #f))
 (define (error-parse msg)
-  (define context (parse-context))
+  (define context (current-context))
   (error (if (and context context->string)
            (format "~a; ~a" msg (context->string context)) msg)))
 
@@ -42,7 +44,7 @@
 (define senv-new (curry senv-add-specials senv-empty))
 (define (senv-lookup senv ident)
   (match (senv-get senv ident)
-    ((nothing) (error-parse (format "undefined identifier: ~s" ident)))
+    ((nothing) (error-parse "undefined identifier"))
     ((just val) val)))
 
 (define (build-apply proc args)
@@ -62,37 +64,39 @@
 (define (parse-identifier senv ident)
   (match (senv-lookup senv ident)
     ((? integer? ridx) (t-value (v-var (- (senv-scope senv) ridx 1))))
-    (_ (error-parse (format "invalid use of special identifier: ~s" ident)))))
+    (_ (error-parse "invalid use of special identifier"))))
 
 (define ((parse parse-extra) senv stx)
-  (define self (parse parse-extra))
-  (match stx
-    ((cons head tail)
-     (match (if (symbol? head) (senv-get senv head) (nothing))
-       ((just (? procedure? special)) (special senv head tail))
-       (_ (build-apply (self senv head) (map (curry self senv) tail)))))
-    ('()         (t-value (v-unit)))
-    ((? symbol?) (parse-identifier senv stx))
-    (_           (parse-extra senv stx))))
+  (define (self senv stx)
+    (parameterize ((current-context stx))
+      (match stx
+        ((cons head tail)
+         (match (if (symbol? head) (senv-get senv head) (nothing))
+           ((just (? procedure? special)) (special senv head tail))
+           (_ (build-apply (self senv head) (map (curry self senv) tail)))))
+        ('()         (t-value (v-unit)))
+        ((? symbol?) (parse-identifier senv stx))
+        (_           (parse-extra senv stx)))))
+  (self senv stx))
 
 (define ((parse-value parse) senv stx)
   (match (parse senv stx)
     ((t-value val) val)
-    (_ (error-parse (format "invalid value syntax: ~s" stx)))))
+    (_ (error-parse "invalid value syntax"))))
 
 (define ((parse-lambda parse) senv head tail)
   (match tail
     ((list (? non-empty-list? params) body)
      (build-lambda parse senv params body))
-    (_ (error-parse (format "invalid lambda: ~s" `(,head . ,tail))))))
+    (_ (error-parse "invalid lambda"))))
 (define ((parse-pair parse-value) senv head tail)
   (match tail
     ((list l r) (t-value (apply v-pair (map (curry parse-value senv) tail))))
-    (_ (error-parse (format "invalid pair: ~s" `(,head . ,tail))))))
+    (_ (error-parse "invalid pair"))))
 (define ((parse-unpair parse) senv head tail)
   (match tail
     ((list bt pr) (t-unpair (parse senv bt) (parse senv pr)))
-    (_ (error-parse (format "invalid unpair: ~s" `(,head . ,tail))))))
+    (_ (error-parse "invalid unpair"))))
 
 (def (unzip-bindings err bindings)
   (values params args) =
@@ -105,7 +109,7 @@
   (values (reverse params) (reverse args)))
 
 (define ((parse-let parse) senv head tail)
-  (define (err) (error-parse (format "invalid let: ~s" `(,head . ,tail))))
+  (define (err) (error-parse "invalid let"))
   (match tail
     ((list (? non-empty-list? bindings) body)
      (lets (values params args) = (unzip-bindings err bindings)
@@ -113,7 +117,7 @@
            (build-apply proc (map (curry parse senv) args))))
     (_ (err))))
 (define ((parse-let* parse) senv head tail)
-  (define (err) (error-parse (format "invalid let*: ~s" `(,head . ,tail))))
+  (define (err) (error-parse "invalid let*"))
   (match tail
     ((list (? non-empty-list? bindings) body)
      (lets (values params args) = (unzip-bindings err bindings)
