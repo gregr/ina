@@ -1,6 +1,7 @@
 #lang racket/base
 (provide
   build-apply
+  error-parse
   parse
   parse-lambda
   parse-let
@@ -23,6 +24,13 @@
   racket/match
   )
 
+(define context->string #f)
+(define parse-context (make-parameter #f))
+(define (error-parse msg)
+  (define context (parse-context))
+  (error (if (and context context->string)
+           (format "~a; ~a" msg (context->string context)) msg)))
+
 (record senv mapping scope)
 (define senv-empty (senv hash-empty 0))
 (def (senv-get (senv mp _) name) (hash-get mp name))
@@ -34,7 +42,7 @@
 (define senv-new (curry senv-add-specials senv-empty))
 (define (senv-lookup senv ident)
   (match (senv-get senv ident)
-    ((nothing) (error (format "undefined identifier: ~s" ident)))
+    ((nothing) (error-parse (format "undefined identifier: ~s" ident)))
     ((just val) val)))
 
 (define (build-apply proc args)
@@ -54,7 +62,7 @@
 (define (parse-identifier senv ident)
   (match (senv-lookup senv ident)
     ((? integer? ridx) (t-value (v-var (- (senv-scope senv) ridx 1))))
-    (_ (error (format "invalid use of special identifier: ~s" ident)))))
+    (_ (error-parse (format "invalid use of special identifier: ~s" ident)))))
 
 (define ((parse parse-extra) senv stx)
   (define self (parse parse-extra))
@@ -70,21 +78,21 @@
 (define ((parse-value parse) senv stx)
   (match (parse senv stx)
     ((t-value val) val)
-    (_ (error (format "invalid value syntax: ~s" stx)))))
+    (_ (error-parse (format "invalid value syntax: ~s" stx)))))
 
 (define ((parse-lambda parse) senv head tail)
   (match tail
     ((list (? non-empty-list? params) body)
      (build-lambda parse senv params body))
-    (_ (error (format "invalid lambda: ~s" `(,head . ,tail))))))
+    (_ (error-parse (format "invalid lambda: ~s" `(,head . ,tail))))))
 (define ((parse-pair parse-value) senv head tail)
   (match tail
     ((list l r) (t-value (apply v-pair (map (curry parse-value senv) tail))))
-    (_ (error (format "invalid pair: ~s" `(,head . ,tail))))))
+    (_ (error-parse (format "invalid pair: ~s" `(,head . ,tail))))))
 (define ((parse-unpair parse) senv head tail)
   (match tail
     ((list bt pr) (t-unpair (parse senv bt) (parse senv pr)))
-    (_ (error (format "invalid unpair: ~s" `(,head . ,tail))))))
+    (_ (error-parse (format "invalid unpair: ~s" `(,head . ,tail))))))
 
 (def (unzip-bindings err bindings)
   (values params args) =
@@ -97,7 +105,7 @@
   (values (reverse params) (reverse args)))
 
 (define ((parse-let parse) senv head tail)
-  (define (err) (error (format "invalid let: ~s" `(,head . ,tail))))
+  (define (err) (error-parse (format "invalid let: ~s" `(,head . ,tail))))
   (match tail
     ((list (? non-empty-list? bindings) body)
      (lets (values params args) = (unzip-bindings err bindings)
@@ -105,7 +113,7 @@
            (build-apply proc (map (curry parse senv) args))))
     (_ (err))))
 (define ((parse-let* parse) senv head tail)
-  (define (err) (error (format "invalid let*: ~s" `(,head . ,tail))))
+  (define (err) (error-parse (format "invalid let*: ~s" `(,head . ,tail))))
   (match tail
     ((list (? non-empty-list? bindings) body)
      (lets (values params args) = (unzip-bindings err bindings)
