@@ -21,6 +21,7 @@
 
 (define (tuple0->list tup)
   (match tup
+    ((annotated _ tup) (tuple0->list tup))
     ((v-unit)     '())
     ((v-pair l r) (list* l (tuple0->list r)))))
 
@@ -41,5 +42,8 @@
   names = (append (map car imports) (map car bindings))
   body = (foldr (lambda (name acc) `(pair ,name ,acc)) '() names)
   prog = ((link-program parse) imports `(let* ,bindings ,body))
-  vals = (tuple0->list (t-value-v (substitute-full (step-complete prog))))
+  vals = (match (substitute-full (step-complete prog))
+           ((annotated _ vals) vals)
+           (vals vals))
+  vals = (tuple0->list (t-value-v vals))
   (make-immutable-hash (zip-with* cons names vals)))

@@ -64,7 +64,7 @@
 (define (substitute-full tv)
   (define (self sub tv)
     (match tv
-      ((annotated _ tv) (self sub tv))
+      ((annotated ann tv) (annotated ann (self sub tv)))
       ((t-subst inner t) (self (if sub (substitute-subst sub inner) inner) t))
       ((t-value v) (t-value (self sub v)))
       ((t-unpair idx pr) (apply-map* t-unpair (curry self sub) idx pr))
