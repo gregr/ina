@@ -97,21 +97,21 @@
 
 (define ((parse parse-extra) senv stx)
   (def (self senv stx)
-    (annotated _ datum) = stx
+    (annotated ann datum) = stx
     (parameterize ((current-context stx))
-      (match datum
+      (annotated ann (match datum
         ((cons (and (annotated _ head) ahead) tail)
          (match (if (symbol? head) (senv-get senv head) (nothing))
            ((just (? procedure? special)) (special senv tail))
            (_ (build-apply (self senv ahead) (map (curry self senv) tail)))))
         ('()         (t-value (v-unit)))
         ((? symbol?) (parse-identifier senv datum))
-        (_           (parse-extra senv datum)))))
+        (_           (parse-extra senv datum))))))
   (self senv stx))
 
 (define ((parse-value parse) senv stx)
   (match (parse senv stx)
-    ((t-value val) val)
+    ((annotated ann (t-value val)) (annotated ann val))
     (_ (error-parse "invalid value syntax"))))
 
 (define ((parse-lambda parse) senv tail)

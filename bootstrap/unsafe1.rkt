@@ -324,13 +324,13 @@
 
 (def (parse-quoted senv stx)
   (annotated ann datum) = stx
-  (match datum
+  (annotated ann (match datum
     (`(,hd . ,tl) (lets tl = (if (annotated? tl) tl (annotated ann tl))
                         (t-apply (t-apply (std0 'cons) (parse-quoted senv hd))
                                  (parse-quoted senv tl))))
     ('()         (std0 'nil))
     ((? symbol?) (symbol->value! datum))
-    (_           (parse/context stx parse-extra senv datum))))
+    (_           (parse/context stx parse-extra senv datum)))))
 
 (define (parse-quote senv tail)
   (match tail
