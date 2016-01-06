@@ -32,6 +32,7 @@
       (dbody (env-extend env (reverse (forl dval <- dbindings (dval env)))))))
   (define (pre-denote-value val scope path)
     (match val
+      ((annotated _ val) (pre-denote-value val scope path))
       ((v-subst sub val) (pre-denote-subst pre-denote-value sub val 'v))
       ((v-lam body) (let ((db (pre-denote-term
                                 body (+ 1 scope) (list* 'body path))))
@@ -47,6 +48,7 @@
                                      scope idx (annotate path)))))))
   (define (pre-denote-term tm scope path)
     (match tm
+      ((annotated _ tm) (pre-denote-term tm scope path))
       ((t-subst sub tm) (pre-denote-subst pre-denote-term sub tm 't))
       ((t-value val)    (pre-denote-value val scope (list* 'v path)))
       ((t-unpair tbit tpair)

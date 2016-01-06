@@ -46,6 +46,7 @@
 
 (define (substitute-value sub val)
   (match val
+    ((annotated _ val) (substitute-value sub val))
     ((v-subst _ _) (v-subst sub val))
     ((v-lam _)     (v-subst sub val))
     ((v-pair l r)  (apply-map* v-pair (curry substitute-value sub) l r))
@@ -54,6 +55,7 @@
 
 (define (substitute sub tm)
   (match tm
+    ((annotated _ tm)   (substitute sub tm))
     ((t-subst inner tm) (t-subst (substitute-subst sub inner) tm))
     ((t-value val)      (t-value (substitute-value sub val)))
     ((t-unpair idx pr)  (apply-map* t-unpair (curry t-subst sub) idx pr))
@@ -62,6 +64,7 @@
 (define (substitute-full tv)
   (define (self sub tv)
     (match tv
+      ((annotated _ tv) (self sub tv))
       ((t-subst inner t) (self (if sub (substitute-subst sub inner) inner) t))
       ((t-value v) (t-value (self sub v)))
       ((t-unpair idx pr) (apply-map* t-unpair (curry self sub) idx pr))

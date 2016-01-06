@@ -1,6 +1,5 @@
 #lang racket/base
 (provide
-  (struct-out annotated)
   (struct-out ann-source)
   annotate/source
   build-apply
@@ -30,7 +29,6 @@
   racket/match
   )
 
-(record annotated ann term)
 (records annotation
   (ann-source cstx))
 

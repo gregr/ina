@@ -45,6 +45,7 @@
     (step-execute sc1 (k t0 t1)))
   (if (eq? 0 step-count) (values 0 term)
     (match term
+      ((annotated _ tm) (step* step-count tm))
       ((t-unpair t0 t1) (step-seq-execute t-unpair t0 t1))
       ((t-apply t0 t1) (step-seq-execute t-apply t0 t1))
       (_ (step-execute step-count term)))))

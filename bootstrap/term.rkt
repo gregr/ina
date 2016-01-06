@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  (struct-out annotated)
   (struct-out b-0)
   (struct-out b-1)
   bit?
@@ -42,3 +43,5 @@
 (records bit (b-0) (b-1))
 
 (record subst bindings lift)
+
+(record annotated ann term)
