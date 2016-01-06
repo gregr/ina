@@ -1,6 +1,5 @@
 #lang racket/base
 (provide
-  (struct-out ann-source)
   annotate/source
   build-apply
   error-parse
@@ -29,9 +28,6 @@
   racket/match
   )
 
-(records annotation
-  (ann-source cstx))
-
 (define ((annotate/f f) stx)
   (define (self cstx) (annotated (f cstx) (match (::.* cstx)
                                             ((? pair?) (annotate-pair cstx))
@@ -43,14 +39,14 @@
                                ('() '())
                                (atom (annotated (f ctail) atom)))))
   (self (::0 stx)))
-(define annotate/source (annotate/f ann-source))
+(define annotate/source (annotate/f identity))
 
 ;(define context->string #f)
-;(def (context->string (annotated (ann-source cstx) term))
+;(def (context->string (annotated cstx term))
   ;stx = (::.* cstx)
   ;holed = (::^*. (::=* cstx (void)))
   ;(format "~s" stx))
-(def (context->string (annotated (ann-source cstx) term))
+(def (context->string (annotated cstx term))
   stx = (::.* cstx)
   holed = (::^*. (::=* cstx (void)))
   (format "~s; in ~s" stx holed))
