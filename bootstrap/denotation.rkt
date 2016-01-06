@@ -20,6 +20,9 @@
 (define (env-extend env vs) (append vs env))
 
 (define (pre-denote tm annotate scope path)
+  (define (error-denote msg scope path)
+    (error (format "~a; depth=~s; ~s" msg scope (annotate path))))
+
   (def (pre-denote-subst pdbody (subst bindings lift) body body-key)
     (values dbindings _) =
     (forf result = '() sub-path = (list* 'first path)
@@ -44,8 +47,8 @@
                               ((b-1) (lambda (env) 1))))
       ((v-unit)     (lambda (env) '()))
       ((v-var idx)  (if (< idx scope) (lambda (env) (env-ref env idx))
-                      (error (format "unbound variable; depth=~s index=~s; ~s"
-                                     scope idx (annotate path)))))))
+                      (error-denote (format "unbound variable index=~s" idx)
+                                    scope path)))))
   (define (pre-denote-term tm scope path)
     (match tm
       ((annotated _ tm) (pre-denote-term tm scope path))
@@ -58,11 +61,10 @@
            (match (dpair env)
              ((cons pl pr)
               (match (dbit env) (0 pl) (1 pr)
-                (val (error
-                       (format "cannot unpair with non-bit ~v; depth=~s; ~s"
-                               val scope (annotate path))))))
-             (val (error (format "cannot unpair non-pair ~v; depth=~s; ~s"
-                                 val scope (annotate path))))))))
+                (val (error-denote (format "cannot unpair with non-bit ~v" val)
+                                   scope path))))
+             (val (error-denote (format "cannot unpair non-pair ~v" val)
+                                scope path))))))
       ((t-apply tproc targ)
        (let ((dproc (pre-denote-term tproc scope (list* 'proc path)))
              (darg (pre-denote-term targ scope (list* 'arg path))))
@@ -70,10 +72,9 @@
            (let ((proc (dproc env)) (arg (darg env)))
              (match proc
                ((? procedure? proc) (proc arg))
-               (val (error
-                      (format
-                        "cannot apply non-procedure ~v to ~v; depth=~s; ~s"
-                        val arg scope (annotate path)))))))))))
+               (val (error-denote
+                      (format "cannot apply non-procedure ~v to ~v" val arg)
+                      scope path)))))))))
   (pre-denote-term tm scope path))
 
 (define (denote term (annotate ~s))
