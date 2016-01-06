@@ -13,6 +13,7 @@
   parse-thunk
   parse-unpair
   parse-value
+  parse/context
   senv-new
   )
 
@@ -47,12 +48,21 @@
 (define annotate/source (annotate/f ann-source))
 
 ;(define context->string #f)
-(define context->string ~s)
+;(def (context->string (annotated (ann-source cstx) term))
+  ;stx = (::.* cstx)
+  ;holed = (::^*. (::=* cstx (void)))
+  ;(format "~s" stx))
+(def (context->string (annotated (ann-source cstx) term))
+  stx = (::.* cstx)
+  holed = (::^*. (::=* cstx (void)))
+  (format "~s; in ~s" stx holed))
 (define current-context (make-parameter #f))
 (define (error-parse msg)
   (define context (current-context))
   (error (if (and context context->string)
            (format "~a; ~a" msg (context->string context)) msg)))
+(define (parse/context stx parse . args)
+  (parameterize ((current-context stx)) (apply parse args)))
 
 (record senv mapping scope)
 (define senv-empty (senv hash-empty 0))
@@ -73,7 +83,7 @@
 
 (def (build-lambda parse senv params body)
   senv = (forf senv = senv
-               param <- params
+               (annotated _ param) <- params
                (senv-add senv param))
   (forf body = (parse senv body)
         _ <- params
@@ -88,16 +98,17 @@
     (_ (error-parse "invalid use of special identifier"))))
 
 (define ((parse parse-extra) senv stx)
-  (define (self senv stx)
+  (def (self senv stx)
+    (annotated _ datum) = stx
     (parameterize ((current-context stx))
-      (match stx
-        ((cons head tail)
+      (match datum
+        ((cons (and (annotated _ head) ahead) tail)
          (match (if (symbol? head) (senv-get senv head) (nothing))
            ((just (? procedure? special)) (special senv tail))
-           (_ (build-apply (self senv head) (map (curry self senv) tail)))))
+           (_ (build-apply (self senv ahead) (map (curry self senv) tail)))))
         ('()         (t-value (v-unit)))
-        ((? symbol?) (parse-identifier senv stx))
-        (_           (parse-extra senv stx)))))
+        ((? symbol?) (parse-identifier senv datum))
+        (_           (parse-extra senv datum)))))
   (self senv stx))
 
 (define ((parse-value parse) senv stx)
@@ -107,7 +118,7 @@
 
 (define ((parse-lambda parse) senv tail)
   (match tail
-    ((list (? non-empty-list? params) body)
+    ((list (annotated _ (? non-empty-list? params)) body)
      (build-lambda parse senv params body))
     (_ (error-parse "invalid lambda"))))
 (define ((parse-pair parse-value) senv tail)
@@ -124,15 +135,15 @@
   (forf params = '() args = '()
         binding <- bindings
         (match binding
-          ((list param arg) (values (list* param params)
-                                    (list* arg args)))
+          ((annotated _ (list param arg)) (values (list* param params)
+                                                  (list* arg args)))
           (_ (err))))
   (values (reverse params) (reverse args)))
 
 (define ((parse-let parse) senv tail)
   (define (err) (error-parse "invalid let"))
   (match tail
-    ((list (? non-empty-list? bindings) body)
+    ((list (annotated _ (? non-empty-list? bindings)) body)
      (lets (values params args) = (unzip-bindings err bindings)
            proc = (build-lambda parse senv params body)
            (build-apply proc (map (curry parse senv) args))))
@@ -140,11 +151,11 @@
 (define ((parse-let* parse) senv tail)
   (define (err) (error-parse "invalid let*"))
   (match tail
-    ((list (? non-empty-list? bindings) body)
+    ((list (annotated _ (? non-empty-list? bindings)) body)
      (lets (values params args) = (unzip-bindings err bindings)
            (values senv parsed-args) =
            (forf senv = senv parsed-args = '()
-                 param <- params
+                 (annotated _ param) <- params
                  arg <- args
                  (values (senv-add senv param)
                          (list* (parse senv arg) parsed-args)))

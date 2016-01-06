@@ -44,7 +44,8 @@
   ))
 
 (define unsafe0-senv-empty (senv-new unsafe0-specials))
-(define unsafe0-parse (curry parse-term unsafe0-senv-empty))
+(define (unsafe0-parse stx)
+  (parse-term unsafe0-senv-empty (annotate/source stx)))
 
 (module+ test
   (require
