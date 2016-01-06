@@ -72,7 +72,7 @@
       (match stx
         ((cons head tail)
          (match (if (symbol? head) (senv-get senv head) (nothing))
-           ((just (? procedure? special)) (special senv head tail))
+           ((just (? procedure? special)) (special senv tail))
            (_ (build-apply (self senv head) (map (curry self senv) tail)))))
         ('()         (t-value (v-unit)))
         ((? symbol?) (parse-identifier senv stx))
@@ -84,16 +84,16 @@
     ((t-value val) val)
     (_ (error-parse "invalid value syntax"))))
 
-(define ((parse-lambda parse) senv head tail)
+(define ((parse-lambda parse) senv tail)
   (match tail
     ((list (? non-empty-list? params) body)
      (build-lambda parse senv params body))
     (_ (error-parse "invalid lambda"))))
-(define ((parse-pair parse-value) senv head tail)
+(define ((parse-pair parse-value) senv tail)
   (match tail
     ((list l r) (t-value (apply v-pair (map (curry parse-value senv) tail))))
     (_ (error-parse "invalid pair"))))
-(define ((parse-unpair parse) senv head tail)
+(define ((parse-unpair parse) senv tail)
   (match tail
     ((list bt pr) (t-unpair (parse senv bt) (parse senv pr)))
     (_ (error-parse "invalid unpair"))))
@@ -108,7 +108,7 @@
           (_ (err))))
   (values (reverse params) (reverse args)))
 
-(define ((parse-let parse) senv head tail)
+(define ((parse-let parse) senv tail)
   (define (err) (error-parse "invalid let"))
   (match tail
     ((list (? non-empty-list? bindings) body)
@@ -116,7 +116,7 @@
            proc = (build-lambda parse senv params body)
            (build-apply proc (map (curry parse senv) args))))
     (_ (err))))
-(define ((parse-let* parse) senv head tail)
+(define ((parse-let* parse) senv tail)
   (define (err) (error-parse "invalid let*"))
   (match tail
     ((list (? non-empty-list? bindings) body)

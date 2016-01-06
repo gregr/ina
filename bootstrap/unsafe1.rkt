@@ -284,13 +284,13 @@
 (define parse-term (parse parse-extra))
 (define parse-val (parse-value parse-term))
 
-(define (parse-bit senv head tail)
+(define (parse-bit senv tail)
   (match tail
     ((list 0) (t-value (v-bit (b-0))))
     ((list 1) (t-value (v-bit (b-1))))
     (_        (error-parse "invalid bit"))))
 
-(define (parse-if senv head tail)
+(define (parse-if senv tail)
   (define (pthunk stx) ((parse-thunk parse-term) senv stx))
   (match tail
     ((list cnd tcase fcase)
@@ -331,7 +331,7 @@
     ((? symbol?) (symbol->value! stx))
     (_ (parse-extra senv stx))))
 
-(define (parse-quote senv head tail)
+(define (parse-quote senv tail)
   (match tail
     ((list stx) (parse-quoted senv stx))
     (_ (error-parse "invalid quote"))))

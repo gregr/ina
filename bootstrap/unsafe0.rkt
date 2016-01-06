@@ -24,7 +24,7 @@
 (define parse-term (parse parse-extra))
 (define parse-val (parse-value parse-term))
 
-(define (parse-if0 senv head tail)
+(define (parse-if0 senv tail)
   (define (pthunk stx) ((parse-thunk parse-term) senv stx))
   (match tail
     ((list cnd case0 case1)
