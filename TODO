@@ -5,7 +5,36 @@ text-based bootstrap
       and-map?, or-map?, datum->tag (tag as a symbol)
       match versions of let[rec][$][*], lambda[$]
 
-  records/modules
+  records
+    project/get/select/access/extract
+    record->module
+      maybe silly, but this allows several operations to be derived from module to avoid redundancy
+        fields (via provisions)
+        hide
+        extend
+
+  modules
+    forms
+      requirements and provisions may be renamed internally
+      (module (require ...) (provide ...) field definitions ...)
+        completing produces a record
+      (program (require ...) body ...)
+        completing executes program body
+        possibly just syntactic sugar for 'module' form
+    operations
+      (requirements A): list of names A requires
+      (provisions A): list of names A provides
+      (hide A names): new module providing everything from A except those in names
+        hiding all names except those listed can be defined as linking into a pass-thru module
+      (extend A B): new module providing everything from both A and B
+        symmetric: conflicts (names provided by both A and B) are an error
+        an asymmetric version can be defined in terms of extend, hide and provisions
+      (link A B): new module resolving A's dependencies using B's provisions
+        new dependencies are B's plus those unresolved from A
+      (self-link A): new module feeding A's provisions back into itself recursively
+        a multi-module cyclic link can be defined in terms of extend, link, and self-link
+      (complete A): produce record from A; A must have no unresolved dependencies
+        maybe better to simply provide a module->record and derive program completion?
 
   self-hosted semantics
     term
