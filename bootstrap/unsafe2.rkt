@@ -338,6 +338,15 @@
   (define unsafe2-std2-eval-denoted (denote unsafe2-std2-eval))
   (define (unsafe2-std2-denote body)
     (unsafe2-std2-eval-denoted (denote (unsafe1-parse (list 'quote body)))))
+  ;(require "operation.rkt" "substitution.rkt")
+  ;(define unsafe2-std2-eval-stepped (time (step-complete unsafe2-std2-eval)))
+  ;(define (unsafe2-std2-step body)
+    ;(time (step-complete (t-apply unsafe2-std2-eval-stepped
+                                  ;(unsafe1-parse (list 'quote body))))))
+  ;(define stepped-result (t-value-v (strip-annotations (unsafe2-std2-step
+    ;'(letrec (((even? n) (if (=? 0 n) #t (odd? (- n 1))))
+              ;((odd? n) (if (=? 0 n) #f (even? (- n 1)))))
+       ;(list (even? 3) (odd? 3)))))))
   (check-equal?
     (unsafe2-std2-denote '(head '(a b)))
     (denote (unsafe1-parse ''a)))

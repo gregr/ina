@@ -3,6 +3,7 @@
   step
   step-complete
   step*
+  strip-annotations
   )
 
 (require
