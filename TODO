@@ -1,23 +1,11 @@
 text-based bootstrap
-  annotation tree manipulations
-    step-continuation to find path before applying step
-    visit same path in annotation tree
-    manipulate tree in a way that corresponds to step-execute
-
-  applicative syntax
-    term/value annotator, re-annotator + annotation-mapping
-
   unsafe2: to bootstrap safe languages
-    syntax
-      (combiner operand ...), literals (boolean, integer), ()
-    primitive operatives:
-      lambda, lambda$, bit, pair, unpair, quote, quasiquote/unquote,
     provides:
-      fix*, if, cond, let[*], let$, letrec, match, quasiquote/unquote/unquote-splicing(new!), $, @, list, list*, apply*,
-      filter, reverse, not?, and?, or?, and-map?, or-map?, datum->tag (tag as a symbol)
+      cond, match, quasiquote/unquote/unquote-splicing(new!)
+      and-map?, or-map?, datum->tag (tag as a symbol)
+      match versions of let[rec][$][*], lambda[$]
 
-  statically-generated unique symbols
-  non-primitive tagged data
+  records/modules
 
   self-hosted semantics
     term
@@ -29,20 +17,9 @@ text-based bootstrap
       unsafe1
     linking
 
-  future bootstrap goals:
-    where do records/modules fit?
-    extended numeric literals (rational, floating point, complex), characters as ascii/utf8 bit encodings, symbols as strings with alternative tagging rather than injected binaries
-    CPS transform to support system interaction (aka produce)
-    use annotation manipulations for debug/editor support
-      track variable names, comments and other source metadata
-      trace data flow and dependencies, even through applications of eval to quoted data
-        when navigating/editing a program that has been partially reduced
-          editor should be able to map residual program locations to original program locations
-          only reduced terms that interact with edited portions need to be updated
-
-  goals after bootstrap:
-    effectful calculus with a compatible step relation (fully Church-Rosser as in Shutt's vau calculi, not just satisfying Felleisen's diamond property)
-      shift/reset, constant, mutable ref
+  support non-primitive (user-extensible) tagged data in std0-module
+  extended numeric literals (rational, floating point, complex), characters as ascii/utf8 bit encodings, symbols as strings with alternative tagging rather than injected binaries
+  CPS transform to support system interaction (aka produce)
 
   automated optimization ideas (in case bootstrapped system is unusably slow):
     make sure to check terms for size explosion after using any of these
@@ -74,6 +51,7 @@ text-based bootstrap
       cpu time: 432 real time: 430 gc time: 28
       user    0m4.452s
 
+
 high-level language design
   should serve as an example of creating an ina backend for a HLL
 
@@ -85,6 +63,16 @@ high-level language design
 
   more ambitious effects
     actual concurrency, CAS, channels, thread-local mutable data
+
+  optional type system
+    simple programmer-supplied annotations of what to reduce at "typecheck-time" for more precise analysis
+      dynamic-lambda parameter annotations:
+        no-preference: polymorphic preference determined by dependencies
+        prefer-monomorphic
+        prefer-polymorphic: provides something like let-polymorphism by inferring intersection types
+      typechecking will attempt normalization where necessary to resolve/eliminate intersection types
+    fall back on ML(x)-like inference
+    interoperate with untyped program components
 
 
 simple compilation to racket
@@ -100,6 +88,41 @@ database/repository system
 
 
 compile to javascript
+
+
+effectful calculus with a compatible step relation (fully Church-Rosser as in Shutt's vau calculi, not just satisfying Felleisen's diamond property)
+  shift/reset, constant, mutable ref
+
+
+annotated evaluation
+  lam and subst-binding annotations to remember parameter/variable names
+  for early subst cleanup, annotate terms/values with free vars
+  what does a high level debugger/ide need, annotation-wise?
+    mark primitive operations that should be reduced in one step from user's perspective
+    elaboration layer support
+      track dependency flow during elaboration (small-step evaluation)
+      re-tag programs to formally indicate a new reference layer
+    enough information to contextually pretty-print the current program
+      at the very least, pretty-print high level values (symbols, ints, booleans, lists)
+  dependency flow analysis
+    information to track
+      immediate value (e.g. pair component extracted by unpair operation)
+      contributor values (e.g. bit and pair during unpair operation)
+      direct term path
+      predecessor term path (strictness analysis: term never gets evaluated if predecessor never terminates)
+    path representation determines precision: lists vs. sets vs. counted sets? unlimited vs. LRU truncated?
+  notation/pretty-printing
+    meta nodes for choosing pre-defined behaviors; avoids becoming too dependent on host language
+    of embedded languages: denotational (kernel-like) and operational (AST-based) encodings
+      operational: can leverage meta nodes directly
+      denotational: requires a smarter analysis
+        component "holes" indicated by usage of "eval" from within syntax transformer
+          holes positions can be interacted with directly and are pretty-printed independently
+          original syntactic application/form will be statically pretty-printed, except for holes
+            e.g. (let ((a <hole0>) (b <hole1>)) <hole2>)
+            until skeleton of transformation is disturbed (indicated by foreign annotations?)
+              at which point resultant subcomponents are also pretty-printed independently
+    unsafe1 in unsafe0 in unsafe1 ...
 
 
 self-extensible browser-based editor
