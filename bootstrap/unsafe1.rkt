@@ -12,13 +12,16 @@
   "linking.rkt"
   "operation.rkt"
   "parsing.rkt"
+  "substitution.rkt"
   "term.rkt"
   "unsafe0.rkt"
   gregr-misc/dict
+  gregr-misc/list
   gregr-misc/maybe
   gregr-misc/record
   gregr-misc/sugar
   racket/function
+  racket/list
   racket/match
   racket/string
   )
@@ -43,7 +46,16 @@
   (if (= 0 n) bits-nil
     `(,bits ,(if ((if invert? not identity) (= 0 (modulo n 2))) 0 1)
             ,(nat->bits (quotient n 2) invert?))))
-
+(define (bits->nat bs invert?)
+  (match bs
+    ((v-pair (v-bit (b-0)) (v-unit)) (just 0))
+    ((v-pair (v-bit (b-1)) (v-pair (v-bit bt) bs))
+     (match (bits->nat bs invert?)
+       ((nothing) (nothing))
+       ((just nat)
+        (just (+ (match bt ((b-0) (if invert? 1 0)) ((b-1) (if invert? 0 1)))
+                 (* 2 nat))))))
+    (_ (nothing))))
 (define (nat->symbol n)
   (strip-annotations
     (step-complete (unsafe0-parse `(,pcons ,tag:symbol ,(nat->bits n))))))
@@ -320,6 +332,8 @@
   _ = (set-box! bx st)
   result)
 (define symbol->value! (boxed-symbol-table-get *symbol-table*))
+(define (value->symbol! val)
+  (hash-get (symbol-table-count->symbol (unbox *symbol-table*)) val))
 (define (symbol-table-string)
   (string-join
     (forl (values sym val) <- (symbol-table-symbol->value
@@ -380,6 +394,147 @@
 
 (define (unsafe1-module std0-imports bindings)
   ((link-module unsafe1-parse) (open-module std0 std0-imports) bindings))
+(define source-table-empty (symbol-table (hasheq) (hash)))
+(def (source-table-get st sym)
+  (symbol-table s->v c->s) = st
+  (match (hash-get s->v sym)
+    ((nothing) (lets val = (hash-count s->v)
+                     c->s = (hash-set c->s val sym)
+                     s->v = (hash-set s->v sym val)
+                     (values (symbol-table s->v c->s) val)))
+    ((just val) (values st val))))
+(def ((boxed-source-table-get bx) sym)
+  (values st result) = (source-table-get (unbox bx) sym)
+  _ = (set-box! bx st)
+  result)
+(define *source-table* (box source-table-empty))
+(define source->value! (boxed-source-table-get *source-table*))
+
+(define (source->tag tv)
+  (match tv
+    ((annotated #f tv) (source->tag tv))
+    ((annotated src tv) (annotated (source->value! src) (source->tag tv)))
+    ((t-subst (subst bs k) t)
+     (t-subst (subst (map source->tag bs) k) (source->tag t)))
+    ((t-value v) (t-value (source->tag v)))
+    ((t-unpair bit pair) (apply-map* t-unpair source->tag bit pair))
+    ((t-apply  proc arg) (apply-map* t-apply source->tag proc arg))
+    ((v-subst (subst bs k) v)
+     (v-subst (subst (map source->tag bs) k) (source->tag v)))
+    ((v-pair l r) (apply-map* v-pair source->tag l r))
+    ((v-lam body) (v-lam (source->tag body)))
+    (_ tv)))
+
+(records unsafe1-syntax
+  (us1-lambda params body)
+  (us1-pair l r)
+  (us1-list xs final)
+  (us1-apply proc rargs)
+  ;(us1-let)
+  ;(us1-let*)
+  )
+
+(define (pretty tv)
+  (define (pretty-pair l r) (us1-pair (pretty l) (pretty r)))
+  (define (pretty-tagged l r)
+    ((hash-ref
+       (hash tag:boolean (thunk (match r
+                                  ((v-bit (b-0)) #t)
+                                  ((v-bit (b-1)) #f)
+                                  (_ (pretty-pair l r))))
+             tag:nil (thunk (if (equal? (v-unit) r) '() (pretty-pair l r)))
+             tag:cons (thunk (match r
+                               ((v-pair l r)
+                                (match (pretty r)
+                                  ((us1-list xs final)
+                                   (us1-list (list* (pretty l) xs) final))
+                                  (r (us1-list (list (pretty l)) r))))
+                               (_ (pretty-pair l r))))
+             tag:symbol (thunk (match (bits->nat r)
+                                 ((just nat) (value->symbol! nat))
+                                 ((nothing) (pretty-pair l r))))
+             tag:integer
+             (thunk (match r
+                      ((v-pair l r)
+                       (match* (l (bits->nat r))
+                         (((v-bit bt) (just nat)) (match bt
+                                                    ((b-0) nat)
+                                                    ((b-1) (- (- nat) 1))))
+                         ((_ _) (pretty-pair l r)))))))
+       l (thunk (pretty-pair l r)))))
+  (define (pretty-apply proc arg)
+    (match (pretty proc)
+      ((us1-apply proc rargs) (us1-apply proc (list* (pretty arg) rargs)))
+      (proc (us1-apply proc (list (pretty arg))))))
+  (define (pretty-if proc arg)
+    (match* (proc arg)
+      (((t-unpair cnd (t-value (v-pair (v-lam tcase) (v-lam fcase)))) (v-unit))
+       `(if ,(pretty cnd) ,(pretty tcase) ,(pretty fcase)))
+      ((_ _) (pretty-apply proc arg))))
+  (match tv
+    ((annotated tag tv) (annotated tag (pretty tv)))
+    ((t-subst sub t) (pretty (substitute-full tv)))
+    ((v-subst sub v) (pretty (substitute-full tv)))
+    ((t-value v) (pretty v))
+    ((t-unpair bit pair) (apply-map* t-unpair strip-annotations bit pair))
+    ((t-apply  proc arg) (pretty-if proc arg))
+    ((v-pair l r) (pretty-tagged l r))
+    ((v-lam body) (match (pretty body)
+                    ((us1-lambda params body) (us1-lambda (+ 1 params) body))
+                    (body (us1-lambda 1 body))))
+    (_ tv)))
+
+(define (pretty/html tv)
+  (define (pretty->html ptv)
+    (match ptv
+      ((annotated tag ptv)
+       (format "<span class=\"tag-~a\">~a</span>" tag (pretty->html ptv)))
+      ((us1-lambda params body)
+       (format "(lambda ~a ~a)" (reverse (range params)) (pretty->html body)))
+      ((us1-pair l r)
+       (format "(pair ~a ~a)" (pretty->html l) (pretty->html r)))
+      ((us1-list xs final)
+       (format "'~a" (append (map pretty->html xs) (pretty->html final))))
+      ((us1-apply proc rargs)
+       (format "~a" (list* (pretty->html proc)
+                           (reverse (map pretty->html rargs)))))
+      (_ (format "~v" ptv))))
+  (format "<pre>~a</pre>" (pretty->html (pretty (source->tag tv)))))
+
+(define (compare/html . tvs)
+  (format "<!DOCTYPE html>
+<head>
+<script>
+var oldTarget = null;
+var oldBGC = 'black';
+window.onmouseover=function(e) {
+  if (oldTarget !== null && e.target !== oldTarget) {
+    var hs = document.getElementsByClassName(oldTarget.className);
+    for (var i = 0; i < hs.length; ++i) {
+      hs[i].style.backgroundColor = oldBGC;
+    }
+  }
+  if (e.target.tagName === 'SPAN') {
+    oldTarget = e.target;
+    var hs = document.getElementsByClassName(e.target.className);
+    for (var i = 0; i < hs.length; ++i) {
+      oldBGC = hs[i].style.backgroundColor;
+      hs[i].style.backgroundColor = 'rgb(255,128,128)';
+    }
+  }
+};
+</script>
+</head>
+<body>
+~a
+</body>" (string-join (map pretty/html tvs) "\n<p></p>\n")))
+
+(lets t0 = (unsafe1-parse '((lambda (x y) x) (bit 0) (bit 1)))
+      (just t1) = (step t0)
+      (just t2) = (step t1)
+      (just t3) = (step t2)
+      tc = (step-complete t0)
+      (displayln (compare/html t0 t1 t3 tc)))
 
 (module+ test
   (lets
