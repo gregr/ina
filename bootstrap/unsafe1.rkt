@@ -45,13 +45,14 @@
             ,(nat->bits (quotient n 2) invert?))))
 
 (define (nat->symbol n)
-  (step-complete (unsafe0-parse `(,pcons ,tag:symbol ,(nat->bits n)))))
+  (strip-annotations
+    (step-complete (unsafe0-parse `(,pcons ,tag:symbol ,(nat->bits n))))))
 
 (define (int->integer i)
-  (step-complete (unsafe0-parse
+  (strip-annotations (step-complete (unsafe0-parse
     `(,pcons ,tag:integer
        (,pcons ,(if (< i 0) 1 0)
-         ,(nat->bits (if (< i 0) (- (+ i 1)) i) (< i 0)))))))
+         ,(nat->bits (if (< i 0) (- (+ i 1)) i) (< i 0))))))))
 
 (define std0-module (unsafe0-module
   `((identity (lambda (x) x))
