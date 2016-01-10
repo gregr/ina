@@ -54,7 +54,8 @@
     (values sc1 t1) = (step* sc0 t1)
     t0 = (if (annotated? t0) t0 (annotated #f t0))
     t1 = (if (annotated? t1) t1 (annotated #f t1))
-    (step-execute sc1 (k t0 t1)))
+    tm = (k t0 t1)
+    (if (eq? 0 sc1) (values 0 tm) (step-execute sc1 tm)))
   (if (eq? 0 step-count) (values 0 term)
     (match term
       ((annotated #f tm) (step* step-count tm))
