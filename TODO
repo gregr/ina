@@ -1,4 +1,28 @@
 text-based bootstrap
+  parsing
+    add/improve transformation steps to retain more source info, simplify and reduce coupling
+      text -(read)-> s-exp -(parse)-> sugared AST -(optional: desugar)-> desugared AST -(elaborate)-> term
+        AST: annotated with s-exp source cursors
+          a desugaring step must be designed according to the particular term syntax being targeted
+            different targets may have different features (if, let, etc.)
+        term: annotated with AST (which may itself be annotated with source) being elaborated
+      abridge: term -> desugared AST
+      sugar: desugared AST -> sugared AST
+      print: AST -> s-exp
+      write: s-exp -> text
+    unify unsafe0 and unsafe1 parsing, at least at the desugared stage
+
+  visualization
+    dependency visualization: correlate subterms across multiple steps
+      indicate at least two levels of highest priority (red highlighting of diminishing intensity)
+      approximate (for simplicity) horizontal formatting limit
+
+  meta computation
+    consider supporting evaluation of terms within annotations to enable dynamic metadata
+
+  early subst cleanup
+    consider adding a free-var-indication term to allow substitutions to shrink before dispersion
+
   unsafe2: to bootstrap safe languages
     provides:
       cond, match, quasiquote/unquote/unquote-splicing(new!)
