@@ -30,7 +30,10 @@
 
 (define pcons '(lambda (hd tl) (pair hd tl)))
 
-(define tag:symbol '(pair 0 (pair 0 (pair 0 ()))))
+(define tag:symbol  '(pair 0 (pair 0 (pair 0 ()))))
+(define tag:boolean '(pair 0 (pair 0 (pair 1 ()))))
+(define tag:nil     '(pair 0 (pair 1 (pair 0 ()))))
+(define tag:cons    '(pair 0 (pair 1 (pair 1 ()))))
 (define tag:integer '(pair 1 (pair 0 (pair 0 ()))))
 
 (define bits-nil '(pair 0 ()))
@@ -67,9 +70,9 @@
     (bit=?0 (lambda (b0 b1) (if0 b0 (if0 b1 0 1) (if0 b1 1 0))))
 
     (tag:symbol  ,tag:symbol)
-    (tag:boolean (pair 0 (pair 0 (pair 1 ()))))
-    (tag:nil     (pair 0 (pair 1 (pair 0 ()))))
-    (tag:cons    (pair 0 (pair 1 (pair 1 ()))))
+    (tag:boolean ,tag:boolean)
+    (tag:nil     ,tag:nil)
+    (tag:cons    ,tag:cons)
     (tag:integer ,tag:integer)
     (tag=?0 (lambda (t0 t1)
               (if0 (bit=?0 (phead t0) (phead t1))
