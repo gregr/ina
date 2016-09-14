@@ -50,4 +50,15 @@
 ** aggregation
 ** higher-order functional orchestration and communication
 
+* terms
+** atoms
+*** (), boolean, exact, inexact (later), symbol
+*** text is pseudo-atomic?
+** compounds
+*** tuple
+**** unordered (record/dict)
+**** ordered (special case of unordered)
+*** set (special case of dict?)
+*** extensional relations are sets of unordered tuples
+
 */
