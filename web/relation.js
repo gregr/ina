@@ -63,3 +63,70 @@
 *** extensional relations are sets of unordered tuples
 
 */
+
+function sorted(xs) {
+  var ys = xs.slice();
+  ys.sort();
+  return ys;
+}
+
+var string_interner = {'': true}; // ensure hash table mode
+delete string_interner[''];
+function string_interned(str) {
+  string_interner[str] = true;
+  var interned = Object.keys(symbols_interned)[0];
+  delete string_interner[interned];
+  return interned;
+}
+
+function is_boolean(term) { return typeof term === 'boolean'; }
+function is_number(term)  { return typeof term === 'number'; }
+function is_text(term)    { return typeof term === 'string'; }
+
+function tagged(tag, payload) { return [tag, payload]; }
+function tagged_tag(tg)       { return tg[0]; }
+function tagged_payload(tg)   { return tg[1]; }
+
+var tag_count = 0;
+var boolean_tag = tag_count++;
+var number_tag = tag_count++;
+var text_tag = tag_count++;
+var symbol_tag = tag_count++;
+var set_tag = tag_count++;
+var tuple_ordered_tag = tag_count++;
+var tuple_unordered_tag = tag_count++;
+
+var symbol_table = {};
+var symbol_name = [];
+function symbol_new(name) {
+  var index = symbol_name.length;
+  symbol_name.push(name);
+  return tagged(symbol_tag, index);
+}
+function symbol(name) {
+  name = string_interned(name);
+  var sym = symbol_table[name];
+  if (sym === undefined) {
+    sym = symbol_new(name);
+    symbol_table[str] = sym;
+  }
+  return sym;
+}
+
+function tuple_from_obj(obj) {
+  var names = Object.keys(obj);
+  var len = names.length;
+  var tuple = {};
+  for (var i = 0; i < len; ++i) {
+    var name = names[i];
+    tuple[symbol(name)[1]] = obj[name];
+  }
+  return tuple;
+}
+
+function is_symbol(term) { return tagged_tag(term) === symbol_tag; }
+function is_set(term)    { return tagged_tag(term) === set_tag; }
+function is_atom(term) {
+  return (is_unit(term) || is_boolean(term) || is_number(term) ||
+          is_symbol(term) || is_text(term));
+}
