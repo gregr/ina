@@ -82,6 +82,7 @@ function string_interned(str) {
 function is_boolean(term) { return typeof term === 'boolean'; }
 function is_number(term)  { return typeof term === 'number'; }
 function is_text(term)    { return typeof term === 'string'; }
+function is_tuple(term)   { return typeof term === 'object'; }
 
 function tagged(tag, payload) { return [tag, payload]; }
 function tagged_tag(tg)       { return tg[0]; }
@@ -114,14 +115,38 @@ function symbol(name) {
 }
 
 function tuple_from_obj(obj) {
-  var names = Object.keys(obj);
-  var len = names.length;
   var tuple = {};
-  for (var i = 0; i < len; ++i) {
-    var name = names[i];
+  for (var name in obj) {
     tuple[symbol(name)[1]] = obj[name];
   }
   return tuple;
+}
+function tuple_insert(tup, key, value) {
+  var tnew = {};
+  for (var k in tup) {
+    tnew[k] = tup[k];
+  }
+  // TODO: check for existing key and unify
+  tnew[key] = value;
+  return tnew;
+}
+function tuple_remove(tup, key) {
+  var tnew = {};
+  for (var k in tup) {
+    if (k !== key) tnew[k] = tup[k];
+  }
+  return tnew;
+}
+function tuple_meet(t0, t1) {
+  var tnew = {};
+  for (var k in t0) {
+    tnew[k] = t0[k];
+  }
+  for (var k in t1) {
+    // TODO: check for existing key and unify
+    tnew[k] = t1[k];
+  }
+  return tnew;
 }
 
 function is_symbol(term) { return tagged_tag(term) === symbol_tag; }
