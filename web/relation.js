@@ -1,3 +1,4 @@
+'use strict'
 /*
 
 * relation definition
@@ -52,13 +53,13 @@
 
 * terms
 ** atoms
-*** (), boolean, exact, inexact (later), symbol
+*** boolean, exact, inexact (later), symbol
 *** text is pseudo-atomic?
 ** compounds
 *** tuple
-**** unordered (record/dict)
-**** ordered (special case of unordered)
-*** set (special case of dict?)
+**** unordered (record)
+**** ordered (array)
+*** set
 *** extensional relations are sets of unordered tuples
 
 */
