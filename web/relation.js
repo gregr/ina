@@ -60,6 +60,15 @@
 **** unordered (record)
 **** ordered (array)
 *** set
+**** monomorphic vs. polymorphic sets
+****   boolean (ideal: two bits)
+****   number  (ideal: intervals)
+****   text    (ideal: some kind of trie/index?)
+****   symbol  (ideal: also intervals?)
+****   tuple ordered
+****   tuple unordered
+****   set (nested, so mono vs. poly again)
+****   polymorphic
 *** extensional relations are sets of unordered tuples
 
 */
