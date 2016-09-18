@@ -78,6 +78,13 @@ function sorted(xs) {
   ys.sort();
   return ys;
 }
+function sorted_by(cmp, xs) {
+  var ys = xs.slice();
+  ys.sort(cmp);
+  return ys;
+}
+function compare_asc(n0, n1) { return n0 - n1; }
+function compare_desc(n0, n1) { return n1 - n0; }
 
 var string_interner = {'': true}; // ensure hash table mode
 delete string_interner[''];
