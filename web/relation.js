@@ -155,3 +155,9 @@ function is_atom(term) {
   return (is_unit(term) || is_boolean(term) || is_number(term) ||
           is_symbol(term) || is_text(term));
 }
+
+// https://www.npmjs.com/package/v8-natives
+// node --allow-natives-syntax
+// %HasFastProperties(obj)
+// %GetOptimizationStatus(fn)
+// %OptimizeFunctionOnNextCall(fn)
