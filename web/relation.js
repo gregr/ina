@@ -167,10 +167,12 @@ function tuple_meet(t0, t1) {
 
 function is_symbol(term) { return tagged_tag(term) === symbol_tag; }
 function is_set(term)    { return tagged_tag(term) === set_tag; }
-function is_atom(term) {
-  return (is_unit(term) || is_boolean(term) || is_number(term) ||
-          is_symbol(term) || is_text(term));
-}
+
+var set_boolean_empty = 0;
+function set_boolean_has(set, bool) { return (set & (1 << bool)) > 0; }
+function set_boolean_add(set, bool) { return set | (1 << bool); }
+function set_boolean_join(s0, s1)   { return s0 | s1; }
+function set_boolean_meet(s0, s1)   { return s0 & s1; }
 
 // https://www.npmjs.com/package/v8-natives
 // node --allow-natives-syntax
