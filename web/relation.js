@@ -256,6 +256,14 @@ function btree_remove(bt, key) {
 //function btree_to_list(bt) {
 //}
 
+function btree_from_list(xs) {
+  var bt = btree_empty;
+  for (var ix = 0, len = xs.length; ix < len; ++ix) {
+    key = xs[ix];
+    bt = btree_put(bt, key, key);
+  }
+  return bt;
+}
 
 function sorted(xs) {
   var ys = xs.slice();
