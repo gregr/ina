@@ -73,6 +73,209 @@
 
 */
 
+function bisect(xs, key, start, end) {
+  while (start < end) {
+    var mid = start + ((end - start) >> 1);
+    var found = xs[mid];
+    if      (key < found) { end = mid; }
+    else if (key > found) { start = mid + 1; }
+    else                  { return mid; }
+  }
+  return start;
+}
+
+var BTREE_BLOCK_SIZE_FULL = 8;
+var BTREE_BLOCK_SIZE_HALF = BTREE_BLOCK_SIZE_FULL/2;
+var btree_empty = {'depth': 0, 'data': null};
+
+function btree_get(bt, key) {
+  var depth = bt.depth;
+  var data = bt.data;
+  if (!depth) return undefined;
+  do {
+    var keys = data.keys;
+    var ix = bisect(keys, key, 0, keys.length);
+    if (keys[ix] === key) { return data.values[ix]; }
+    if (!--depth) return undefined;
+    data = data.children[ix];
+  } while (true);
+}
+
+function btree_update(bt, path, data) {
+  for (var ip = path.length - 1; ip >= 0; --ip) {
+    var pseg = path[ip];
+    var ix = pseg.index;
+    var data_old = pseg.data;
+    var children = data_old.children.slice();
+    children[ix] = data;
+    data = {'keys': data_old.keys
+           ,'values': data_old.values
+           ,'children': children};
+  }
+  return {'depth': bt.depth, 'data': data};
+}
+
+function btree_put(bt, key, value) {
+  var path = [];
+  var depth = bt.depth;
+  var data = bt.data;
+  if (!depth) {
+    return {'depth': 1, 'data': {'keys': [key], 'values': [value]}};
+  }
+  do {
+    var keys = data.keys;
+    var ix = bisect(keys, key, 0, keys.length);
+    if (keys[ix] === key) {
+      values = data.values;
+      if (values[ix] === value) return bt;
+      values = values.slice();
+      values[ix] = value;
+      data = {'keys': keys, 'values': values, 'children': data.children};
+      return btree_update(bt, path, data);
+    }
+    if (!--depth) {
+      var klen = keys.length;
+      if (klen < BTREE_BLOCK_SIZE_FULL) {
+        keys = keys.slice();     ++keys.length;
+        values = values.slice(); ++values.length;
+        for (var j = klen; ix < j; --j) {
+          keys[j] = keys[j - 1];
+          values[j] = values[j - 1];
+        }
+        keys[ix] = key;
+        values[ix] = value;
+        return btree_update(bt, path, {'keys': keys, 'values': values});
+      } else {
+        var kl = keys.slice(0, BTREE_BLOCK_SIZE_HALF);
+        var kr = keys.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
+        var vl = values.slice(0, BTREE_BLOCK_SIZE_HALF);
+        var vr = values.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
+        var ckey, cvalue;
+        if (ix < BTREE_BLOCK_SIZE_HALF) {
+          var j = BTREE_BLOCK_SIZE_HALF - 1;
+          ckey = kl[j];
+          cvalue = vl[j];
+          for (; ix < j; --j) {
+            kl[j] = kl[j - 1];
+            vl[j] = vl[j - 1];
+          }
+          kl[ix] = key;
+          vl[ix] = value;
+        } else if (ix > BTREE_BLOCK_SIZE_HALF) {
+          ix -= BTREE_BLOCK_SIZE_HALF + 1;
+          var j = 0;
+          ckey = kr[j];
+          cvalue = vr[j];
+          for (; j < ix; ++j) {
+            kr[j] = kr[j + 1];
+            vr[j] = vr[j + 1];
+          }
+          kr[ix] = key;
+          vr[ix] = value;
+        } else {
+          ckey = key;
+          cvalue = value;
+        }
+        var left = {'keys': kl, 'values': vl};
+        var right = {'keys': kr, 'values': vr};
+        return btree_update_put(bt, path, ckey, cvalue, left, right);
+      }
+    }
+    path.push({'index': ix, 'data': data});
+    data = data.children[ix];
+  } while (true);
+}
+
+function btree_update_put(bt, path, key, value, left, right) {
+  for (var ip = path.length - 1; ip >= 0; --ip) {
+    var pseg = path[ip];
+    var ix = pseg.index;
+    var data_old = pseg.data;
+    var keys = data_old.keys;
+    var values = data_old.values;
+    var children = data_old.children;
+    var klen = keys.length;
+
+    if (klen < BTREE_BLOCK_SIZE_FULL) {
+      keys = keys.slice();         ++keys.length;
+      values = values.slice();     ++values.length;
+      children = children.slice(); ++children.length;
+      for (var j = klen; ix < j; --j) {
+        keys[j] = keys[j - 1];
+        values[j] = values[j - 1];
+        children[j + 1] = children[j];
+      }
+      keys[ix] = key;
+      values[ix] = value;
+      children[ix] = left;
+      children[ix + 1] = right;
+      data = {'keys': keys, 'values': values, 'children': children};
+      path.length = ip;
+      return btree_update(bt, path, data);
+    } else {
+      var kl = keys.slice(0, BTREE_BLOCK_SIZE_HALF);
+      var kr = keys.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
+      var vl = values.slice(0, BTREE_BLOCK_SIZE_HALF);
+      var vr = values.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
+      var chl = children.slice(0, BTREE_BLOCK_SIZE_HALF + 1);
+      var chr = children.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL + 1);
+      var ckey, cvalue;
+      if (ix < BTREE_BLOCK_SIZE_HALF) {
+        var j = BTREE_BLOCK_SIZE_HALF - 1;
+        ckey = kl[j];
+        cvalue = vl[j];
+        for (; ix < j; --j) {
+          kl[j] = kl[j - 1];
+          vl[j] = vl[j - 1];
+          chl[j + 1] = chl[j];
+        }
+        kl[ix] = key;
+        vl[ix] = value;
+        chl[ix] = left;
+        chl[ix + 1] = right;
+      } else if (ix > BTREE_BLOCK_SIZE_HALF) {
+        ix -= BTREE_BLOCK_SIZE_HALF + 1;
+        var j = 0;
+        ckey = kr[j];
+        cvalue = vr[j];
+        for (; j < ix; ++j) {
+          kr[j] = kr[j + 1];
+          vr[j] = vr[j + 1];
+          chr[j] = chr[j + 1];
+        }
+        kr[ix] = key;
+        vr[ix] = value;
+        chr[ix] = left;
+        chr[ix + 1] = right;
+      } else {
+        ckey = key;
+        cvalue = value;
+        chl[BTREE_BLOCK_SIZE_HALF] = left;
+        chr[0] = right;
+      }
+      key = ckey;
+      value = cvalue;
+      left = {'keys': kl, 'values': vl, 'children': cl};
+      right = {'keys': kr, 'values': vr, 'children': cr};
+    }
+  }
+  return {'depth': bt.depth + 1
+         ,'data': {'keys': [key]
+                  ,'values': [value]
+                  ,'children': [left, right]}};
+}
+
+function btree_remove(bt, key) {
+}
+
+//function btree_join(bt0, bt1) {
+//}
+//function btree_meet(bt0, bt1) {
+//}
+//function btree_to_list(bt) {
+//}
+
+
 function sorted(xs) {
   var ys = xs.slice();
   ys.sort();
