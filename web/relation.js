@@ -130,56 +130,14 @@ function btree_put(bt, key, value) {
       if (values[ix] === value) return bt;
       values = values.slice();
       values[ix] = value;
-      data = {'keys': keys, 'values': values, 'children': data.children};
+      children = data.children;
+      data = {'keys': keys, 'values': values};
+      if (children) { data.children = children; }
       return btree_update(bt, path, data);
     }
     if (!--depth) {
-      var klen = keys.length;
-      if (klen < BTREE_BLOCK_SIZE_FULL) {
-        keys = keys.slice();     ++keys.length;
-        values = values.slice(); ++values.length;
-        for (var j = klen; ix < j; --j) {
-          keys[j] = keys[j - 1];
-          values[j] = values[j - 1];
-        }
-        keys[ix] = key;
-        values[ix] = value;
-        return btree_update(bt, path, {'keys': keys, 'values': values});
-      } else {
-        var kl = keys.slice(0, BTREE_BLOCK_SIZE_HALF);
-        var kr = keys.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
-        var vl = values.slice(0, BTREE_BLOCK_SIZE_HALF);
-        var vr = values.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
-        var ckey, cvalue;
-        if (ix < BTREE_BLOCK_SIZE_HALF) {
-          var j = BTREE_BLOCK_SIZE_HALF - 1;
-          ckey = kl[j];
-          cvalue = vl[j];
-          for (; ix < j; --j) {
-            kl[j] = kl[j - 1];
-            vl[j] = vl[j - 1];
-          }
-          kl[ix] = key;
-          vl[ix] = value;
-        } else if (ix > BTREE_BLOCK_SIZE_HALF) {
-          ix -= BTREE_BLOCK_SIZE_HALF + 1;
-          var j = 0;
-          ckey = kr[j];
-          cvalue = vr[j];
-          for (; j < ix; ++j) {
-            kr[j] = kr[j + 1];
-            vr[j] = vr[j + 1];
-          }
-          kr[ix] = key;
-          vr[ix] = value;
-        } else {
-          ckey = key;
-          cvalue = value;
-        }
-        var left = {'keys': kl, 'values': vl};
-        var right = {'keys': kr, 'values': vr};
-        return btree_update_put(bt, path, ckey, cvalue, left, right);
-      }
+      path.push({'index': ix, 'data': data});
+      return btree_update_put(bt, path, key, value, null, null);
     }
     path.push({'index': ix, 'data': data});
     data = data.children[ix];
@@ -195,30 +153,35 @@ function btree_update_put(bt, path, key, value, left, right) {
     var values = data_old.values;
     var children = data_old.children;
     var klen = keys.length;
-
     if (klen < BTREE_BLOCK_SIZE_FULL) {
-      keys = keys.slice();         ++keys.length;
-      values = values.slice();     ++values.length;
-      children = children.slice(); ++children.length;
+      keys = keys.slice();     ++keys.length;
+      values = values.slice(); ++values.length;
+      if (children) { children = children.slice(); ++children.length; }
       for (var j = klen; ix < j; --j) {
         keys[j] = keys[j - 1];
         values[j] = values[j - 1];
-        children[j + 1] = children[j];
+        if (children) { children[j + 1] = children[j]; }
       }
       keys[ix] = key;
       values[ix] = value;
-      children[ix] = left;
-      children[ix + 1] = right;
-      data = {'keys': keys, 'values': values, 'children': children};
+      if (children) {
+        children[ix] = left;
+        children[ix + 1] = right;
+      }
+      data = {'keys': keys, 'values': values};
+      if (children) { data.children = children; }
       path.length = ip;
       return btree_update(bt, path, data);
     } else {
+      var chl, chr;
       var kl = keys.slice(0, BTREE_BLOCK_SIZE_HALF);
       var kr = keys.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
       var vl = values.slice(0, BTREE_BLOCK_SIZE_HALF);
       var vr = values.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
-      var chl = children.slice(0, BTREE_BLOCK_SIZE_HALF + 1);
-      var chr = children.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL + 1);
+      if (children) {
+        chl = children.slice(0, BTREE_BLOCK_SIZE_HALF + 1);
+        chr = children.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL + 1);
+      }
       var ckey, cvalue;
       if (ix < BTREE_BLOCK_SIZE_HALF) {
         var j = BTREE_BLOCK_SIZE_HALF - 1;
@@ -227,12 +190,14 @@ function btree_update_put(bt, path, key, value, left, right) {
         for (; ix < j; --j) {
           kl[j] = kl[j - 1];
           vl[j] = vl[j - 1];
-          chl[j + 1] = chl[j];
+          if (children) { chl[j + 1] = chl[j]; }
         }
         kl[ix] = key;
         vl[ix] = value;
-        chl[ix] = left;
-        chl[ix + 1] = right;
+        if (children) {
+          chl[ix] = left;
+          chl[ix + 1] = right;
+        }
       } else if (ix > BTREE_BLOCK_SIZE_HALF) {
         ix -= BTREE_BLOCK_SIZE_HALF + 1;
         var j = 0;
@@ -241,22 +206,30 @@ function btree_update_put(bt, path, key, value, left, right) {
         for (; j < ix; ++j) {
           kr[j] = kr[j + 1];
           vr[j] = vr[j + 1];
-          chr[j] = chr[j + 1];
+          if (children) { chr[j] = chr[j + 1]; }
         }
         kr[ix] = key;
         vr[ix] = value;
-        chr[ix] = left;
-        chr[ix + 1] = right;
+        if (children) {
+          chr[ix] = left;
+          chr[ix + 1] = right;
+        }
       } else {
         ckey = key;
         cvalue = value;
-        chl[BTREE_BLOCK_SIZE_HALF] = left;
-        chr[0] = right;
+        if (children) {
+          chl[BTREE_BLOCK_SIZE_HALF] = left;
+          chr[0] = right;
+        }
       }
       key = ckey;
       value = cvalue;
-      left = {'keys': kl, 'values': vl, 'children': cl};
-      right = {'keys': kr, 'values': vr, 'children': cr};
+      left = {'keys': kl, 'values': vl};
+      right = {'keys': kr, 'values': vr};
+      if (children) {
+        left.children = chl;
+        right.children = chr;
+      }
     }
   }
   return {'depth': bt.depth + 1
