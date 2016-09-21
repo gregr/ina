@@ -73,6 +73,14 @@
 
 */
 
+function range(start, end) {
+  var xs = []; xs.length = end - start;
+  for (var ix = 0; ix + start < end; ++ix) {
+    xs[ix] = ix + start;
+  }
+  return xs;
+}
+
 function bisect(xs, key, start, end) {
   while (start < end) {
     var mid = start + ((end - start) >> 1);
