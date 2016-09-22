@@ -102,8 +102,9 @@ function btree_get(bt, key) {
   if (!depth) return undefined;
   do {
     var keys = data.keys;
-    var ix = bisect(keys, key, 0, keys.length);
-    if (keys[ix] === key) { return data.values[ix]; }
+    var klen = keys.length;
+    var ix = bisect(keys, key, 0, klen);
+    if (ix < klen && keys[ix] === key) { return data.values[ix]; }
     if (!--depth) return undefined;
     data = data.children[ix];
   } while (true);
@@ -132,8 +133,9 @@ function btree_put(bt, key, value) {
   }
   do {
     var keys = data.keys;
-    var ix = bisect(keys, key, 0, keys.length);
-    if (keys[ix] === key) {
+    var klen = keys.length;
+    var ix = bisect(keys, key, 0, klen);
+    if (ix < klen && keys[ix] === key) {
       values = data.values;
       if (values[ix] === value) return bt;
       values = values.slice();
@@ -143,11 +145,10 @@ function btree_put(bt, key, value) {
       if (children) { data.children = children; }
       return btree_update(bt, path, data);
     }
+    path.push({'index': ix, 'data': data});
     if (!--depth) {
-      path.push({'index': ix, 'data': data});
       return btree_update_put(bt, path, key, value, null, null);
     }
-    path.push({'index': ix, 'data': data});
     data = data.children[ix];
   } while (true);
 }
