@@ -177,10 +177,8 @@ function btree_put(bt, key, value) {
     if (ix < klen && keys[ix] === key) {
       values = data.values;
       if (values[ix] === value) return bt;
-      values = values.slice();
-      values[ix] = value;
       children = data.children;
-      data = {'keys': keys, 'values': values};
+      data = {'keys': keys, 'values': array_replace(values, ix, value)};
       if (children) { data.children = children; }
       return btree_update(bt, path, data);
     }
@@ -202,18 +200,10 @@ function btree_update_put(bt, path, key, value, left, right) {
     var children = data_old.children;
     var klen = keys.length;
     if (klen < BTREE_BLOCK_SIZE_FULL) {
-      keys = keys.slice();     ++keys.length;
-      values = values.slice(); ++values.length;
-      if (children) { children = children.slice(); ++children.length; }
-      for (var j = klen; ix < j; --j) {
-        keys[j] = keys[j - 1];
-        values[j] = values[j - 1];
-        if (children) { children[j + 1] = children[j]; }
-      }
-      keys[ix] = key;
-      values[ix] = value;
+      keys = array_insert(keys, ix, key);
+      values = array_insert(values, ix, value);
       if (children) {
-        children[ix] = left;
+        children = array_insert(children, ix, left);
         children[ix + 1] = right;
       }
       data = {'keys': keys, 'values': values};
@@ -221,57 +211,43 @@ function btree_update_put(bt, path, key, value, left, right) {
       path.length = ip;
       return btree_update(bt, path, data);
     } else {
-      var chl, chr;
-      var kl = keys.slice(0, BTREE_BLOCK_SIZE_HALF);
-      var kr = keys.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
-      var vl = values.slice(0, BTREE_BLOCK_SIZE_HALF);
-      var vr = values.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
-      if (children) {
-        chl = children.slice(0, BTREE_BLOCK_SIZE_HALF + 1);
-        chr = children.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL + 1);
-      }
-      var ckey, cvalue;
+      var kl, kr, vl, vr, chl, chr;
       if (ix < BTREE_BLOCK_SIZE_HALF) {
-        var j = BTREE_BLOCK_SIZE_HALF - 1;
-        ckey = kl[j];
-        cvalue = vl[j];
-        for (; ix < j; --j) {
-          kl[j] = kl[j - 1];
-          vl[j] = vl[j - 1];
-          if (children) { chl[j + 1] = chl[j]; }
-        }
-        kl[ix] = key;
-        vl[ix] = value;
+        kr = keys.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
+        kl = array_insert_remove_right(keys, 0, BTREE_BLOCK_SIZE_HALF, ix, key);
+        key = keys[BTREE_BLOCK_SIZE_HALF - 1];
+        vr = values.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
+        vl = array_insert_remove_right(values, 0, BTREE_BLOCK_SIZE_HALF, ix, value);
+        value = keys[BTREE_BLOCK_SIZE_HALF - 1];
         if (children) {
-          chl[ix] = left;
+          chr = children.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL + 1);
+          chl = array_insert_remove_right(children, 0, BTREE_BLOCK_SIZE_HALF + 1, ix, left);
           chl[ix + 1] = right;
         }
       } else if (ix > BTREE_BLOCK_SIZE_HALF) {
-        ix -= BTREE_BLOCK_SIZE_HALF + 1;
-        var j = 0;
-        ckey = kr[j];
-        cvalue = vr[j];
-        for (; j < ix; ++j) {
-          kr[j] = kr[j + 1];
-          vr[j] = vr[j + 1];
-          if (children) { chr[j] = chr[j + 1]; }
-        }
-        kr[ix] = key;
-        vr[ix] = value;
+        kl = keys.slice(0, BTREE_BLOCK_SIZE_HALF);
+        kr = array_insert_remove_left(keys, BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL, ix, key);
+        key = keys[BTREE_BLOCK_SIZE_HALF];
+        vl = values.slice(0, BTREE_BLOCK_SIZE_HALF);
+        vr = array_insert_remove_left(values, BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL, ix, value);
+        value = keys[BTREE_BLOCK_SIZE_HALF];
         if (children) {
-          chr[ix] = left;
-          chr[ix + 1] = right;
+          chl = children.slice(0, BTREE_BLOCK_SIZE_HALF + 1);
+          chr = array_insert_remove_left(children, BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL + 1, ix, left);
+          chr[ix - BTREE_BLOCK_SIZE_HALF] = right;
         }
       } else {
-        ckey = key;
-        cvalue = value;
+        kl = keys.slice(0, BTREE_BLOCK_SIZE_HALF);
+        kr = keys.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
+        vl = values.slice(0, BTREE_BLOCK_SIZE_HALF);
+        vr = values.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
         if (children) {
+          chl = children.slice(0, BTREE_BLOCK_SIZE_HALF + 1);
+          chr = children.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL + 1);
           chl[BTREE_BLOCK_SIZE_HALF] = left;
           chr[0] = right;
         }
       }
-      key = ckey;
-      value = cvalue;
       left = {'keys': kl, 'values': vl};
       right = {'keys': kr, 'values': vr};
       if (children) {
