@@ -133,72 +133,65 @@ function array_insert_remove_left(xs, start, end, ix, val) {
 
 var BTREE_BLOCK_SIZE_FULL = 8;
 var BTREE_BLOCK_SIZE_HALF = BTREE_BLOCK_SIZE_FULL/2;
-var btree_empty = {'depth': 0, 'data': null};
-
-function btree_leaf(keys, values) { return {'keys': keys, 'values': values}; }
 function btree_branch(keys, values, children) {
   return {'keys': keys, 'values': values, 'children': children};
 }
+function btree_leaf(keys, values) { return btree_branch(keys, values, null); }
+function btree_step(path, bt, index) { path.push({'index': index, 'tree': bt}); }
+var btree_empty = btree_leaf([], []);
 
 function btree_get(bt, key) {
-  var depth = bt.depth;
-  var data = bt.data;
-  if (!depth) return undefined;
-  do {
-    var keys = data.keys;
+  while (true) {
+    var keys = bt.keys;
     var klen = keys.length;
     var ix = bisect(keys, key, 0, klen);
-    if (ix < klen && keys[ix] === key) { return data.values[ix]; }
-    if (!--depth) return undefined;
-    data = data.children[ix];
-  } while (true);
+    if (ix < klen && keys[ix] === key) { return bt.values[ix]; }
+    var children = bt.children;
+    if (!children) { return undefined; }
+    bt = bt.children[ix];
+  }
 }
 
-function btree_update(bt, path, data) {
+function btree_path_update(path, bt) {
   for (var ip = path.length - 1; ip >= 0; --ip) {
     var pseg = path[ip];
     var ix = pseg.index;
-    var data_old = pseg.data;
-    var children = data_old.children.slice();
-    children[ix] = data;
-    data = btree_branch(data_old.keys, data_old.values, children);
+    var old = pseg.tree;
+    var children = old.children.slice();
+    children[ix] = bt;
+    bt = btree_branch(old.keys, old.values, children);
   }
-  return {'depth': bt.depth, 'data': data};
+  return bt;
 }
 
 function btree_put(bt, key, value) {
+  var original = bt;
   var path = [];
-  var depth = bt.depth;
-  var data = bt.data;
-  if (!depth) { return {'depth': 1, 'data': btree_leaf([key], [value])}; }
-  do {
-    var keys = data.keys;
+  while (true) {
+    var keys = bt.keys;
     var klen = keys.length;
     var ix = bisect(keys, key, 0, klen);
+    var children = bt.children;
     if (ix < klen && keys[ix] === key) {
-      values = data.values;
-      if (values[ix] === value) return bt;
-      children = data.children;
-      data = btree_leaf(keys, array_replace(values, ix, value));
-      if (children) { data.children = children; }
-      return btree_update(bt, path, data);
+      values = bt.values;
+      if (values[ix] === value) { return original; }
+      bt = btree_branch(keys, array_replace(values, ix, value), children);
+      return btree_path_update(path, bt);
     }
-    path.push({'index': ix, 'data': data});
-    if (!--depth) {
-      return btree_update_put(bt, path, key, value, null, null);
-    }
-    data = data.children[ix];
-  } while (true);
+    btree_step(path, bt, ix);
+    if (!children) { return btree_path_insert(path, key, value, null, null); }
+    bt = children[ix];
+  }
 }
 
-function btree_update_put(bt, path, key, value, left, right) {
+function btree_path_insert(path, key, value, left, right) {
   for (var ip = path.length - 1; ip >= 0; --ip) {
     var pseg = path[ip];
     var ix = pseg.index;
-    var data_old = pseg.data;
-    var keys = data_old.keys;
-    var values = data_old.values;
-    var children = data_old.children;
+    var old = pseg.tree;
+    var keys = old.keys;
+    var values = old.values;
+    var children = old.children;
     var klen = keys.length;
     if (klen < BTREE_BLOCK_SIZE_FULL) {
       keys = array_insert(keys, ix, key);
@@ -207,12 +200,10 @@ function btree_update_put(bt, path, key, value, left, right) {
         children = array_insert(children, ix, left);
         children[ix + 1] = right;
       }
-      data = btree_leaf(keys, values);
-      if (children) { data.children = children; }
       path.length = ip;
-      return btree_update(bt, path, data);
+      return btree_path_update(path, btree_branch(keys, values, children));
     } else {
-      var kl, kr, vl, vr, chl, chr;
+      var kl, kr, vl, vr, chl = null, chr = null;
       if (ix < BTREE_BLOCK_SIZE_HALF) {
         kr = keys.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
         kl = array_insert_remove_right(keys, 0, BTREE_BLOCK_SIZE_HALF, ix, key);
@@ -249,16 +240,11 @@ function btree_update_put(bt, path, key, value, left, right) {
           chr[0] = right;
         }
       }
-      left = btree_leaf(kl, vl);
-      right = btree_leaf(kr, vr);
-      if (children) {
-        left.children = chl;
-        right.children = chr;
-      }
+      left = btree_branch(kl, vl, chl);
+      right = btree_branch(kr, vr, chr);
     }
   }
-  return {'depth': bt.depth + 1
-         ,'data': btree_branch([key], [value], [left, right])};
+  return btree_branch([key], [value], [left, right]);
 }
 
 function btree_remove(bt, key) {
