@@ -135,6 +135,11 @@ var BTREE_BLOCK_SIZE_FULL = 8;
 var BTREE_BLOCK_SIZE_HALF = BTREE_BLOCK_SIZE_FULL/2;
 var btree_empty = {'depth': 0, 'data': null};
 
+function btree_leaf(keys, values) { return {'keys': keys, 'values': values}; }
+function btree_branch(keys, values, children) {
+  return {'keys': keys, 'values': values, 'children': children};
+}
+
 function btree_get(bt, key) {
   var depth = bt.depth;
   var data = bt.data;
@@ -156,9 +161,7 @@ function btree_update(bt, path, data) {
     var data_old = pseg.data;
     var children = data_old.children.slice();
     children[ix] = data;
-    data = {'keys': data_old.keys
-           ,'values': data_old.values
-           ,'children': children};
+    data = btree_branch(data_old.keys, data_old.values, children);
   }
   return {'depth': bt.depth, 'data': data};
 }
@@ -167,9 +170,7 @@ function btree_put(bt, key, value) {
   var path = [];
   var depth = bt.depth;
   var data = bt.data;
-  if (!depth) {
-    return {'depth': 1, 'data': {'keys': [key], 'values': [value]}};
-  }
+  if (!depth) { return {'depth': 1, 'data': btree_leaf([key], [value])}; }
   do {
     var keys = data.keys;
     var klen = keys.length;
@@ -178,7 +179,7 @@ function btree_put(bt, key, value) {
       values = data.values;
       if (values[ix] === value) return bt;
       children = data.children;
-      data = {'keys': keys, 'values': array_replace(values, ix, value)};
+      data = btree_leaf(keys, array_replace(values, ix, value));
       if (children) { data.children = children; }
       return btree_update(bt, path, data);
     }
@@ -206,7 +207,7 @@ function btree_update_put(bt, path, key, value, left, right) {
         children = array_insert(children, ix, left);
         children[ix + 1] = right;
       }
-      data = {'keys': keys, 'values': values};
+      data = btree_leaf(keys, values);
       if (children) { data.children = children; }
       path.length = ip;
       return btree_update(bt, path, data);
@@ -248,8 +249,8 @@ function btree_update_put(bt, path, key, value, left, right) {
           chr[0] = right;
         }
       }
-      left = {'keys': kl, 'values': vl};
-      right = {'keys': kr, 'values': vr};
+      left = btree_leaf(kl, vl);
+      right = btree_leaf(kr, vr);
       if (children) {
         left.children = chl;
         right.children = chr;
@@ -257,9 +258,7 @@ function btree_update_put(bt, path, key, value, left, right) {
     }
   }
   return {'depth': bt.depth + 1
-         ,'data': {'keys': [key]
-                  ,'values': [value]
-                  ,'children': [left, right]}};
+         ,'data': btree_branch([key], [value], [left, right])};
 }
 
 function btree_remove(bt, key) {
