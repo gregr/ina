@@ -92,6 +92,45 @@ function bisect(xs, key, start, end) {
   return start;
 }
 
+function array_insert(xs, ix, val) {
+  var rhs = xs.length;
+  var ys = []; ys.length = rhs + 1;
+  for (; ix < rhs; --rhs) { ys[rhs] = xs[rhs - 1]; }
+  ys[ix] = val;
+  while (--ix >= 0) { ys[ix] = xs[ix]; }
+  return ys;
+}
+function array_replace(xs, ix, val) {
+  var ys = xs.slice();
+  ys[ix] = val;
+  return ys;
+}
+function array_remove(xs, ix) {
+  var rhs = xs.length - 1;
+  var ys = []; ys.length = rhs;
+  for (var j = 0; j < ix; ++j) { ys[j] = xs[j]; }
+  for (; ix < rhs; --rhs) { ys[ix] = xs[ix + 1]; }
+  return ys;
+}
+function array_insert_remove_right(xs, start, end, ix, val) {
+  var lhs = start, rhs = end - 1;
+  var ys = []; ys.length = end - start;
+  var j = 0;
+  for (; lhs < ix; ++j, ++lhs) { ys[j] = xs[lhs]; }
+  ys[j] = val;
+  for (++j; lhs < rhs; ++j, ++lhs) { ys[j] = xs[lhs]; }
+  return ys;
+}
+function array_insert_remove_left(xs, start, end, ix, val) {
+  var lhs = start, rhs = end - 1;
+  var ys = []; ys.length = end - start;
+  var j = 0;
+  for (; ++lhs < ix; ++j) { ys[j] = xs[lhs]; }
+  ys[j] = val;
+  for (++j; lhs <= rhs; ++j, ++lhs) { ys[j] = xs[lhs]; }
+  return ys;
+}
+
 var BTREE_BLOCK_SIZE_FULL = 8;
 var BTREE_BLOCK_SIZE_HALF = BTREE_BLOCK_SIZE_FULL/2;
 var btree_empty = {'depth': 0, 'data': null};
