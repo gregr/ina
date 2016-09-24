@@ -130,6 +130,14 @@ function array_insert_remove_left(xs, start, end, ix, val) {
   for (++j; lhs <= rhs; ++j, ++lhs) { ys[j] = xs[lhs]; }
   return ys;
 }
+function array_merge(xs, ys) { return xs.concat(ys); }
+function array_merge_mid(xs, mid, ys) { return xs.concat([mid]).concat(ys); }
+function array_extend(xs, ys) {
+  var ix = xs.length;
+  var len = ix + ys.length;
+  xs.length = len;
+  for (var j = 0; ix < len; ++ix, ++j) { xs[ix] = ys[j]; }
+}
 
 var BTREE_BLOCK_SIZE_FULL = 8;
 var BTREE_BLOCK_SIZE_HALF = BTREE_BLOCK_SIZE_FULL/2;
