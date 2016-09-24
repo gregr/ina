@@ -197,7 +197,7 @@ function btree_path_insert(path, key, value, left, right) {
         key = keys[BTREE_BLOCK_SIZE_HALF - 1];
         vr = values.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL);
         vl = array_insert_remove_right(values, 0, BTREE_BLOCK_SIZE_HALF, ix, value);
-        value = keys[BTREE_BLOCK_SIZE_HALF - 1];
+        value = values[BTREE_BLOCK_SIZE_HALF - 1];
         if (children) {
           chr = children.slice(BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL + 1);
           chl = array_insert_remove_right(children, 0, BTREE_BLOCK_SIZE_HALF + 1, ix, left);
@@ -209,7 +209,7 @@ function btree_path_insert(path, key, value, left, right) {
         key = keys[BTREE_BLOCK_SIZE_HALF];
         vl = values.slice(0, BTREE_BLOCK_SIZE_HALF);
         vr = array_insert_remove_left(values, BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL, ix, value);
-        value = keys[BTREE_BLOCK_SIZE_HALF];
+        value = values[BTREE_BLOCK_SIZE_HALF];
         if (children) {
           chl = children.slice(0, BTREE_BLOCK_SIZE_HALF + 1);
           chr = array_insert_remove_left(children, BTREE_BLOCK_SIZE_HALF, BTREE_BLOCK_SIZE_FULL + 1, ix, left);
@@ -243,7 +243,7 @@ function btree_put(bt, key, value) {
     var ix = bisect(keys, key, 0, klen);
     var children = bt.children;
     if (ix < klen && keys[ix] === key) {
-      values = bt.values;
+      var values = bt.values;
       if (values[ix] === value) { return original; }
       bt = btree_branch(keys, array_replace(values, ix, value), children);
       return btree_path_update(path, bt);
