@@ -171,27 +171,6 @@ function btree_path_update(path, bt) {
   }
   return bt;
 }
-
-function btree_put(bt, key, value) {
-  var original = bt;
-  var path = [];
-  while (true) {
-    var keys = bt.keys;
-    var klen = keys.length;
-    var ix = bisect(keys, key, 0, klen);
-    var children = bt.children;
-    if (ix < klen && keys[ix] === key) {
-      values = bt.values;
-      if (values[ix] === value) { return original; }
-      bt = btree_branch(keys, array_replace(values, ix, value), children);
-      return btree_path_update(path, bt);
-    }
-    btree_step(path, bt, ix);
-    if (!children) { return btree_path_insert(path, key, value, null, null); }
-    bt = children[ix];
-  }
-}
-
 function btree_path_insert(path, key, value, left, right) {
   for (var ip = path.length - 1; ip >= 0; --ip) {
     var pseg = path[ip];
@@ -253,6 +232,26 @@ function btree_path_insert(path, key, value, left, right) {
     }
   }
   return btree_branch([key], [value], [left, right]);
+}
+
+function btree_put(bt, key, value) {
+  var original = bt;
+  var path = [];
+  while (true) {
+    var keys = bt.keys;
+    var klen = keys.length;
+    var ix = bisect(keys, key, 0, klen);
+    var children = bt.children;
+    if (ix < klen && keys[ix] === key) {
+      values = bt.values;
+      if (values[ix] === value) { return original; }
+      bt = btree_branch(keys, array_replace(values, ix, value), children);
+      return btree_path_update(path, bt);
+    }
+    btree_step(path, bt, ix);
+    if (!children) { return btree_path_insert(path, key, value, null, null); }
+    bt = children[ix];
+  }
 }
 
 function btree_remove(bt, key) {
