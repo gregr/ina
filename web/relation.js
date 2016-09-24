@@ -416,8 +416,29 @@ function btree_join(join, bt0, bt1) {
   return result;
 }
 
-//function btree_meet(meet, bt0, bt1) {
-//}
+function btree_meet(meet, bt0, bt1) {
+  var ks0 = btree_keys_to_list(bt0);
+  var ks1 = btree_keys_to_list(bt1);
+  var result = btree_empty;
+  var k0, l0 = ks0.length, i0 = 0, k1, l1 = ks1.length, i1 = 0;
+  if (i0 < l0) {
+    k0 = ks0[i0];
+    if (i1 < l1) {
+      k1 = ks1[i1];
+      while (true) {
+        if      (k0 < k1) { ++i0; if (i0 === l0) break; k0 = ks0[i0]; }
+        else if (k1 < k0) { ++i1; if (i1 === l1) break; k1 = ks1[i1]; }
+        else {
+          var value = meet(btree_get(bt0, k0), btree_get(bt1, k1));
+          if (value !== undefined) { result = btree_put(result, k0, value); }
+          ++i0; ++i1; if (i0 === l0 || i1 === l1) break;
+          k0 = ks0[i0]; k1 = ks1[i1];
+        }
+      }
+    }
+  }
+  return result;
+}
 
 function btree_keys_to_list(bt) {
   var path = [], result = [];
