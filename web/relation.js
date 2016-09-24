@@ -324,7 +324,7 @@ function btree_path_remove(path, bt, ix) {
 function btree_path_balance(path, bt) {
   for (var ip = path.length - 1; ip >= 0; --ip) {
     var klen = bt.keys.length;
-    if (klen > BTREE_BLOCK_SIZE_HALF || path.length === 0) {
+    if (klen >= BTREE_BLOCK_SIZE_HALF || path.length === 0) {
       path.length = ip + 1;
       return btree_path_update(path, bt);
     } else {
@@ -336,7 +336,7 @@ function btree_path_balance(path, bt) {
       if (pix > 0 && siblings[pix - 1].keys.length > BTREE_BLOCK_SIZE_HALF) {
         var six = pix - 1;
         var sib = siblings[six];
-        var sklen = skeys.length;
+        var sklen = sib.keys.length;
         return btree_rotate_sibling(
             path, bt, 0, pix, pbt, six, sib, sklen - 1, sklen, six);
       }
@@ -465,7 +465,7 @@ function btree_keys_to_list(bt) {
 function btree_from_list(xs) {
   var bt = btree_empty;
   for (var ix = 0, len = xs.length; ix < len; ++ix) {
-    key = xs[ix];
+    var key = xs[ix];
     bt = btree_put(bt, key, key);
   }
   return bt;
