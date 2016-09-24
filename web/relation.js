@@ -384,8 +384,28 @@ function btree_remove(bt, key) {
 //}
 //function btree_meet(bt0, bt1) {
 //}
-//function btree_to_list(bt) {
-//}
+
+function btree_keys_to_list(bt) {
+  var path = [], result = [];
+  while (true) {
+    var children = bt.children;
+    var keys = bt.keys;
+    if (children) {
+      for (var j = children.length - 1; j; --j) {
+        path.push({'key': keys[j - 1], 'rhs': children[j]});
+      }
+      bt = children[j];
+    } else {
+      for (var i = 0, len = keys.length; i < len; ++i) {
+        result.push(keys[i]);
+      }
+      if (path.length === 0) { return result; }
+      var seg = path.pop();
+      result.push(seg.key);
+      bt = seg.rhs;
+    }
+  }
+}
 
 function btree_from_list(xs) {
   var bt = btree_empty;
