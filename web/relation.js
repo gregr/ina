@@ -106,10 +106,10 @@ function array_replace(xs, ix, val) {
   return ys;
 }
 function array_remove(xs, ix) {
-  var rhs = xs.length - 1;
-  var ys = []; ys.length = rhs;
+  var len = xs.length - 1;
+  var ys = []; ys.length = len;
   for (var j = 0; j < ix; ++j) { ys[j] = xs[j]; }
-  for (; ix < rhs; --rhs) { ys[ix] = xs[ix + 1]; }
+  for (; j < len; ++j) { ys[j] = xs[j + 1]; }
   return ys;
 }
 function array_insert_remove_right(xs, start, end, ix, val) {
