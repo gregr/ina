@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eufo pipefail
+
+python -m SimpleHTTPServer
