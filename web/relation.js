@@ -254,7 +254,130 @@ function btree_put(bt, key, value) {
   }
 }
 
+function btree_merge_siblings(pbt, left, il, right, ir) {
+  var keys = array_merge_mid(left.keys, pbt.keys[il], right.keys);
+  var values = array_merge_mid(left.values, pbt.values[il], right.values);
+  var children = left.children;
+  if (children) { children = array_merge(left.children, right.children); }
+  var bt = btree_branch(keys, values, children);
+  keys = array_remove(pbt.keys, il);
+  values = array_remove(pbt.values, il);
+  children = array_remove(pbt.children, ir);
+  children[il] = bt;
+  return btree_branch(keys, values, children);
+}
+
+function btree_leftmost(path_out, bt) {
+  var children = bt.children;
+  while (children) {
+    btree_step(path_out, bt, 0);
+    bt = children[0];
+    children = bt.children;
+  }
+  return bt;
+}
+function btree_rightmost(path_out, bt) {
+  var children = bt.children;
+  while (children) {
+    var ix = children.length - 1;
+    btree_step(path_out, bt, ix);
+    bt = children[ix];
+    children = bt.children;
+  }
+  return bt;
+}
+
+function btree_rotate_leaf(path, bt, ix, ix_child, leaf_path, leaf, leaf_ix) {
+  var keys = array_replace(bt.keys, ix, leaf.keys[leaf_ix]);
+  var values = array_replace(bt.values, ix, leaf.values[leaf_ix]);
+  btree_step(path, btree_branch(keys, values, bt.children), ix_child);
+  array_extend(path, leaf_path);
+  return btree_path_remove(path, leaf, leaf_ix);
+}
+function btree_rotate_sibling(path, bt, ix, pix, pbt, p_ix, sib, sib_ix, sib_cix, sib_pix) {
+  var children = bt.children, schildren = sib.children;
+  if (children) {
+    children = array_insert(children, ix, schildren[sib_cix]);
+    schildren = array_remove(schildren, sib_cix);
+  }
+  bt = btree_branch(array_insert(bt.keys, ix, pbt.keys[p_ix])
+                   ,array_insert(bt.values, ix, pbt.values[p_ix])
+                   ,children);
+  var pkeys = array_replace(pbt.keys, p_ix, sib.keys[sib_ix]);
+  var skeys = array_remove(sib.keys, sib_ix);
+  var pvalues = array_replace(pbt.values, p_ix, sib.values[sib_ix]);
+  var svalues = array_remove(sib.values, sib_ix);
+  sib = btree_branch(skeys, svalues, schildren);
+  var siblings = array_replace(pbt.children, sib_pix, sib);
+  siblings[pix] = bt;
+  return btree_path_update(path, btree_branch(pkeys, pvalues, siblings));
+}
+
+function btree_path_remove(path, bt, ix) {
+  var keys = array_remove(bt.keys, ix);
+  var values = array_remove(bt.values, ix);
+  var children = bt.children;
+  if (children) { children = array_remove(children, ix); }
+  bt = btree_branch(keys, values, children);
+  return btree_path_balance(path, bt);
+}
+function btree_path_balance(path, bt) {
+  for (var ip = path.length - 1; ip >= 0; --ip) {
+    var klen = bt.keys.length;
+    if (klen > BTREE_BLOCK_SIZE_HALF || path.length === 0) {
+      path.length = ip + 1;
+      return btree_path_update(path, bt);
+    } else {
+      var pseg = path[ip]; path.length = ip;
+      var pix = pseg.index;
+      var pbt = pseg.tree;
+      var siblings = pbt.children;
+      var siblen = siblings.length;
+      if (pix > 0 && siblings[pix - 1].keys.length > BTREE_BLOCK_SIZE_HALF) {
+        var six = pix - 1;
+        var sib = siblings[six];
+        var sklen = skeys.length;
+        return btree_rotate_sibling(
+            path, bt, 0, pix, pbt, six, sib, sklen - 1, sklen, six);
+      }
+      if (pix < siblen - 1) {
+        sib = siblings[pix + 1];
+        if (sib.keys.length > BTREE_BLOCK_SIZE_HALF) {
+          return btree_rotate_sibling(
+              path, bt, klen, pix, pbt, pix, sib, 0, 0, pix + 1);
+        } else { bt = btree_merge_siblings(pbt, bt, pix, pbt.children[pix + 1], pix + 1); }
+      } else { bt = btree_merge_siblings(pbt, pbt.children[pix - 1], pix - 1, bt, pix); }
+    }
+  }
+  return bt;
+}
+
 function btree_remove(bt, key) {
+  var original = bt;
+  var path = [];
+  while (true) {
+    var children = bt.children;
+    var keys = bt.keys;
+    var klen = keys.length;
+    var ix = bisect(keys, key, 0, klen);
+    if (ix < klen && keys[ix] === key) {
+      if (children) {
+        var lpath = [];
+        var leaf = btree_rightmost(lpath, children[ix]);
+        var lklen = leaf.keys.length;
+        if (lklen > BTREE_BLOCK_SIZE_HALF) {
+          return btree_rotate_leaf(path, bt, ix, ix, lpath, leaf, lklen - 1);
+        } else {
+          lpath = [];
+          leaf = btree_leftmost(lpath, children[ix + 1]);
+          return btree_rotate_leaf(path, bt, ix, ix + 1, lpath, leaf, 0);
+        }
+      } else { return btree_path_remove(path, bt, ix); }
+    }
+    if (!children) { return original; }
+    btree_step(path, bt, ix);
+    bt = children[ix];
+  }
 }
 
 //function btree_join(bt0, bt1) {
