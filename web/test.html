@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<style>
+.hframe {
+  display: table-cell;
+  border: 1px solid;
+}
+.vframe {
+  display: table-row;
+  border: 1px solid #000000;
+}
+.chassis {
+  display: inline-block;
+  vertical-align: top;
+  border-collapse: collapse;
+  margin: 1px;
+  border: 2px solid #336666;
+}
+.atom {
+  background-color: #cccccc;
+  font-family: monospace;
+  white-space: pre;
+  min-width: 10px;
+  min-height: 10px;
+}
+</style>
+<div id="target"></div>
+<script src="relation.js"></script>
+<script>
+var target = document.getElementById('target');
+// TODO: escape_html
+function html_atom(atom) {
+  return '<div class="atom hframe">' + atom.toString() + '</div>';
+}
+function html_array(xs) {
+  var atoms = [];
+  for (var i = 0, len = xs.length; i < len; ++i) {
+    atoms.push(html_atom(xs[i]));
+  }
+  return '<div class="chassis">' + atoms.join('') + '</div>';
+}
+function html_btree(bt) {
+  if (bt.children) {
+    var subs = [];
+    var keys = array_insert(bt.keys, 0, '_');
+    for (var i = 0, len = bt.children.length; i < len; ++i) {
+      subs.push('<div class="chassis hframe"><div class="vframe>"><div class="chassis">'+html_atom(keys[i])+'</div></div>'+html_btree(bt.children[i])+'</div>');
+    }
+    return '<div class="chassis">' + subs.join('') + '</div>'
+  } else { return html_array(bt.keys); }
+}
+</script>
