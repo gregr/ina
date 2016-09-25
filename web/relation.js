@@ -91,6 +91,17 @@ function bisect(xs, key, start, end) {
   }
   return start;
 }
+function bisect_by(compare, xs, key, start, end) {
+  while (start < end) {
+    var mid = start + ((end - start) >> 1);
+    var found = xs[mid];
+    var cmp = compare(key, found);
+    if      (cmp < 0) { end = mid; }
+    else if (cmp > 0) { start = mid + 1; }
+    else              { return mid; }
+  }
+  return start;
+}
 
 function array_insert(xs, ix, val) {
   var rhs = xs.length;
