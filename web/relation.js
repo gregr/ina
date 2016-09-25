@@ -295,10 +295,10 @@ function btree_rotate_leaf(path, bt, ix, ix_child, leaf_path, leaf, leaf_ix) {
   array_extend(path, leaf_path);
   return btree_path_remove(path, leaf, leaf_ix);
 }
-function btree_rotate_sibling(path, bt, ix, pix, pbt, p_ix, sib, sib_ix, sib_cix, sib_pix) {
+function btree_rotate_sibling(path, bt, ix, cix, pix, pbt, p_ix, sib, sib_ix, sib_cix, sib_pix) {
   var children = bt.children, schildren = sib.children;
   if (children) {
-    children = array_insert(children, ix, schildren[sib_cix]);
+    children = array_insert(children, cix, schildren[sib_cix]);
     schildren = array_remove(schildren, sib_cix);
   }
   bt = btree_branch(array_insert(bt.keys, ix, pbt.keys[p_ix])
@@ -339,13 +339,13 @@ function btree_path_balance(path, bt) {
         var sib = siblings[six];
         var sklen = sib.keys.length;
         return btree_rotate_sibling(
-            path, bt, 0, pix, pbt, six, sib, sklen - 1, sklen, six);
+            path, bt, 0, 0, pix, pbt, six, sib, sklen - 1, sklen, six);
       }
       if (pix < siblen - 1) {
         sib = siblings[pix + 1];
         if (sib.keys.length > BTREE_BLOCK_SIZE_HALF) {
           return btree_rotate_sibling(
-              path, bt, klen, pix, pbt, pix, sib, 0, 0, pix + 1);
+              path, bt, klen, klen + 1, pix, pbt, pix, sib, 0, 0, pix + 1);
         } else { bt = btree_merge_siblings(pbt, bt, pix, pbt.children[pix + 1], pix + 1); }
       } else { bt = btree_merge_siblings(pbt, pbt.children[pix - 1], pix - 1, bt, pix); }
     }
