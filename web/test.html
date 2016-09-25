@@ -16,6 +16,7 @@
   border: 2px solid #336666;
 }
 .atom {
+  cursor: pointer;
   background-color: #cccccc;
   font-family: monospace;
   white-space: pre;
@@ -24,9 +25,11 @@
 }
 </style>
 <div id="target"></div>
+<button id="add">add</button>
+<input id="key" type="number"></input>
+<button id="remove">remove</button>
 <script src="relation.js"></script>
 <script>
-var target = document.getElementById('target');
 // TODO: escape_html
 function html_atom(atom) {
   return '<div class="atom hframe">' + atom.toString() + '</div>';
@@ -48,4 +51,40 @@ function html_btree(bt) {
     return '<div class="chassis">' + subs.join('') + '</div>'
   } else { return html_array(bt.keys); }
 }
+var log = [];
+var current_btree = btree_from_list(range(0, 49));
+var input_key = document.getElementById('key');
+var button_add = document.getElementById('add');
+var button_remove = document.getElementById('remove');
+
+function update() { target.innerHTML = html_btree(current_btree); }
+function add_key() {
+  current_btree = btree_put(current_btree, +input_key.value, +input_key.value);
+  log.push(['add', +input_key.value]);
+  update();
+}
+function remove_key() {
+  current_btree = btree_remove(current_btree, +input_key.value);
+  log.push(['remove', +input_key.value]);
+  update();
+}
+function enter_key(e) {
+  if (e.type === 'keypress' && e.key !== 'Enter') return;
+  add_key();
+  ++input_key.value;
+}
+function remove_selected(e) {
+  if (e.target.classList.contains('atom')) {
+    input_key.value = e.target.innerHTML;
+    remove_key();
+  }
+}
+
+input_key.addEventListener('keypress', enter_key, true);
+button_add.addEventListener('click', add_key, true);
+button_remove.addEventListener('click', remove_key, true);
+
+var target = document.getElementById('target');
+target.addEventListener('click', remove_selected, false);
+update();
 </script>
