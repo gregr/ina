@@ -75,7 +75,9 @@ function enter_key(e) {
 }
 function remove_selected(e) {
   if (e.target.classList.contains('atom')) {
-    input_key.value = e.target.innerHTML;
+    var value = e.target.innerHTML;
+    if (value === '_') return;
+    input_key.value = value;
     remove_key();
   }
 }
