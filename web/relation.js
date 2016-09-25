@@ -482,8 +482,57 @@ function sorted_by(cmp, xs) {
   ys.sort(cmp);
   return ys;
 }
-function compare_asc(n0, n1) { return n0 - n1; }
-function compare_desc(n0, n1) { return n1 - n0; }
+
+function compare_boolean_asc(b0, b1) { return +b0 - +b1; }
+function compare_boolean_desc(b0, b1) { return +b1 - +b0; }
+function compare_number_asc(n0, n1) { return n0 - n1; }
+function compare_number_desc(n0, n1) { return n1 - n0; }
+function compare_symbol_asc(s0, s1) { return s0.code - s1.code; }
+function compare_symbol_desc(s0, s1) { return s1.code - s0.code; }
+function compare_tuple_asc(t0, t1) {
+  var ks0 = t0.keys; var l0 = ks0.length;
+  var ks1 = t1.keys; var l1 = ks1.length;
+  var i = 0;
+  for (; i < l0; ++i) {
+    if (i >= l1) { return 1; }
+    var k0 = ks0[i];
+    var k1 = ks1[i];
+    if (k0 !== k1) { return k0 < k1 ? -1 : 1; }
+    var cmp = compare_poly_asc(t0.assoc[k0], t1.assoc[k0]);
+    if (cmp !== 0) { return cmp; }
+  }
+  return i < l1 ? -1 : 0;
+}
+function compare_set_asc(s0, s1) {
+  var xs0 = s0.elements; l0 = xs0.length;
+  var xs1 = s1.elements; l1 = xs1.length;
+  var i = 0;
+  for (; i < l0; ++i) {
+    if (i >= l1) { return 1; }
+    var cmp = compare_poly_asc(xs0[i], xs1[i]);
+    if (cmp !== 0) { return cmp; }
+  }
+  return i < l1 ? -1 : 0;
+}
+function compare_poly_asc(x0, x1) {
+  if (t0 === t1) { return 0; }
+  var t0 = typeof x0;
+  var t1 = typeof x1;
+  // coincidentally, this line works for now
+  if (t0 !== t1) { return t0 < t1 ? -1 : 1; }
+  switch (t0) {
+    case 'boolean': return compare_boolean_asc(x0, x1);
+    case 'number': return compare_number_asc(x0, x1);
+    case 'string': return x0.localeCompare(x1);
+    case 'object':
+      t0 = x0.tag; t1 = x1.tag;
+      // coincidentally, this line also works for now
+      if (t0 !== t1) { return t0 < t1 ? -1 : 1; }
+      if (t0 === symbol_tag) { return compare_symbol_asc(x0, x1); }
+      if (t0 === tuple_tag) { return compare_tuple_asc(x0, x1); }
+      if (t0 === set_tag) { return compare_set_asc(x0, x1); }
+  }
+}
 
 var string_interner = {'': true}; // ensure hash table mode
 delete string_interner[''];
@@ -508,9 +557,8 @@ var boolean_tag = tag_count++;
 var number_tag = tag_count++;
 var text_tag = tag_count++;
 var symbol_tag = tag_count++;
+var tuple_tag = tag_count++;
 var set_tag = tag_count++;
-var tuple_ordered_tag = tag_count++;
-var tuple_unordered_tag = tag_count++;
 
 var symbol_table = {};
 var symbol_name = [];
