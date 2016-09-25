@@ -264,6 +264,7 @@ function btree_merge_siblings(pbt, left, il, right, ir) {
   values = array_remove(pbt.values, il);
   children = array_remove(pbt.children, ir);
   children[il] = bt;
+  if (keys.length === 0) return bt;
   return btree_branch(keys, values, children);
 }
 
