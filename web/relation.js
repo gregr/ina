@@ -498,8 +498,8 @@ function compare_boolean_asc(b0, b1) { return +b0 - +b1; }
 function compare_boolean_desc(b0, b1) { return +b1 - +b0; }
 function compare_number_asc(n0, n1) { return n0 - n1; }
 function compare_number_desc(n0, n1) { return n1 - n0; }
-function compare_symbol_asc(s0, s1) { return s0.code - s1.code; }
-function compare_symbol_desc(s0, s1) { return s1.code - s0.code; }
+function compare_symbol_asc(s0, s1) { return s0.index - s1.index; }
+function compare_symbol_desc(s0, s1) { return s1.index - s0.index; }
 function compare_tuple_asc(t0, t1) {
   var ks0 = t0.keys; var l0 = ks0.length;
   var ks1 = t1.keys; var l1 = ks1.length;
@@ -559,10 +559,6 @@ function is_number(term)  { return typeof term === 'number'; }
 function is_text(term)    { return typeof term === 'string'; }
 function is_tuple(term)   { return typeof term === 'object'; }
 
-function tagged(tag, payload) { return [tag, payload]; }
-function tagged_tag(tg)       { return tg[0]; }
-function tagged_payload(tg)   { return tg[1]; }
-
 var tag_count = 0;
 var boolean_tag = tag_count++;
 var number_tag = tag_count++;
@@ -571,12 +567,22 @@ var symbol_tag = tag_count++;
 var tuple_tag = tag_count++;
 var set_tag = tag_count++;
 
+function is_symbol(term) {
+  return (typeof term === 'object') && term.tag === symbol_tag;
+}
+function is_tuple(term) {
+  return (typeof term === 'object') && term.tag === tuple_tag;
+}
+function is_set(term) {
+  return (typeof term === 'object') && term.tag === set_tag;
+}
+
 var symbol_table = {};
 var symbol_name = [];
 function symbol_new(name) {
   var index = symbol_name.length;
   symbol_name.push(name);
-  return tagged(symbol_tag, index);
+  return {'tag': symbol_tag, 'index': index};
 }
 function symbol(name) {
   name = string_interned(name);
@@ -588,6 +594,9 @@ function symbol(name) {
   return sym;
 }
 
+function tuple(keys, assoc) {
+  return {'tag': tuple_tag, 'keys': keys, 'assoc': assoc};
+}
 function tuple_from_obj(obj) {
   var tuple = {};
   for (var name in obj) {
@@ -623,8 +632,8 @@ function tuple_meet(t0, t1) {
   return tnew;
 }
 
-function is_symbol(term) { return tagged_tag(term) === symbol_tag; }
-function is_set(term)    { return tagged_tag(term) === set_tag; }
+function set(elements) { return {'tag': set_tag, 'elements': elements}; }
+var set_empty = set([]);
 
 var set_boolean_empty = 0;
 function set_boolean_has(set, bool) { return (set & (1 << bool)) > 0; }
