@@ -493,6 +493,22 @@ function sorted_by(cmp, xs) {
   ys.sort(cmp);
   return ys;
 }
+function unique(compare, xs) {
+  var dup_count = 0, len = xs.length;
+  for (var i = 0, prev = undefined; i < len; ++i) {
+    var current = xs[i];
+    if (compare(current, prev) === 0) { ++dup_count; }
+    prev = current;
+  }
+  if (dup_count === 0) { return xs; }
+  var ys = []; ys.length = len - dup_count;
+  for (var i = 0, j = 0, prev = undefined; i < len; ++i) {
+    var current = xs[i];
+    if (compare(xs[i], prev) !== 0) { ys[j] = current; ++j; }
+    prev = current;
+  }
+  return ys;
+}
 
 function compare_boolean_asc(b0, b1) { return +b0 - +b1; }
 function compare_boolean_desc(b0, b1) { return +b1 - +b0; }
@@ -634,6 +650,9 @@ function tuple_meet(t0, t1) {
 
 function set(elements) { return {'tag': set_tag, 'elements': elements}; }
 var set_empty = set([]);
+function set_from_list(xs) {
+  return set(unique(compare_poly_asc, sorted_by(compare_poly_asc, xs)));
+}
 
 var set_boolean_empty = 0;
 function set_boolean_has(set, bool) { return (set & (1 << bool)) > 0; }
