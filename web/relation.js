@@ -630,6 +630,7 @@ function tuple_from_obj(obj) {
   keys.sort(compare_number_asc);
   return tuple(keys, assoc);
 }
+function tuple_get(tup, key) { return tup.assoc[key.index]; }
 function tuple_insert(tup, key, value) {
   var assoc = {}, old = tup.assoc;
   for (var k in old) { assoc[k] = old[k]; }
