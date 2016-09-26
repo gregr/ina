@@ -509,6 +509,12 @@ function unique(compare, xs) {
   }
   return ys;
 }
+function unique_insert(compare, xs, value) {
+  var len = xs.length;
+  var ix = bisect_by(compare, xs, value, 0, len);
+  if (ix < len && compare(xs[ix], value) === 0) { return xs; }
+  return array_insert(xs, ix, value);
+}
 
 function compare_boolean_asc(b0, b1) { return +b0 - +b1; }
 function compare_boolean_desc(b0, b1) { return +b1 - +b0; }
@@ -652,6 +658,9 @@ function set(elements) { return {'tag': set_tag, 'elements': elements}; }
 var set_empty = set([]);
 function set_from_list(xs) {
   return set(unique(compare_poly_asc, sorted_by(compare_poly_asc, xs)));
+}
+function set_insert(xs, value) {
+  return set(unique_insert(compare_poly_asc, xs.elements, value));
 }
 
 var set_boolean_empty = 0;
