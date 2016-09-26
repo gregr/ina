@@ -677,6 +677,12 @@ var set_empty = set([]);
 function set_from_list(xs) {
   return set(unique(compare_poly_asc, sorted_by(compare_poly_asc, xs)));
 }
+function set_has(xs, value) {
+  var els = xs.elements;
+  var len = els.length;
+  var ix = bisect_by(compare_poly_asc, els, value, 0, len);
+  return (ix < len) && compare_poly_asc(els[ix], value) === 0;
+}
 function set_insert(xs, value) {
   return set(unique_insert(compare_poly_asc, xs.elements, value));
 }
