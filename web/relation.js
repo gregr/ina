@@ -620,38 +620,56 @@ function tuple(keys, assoc) {
   return {'tag': tuple_tag, 'keys': keys, 'assoc': assoc};
 }
 function tuple_from_obj(obj) {
-  var tuple = {};
+  var assoc = {};
+  var keys = [];
   for (var name in obj) {
-    tuple[symbol(name)[1]] = obj[name];
+    var key = symbol(name).index;
+    keys.push(key);
+    assoc[key] = obj[name];
   }
-  return tuple;
+  keys.sort(compare_number_asc);
+  return tuple(keys, assoc);
 }
 function tuple_insert(tup, key, value) {
-  var tnew = {};
-  for (var k in tup) {
-    tnew[k] = tup[k];
+  var assoc = {}, old = tup.assoc;
+  for (var k in old) { assoc[k] = old[k]; }
+  var keys = tup.keys;
+  var len = keys.length;
+  var ix = bisect(keys, key, 0, len);
+  if (ix === len || keys[ix] !== key) { keys = array_insert(keys, ix, key); }
+  else {
+    // TODO: unify
   }
-  // TODO: check for existing key and unify
-  tnew[key] = value;
-  return tnew;
+  assoc[key] = value;
+  return tuple(keys, assoc);
 }
 function tuple_remove(tup, key) {
-  var tnew = {};
-  for (var k in tup) {
-    if (k !== key) tnew[k] = tup[k];
+  var keys = tup.keys;
+  var len = keys.length;
+  var ix = bisect(keys, key, 0, len);
+  if (ix === len || keys[ix] !== key) { return tup; }
+  keys = array_remove(keys, ix); --len;
+  var assoc = {}, old = tup.assoc;
+  for (var i = 0; i < len; ++i) {
+    var key = keys[i];
+    assoc[key] = old[key];
   }
-  return tnew;
+  return tuple(keys, assoc);
 }
 function tuple_meet(t0, t1) {
-  var tnew = {};
-  for (var k in t0) {
-    tnew[k] = t0[k];
+  var a0 = t0.assoc, k0 = t0.keys;
+  var a1 = t1.assoc, k1 = t1.keys;
+  var keys = unique(compare_number_asc
+                   ,sorted_by(compare_number_asc, k0.concat(k1)));
+  var assoc = {};
+  for (var k in a0) {
+    assoc[k] = a0[k];
   }
   for (var k in t1) {
     // TODO: check for existing key and unify
-    tnew[k] = t1[k];
+    assoc[k] = a1[k];
   }
-  return tnew;
+  return tuple(keys, assoc);
 }
 
 function set(elements) { return {'tag': set_tag, 'elements': elements}; }
