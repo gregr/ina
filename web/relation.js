@@ -526,7 +526,7 @@ function compare_set_asc(s0, s1) {
   return i < l1 ? -1 : 0;
 }
 function compare_poly_asc(x0, x1) {
-  if (t0 === t1) { return 0; }
+  if (x0 === x1) { return 0; }
   var t0 = typeof x0;
   var t1 = typeof x1;
   // coincidentally, this line works for now
