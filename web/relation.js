@@ -520,6 +520,8 @@ function compare_boolean_asc(b0, b1) { return +b0 - +b1; }
 function compare_boolean_desc(b0, b1) { return +b1 - +b0; }
 function compare_number_asc(n0, n1) { return n0 - n1; }
 function compare_number_desc(n0, n1) { return n1 - n0; }
+function compare_text_asc(t0, t1) { return t0 === t1 ? 0 : t0 < t1 ? -1 : 1; }
+function compare_text_desc(t0, t1) { return t1 === t0 ? 0 : t1 < t0 ? -1 : 1; }
 function compare_symbol_asc(s0, s1) { return s0.index - s1.index; }
 function compare_symbol_desc(s0, s1) { return s1.index - s0.index; }
 function compare_tuple_asc(t0, t1) {
@@ -556,7 +558,7 @@ function compare_poly_asc(x0, x1) {
   switch (t0) {
     case 'boolean': return compare_boolean_asc(x0, x1);
     case 'number': return compare_number_asc(x0, x1);
-    case 'string': return x0.localeCompare(x1);
+    case 'string': return compare_text_asc(x0, x1);
     case 'object':
       t0 = x0.tag; t1 = x1.tag;
       // coincidentally, this line also works for now
