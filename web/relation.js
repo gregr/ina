@@ -701,3 +701,216 @@ function set_boolean_meet(s0, s1)   { return s0 & s1; }
 // %HasFastProperties(obj)
 // %GetOptimizationStatus(fn)
 // %OptimizeFunctionOnNextCall(fn)
+
+function stream(source, start) { return {'source': source, 'start': start}; }
+
+var re_slash_text = /\\[^u]|\\u[0-9a-fA-F]{4}/g;
+function decode_text_slash(es) {
+  switch (es[1]) {
+    case '0': return '\0';
+    case 'b': return '\b';
+    case 't': return '\t';
+    case 'n': return '\n';
+    case 'r': return '\r';
+    case 'v': return '\v';
+    case 'f': return '\f';
+    case 'u': return eval('"' + es + '"');
+    default: return es[1];
+  }
+}
+function decode_text(src, start, end) {
+  return src.slice(start, end).replace(re_slash_text, decode_text_slash);
+}
+function decode_int(src, start, end) { return eval(src.slice(start, end)); }
+function decode_float(src, start, end) { return eval(src.slice(start, end)); }
+
+function cc_digit_decimal(cc) { return cc >= 48 && cc <= 57; }
+function cc_digit_hexadecimal(cc) {
+  return cc_digit_decimal(cc) ||
+    (cc >= 65 && cc <= 70) || (cc >= 97 && cc <= 102);
+  }
+function cc_digit_binary(cc) { return cc === 48 || cc === 49; }
+function cc_alphaUpper(cc) { return cc >= 65 && cc <= 90; }
+function cc_alphaLower(cc) { return cc >= 97 && cc <= 122; }
+function cc_alpha(cc) { return cc_alphaLower(cc) || cc_alphaUpper(cc); }
+function cc_hspace(cc) {
+  return cc === 32 || cc === 9 || cc === 160 || cc >= 0x2000 && cc <= 0x200A;
+}
+function cc_vspace(cc) {
+  return cc >= 10 && cc <= 13 || cc === 133 || cc === 0x2028 || cc === 0x02029;
+}
+function cc_space(cc) { return cc_hspace(cc) || cc_vspace(cc); }
+
+function token_boundary(src, i) {
+  if (i >= src.length) { return i; }
+  var ch = src[i];
+  switch (ch) {
+    case '(': case '[': case '{':
+    case ')': case ']': case '}':
+    case '`': case '"': case "'":
+      return i;
+    default:
+      if (cc_space(src.charCodeAt(i))) { return i; }
+      else { return undefined; }
+  }
+}
+function token_space(src, i) {
+  for (var len = src.length; i < len; ++i) {
+    if (!cc_space(src.charCodeAt(i))) { break; }
+  }
+  return i;
+}
+function token_text(delim, src, i) {
+  for (var len = src.length; i < len; ++i) {
+    if (src[i] === delim) { return i; }
+    else if (src[i] === '\\') { ++i; }
+  }
+  return undefined;
+}
+
+// ~!@$%^&*-=+|\<>/?
+//case ',': case '.': case ';': case ':':
+function token_symbol(src, i) {
+  for (var len = src.length; i < len; ++i) {
+    if (src[i] === '\\') { ++i; }
+    else {
+      var j = token_boundary(src, i);
+      if (j !== undefined) { return j; }
+    }
+  }
+  return i;
+}
+function token_float(src, i) {
+  var len = src.length, needs_digits = true;
+  if (i < len) {
+    var ch = src[i]; if (ch === '-') { ++i; }
+    for (; i < len; ++i) {
+      if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+      needs_digits = false;
+    }
+    if (i === len) { return needs_digits ? undefined : i; }
+    ch = src[i];
+    if (ch === '.') {
+      ++i;
+      for (; i < len; ++i) {
+        if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+        needs_digits = false;
+      }
+    }
+    if (i === len) { return needs_digits ? undefined : i; }
+    switch (src[i]) {
+      case 'e': case 'E':
+        ++i; needs_digits = true; if (i === len) { return undefined; }
+        ch = src[i]; if (ch === '-') { ++i; }
+        for (; i < len; ++i) {
+          if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+          needs_digits = false;
+        }
+    }
+  }
+  if (needs_digits) { return undefined; }
+  return token_boundary(src, i);
+}
+function token_int(src, i) {
+  var start = i, len = src.length;
+  if (i < len) {
+    var ch = src[i];
+    if (ch === '-') {
+      ++start; ++i; if (i === len) { return undefined; } ch = src[i];
+    }
+    if (ch === '0') {
+      ++i; if (i === len) { return i; } ch = src[i];
+      switch (ch) {
+        case 'x':
+          start += 2; ++i;
+          for (; i < len; ++i) {
+            if (!cc_digit_hexadecimal(src.charCodeAt(i))) { break; }
+          }
+          break;
+        case 'b':
+          start += 2; ++i;
+          for (; i < len; ++i) {
+            if (!cc_digit_binary(src.charCodeAt(i))) { break; }
+          }
+          break;
+      }
+    }
+  }
+  for (; i < len; ++i) {
+    if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+  }
+  if (i === start) { return undefined; }
+  return token_boundary(src, i);
+}
+
+function result_boundary(result, ss, i) {
+  i = token_boundary(ss.source, i);
+  if (i === undefined) { ss.start = i; return result; }
+  else { return undefined; }
+}
+
+function read_special(ss) {
+  var src = ss.source, i = ss.start;
+  var len = src.length;
+  if (i >= len) { return undefined; }
+  var result, ch = src[i];
+  switch (ch) {
+    case 't': { return result_boundary(true, ss, ++i); }
+    case 'f': { return result_boundary(false, ss, ++i); }
+    // TODO: comments and other specials
+    default: return undefined;
+  }
+}
+
+// TODO: construct
+var bracket_struct_attr = {'(': [')', undefined]
+                          ,'[': [']', undefined]
+                          ,'{': ['}', undefined]};
+function read_structure(bracket, ss) {
+  var src = ss.source, struct_attr = bracket_structure[bracket];
+  var len = src.length, delim = struct_attr[0], construct = struct_attr[1];
+  var elements = [];
+  while (ss.start < len) {
+    var element = read(ss);
+    if (element !== undefined) { elements.push(element); }
+    else { break; }
+  }
+  var i = ss.start;
+  if (i < len && src[i] === delim) { return construct(elements); }
+  return undefined;
+}
+
+function read(ss) {
+  var src = ss.source, i = ss.start, len = src.length;
+  i = token_space(src, i);
+  ss.start = i;
+  if (i < len) {
+    var ch = src[i];
+    switch (ch) {
+      case '(': case '[': case '{':
+        ss.start = ++i; return read_structure(ch, ss);
+      case ')': case ']': case '}': return undefined;
+      case '`': case '"': case "'":
+        var j = token_text(ch, src, ++i);
+        if (j === undefined) { return undefined; }
+        var text = decode_text(src, i, j);
+        ss.start = j + 1;
+        if (ch === '`') { return symbol(text); }
+        else { return text; }
+      case '#': ss.start = ++i; return read_special(ss);
+      default:
+        var j = token_float(src, i);
+        var k = token_int(src, i);
+        var l = token_symbol(src, i);
+        if (j !== undefined && (k === undefined || j > k) &&
+            (l === undefined || j >= l)) {
+          ss.start = j; return decode_float(src, i, j);
+        } else if (k !== undefined && (l === undefined || k >= l)) {
+          ss.start = k; return decode_int(src, i, k);
+        } else if (l !== undefined) {
+          ss.start = l; return symbol(decode_text(src, i, l));
+        }
+    }
+  }
+  return undefined;
+}
