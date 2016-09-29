@@ -573,7 +573,7 @@ var string_interner = {'': true}; // ensure hash table mode
 delete string_interner[''];
 function string_interned(str) {
   string_interner[str] = true;
-  var interned = Object.keys(symbols_interned)[0];
+  var interned = Object.keys(string_interner)[0];
   delete string_interner[interned];
   return interned;
 }
@@ -613,7 +613,7 @@ function symbol(name) {
   var sym = symbol_table[name];
   if (sym === undefined) {
     sym = symbol_new(name);
-    symbol_table[str] = sym;
+    symbol_table[name] = sym;
   }
   return sym;
 }
