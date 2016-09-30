@@ -648,7 +648,7 @@ function tuple_insert(tup, key, value) {
   return tuple(keys, assoc);
 }
 function tuple_remove(tup, key) {
-  var keys = tup.keys;
+  var keys = tup.keys, key = key.index;
   var len = keys.length;
   var ix = bisect(keys, key, 0, len);
   if (ix === len || keys[ix] !== key) { return tup; }
