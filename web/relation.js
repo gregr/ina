@@ -866,13 +866,7 @@ function read_special(ss) {
   }
 }
 
-// TODO: ordered tuples
-var symbol_pair_head = symbol('0');
-var symbol_pair_tail = symbol('1');
-function pair(head, tail) {
-  return tuple_put(tuple_put(tuple_empty, symbol_pair_head, head)
-                  ,symbol_pair_tail, tail);
-}
+function pair(head, tail) { return tuple_from({}, [head, tail]); }
 function array_to_list(xs) {
   var result = tuple_empty;
   for (var i = xs.length - 1; i >= 0; --i) { result = pair(xs[i], result); }
