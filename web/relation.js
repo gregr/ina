@@ -606,7 +606,7 @@ var symbol_name = [];
 function symbol_new(name) {
   var index = symbol_name.length;
   symbol_name.push(name);
-  return {'tag': symbol_tag, 'index': index};
+  return {'tag': symbol_tag, 'name': name, 'index': index};
 }
 function symbol(name) {
   name = string_interned(name);
