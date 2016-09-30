@@ -634,7 +634,7 @@ function tuple_from_obj(obj) {
 }
 function tuple_get(tup, key) { return tup.assoc[key.index]; }
 function tuple_insert(tup, key, value) {
-  var assoc = {}, old = tup.assoc;
+  var assoc = {}, old = tup.assoc, key = key.index;
   for (var k in old) { assoc[k] = old[k]; }
   var keys = tup.keys;
   var len = keys.length;
