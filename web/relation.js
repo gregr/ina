@@ -867,7 +867,7 @@ var bracket_struct_attr = {'(': [')', undefined]
                           ,'[': [']', undefined]
                           ,'{': ['}', undefined]};
 function read_structure(bracket, ss) {
-  var src = ss.source, struct_attr = bracket_structure[bracket];
+  var src = ss.source, struct_attr = bracket_struct_attr[bracket];
   var len = src.length, delim = struct_attr[0], construct = struct_attr[1];
   var elements = [];
   while (ss.start < len) {
@@ -876,7 +876,9 @@ function read_structure(bracket, ss) {
     else { break; }
   }
   var i = ss.start;
-  if (i < len && src[i] === delim) { return construct(elements); }
+  if (i < len && src[i] === delim) {
+    ss.start = ++i; return construct(elements);
+  }
   return undefined;
 }
 
