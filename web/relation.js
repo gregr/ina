@@ -525,8 +525,9 @@ function compare_text_desc(t0, t1) { return t1 === t0 ? 0 : t1 < t0 ? -1 : 1; }
 function compare_symbol_asc(s0, s1) { return s0.index - s1.index; }
 function compare_symbol_desc(s0, s1) { return s1.index - s0.index; }
 function compare_tuple_asc(t0, t1) {
-  var ks0 = t0.keys; var l0 = ks0.length;
-  var ks1 = t1.keys; var l1 = ks1.length;
+  var ks0 = Object.keys(t0.assoc); var l0 = ks0.length;
+  var ks1 = Object.keys(t1.assoc); var l1 = ks1.length;
+  ks0.sort(compare_number_asc); ks1.sort(compare_number_asc);
   var i = 0;
   for (; i < l0; ++i) {
     if (i >= l1) { return 1; }
@@ -618,61 +619,65 @@ function symbol(name) {
   return sym;
 }
 
-function tuple(keys, assoc) {
-  return {'tag': tuple_tag, 'keys': keys, 'assoc': assoc};
+function tuple(assoc) {
+  return {'tag': tuple_tag, 'assoc': assoc};
 }
-var tuple_empty = tuple([], {});
-function tuple_from_obj(obj) {
-  var assoc = {};
-  var keys = [];
+var tuple_empty = tuple([]);
+function tuple_from(obj, arr) {
+  var assoc = arr.slice();
   for (var name in obj) {
-    var key = symbol(name).index;
-    keys.push(key);
+    var key = -symbol(name).index - 1;
     assoc[key] = obj[name];
   }
-  keys.sort(compare_number_asc);
-  return tuple(keys, assoc);
+  return tuple(assoc);
 }
-function tuple_get(tup, key) { return tup.assoc[key.index]; }
+function tuple_get(tup, key) {
+  if (!is_number(key)) { key = -key.index - 1; } return tuple.assoc[key];
+}
 function tuple_put(tup, key, value) {
-  var assoc = {}, old = tup.assoc, key = key.index;
-  for (var k in old) { assoc[k] = old[k]; }
-  var keys = tup.keys;
-  var len = keys.length;
-  var ix = bisect(keys, key, 0, len);
-  if (ix === len || keys[ix] !== key) { keys = array_insert(keys, ix, key); }
-  else { keys = array_replace(keys, ix, key); }
-  assoc[key] = value;
-  return tuple(keys, assoc);
+  var assoc, old = tup.assoc;
+  if (is_number(key)) {  // assumes key <= old.length
+    if (key < old.length) { assoc = array_replace(old, key, value); }
+    else { assoc = array_insert(old, key, value); }
+    for (var k in old) { if (k < 0) { assoc[k] = old[k]; } }
+  } else {
+    assoc = []; assoc.length = old.length;
+    for (var k in old) { assoc[k] = old[k]; }
+    assoc[-key.index - 1] = value;
+  }
+  return tuple(assoc);
 }
 function tuple_remove(tup, key) {
-  var keys = tup.keys, key = key.index;
-  var len = keys.length;
-  var ix = bisect(keys, key, 0, len);
-  if (ix === len || keys[ix] !== key) { return tup; }
-  keys = array_remove(keys, ix); --len;
-  var assoc = {}, old = tup.assoc;
-  for (var i = 0; i < len; ++i) {
-    var key = keys[i];
-    assoc[key] = old[key];
+  var assoc, old = tup.assoc;
+  if (is_number(key)) {
+    if (key >= old.length) { return tup; }
+    assoc = array_remove(old, key);
+    for (var k in old) { if (k < 0) { assoc[k] = old[k]; } }
+  } else {
+    key = -key.index - 1;
+    if (key in old) {
+      assoc = []; assoc.length = old.length;
+      for (var k in old) { if (k !== key) { assoc[k] = old[k]; } }
+    } else { return tup; }
   }
-  return tuple(keys, assoc);
+  return tuple(assoc);
 }
-function tuple_meet(t0, t1) {
-  var a0 = t0.assoc, k0 = t0.keys;
-  var a1 = t1.assoc, k1 = t1.keys;
-  var keys = unique(compare_number_asc
-                   ,sorted_by(compare_number_asc, k0.concat(k1)));
-  var assoc = {};
-  for (var k in a0) {
-    assoc[k] = a0[k];
-  }
-  for (var k in t1) {
-    // TODO: check for existing key and unify
-    assoc[k] = a1[k];
-  }
-  return tuple(keys, assoc);
-}
+// TODO: fix
+//function tuple_meet(t0, t1) {
+  //var a0 = t0.assoc, k0 = t0.keys;
+  //var a1 = t1.assoc, k1 = t1.keys;
+  //var keys = unique(compare_number_asc
+                   //,sorted_by(compare_number_asc, k0.concat(k1)));
+  //var assoc = {};
+  //for (var k in a0) {
+    //assoc[k] = a0[k];
+  //}
+  //for (var k in t1) {
+    //// TODO: check for existing key and unify
+    //assoc[k] = a1[k];
+  //}
+  //return tuple(keys, assoc);
+//}
 
 function set(elements) { return {'tag': set_tag, 'elements': elements}; }
 var set_empty = set([]);
