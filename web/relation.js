@@ -634,16 +634,14 @@ function tuple_from_obj(obj) {
   return tuple(keys, assoc);
 }
 function tuple_get(tup, key) { return tup.assoc[key.index]; }
-function tuple_insert(tup, key, value) {
+function tuple_put(tup, key, value) {
   var assoc = {}, old = tup.assoc, key = key.index;
   for (var k in old) { assoc[k] = old[k]; }
   var keys = tup.keys;
   var len = keys.length;
   var ix = bisect(keys, key, 0, len);
   if (ix === len || keys[ix] !== key) { keys = array_insert(keys, ix, key); }
-  else {
-    // TODO: unify
-  }
+  else { keys = array_replace(keys, ix, key); }
   assoc[key] = value;
   return tuple(keys, assoc);
 }
@@ -867,8 +865,8 @@ function read_special(ss) {
 var symbol_pair_head = symbol('0');
 var symbol_pair_tail = symbol('1');
 function pair(head, tail) {
-  return tuple_insert(tuple_insert(tuple_empty, symbol_pair_head, head)
-                     ,symbol_pair_tail, tail);
+  return tuple_put(tuple_put(tuple_empty, symbol_pair_head, head)
+                  ,symbol_pair_tail, tail);
 }
 function array_to_list(xs) {
   var result = tuple_empty;
