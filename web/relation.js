@@ -621,6 +621,7 @@ function symbol(name) {
 function tuple(keys, assoc) {
   return {'tag': tuple_tag, 'keys': keys, 'assoc': assoc};
 }
+var tuple_empty = tuple([], {});
 function tuple_from_obj(obj) {
   var assoc = {};
   var keys = [];
@@ -862,10 +863,30 @@ function read_special(ss) {
   }
 }
 
-// TODO: construct
-var bracket_struct_attr = {'(': [')', undefined]
-                          ,'[': [']', undefined]
-                          ,'{': ['}', undefined]};
+// TODO: ordered tuples
+var symbol_pair_head = symbol('0');
+var symbol_pair_tail = symbol('1');
+function pair(head, tail) {
+  return tuple_insert(tuple_insert(tuple_empty, symbol_pair_head, head)
+                     ,symbol_pair_tail, tail);
+}
+function array_to_list(xs) {
+  var result = tuple_empty;
+  for (var i = xs.length - 1; i >= 0; --i) { result = pair(xs[i], result); }
+  return result;
+}
+var symbol_bracket_tuple = symbol('[]');
+function construct_tuple(xs) {
+  return pair(symbol_bracket_tuple, array_to_list(xs));
+}
+var symbol_bracket_set = symbol('{}');
+function construct_set(xs) {
+  return pair(symbol_bracket_set, array_to_list(xs));
+}
+
+var bracket_struct_attr = {'(': [')', array_to_list]
+                          ,'[': [']', construct_tuple]
+                          ,'{': ['}', construct_set]};
 function read_structure(bracket, ss) {
   var src = ss.source, struct_attr = bracket_struct_attr[bracket];
   var len = src.length, delim = struct_attr[0], construct = struct_attr[1];
