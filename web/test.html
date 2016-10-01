@@ -28,8 +28,10 @@
 <button id="add">add</button>
 <input id="key" type="number"></input>
 <button id="remove">remove</button>
+<script src="data.js"></script>
 <script src="relation.js"></script>
 <script>
+'use strict';
 // TODO: escape_html
 function html_atom(atom) {
   return '<div class="atom hframe">' + atom.toString() + '</div>';
