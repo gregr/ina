@@ -534,19 +534,6 @@ function tuple_remove(tup, key) {
   //return tuple(keys, assoc);
 //}
 
-function set_from_list(xs) {
-  return set(unique(compare_poly_asc, sorted_by(compare_poly_asc, xs)));
-}
-function set_has(xs, value) {
-  var els = xs.elements;
-  var len = els.length;
-  var ix = bisect_by(compare_poly_asc, els, value, 0, len);
-  return (ix < len) && compare_poly_asc(els[ix], value) === 0;
-}
-function set_insert(xs, value) {
-  return set(unique_insert(compare_poly_asc, xs.elements, value));
-}
-
 var set_boolean_empty = 0;
 function set_boolean_has(set, bool) { return (set & (1 << bool)) > 0; }
 function set_boolean_add(set, bool) { return set | (1 << bool); }

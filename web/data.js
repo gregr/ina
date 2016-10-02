@@ -158,6 +158,26 @@ function compare_poly_asc(x0, x1) {
       if (t0 === set_tag) { return compare_set_asc(x0, x1); }
   }
 }
-// TODO: set
+function set_from_array(xs) {
+  return set(unique(compare_poly_asc, sorted_by(compare_poly_asc, xs)));
+}
+function set_index_of(xs, value) {
+  var els = xs.elements;
+  var len = els.length;
+  var ix = bisect_by(compare_poly_asc, els, value, 0, len);
+  (ix < len) && compare_poly_asc(els[ix], value) === 0 ? ix : -1;
+}
+function set_has(xs, value) { return set_index_of(xs, value) !== -1; }
+function set_add(xs, value) {
+  return set(unique_insert(compare_poly_asc, xs.elements, value));
+}
+function set_remove(xs, value) {
+  var ix = set_index_of(xs, value);
+  if (ix !== -1) {
+    if (len > 1) { return set(array_remove(els, ix)); }
+    return set_empty;
+  }
+  return xs;
+}
 
 // TODO: read
