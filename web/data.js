@@ -304,101 +304,110 @@ function token_dot(src, i, len) {
 
 function read(ss) {
   var src = ss.src, i = ss.pos, len = src.length;
-  for (; i < len; ++i) {
-    var cc = src.charCodeAt(i);
-    if (cc_vspace(cc)) { ++ss.line; ss.col = 0; }
-    else if (cc_hspace(cc)) { ++ss.col; }
-    else { break; }
-  }
-  ss.pos = i;
-  if (i < len) {
-    var ch = src.charAt(i);
-    switch (ch) {
-      case '(': case '[': case '{':
-        var delim, prefix;
-        switch (ch) {
-          case '(': delim = ')'; break;
-          case '[': delim = ']'; prefix = '[]'; break;
-          case '{': delim = '}'; prefix = '{}'; break;
-        }
-        ++ss.pos; ++ss.col;
-        var elements = [], element;
-        while (ss.pos < len && (element = read(ss)) !== undefined) {
-          elements.push(element);
-        }
-        i = ss.pos;
-        var tail = nil;
-        if (token_dot(src, i, len)) {
-          ++i; ++ss.pos; ++ss.col;
-          tail = read(ss);
-          if (read(ss) !== undefined) {
-            ss.msg = 'dotted sequence must have exactly one trailing element';
-            return undefined;
-          }
-        }
-        i = ss.pos;
-        if (i < len && src.charAt(i) === delim) {
-          ++ss.pos; ++ss.col;
-          elements = dotted_list_from_array(elements, tail);
-          if (prefix !== undefined) { elements = pair(prefix, elements); }
-          return elements;
-        }
-        return undefined;
-      case ')': case ']': case '}': return stream_unexpected(ss, ch);
-      case '"':
-        for (++i; i < len; ++i, ++ss.col) {
-          if (src.charAt(i) === ch) { break; }
-          else if (src.charAt(i) === '\\') {
-            if (++i < len) {
-              if (src.charAt(i) === '\n') { ++ss.line; ss.col = 0; }
-              else { ++ss.col; }
-            }
-          }
-        }
-        if (i >= len) { ss.pos = i; return stream_unexpected(ss, 'EOF'); }
-        var text = decode_text(src, ss.pos, i); ss.pos = i + 1; return text;
-      case "'": case '`': case ',':
-        ++ss.pos; ++ss.col;
-        var datum = read(ss);
-        if (datum !== undefined) {
-          var prefix;
+  while (true) {
+    for (; i < len; ++i) {
+      var cc = src.charCodeAt(i);
+      if (cc_vspace(cc)) { ++ss.line; ss.col = 0; }
+      else if (cc_hspace(cc)) { ++ss.col; }
+      else { break; }
+    }
+    ss.pos = i;
+    if (i < len) {
+      var ch = src.charAt(i);
+      switch (ch) {
+        case '(': case '[': case '{':
+          var delim, prefix;
           switch (ch) {
-            case "'": prefix = 'quote'; break;
-            case '`': prefix = 'quasiquote'; break;
-            case ',': prefix = 'unquote'; break;
+            case '(': delim = ')'; break;
+            case '[': delim = ']'; prefix = '[]'; break;
+            case '{': delim = '}'; prefix = '{}'; break;
           }
-          return list_from_array([prefix, datum]);
-        } else { ss.msg = 'invalid '+ch+''; return undefined; }
-      // TODO: case ';':
-      case '#':
-        ch = src.charAt(++i);
-        switch (ch) {
-          case 't': case 'f':
-            if (ch_boundary(src.charAt(++i))) {
-              ss.pos = i; ss.col += 2; return ch === 't';
+          ++ss.pos; ++ss.col;
+          var elements = [], element;
+          while (ss.pos < len && (element = read(ss)) !== undefined) {
+            elements.push(element);
+          }
+          i = ss.pos;
+          var tail = nil;
+          if (token_dot(src, i, len)) {
+            ++i; ++ss.pos; ++ss.col;
+            tail = read(ss);
+            if (read(ss) !== undefined) {
+              ss.msg = 'dotted sequence must have exactly one trailing element';
+              return undefined;
             }
-        }
-        ss.msg = 'invalid `#` syntax'; return undefined;
-      default:
-        if (cc_digit_decimal(src.charCodeAt(i) ||
-            ((ch === '-' || ch === '+') && i+1 < len &&
-             (cc_digit(src.charCodeAt(i+1)) || src.charAt(i+1) === '.')))) {
-          return read_number(ss);
-        } else if (token_dot(src, i, len)) {
-          ss.msg = 'invalid `.`'; return undefined;
-        } else {
-          for (; i < len; ++i) {
-            ch = src.charAt(i);
-            if (ch_boundary(ch)) { break; }
-            else if (ch === '\\') {
+          }
+          i = ss.pos;
+          if (i < len && src.charAt(i) === delim) {
+            ++ss.pos; ++ss.col;
+            elements = dotted_list_from_array(elements, tail);
+            if (prefix !== undefined) { elements = pair(prefix, elements); }
+            return elements;
+          }
+          return undefined;
+        case ')': case ']': case '}': return stream_unexpected(ss, ch);
+        case '"':
+          for (++i; i < len; ++i, ++ss.col) {
+            if (src.charAt(i) === ch) { break; }
+            else if (src.charAt(i) === '\\') {
               if (++i < len) {
                 if (src.charAt(i) === '\n') { ++ss.line; ss.col = 0; }
                 else { ++ss.col; }
-              } else { ss.pos = i; return stream_unexpected(ss, 'EOF'); }
+              }
             }
           }
-          var text = decode_text(src, ss.pos, i); ss.pos = i; return text;
-        }
+          if (i >= len) { ss.pos = i; return stream_unexpected(ss, 'EOF'); }
+          var text = decode_text(src, ss.pos, i); ss.pos = i + 1; return text;
+        case "'": case '`': case ',':
+          ++ss.pos; ++ss.col;
+          var datum = read(ss);
+          if (datum !== undefined) {
+            var prefix;
+            switch (ch) {
+              case "'": prefix = 'quote'; break;
+              case '`': prefix = 'quasiquote'; break;
+              case ',': prefix = 'unquote'; break;
+            }
+            return list_from_array([prefix, datum]);
+          } else { ss.msg = 'invalid '+ch+''; return undefined; }
+        case ';':
+          for (; i < len; ++i) {
+            if (cc_vspace(src.charCodeAt(i))) {
+              ++ss.line; ss.col = 0; ++i; break;
+            } else { ++ss.col; }
+          }
+          ss.pos = i;
+          break;
+        case '#':
+          ch = src.charAt(++i);
+          switch (ch) {
+            case 't': case 'f':
+              if (ch_boundary(src.charAt(++i))) {
+                ss.pos = i; ss.col += 2; return ch === 't';
+              }
+          }
+          ss.msg = 'invalid `#` syntax'; return undefined;
+        default:
+          if (cc_digit_decimal(src.charCodeAt(i) ||
+              ((ch === '-' || ch === '+') && i+1 < len &&
+              (cc_digit(src.charCodeAt(i+1)) || src.charAt(i+1) === '.')))) {
+            return read_number(ss);
+          } else if (token_dot(src, i, len)) {
+            ss.msg = 'invalid `.`'; return undefined;
+          } else {
+            for (; i < len; ++i) {
+              ch = src.charAt(i);
+              if (ch_boundary(ch)) { break; }
+              else if (ch === '\\') {
+                if (++i < len) {
+                  if (src.charAt(i) === '\n') { ++ss.line; ss.col = 0; }
+                  else { ++ss.col; }
+                } else { ss.pos = i; return stream_unexpected(ss, 'EOF'); }
+              }
+            }
+            var text = decode_text(src, ss.pos, i); ss.pos = i; return text;
+          }
+      }
     }
   }
   return stream_unexpected(ss, 'EOF');
