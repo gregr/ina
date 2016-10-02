@@ -546,25 +546,6 @@ function set_boolean_meet(s0, s1)   { return s0 & s1; }
 // %GetOptimizationStatus(fn)
 // %OptimizeFunctionOnNextCall(fn)
 
-function stream(source, start) { return {'source': source, 'start': start}; }
-
-function cc_digit_decimal(cc) { return cc >= 48 && cc <= 57; }
-function cc_digit_hexadecimal(cc) {
-  return cc_digit_decimal(cc) ||
-    (cc >= 65 && cc <= 70) || (cc >= 97 && cc <= 102);
-  }
-function cc_digit_binary(cc) { return cc === 48 || cc === 49; }
-function cc_alphaUpper(cc) { return cc >= 65 && cc <= 90; }
-function cc_alphaLower(cc) { return cc >= 97 && cc <= 122; }
-function cc_alpha(cc) { return cc_alphaLower(cc) || cc_alphaUpper(cc); }
-function cc_hspace(cc) {
-  return cc === 32 || cc === 9 || cc === 160 || cc >= 0x2000 && cc <= 0x200A;
-}
-function cc_vspace(cc) {
-  return cc >= 10 && cc <= 13 || cc === 133 || cc === 0x2028 || cc === 0x02029;
-}
-function cc_space(cc) { return cc_hspace(cc) || cc_vspace(cc); }
-
 function token_boundary(src, i) {
   if (i >= src.length) { return i; }
   var ch = src[i];
@@ -666,6 +647,8 @@ function token_int(src, i) {
   if (i === start) { return undefined; }
   return token_boundary(src, i);
 }
+
+function stream(source, start) { return {'source': source, 'start': start}; }
 
 function result_boundary(result, ss, i) {
   i = token_boundary(ss.source, i);

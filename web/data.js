@@ -208,4 +208,116 @@ function decode_text(src, start, end) {
 function decode_int(src, start, end) { return eval(src.slice(start, end)); }
 function decode_float(src, start, end) { return eval(src.slice(start, end)); }
 
+function cc_digit_decimal(cc) { return cc >= 48 && cc <= 57; }
+function cc_digit_hexadecimal(cc) {
+  return cc_digit_decimal(cc) ||
+    (cc >= 65 && cc <= 70) || (cc >= 97 && cc <= 102);
+  }
+function cc_digit_binary(cc) { return cc === 48 || cc === 49; }
+function cc_hspace(cc) {
+  return cc === 32 || cc === 9 || cc === 160 || cc >= 0x2000 && cc <= 0x200A;
+}
+function cc_vspace(cc) {
+  return cc >= 10 && cc <= 13 || cc === 133 || cc === 0x2028 || cc === 0x02029;
+}
+function cc_space(cc) { return cc_hspace(cc) || cc_vspace(cc); }
+
+function token_boundary(src, i, len) {
+  if (i < len) {
+    switch (src.charAt(i)) {
+      case '(': case '[': case '{': case ')': case ']': case '}': case '"':
+      case "'": case '`': return true;
+      default: return cc_space(src.charCodeAt(i));
+    }
+  }
+  return true;
+}
+function token_space(src, i, len) {
+  for (; i < len; ++i) { if (!cc_space(src.charCodeAt(i))) { break; } }
+  return i;
+}
+function token_text(delim, src, i, len) {
+  for (; i < len; ++i) {
+    if (src.charAt(i) === delim) { return i; }
+    else if (src.charAt(i) === '\\') { ++i; }
+  }
+  return undefined;
+}
+function token_symbol(src, i, len) {
+  if (i >= len) { return undefined; }
+  if (cc_digit(src.charCodeAt(i) ||
+      ((src.charAt(i) === '-' || src.charAt(i) === '+') &&
+       i+1 < len && (cc_digit(src.charCodeAt(i+1)) ||
+                     src.charAt(i+1) === '.')))) {
+    return undefined;
+  }
+  for (; i < len; ++i) {
+    if (token_boundary(src, i)) { return i; }
+    else if (src.charAt(i) === '\\') { ++i; }
+  }
+  return i;
+}
+function token_float(src, i, len) {
+  var needs_digits = true;
+  if (i < len) {
+    var ch = src.charAt(i); if (ch === '-' || ch === '+') { ++i; }
+    for (; i < len; ++i) {
+      if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+      needs_digits = false;
+    }
+    if (i === len) { return needs_digits ? undefined : i; }
+    ch = src.charAt(i);
+    if (ch === '.') {
+      ++i;
+      for (; i < len; ++i) {
+        if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+        needs_digits = false;
+      }
+    }
+    if (i === len) { return needs_digits ? undefined : i; }
+    switch (src.charAt(i)) {
+      case 'e': case 'E':
+        ++i; needs_digits = true; if (i === len) { return undefined; }
+        ch = src.charAt(i); if (ch === '-' || ch === '+') { ++i; }
+        for (; i < len; ++i) {
+          if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+          needs_digits = false;
+        }
+    }
+  }
+  if (needs_digits) { return undefined; }
+  return token_boundary(src, i);
+}
+function token_int(src, i, len) {
+  var start = i;
+  if (i < len) {
+    var ch = src.charAt(i);
+    if (ch === '-' || ch === '+') {
+      ++start; ++i; if (i === len) { return undefined; } ch = src.charAt(i);
+    }
+    if (ch === '0') {
+      ++i; if (i === len) { return i; } ch = src.charAt(i);
+      switch (ch) {
+        case 'x':
+          start += 2; ++i;
+          for (; i < len; ++i) {
+            if (!cc_digit_hexadecimal(src.charCodeAt(i))) { break; }
+          }
+          break;
+        case 'b':
+          start += 2; ++i;
+          for (; i < len; ++i) {
+            if (!cc_digit_binary(src.charCodeAt(i))) { break; }
+          }
+          break;
+      }
+    }
+  }
+  for (; i < len; ++i) {
+    if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+  }
+  if (i === start) { return undefined; }
+  return token_boundary(src, i);
+}
+
 // TODO: read
