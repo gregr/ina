@@ -159,11 +159,12 @@ function compare_poly_asc(x0, x1) {
   }
 }
 
-function list_from_array(xs) {
-  var result = nil;
+function dotted_list_from_array(xs, tail) {
+  var result = tail;
   for (var i = xs.length - 1; i >= 0; --i) { result = pair(xs[i], result); }
   return result;
 }
+function list_from_array(xs) { return dotted_list_from_array(xs, nil); }
 
 function set_from_array(xs) {
   return set(unique(compare_poly_asc, sorted_by(compare_poly_asc, xs)));
@@ -296,6 +297,11 @@ function read_number(ss) {
   return decode();
 }
 
+function token_dot(src, i, len) {
+  return (src.charAt(i) === '.' &&
+          (i+1 >= len || ch_boundary(src.charAt(i+1))));
+}
+
 function read(ss) {
   var src = ss.src, i = ss.pos, len = src.length;
   for (; i < len; ++i) {
@@ -309,8 +315,36 @@ function read(ss) {
     var ch = src.charAt(i);
     switch (ch) {
       // TODO: '`,;
-      //case '(': case '[': case '{':
-        //++ss.pos; ++ss.col; return read_structure(ch, ss); // TODO: dotted pairs
+      case '(': case '[': case '{':
+        var delim, prefix;
+        switch (ch) {
+          case '(': delim = ')'; break;
+          case '[': delim = ']'; prefix = '[]'; break;
+          case '{': delim = '}'; prefix = '{}'; break;
+        }
+        ++ss.pos; ++ss.col;
+        var elements = [], element;
+        while (ss.pos < len && (element = read(ss)) !== undefined) {
+          elements.push(element);
+        }
+        i = ss.pos;
+        var tail = nil;
+        if (token_dot(src, i, len)) {
+          ++i; ++ss.pos; ++ss.col;
+          tail = read(ss);
+          if (read(ss) !== undefined) {
+            ss.msg = 'dotted sequence must have exactly one trailing element';
+            return undefined;
+          }
+        }
+        i = ss.pos;
+        if (i < len && src.charAt(i) === delim) {
+          ++ss.pos; ++ss.col;
+          elements = dotted_list_from_array(elements, tail);
+          if (prefix !== undefined) { elements = pair(prefix, elements); }
+          return elements;
+        }
+        return undefined;
       case ')': case ']': case '}': return stream_unexpected(ss, ch);
       case '"':
         for (++i; i < len; ++i, ++ss.col) {
@@ -338,6 +372,8 @@ function read(ss) {
             ((ch === '-' || ch === '+') && i+1 < len &&
              (cc_digit(src.charCodeAt(i+1)) || src.charAt(i+1) === '.')))) {
           return read_number(ss);
+        } else if (token_dot(src, i, len)) {
+          ss.msg = 'invalid `.`'; return undefined;
         } else {
           for (; i < len; ++i) {
             ch = src.charAt(i);
