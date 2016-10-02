@@ -548,26 +548,6 @@ function set_boolean_meet(s0, s1)   { return s0 & s1; }
 
 function stream(source, start) { return {'source': source, 'start': start}; }
 
-var re_slash_text = /\\[^u]|\\u[0-9a-fA-F]{4}/g;
-function decode_text_slash(es) {
-  switch (es[1]) {
-    case '0': return '\0';
-    case 'b': return '\b';
-    case 't': return '\t';
-    case 'n': return '\n';
-    case 'r': return '\r';
-    case 'v': return '\v';
-    case 'f': return '\f';
-    case 'u': return eval('"' + es + '"');
-    default: return es[1];
-  }
-}
-function decode_text(src, start, end) {
-  return src.slice(start, end).replace(re_slash_text, decode_text_slash);
-}
-function decode_int(src, start, end) { return eval(src.slice(start, end)); }
-function decode_float(src, start, end) { return eval(src.slice(start, end)); }
-
 function cc_digit_decimal(cc) { return cc >= 48 && cc <= 57; }
 function cc_digit_hexadecimal(cc) {
   return cc_digit_decimal(cc) ||

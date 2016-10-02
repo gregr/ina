@@ -187,4 +187,25 @@ function set_remove(xs, value) {
   return xs;
 }
 
+var re_slash_text = /\\[^u]|\\u[0-9a-fA-F]{4}/g;
+function decode_text_slash(es) {
+  switch (es[1]) {
+    case '0': return '\0';
+    case 'b': return '\b';
+    case 't': return '\t';
+    case 'n': return '\n';
+    case 'r': return '\r';
+    case 'v': return '\v';
+    case 'f': return '\f';
+    case 'u': return eval('"' + es + '"');
+    default: return es[1];
+  }
+}
+function decode_text(src, start, end) {
+  return src.slice(start, end).replace(re_slash_text, decode_text_slash);
+}
+// TODO: drop leading zeroes to avoid octal encoding surprises
+function decode_int(src, start, end) { return eval(src.slice(start, end)); }
+function decode_float(src, start, end) { return eval(src.slice(start, end)); }
+
 // TODO: read
