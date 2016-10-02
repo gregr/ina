@@ -477,22 +477,14 @@ function compare_poly_asc(x0, x1) {
 
 function is_tuple(term)   { return typeof term === 'object'; }
 
-var tag_count = 0;
-var boolean_tag = tag_count++;
-var number_tag = tag_count++;
-var text_tag = tag_count++;
 var symbol_tag = tag_count++;
 var tuple_tag = tag_count++;
-var set_tag = tag_count++;
 
 function is_symbol(term) {
   return (typeof term === 'object') && term.tag === symbol_tag;
 }
 function is_tuple(term) {
   return (typeof term === 'object') && term.tag === tuple_tag;
-}
-function is_set(term) {
-  return (typeof term === 'object') && term.tag === set_tag;
 }
 
 var symbol_table = {};
@@ -572,8 +564,6 @@ function tuple_remove(tup, key) {
   //return tuple(keys, assoc);
 //}
 
-function set(elements) { return {'tag': set_tag, 'elements': elements}; }
-var set_empty = set([]);
 function set_from_list(xs) {
   return set(unique(compare_poly_asc, sorted_by(compare_poly_asc, xs)));
 }
@@ -759,9 +749,8 @@ function read_special(ss) {
   }
 }
 
-function pair(head, tail) { return tuple_from({}, [head, tail]); }
 function array_to_list(xs) {
-  var result = tuple_empty;
+  var result = nil;
   for (var i = xs.length - 1; i >= 0; --i) { result = pair(xs[i], result); }
   return result;
 }

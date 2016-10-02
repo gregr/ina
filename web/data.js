@@ -97,6 +97,27 @@ function unique_insert(compare, xs, value) {
   return array_insert(xs, ix, value);
 }
 
+var tag_count = 0;
+var nil_tag = tag_count++;
+var pair_tag = tag_count++;
+var set_tag = tag_count++;
+
+var nil = {'tag': nil_tag};
+function pair(hd, tl) { return {'tag': pair_tag, 'head': hd, 'tail': tl}; }
+function set(elements) { return {'tag': set_tag, 'elements': elements}; }
+var set_empty = set([]);
+
+function is_boolean(term) { return typeof term === 'boolean'; }
+function is_number(term) { return typeof term === 'number'; }
+function is_text(term) { return typeof term === 'string'; }
+function is_nil(term) { term === nil; }
+function is_pair(term) {
+  return (typeof term === 'object') && term.tag === pair_tag;
+}
+function is_set(term) {
+  return (typeof term === 'object') && term.tag === set_tag;
+}
+
 function compare_boolean_asc(b0, b1) { return (b0|0) - (b1|0); }
 function compare_boolean_desc(b0, b1) { return (b1|0) - (b0|0); }
 function compare_number_asc(n0, n1) { return n0 - n1; }
@@ -104,11 +125,6 @@ function compare_number_desc(n0, n1) { return n1 - n0; }
 function compare_text_asc(t0, t1) { return t0 === t1 ? 0 : t0 < t1 ? -1 : 1; }
 function compare_text_desc(t0, t1) { return t1 === t0 ? 0 : t1 < t0 ? -1 : 1; }
 // TODO: compare_pair_asc, compare_set_asc, compare_poly_asc
-
-function is_boolean(term) { return typeof term === 'boolean'; }
-function is_number(term) { return typeof term === 'number'; }
-function is_text(term) { return typeof term === 'string'; }
-// TODO: is_nil, is_pair, is_set
 
 // TODO: set
 
