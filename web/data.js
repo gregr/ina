@@ -124,8 +124,40 @@ function compare_number_asc(n0, n1) { return n0 - n1; }
 function compare_number_desc(n0, n1) { return n1 - n0; }
 function compare_text_asc(t0, t1) { return t0 === t1 ? 0 : t0 < t1 ? -1 : 1; }
 function compare_text_desc(t0, t1) { return t1 === t0 ? 0 : t1 < t0 ? -1 : 1; }
-// TODO: compare_pair_asc, compare_set_asc, compare_poly_asc
-
+function compare_pair_asc(p0, p1) {
+  var c0 = compare_poly_asc(p0.head, p1.head);
+  return c0 !== 0 ? c0 : compare_poly_asc(p0.tail, p1.tail);
+}
+function compare_set_asc(s0, s1) {
+  var xs0 = s0.elements; l0 = xs0.length;
+  var xs1 = s1.elements; l1 = xs1.length;
+  var i = 0;
+  for (; i < l0; ++i) {
+    if (i >= l1) { return 1; }
+    var cmp = compare_poly_asc(xs0[i], xs1[i]);
+    if (cmp !== 0) { return cmp; }
+  }
+  return i < l1 ? -1 : 0;
+}
+function compare_poly_asc(x0, x1) {
+  if (x0 === x1) { return 0; }
+  var t0 = typeof x0;
+  var t1 = typeof x1;
+  // boolean < number < string < nil(unique object) < pair < set
+  if (t0 !== t1) {
+    return t0 === 'object' ? 1 : t1 === 'object' ? -1 : t0 < t1 ? -1 : 1;
+  }
+  switch (t0) {
+    case 'boolean': return compare_boolean_asc(x0, x1);
+    case 'number': return compare_number_asc(x0, x1);
+    case 'string': return compare_text_asc(x0, x1);
+    case 'object':
+      t0 = x0.tag; t1 = x1.tag;
+      if (t0 !== t1) { return t0 < t1 ? -1 : 1; }
+      if (t0 === pair_tag) { return compare_pair_asc(x0, x1); }
+      if (t0 === set_tag) { return compare_set_asc(x0, x1); }
+  }
+}
 // TODO: set
 
 // TODO: read

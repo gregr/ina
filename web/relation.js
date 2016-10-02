@@ -427,53 +427,23 @@ function btree_from_list(xs) {
   return bt;
 }
 
-function compare_symbol_asc(s0, s1) { return s0.index - s1.index; }
-function compare_symbol_desc(s0, s1) { return s1.index - s0.index; }
-function compare_tuple_asc(t0, t1) {
-  var ks0 = Object.keys(t0.assoc); var l0 = ks0.length;
-  var ks1 = Object.keys(t1.assoc); var l1 = ks1.length;
-  ks0.sort(compare_number_asc); ks1.sort(compare_number_asc);
-  var i = 0;
-  for (; i < l0; ++i) {
-    if (i >= l1) { return 1; }
-    var k0 = ks0[i];
-    var k1 = ks1[i];
-    if (k0 !== k1) { return k0 < k1 ? -1 : 1; }
-    var cmp = compare_poly_asc(t0.assoc[k0], t1.assoc[k0]);
-    if (cmp !== 0) { return cmp; }
-  }
-  return i < l1 ? -1 : 0;
-}
-function compare_set_asc(s0, s1) {
-  var xs0 = s0.elements; l0 = xs0.length;
-  var xs1 = s1.elements; l1 = xs1.length;
-  var i = 0;
-  for (; i < l0; ++i) {
-    if (i >= l1) { return 1; }
-    var cmp = compare_poly_asc(xs0[i], xs1[i]);
-    if (cmp !== 0) { return cmp; }
-  }
-  return i < l1 ? -1 : 0;
-}
-function compare_poly_asc(x0, x1) {
-  if (x0 === x1) { return 0; }
-  var t0 = typeof x0;
-  var t1 = typeof x1;
-  // coincidentally, this line works for now
-  if (t0 !== t1) { return t0 < t1 ? -1 : 1; }
-  switch (t0) {
-    case 'boolean': return compare_boolean_asc(x0, x1);
-    case 'number': return compare_number_asc(x0, x1);
-    case 'string': return compare_text_asc(x0, x1);
-    case 'object':
-      t0 = x0.tag; t1 = x1.tag;
-      // coincidentally, this line also works for now
-      if (t0 !== t1) { return t0 < t1 ? -1 : 1; }
-      if (t0 === symbol_tag) { return compare_symbol_asc(x0, x1); }
-      if (t0 === tuple_tag) { return compare_tuple_asc(x0, x1); }
-      if (t0 === set_tag) { return compare_set_asc(x0, x1); }
-  }
-}
+//function compare_symbol_asc(s0, s1) { return s0.index - s1.index; }
+//function compare_symbol_desc(s0, s1) { return s1.index - s0.index; }
+//function compare_tuple_asc(t0, t1) {
+  //var ks0 = Object.keys(t0.assoc); var l0 = ks0.length;
+  //var ks1 = Object.keys(t1.assoc); var l1 = ks1.length;
+  //ks0.sort(compare_number_asc); ks1.sort(compare_number_asc);
+  //var i = 0;
+  //for (; i < l0; ++i) {
+    //if (i >= l1) { return 1; }
+    //var k0 = ks0[i];
+    //var k1 = ks1[i];
+    //if (k0 !== k1) { return k0 < k1 ? -1 : 1; }
+    //var cmp = compare_poly_asc(t0.assoc[k0], t1.assoc[k0]);
+    //if (cmp !== 0) { return cmp; }
+  //}
+  //return i < l1 ? -1 : 0;
+//}
 
 function is_tuple(term)   { return typeof term === 'object'; }
 
