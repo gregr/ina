@@ -314,7 +314,6 @@ function read(ss) {
   if (i < len) {
     var ch = src.charAt(i);
     switch (ch) {
-      // TODO: '`,;
       case '(': case '[': case '{':
         var delim, prefix;
         switch (ch) {
@@ -358,6 +357,19 @@ function read(ss) {
         }
         if (i >= len) { ss.pos = i; return stream_unexpected(ss, 'EOF'); }
         var text = decode_text(src, ss.pos, i); ss.pos = i + 1; return text;
+      case "'": case '`': case ',':
+        ++ss.pos; ++ss.col;
+        var datum = read(ss);
+        if (datum !== undefined) {
+          var prefix;
+          switch (ch) {
+            case "'": prefix = 'quote'; break;
+            case '`': prefix = 'quasiquote'; break;
+            case ',': prefix = 'unquote'; break;
+          }
+          return list_from_array([prefix, datum]);
+        } else { ss.msg = 'invalid '+ch+''; return undefined; }
+      // TODO: case ';':
       case '#':
         ch = src.charAt(++i);
         switch (ch) {
