@@ -706,21 +706,16 @@ function read_special(ss) {
   }
 }
 
-function array_to_list(xs) {
-  var result = nil;
-  for (var i = xs.length - 1; i >= 0; --i) { result = pair(xs[i], result); }
-  return result;
-}
 var symbol_bracket_tuple = symbol('[]');
 function construct_tuple(xs) {
-  return pair(symbol_bracket_tuple, array_to_list(xs));
+  return pair(symbol_bracket_tuple, list_from_array(xs));
 }
 var symbol_bracket_set = symbol('{}');
 function construct_set(xs) {
-  return pair(symbol_bracket_set, array_to_list(xs));
+  return pair(symbol_bracket_set, list_from_array(xs));
 }
 
-var bracket_struct_attr = {'(': [')', array_to_list]
+var bracket_struct_attr = {'(': [')', list_from_array]
                           ,'[': [']', construct_tuple]
                           ,'{': ['}', construct_set]};
 function read_structure(bracket, ss) {

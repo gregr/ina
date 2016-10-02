@@ -158,6 +158,13 @@ function compare_poly_asc(x0, x1) {
       if (t0 === set_tag) { return compare_set_asc(x0, x1); }
   }
 }
+
+function list_from_array(xs) {
+  var result = nil;
+  for (var i = xs.length - 1; i >= 0; --i) { result = pair(xs[i], result); }
+  return result;
+}
+
 function set_from_array(xs) {
   return set(unique(compare_poly_asc, sorted_by(compare_poly_asc, xs)));
 }
