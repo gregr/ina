@@ -205,8 +205,7 @@ function decode_text(src, start, end) {
   return src.slice(start, end).replace(re_slash_text, decode_text_slash);
 }
 // TODO: drop leading zeroes to avoid octal encoding surprises
-function decode_int(src, start, end) { return eval(src.slice(start, end)); }
-function decode_float(src, start, end) { return eval(src.slice(start, end)); }
+function decode_number(src, start, end) { return eval(src.slice(start, end)); }
 
 function cc_digit_decimal(cc) { return cc >= 48 && cc <= 57; }
 function cc_digit_hexadecimal(cc) {
@@ -221,103 +220,138 @@ function cc_vspace(cc) {
   return cc >= 10 && cc <= 13 || cc === 133 || cc === 0x2028 || cc === 0x02029;
 }
 function cc_space(cc) { return cc_hspace(cc) || cc_vspace(cc); }
+function ch_boundary(ch) {
+  switch (ch) {
+    case '(': case '[': case '{': case ')': case ']': case '}': case '"':
+    case "'": case '`': return true;
+    default: return cc_space(ch.charCodeAt(0));
+  }
+}
 
-function token_boundary(src, i, len) {
-  if (i < len) {
+function stream(source) {
+  return {'src': source, 'pos': 0, 'line': 0, 'col': 0, 'msg': ''};
+}
+function stream_copy(old) {
+  var ss = stream(old.source);
+  ss.pos = old.pos;
+  ss.line = old.line;
+  ss.col = old.col;
+  return ss;
+}
+function stream_unexpected(ss, str) { ss.msg = 'unexpected `'+str+'`'; }
+
+function read_number(ss) {
+  var src = ss.src, i = ss.pos, len = src.length, needs_digits = true;
+  var decode = function() {
+    if (needs_digits || (i < len && !ch_boundary(src.charAt(i)))) {
+      ss.msg = 'invalid number'; return;
+    }
+    var number = decode_number(src, ss.pos, i);
+    ss.col += i - ss.pos;
+    ss.pos = i;
+    return number;
+  }
+  var ch = src.charAt(i);
+  if (ch === '-' || ch === '+') { ch = src.charAt(++i); }
+  if (ch === '0') {
+    needs_digits = false; if (++i === len) { return decode(); }
     switch (src.charAt(i)) {
-      case '(': case '[': case '{': case ')': case ']': case '}': case '"':
-      case "'": case '`': return true;
-      default: return cc_space(src.charCodeAt(i));
-    }
-  }
-  return true;
-}
-function token_space(src, i, len) {
-  for (; i < len; ++i) { if (!cc_space(src.charCodeAt(i))) { break; } }
-  return i;
-}
-function token_text(delim, src, i, len) {
-  for (; i < len; ++i) {
-    if (src.charAt(i) === delim) { return i; }
-    else if (src.charAt(i) === '\\') { ++i; }
-  }
-  return undefined;
-}
-function token_symbol(src, i, len) {
-  if (i >= len) { return undefined; }
-  if (cc_digit(src.charCodeAt(i) ||
-      ((src.charAt(i) === '-' || src.charAt(i) === '+') &&
-       i+1 < len && (cc_digit(src.charCodeAt(i+1)) ||
-                     src.charAt(i+1) === '.')))) {
-    return undefined;
-  }
-  for (; i < len; ++i) {
-    if (token_boundary(src, i)) { return i; }
-    else if (src.charAt(i) === '\\') { ++i; }
-  }
-  return i;
-}
-function token_float(src, i, len) {
-  var needs_digits = true;
-  if (i < len) {
-    var ch = src.charAt(i); if (ch === '-' || ch === '+') { ++i; }
-    for (; i < len; ++i) {
-      if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
-      needs_digits = false;
-    }
-    if (i === len) { return needs_digits ? undefined : i; }
-    ch = src.charAt(i);
-    if (ch === '.') {
-      ++i;
-      for (; i < len; ++i) {
-        if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
-        needs_digits = false;
-      }
-    }
-    if (i === len) { return needs_digits ? undefined : i; }
-    switch (src.charAt(i)) {
-      case 'e': case 'E':
-        ++i; needs_digits = true; if (i === len) { return undefined; }
-        ch = src.charAt(i); if (ch === '-' || ch === '+') { ++i; }
-        for (; i < len; ++i) {
-          if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+      case 'x':
+        needs_digits = true;
+        for (++i; i < len; ++i) {
+          if (!cc_digit_hexadecimal(src.charCodeAt(i))) { break; }
           needs_digits = false;
         }
-    }
-  }
-  if (needs_digits) { return undefined; }
-  return token_boundary(src, i);
-}
-function token_int(src, i, len) {
-  var start = i;
-  if (i < len) {
-    var ch = src.charAt(i);
-    if (ch === '-' || ch === '+') {
-      ++start; ++i; if (i === len) { return undefined; } ch = src.charAt(i);
-    }
-    if (ch === '0') {
-      ++i; if (i === len) { return i; } ch = src.charAt(i);
-      switch (ch) {
-        case 'x':
-          start += 2; ++i;
-          for (; i < len; ++i) {
-            if (!cc_digit_hexadecimal(src.charCodeAt(i))) { break; }
-          }
-          break;
-        case 'b':
-          start += 2; ++i;
-          for (; i < len; ++i) {
-            if (!cc_digit_binary(src.charCodeAt(i))) { break; }
-          }
-          break;
-      }
+        return decode();
+      case 'b':
+        needs_digits = true;
+        for (++i; i < len; ++i) {
+          if (!cc_digit_binary(src.charCodeAt(i))) { break; }
+          needs_digits = false;
+        }
+        return decode();
     }
   }
   for (; i < len; ++i) {
     if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+    needs_digits = false;
   }
-  if (i === start) { return undefined; }
-  return token_boundary(src, i);
+  if (i === len) { return decode(); }
+  if (src.charAt(i) === '.') {
+    for (++i; i < len; ++i) {
+      if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+      needs_digits = false;
+    }
+  }
+  if (i === len) { return decode(); }
+  switch (src.charAt(i)) {
+    case 'e': case 'E':
+      needs_digits = true; if (++i === len) { return decode(); }
+      ch = src.charAt(i); if (ch === '-' || ch === '+') { ++i; }
+      for (; i < len; ++i) {
+        if (!cc_digit_decimal(src.charCodeAt(i))) { break; }
+        needs_digits = false;
+      }
+  }
+  return decode();
 }
 
-// TODO: read
+function read(ss) {
+  var src = ss.src, i = ss.pos, len = src.length;
+  for (; i < len; ++i) {
+    var cc = src.charCodeAt(i);
+    if (cc_vspace(cc)) { ++ss.line; ss.col = 0; }
+    else if (cc_hspace(cc)) { ++ss.col; }
+    else { break; }
+  }
+  ss.pos = i;
+  if (i < len) {
+    var ch = src.charAt(i);
+    switch (ch) {
+      // TODO: '`,;
+      //case '(': case '[': case '{':
+        //++ss.pos; ++ss.col; return read_structure(ch, ss); // TODO: dotted pairs
+      case ')': case ']': case '}': return stream_unexpected(ss, ch);
+      case '"':
+        for (++i; i < len; ++i, ++ss.col) {
+          if (src.charAt(i) === ch) { break; }
+          else if (src.charAt(i) === '\\') {
+            if (++i < len) {
+              if (src.charAt(i) === '\n') { ++ss.line; ss.col = 0; }
+              else { ++ss.col; }
+            }
+          }
+        }
+        if (i >= len) { ss.pos = i; return stream_unexpected(ss, 'EOF'); }
+        var text = decode_text(src, ss.pos, i); ss.pos = i + 1; return text;
+      case '#':
+        ch = src.charAt(++i);
+        switch (ch) {
+          case 't': case 'f':
+            if (ch_boundary(src.charAt(++i))) {
+              ss.pos = i; ss.col += 2; return ch === 't';
+            }
+        }
+        ss.msg = 'invalid `#` syntax'; return undefined;
+      default:
+        if (cc_digit_decimal(src.charCodeAt(i) ||
+            ((ch === '-' || ch === '+') && i+1 < len &&
+             (cc_digit(src.charCodeAt(i+1)) || src.charAt(i+1) === '.')))) {
+          return read_number(ss);
+        } else {
+          for (; i < len; ++i) {
+            ch = src.charAt(i);
+            if (ch_boundary(ch)) { break; }
+            else if (ch === '\\') {
+              if (++i < len) {
+                if (src.charAt(i) === '\n') { ++ss.line; ss.col = 0; }
+                else { ++ss.col; }
+              } else { ss.pos = i; return stream_unexpected(ss, 'EOF'); }
+            }
+          }
+          var text = decode_text(src, ss.pos, i); ss.pos = i; return text;
+        }
+    }
+  }
+  return stream_unexpected(ss, 'EOF');
+}
