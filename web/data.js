@@ -224,7 +224,7 @@ function cc_space(cc) { return cc_hspace(cc) || cc_vspace(cc); }
 function ch_boundary(ch) {
   switch (ch) {
     case '(': case '[': case '{': case ')': case ']': case '}': case '"':
-    case "'": case '`': return true;
+    case "'": case '`': case ',': case ';': return true;
     default: return cc_space(ch.charCodeAt(0));
   }
 }
