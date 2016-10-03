@@ -516,3 +516,20 @@ function write(datum) {
     } else { return '#{}'; }
   }
 }
+
+var escape_html_replacement = {
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;',
+  '/': '&#x2F', '`': '&#x60'
+};
+function escape_html_replace(str) { return escape_html_replacement[str]; }
+function escape_html(str) {
+  return str.replace(/[&<>"'\/`]/g, escape_html_replace);
+}
+function encode_uri_path(str) { return encodeURIComponent(str); }
+function decode_uri_path(up) { return decodeURIComponent(str); }
+function encode_uri_query(str) {
+  return encodeURIComponent(str).replace(/%20/g, '+');
+}
+function decode_uri_query(uq) {
+  return decodeURIComponent(uq.replace(/\+/g, '%20'));
+}
