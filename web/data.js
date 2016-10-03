@@ -488,3 +488,31 @@ function text_quoted(text) {
   quoted += text.slice(h, i) + '"';
   return quoted;
 }
+
+function write(datum) {
+  if (is_pair(datum)) {
+    var elements = ['('];
+    do { elements.push(write(datum.head), ' '); datum = datum.tail; }
+    while(is_pair(datum));
+    if (datum !== nil) { elements.push('. ', write(datum), ' '); }
+    elements[elements.length - 1] = ')';
+    return elements.join('');
+  }
+  if (is_text(datum)) {
+    if (text_should_quote(datum)) { return text_quoted(datum); }
+    else { return datum; }
+  }
+  if (is_number(datum)) { return datum.toString(); }
+  if (datum === nil)    { return '()'; }
+  if (datum === true)   { return '#t'; }
+  if (datum === false)  { return '#f'; }
+  if (is_set(datum)) {
+    var xs = datum.elements; var len = xs.length;
+    if (len > 0) {
+      var elements = ['#{']; elements.length = len * 2 + 1;
+      for (var i = 0; i < len; ++i) { elements.push(write(xs[i]), ' '); }
+      elements[elements.length - 1] = '}';
+      return elements.join('');
+    } else { return '#{}'; }
+  }
+}
