@@ -431,3 +431,60 @@ function read(ss) {
   }
   return stream_unexpected(ss, 'EOF');
 }
+
+var bad_leading = ['#'];
+var bad_anywhere = ['\\',"'",'`',',',';','"','(',')','[',']','{','}','\0','\b'];
+function text_should_quote(text) {
+  var len = text.length;
+  if (token_numeric(text, 0, len) || token_dot(text, 0, len)) { return true; }
+  if (len === 0) { return true; }
+  var ch = text.charAt(0), blen = bad_leading.length;
+  for (var j = 0; j < blen; ++j) {
+    if (ch === bad_leading[j]) { return true; }
+  }
+  var blen = bad_anywhere.length;
+  for (var i = 0; i < len; ++i) {
+    var ch = text.charAt(i), cc = text.charCodeAt(i);
+    if (cc_space(cc)) { return true; }
+    for (var j = 0; j < blen; ++j) {
+      if (ch === bad_anywhere[j]) { return true; }
+    }
+  }
+  return false;
+}
+function text_repeat(text, count) {
+  var result = text;
+  for (var i = 1; i < count; ++i) { result += text; }
+  return result;
+}
+function encode_char(ch) {
+  switch (ch) {
+    case '\0': return '\\0';
+    case '\b': return '\\b';
+    case '\t': return '\\t';
+    case '\n': return '\\n';
+    case '\v': return '\\v';
+    case '\f': return '\\f';
+    case '\r': return '\\r';
+    case '"':  return '\\"';
+    default:
+      var cc = ch.charCodeAt(0);
+      if (cc != 32 && cc_space(cc)) {
+        var ustr = cc.toString(16);
+        return '\\u' + text_repeat('0', 4 - ustr.length) + ustr;
+      }
+      return undefined;
+  }
+}
+function text_quoted(text) {
+  var quoted = '"', len = text.length, h = 0, i = 0;
+  for (; i < len; ++i) {
+    var ch = encode_char(text.charAt(i));
+    if (ch !== undefined) {
+      quoted += text.slice(h, i) + ch;
+      h = i+1;
+    }
+  }
+  quoted += text.slice(h, i) + '"';
+  return quoted;
+}
