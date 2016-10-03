@@ -195,9 +195,9 @@ function decode_text_slash(es) {
     case 'b': return '\b';
     case 't': return '\t';
     case 'n': return '\n';
-    case 'r': return '\r';
     case 'v': return '\v';
     case 'f': return '\f';
+    case 'r': return '\r';
     case 'u': return eval('"' + es + '"');
     default: return es[1];
   }
@@ -296,6 +296,14 @@ function read_number(ss) {
       }
   }
   return decode();
+}
+
+function token_numeric(src, i, len) {
+  var ch = src.charAt(i);
+  return (cc_digit_decimal(src.charCodeAt(i)) ||
+          ((ch === '-' || ch === '+') && i+1 < len &&
+           (cc_digit_decimal(src.charCodeAt(i+1)) ||
+            src.charAt(i+1) === '.')));
 }
 
 function token_dot(src, i, len) {
@@ -402,11 +410,8 @@ function read(ss) {
           }
           ss.msg = 'invalid `#` syntax'; return undefined;
         default:
-          if (cc_digit_decimal(src.charCodeAt(i) ||
-              ((ch === '-' || ch === '+') && i+1 < len &&
-              (cc_digit(src.charCodeAt(i+1)) || src.charAt(i+1) === '.')))) {
-            return read_number(ss);
-          } else if (token_dot(src, i, len)) {
+          if (token_numeric(src, i, len)) { return read_number(ss); }
+          else if (token_dot(src, i, len)) {
             ss.msg = 'invalid `.`'; return undefined;
           } else {
             for (; i < len; ++i) {
