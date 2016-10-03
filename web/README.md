@@ -2,24 +2,6 @@
 
 ## TODO
 
-### Parsing
-
-* atoms
-  * boolean
-  * number
-  * text
-  * symbol
-* contextual escaping
-  * [OWASP XSS Prevention Rules](https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet#RULE_.237_-_Prevent_DOM-based_XSS)
-  * html
-    * content
-    * attributes
-    * urls
-  * javascript
-    * data values
-  * css
-    * property values
-
 ### Visualization
 
 * text
