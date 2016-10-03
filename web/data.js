@@ -240,6 +240,7 @@ function stream_copy(old) {
   return ss;
 }
 function stream_unexpected(ss, str) { ss.msg = 'unexpected `'+str+'`'; }
+function stream_expected(ss, str) { ss.msg = 'expected `'+str+'`'; }
 
 function read_number(ss) {
   var src = ss.src, i = ss.pos, len = src.length, needs_digits = true;
@@ -302,6 +303,14 @@ function token_dot(src, i, len) {
           (i+1 >= len || ch_boundary(src.charAt(i+1))));
 }
 
+function read_sequence(ss) {
+  var len = ss.src.length, elements = [], element;
+  while (ss.pos < len && (element = read(ss)) !== undefined) {
+    elements.push(element);
+  }
+  return elements;
+}
+
 function read(ss) {
   var src = ss.src, i = ss.pos, len = src.length;
   while (true) {
@@ -323,10 +332,7 @@ function read(ss) {
             case '{': delim = '}'; prefix = '{}'; break;
           }
           ++ss.pos; ++ss.col;
-          var elements = [], element;
-          while (ss.pos < len && (element = read(ss)) !== undefined) {
-            elements.push(element);
-          }
+          var elements = read_sequence(ss);
           i = ss.pos;
           var tail = nil;
           if (token_dot(src, i, len)) {
@@ -344,7 +350,7 @@ function read(ss) {
             if (prefix !== undefined) { elements = pair(prefix, elements); }
             return elements;
           }
-          return undefined;
+          return stream_expected(ss, delim);
         case ')': case ']': case '}': return stream_unexpected(ss, ch);
         case '"':
           for (++i; i < len; ++i, ++ss.col) {
@@ -385,6 +391,14 @@ function read(ss) {
               if (ch_boundary(src.charAt(++i))) {
                 ss.pos = i; ss.col += 2; return ch === 't';
               }
+            case '{':
+              ss.pos += 2; ss.col += 2;
+              var elements = read_sequence(ss);
+              i = ss.pos;
+              if (i < len && src.charAt(i) === '}') {
+                ++ss.pos; ++ss.col; return set_from_array(elements);
+              }
+              return stream_expected(ss, '}');
           }
           ss.msg = 'invalid `#` syntax'; return undefined;
         default:
