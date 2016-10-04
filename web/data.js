@@ -380,7 +380,7 @@ function read(ss) {
             }
           }
           if (i >= len) { ss.pos = i; return stream_unexpected(ss, 'EOF'); }
-          var text = decode_text(src, ss.pos, i); ss.pos = i + 1; return text;
+          var text = decode_text(src, ss.pos+1, i); ss.pos = i+1; return text;
         case "'": case '`': case ',':
           ++ss.pos; ++ss.col;
           var datum = read(ss);
