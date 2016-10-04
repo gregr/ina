@@ -239,6 +239,8 @@ function stream_copy(old) {
   ss.col = old.col;
   return ss;
 }
+function stream_finish(ss) { ss.pos = ss.src.length; }
+function stream_finished(ss) { return ss.pos === ss.src.length; }
 function stream_unexpected(ss, str) { ss.msg = 'unexpected `'+str+'`'; }
 function stream_expected(ss, str) { ss.msg = 'expected `'+str+'`'; }
 
@@ -316,6 +318,7 @@ function read_sequence(ss) {
   while (ss.pos < len && (element = read(ss)) !== undefined) {
     elements.push(element);
   }
+  ss.msg = '';
   return elements;
 }
 
@@ -427,9 +430,8 @@ function read(ss) {
             var text = decode_text(src, ss.pos, i); ss.pos = i; return text;
           }
       }
-    }
+    } else { return stream_finish(ss); }
   }
-  return stream_unexpected(ss, 'EOF');
 }
 
 var bad_leading = ['#'];
