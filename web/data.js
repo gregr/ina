@@ -386,7 +386,7 @@ function read(ss) {
               case ',': prefix = 'unquote'; break;
             }
             return list_from_array([prefix, datum]);
-          } else { ss.msg = 'invalid '+ch+''; return undefined; }
+          } else { ss.msg = 'expected an element to '+prefix+''; return; }
         case ';':
           for (; i < len; ++i) {
             if (cc_vspace(src.charCodeAt(i))) {
@@ -414,9 +414,8 @@ function read(ss) {
           ss.msg = 'invalid `#` syntax'; return undefined;
         default:
           if (token_numeric(src, i, len)) { return read_number(ss); }
-          else if (token_dot(src, i, len)) {
-            ss.msg = 'invalid `.`'; return undefined;
-          } else {
+          else if (token_dot(src, i, len)) { return stream_unexpected('.'); }
+          else {
             for (; i < len; ++i) {
               ch = src.charAt(i);
               if (ch_boundary(ch)) { break; }
