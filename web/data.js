@@ -243,6 +243,16 @@ function stream_finish(ss) { ss.pos = ss.src.length; }
 function stream_finished(ss) { return ss.pos === ss.src.length; }
 function stream_unexpected(ss, str) { ss.msg = 'unexpected `'+str+'`'; }
 function stream_expected(ss, str) { ss.msg = 'expected `'+str+'`'; }
+function stream_skip_whitespace(ss) {
+  var src = ss.src, i = ss.pos, len = src.length;
+  for (; i < len; ++i) {
+    var cc = src.charCodeAt(i);
+    if (cc_vspace(cc)) { ++ss.line; ss.col = 0; }
+    else if (cc_hspace(cc)) { ++ss.col; }
+    else { break; }
+  }
+  ss.pos = i; return i;
+}
 
 function read_number(ss) {
   var src = ss.src, i = ss.pos, len = src.length, needs_digits = true;
@@ -323,15 +333,9 @@ function read_sequence(ss) {
 }
 
 function read(ss) {
-  var src = ss.src, i = ss.pos, len = src.length;
+  var src = ss.src, i, len = src.length;
   while (true) {
-    for (; i < len; ++i) {
-      var cc = src.charCodeAt(i);
-      if (cc_vspace(cc)) { ++ss.line; ss.col = 0; }
-      else if (cc_hspace(cc)) { ++ss.col; }
-      else { break; }
-    }
-    ss.pos = i;
+    i = stream_skip_whitespace(ss);
     if (i < len) {
       var ch = src.charAt(i);
       switch (ch) {
