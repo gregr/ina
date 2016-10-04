@@ -355,7 +355,7 @@ function read(ss) {
             tail = read(ss);
             if (tail === undefined || read(ss) !== undefined) {
               ss.msg = 'exactly one element must follow `.` in sequence';
-              return undefined;
+              return;
             }
           }
           i = ss.pos;
@@ -415,7 +415,7 @@ function read(ss) {
               }
               return stream_expected(ss, '}');
           }
-          ss.msg = 'invalid `#` syntax'; return undefined;
+          ss.msg = 'invalid `#` syntax'; return;
         default:
           if (token_numeric(src, i, len)) { return read_number(ss); }
           else if (token_dot(src, i, len)) { return stream_unexpected('.'); }
@@ -478,7 +478,7 @@ function encode_char(ch) {
         var ustr = cc.toString(16);
         return '\\u' + text_repeat('0', 4 - ustr.length) + ustr;
       }
-      return undefined;
+      return;
   }
 }
 function text_quoted(text) {
