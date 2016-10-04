@@ -353,8 +353,8 @@ function read(ss) {
           if (token_dot(src, i, len)) {
             ++i; ++ss.pos; ++ss.col;
             tail = read(ss);
-            if (read(ss) !== undefined) {
-              ss.msg = 'dotted sequence must have exactly one trailing element';
+            if (tail === undefined || read(ss) !== undefined) {
+              ss.msg = 'exactly one element must follow `.` in sequence';
               return undefined;
             }
           }
