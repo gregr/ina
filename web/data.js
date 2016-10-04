@@ -199,6 +199,7 @@ function decode_text_slash(es) {
     case 'f': return '\f';
     case 'r': return '\r';
     case 'u': return eval('"' + es + '"');
+    case '\n': return '';
     default: return es[1];
   }
 }
