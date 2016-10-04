@@ -232,11 +232,13 @@ function ch_boundary(ch) {
 function stream(source) {
   return {'src': source, 'pos': 0, 'line': 0, 'col': 0, 'msg': ''};
 }
+function stream_reset(ss) { ss.pos = 0; ss.line = 0; ss.col = 0; ss.msg = ''; }
 function stream_copy(old) {
   var ss = stream(old.source);
   ss.pos = old.pos;
   ss.line = old.line;
   ss.col = old.col;
+  ss.msg = old.msg;
   return ss;
 }
 function stream_finish(ss) { ss.pos = ss.src.length; }
