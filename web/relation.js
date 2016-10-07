@@ -103,11 +103,16 @@ function btree_leaf(keys, values) { return btree_branch(keys, values, null); }
 function btree_step(path, bt, index) { path.push({'index': index, 'tree': bt}); }
 var btree_empty = btree_leaf([], []);
 
+
+function btree_bisect(xs, key, start, end) {
+  return bisect_by(compare_poly_asc, xs, key, start, end);
+}
+
 function btree_get(bt, key) {
   while (true) {
     var keys = bt.keys;
     var klen = keys.length;
-    var ix = bisect(keys, key, 0, klen);
+    var ix = btree_bisect(keys, key, 0, klen);
     if (ix < klen && keys[ix] === key) { return bt.values[ix]; }
     var children = bt.children;
     if (!children) { return undefined; }
@@ -195,7 +200,7 @@ function btree_put(bt, key, value) {
   while (true) {
     var keys = bt.keys;
     var klen = keys.length;
-    var ix = bisect(keys, key, 0, klen);
+    var ix = btree_bisect(keys, key, 0, klen);
     var children = bt.children;
     if (ix < klen && keys[ix] === key) {
       var values = bt.values;
@@ -315,7 +320,7 @@ function btree_remove(bt, key) {
     var children = bt.children;
     var keys = bt.keys;
     var klen = keys.length;
-    var ix = bisect(keys, key, 0, klen);
+    var ix = btree_bisect(keys, key, 0, klen);
     if (ix < klen && keys[ix] === key) {
       if (children) {
         var lpath = [];
@@ -346,10 +351,10 @@ function btree_join(join, bt0, bt1) {
     if (i1 < l1) {
       k1 = ks1[i1];
       while (true) {
-        if (k0 < k1) {
+        if (compare_poly_asc(k0, k1) < 0) {
           result = btree_put(result, k0, btree_get(bt0, k0));
           ++i0; if (i0 === l0) break; k0 = ks0[i0];
-        } else if (k1 < k0) {
+        } else if (compare_poly_asc(k0, k1) > 0) {
           result = btree_put(result, k1, btree_get(bt1, k1));
           ++i1; if (i1 === l1) break; k1 = ks1[i1];
         } else {
@@ -382,9 +387,11 @@ function btree_meet(meet, bt0, bt1) {
     if (i1 < l1) {
       k1 = ks1[i1];
       while (true) {
-        if      (k0 < k1) { ++i0; if (i0 === l0) break; k0 = ks0[i0]; }
-        else if (k1 < k0) { ++i1; if (i1 === l1) break; k1 = ks1[i1]; }
-        else {
+        if (compare_poly_asc(k0, k1) < 0) {
+          ++i0; if (i0 === l0) break; k0 = ks0[i0];
+        } else if (compare_poly_asc(k0, k1) > 0) {
+          ++i1; if (i1 === l1) break; k1 = ks1[i1];
+        } else {
           var value = meet(btree_get(bt0, k0), btree_get(bt1, k1));
           if (value !== undefined) { result = btree_put(result, k0, value); }
           ++i0; ++i1; if (i0 === l0 || i1 === l1) break;
