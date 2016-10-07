@@ -406,9 +406,10 @@ function read(ss) {
           ch = src.charAt(++i);
           switch (ch) {
             case 't': case 'f':
-              if (ch_boundary(src.charAt(++i))) {
+              if (++i == len || ch_boundary(src.charAt(i))) {
                 ss.pos = i; ss.col += 2; return ch === 't';
               }
+              break;
             case '{':
               ss.pos += 2; ss.col += 2;
               var elements = read_sequence(ss);
