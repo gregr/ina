@@ -17,24 +17,43 @@
 }
 .atom {
   cursor: pointer;
-  background-color: #cccccc;
   font-family: monospace;
   white-space: pre;
   min-width: 10px;
   min-height: 10px;
 }
+.boolean {
+  background-color: #00ff00;
+}
+.number {
+  background-color: #ff9900;
+}
+.text {
+  background-color: #00ffff;
+}
 </style>
 <div id="target"></div>
 <button id="add">add</button>
-<input id="key" type="number"></input>
+<input id="key"></input>
 <button id="remove">remove</button>
 <script src="data.js"></script>
 <script src="relation.js"></script>
 <script>
 'use strict';
-// TODO: escape_html
-function html_atom(atom) {
-  return '<div class="atom hframe">' + atom.toString() + '</div>';
+function html_boolean(value) {
+  return '<span class="atom boolean hframe">' + escape_html(write(value)) + '</span>';
+}
+function html_number(value) {
+  return '<span class="atom number hframe">' + escape_html(write(value)) + '</span>';
+}
+function html_text(value) {
+  return '<span class="atom text hframe">' + escape_html(write(value)) + '</span>';
+}
+function html_atom(value) {
+  if (is_number(value)) { return html_number(value); }
+  if (is_text(value)) { return html_text(value); }
+  if (is_boolean(value)) { return html_boolean(value); }
+  throw [value, 'is not an atom'];
 }
 function html_array(xs) {
   var atoms = [];
@@ -60,20 +79,34 @@ var button_add = document.getElementById('add');
 var button_remove = document.getElementById('remove');
 
 function update() { target.innerHTML = html_btree(current_btree); }
+function read_value(str) {
+  var ss = stream(str);
+  var v = read(ss);
+  if (v === undefined || read(ss) !== undefined || !stream_finished(ss)) {
+    alert('bad value');
+    throw 'bad value';
+  }
+  return v;
+}
+function input_key_value() {
+  return read_value(input_key.value);
+}
 function add_key() {
-  current_btree = btree_put(current_btree, +input_key.value, +input_key.value);
-  log.push(['add', +input_key.value]);
+  var val = input_key_value();
+  current_btree = btree_put(current_btree, val, val);
+  log.push(['add', val]);
   update();
 }
 function remove_key() {
-  current_btree = btree_remove(current_btree, +input_key.value);
-  log.push(['remove', +input_key.value]);
+  var val = input_key_value();
+  current_btree = btree_remove(current_btree, val);
+  log.push(['remove', val]);
   update();
 }
 function enter_key(e) {
   if (e.type === 'keypress' && e.key !== 'Enter') return;
   add_key();
-  ++input_key.value;
+  if (is_number(input_key_value())) { ++input_key.value; }
 }
 function remove_selected(e) {
   if (e.target.classList.contains('atom')) {
