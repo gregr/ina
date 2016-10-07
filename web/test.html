@@ -46,10 +46,10 @@
 var vdata = [];
 function value_clear() { vdata.length = 0; }
 function value_new(value) {
-  var id = vdata.length++; vdata[id] = value; return 'v'+id.toString();
+  var id = vdata.length++; vdata[id] = value; return id;
 }
-function value_put(id, value) { vdata[id.slice(1)] = value; }
-function value_get(id) { return vdata[id.slice(1)]; }
+function value_put(id, value) { vdata[id] = value; }
+function value_get(id) { return vdata[id]; }
 function html_atom(value) {
   var cls;
   if (is_number(value)) { cls = 'number'; }
