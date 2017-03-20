@@ -1,17 +1,48 @@
-text-based bootstrap
-  parsing
-    add/improve transformation steps to retain more source info, simplify and reduce coupling
-      text -(read)-> s-exp -(parse)-> sugared AST -(optional: desugar)-> desugared AST -(elaborate)-> term
-        AST: annotated with s-exp source cursors
-          a desugaring step must be designed according to the particular term syntax being targeted
-            different targets may have different features (if, let, etc.)
-        term: annotated with AST (which may itself be annotated with source) being elaborated
-      abridge: term -> desugared AST
-      sugar: desugared AST -> sugared AST
-      print: AST -> s-exp
-      write: s-exp -> text
-    unify unsafe0 and unsafe1 parsing, at least at the desugared stage
+web-based bootstrap
+  text-based program construction
+    simplify existing reader/writer
+      syntax-object: (metadata, s-expr-containing-syntax-objects)
+      annotate: text-position-info -> metadata
+      read/annotate: annotate -> text -> syntax-object
+      write: syntax-object|s-expr -> text
 
+  minimalistic lisp
+    purpose: implement a simple JS compiler to minimize amount of manually written JS
+    data
+      pairs, nil, booleans, symbols(, simple js-like numbers? or numbers as symbols?)
+      string representations for communicating with outside world:
+        ;; nested list representation allows efficient concat, but more complex to interpret externally
+        string ::= symbol | [string]
+        ;; a final normalization step on output can simplify external interpretation
+        normalized-string ::= [symbol]
+    real-world [effect?] interaction/reaction
+      request handling
+        value: `(value ,val)
+        request: `(request ,payload ,continuation)
+        continuation: -> `(lambda (response) ...)
+        eval: program -> value|request
+        handle: value|request -> ...
+      minimal web-platform effects
+        only need to convert symbol lists (normalized strings) to actual strings or text files
+        but some REPL and debugging support should be helpful
+    extensible denotational syntax
+      look at unsafe2 for an initial solution (rename seval to denote)
+        but depend less on dynamic definition of operatives in actual programs by using modules
+      hygienic, non-macro-based syntax extension inspired by f-exprs, but static
+      open denote/eval recursion
+      avoid leaking details about AST and environment representation
+
+  muJS
+    purpose: implement a simple RTL as a compilation target
+    data
+      undefined, null, booleans, js-int, js-float, strings, arrays, records?, jump-labels?
+    control flow
+      if, for (w/ labels), while, switch, functions
+        maybe these are too high-level to consider for a compilation target
+      MLton-style CPS/SSA tc/jump continuations?
+
+
+old bootstrap notes
   visualization
     dependency visualization: correlate subterms across multiple steps
       indicate at least two levels of highest priority (red highlighting of diminishing intensity)
