@@ -213,6 +213,20 @@ function evaluate(stx) {
   var native_text_eq = make_eq('text=?', is_text);
   var native_number_eq = make_eq('number=?', is_number);
   var native_int32_eq = make_eq('int32=?', is_int32);
+  function make_lt(name, is_x) {
+    return function(x0) {
+      if (!is_x(x0)) { throw ["invalid argument to '"+name+"'", x0]; }
+      result = function(x1) {
+        if (!is_x(x1)) { throw ["invalid argument to '"+name+"'", x1]; }
+        result = (x0 < x1);
+        return unwind();
+      };
+      return unwind();
+    };
+  }
+  var native_text_lt = make_lt('text<?', is_text);
+  var native_number_lt = make_lt('number<?', is_number);
+  var native_int32_lt = make_lt('int32<?', is_int32);
   function native_pair(h) {
     result = function(t) { result = [h, t]; return unwind(); };
     return unwind();
@@ -314,8 +328,11 @@ function evaluate(stx) {
     ['number?', native_number_huh],
     ['int32?', native_int32_huh],
     ['text=?', native_text_eq],
+    ['text<?', native_text_lt],
     ['number=?', native_number_eq],
+    ['number<?', native_number_lt],
     ['int32=?', native_int32_eq],
+    ['int32<?', native_int32_lt],
     ['pair', native_pair],
     ['head', native_pair_head],
     ['tail', native_pair_tail],
