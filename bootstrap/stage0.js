@@ -201,9 +201,9 @@ function evaluate(stx) {
   function native_text_huh(datum) { result = is_text(datum); return unwind(); }
   function make_eq(name, is_x) {
     return function(x0) {
-      if (!is_text(x0)) { throw ['cannot apply '+name+' to non-text', x0]; }
+      if (!is_x(x0)) { throw ["invalid argument to '"+name+"'", x0]; }
       result = function(x1) {
-        if (!is_text(x1)) { throw ['cannot apply '+name+' to non-text', x1]; }
+        if (!is_x(x1)) { throw ["invalid argument to '"+name+"'", x1]; }
         result = (x0 === x1);
         return unwind();
       };
