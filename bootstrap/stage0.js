@@ -96,6 +96,7 @@ function evaluate(stx) {
       var kenv = env;
       ks.push(function() {
         var proc = result;
+        if (!is_closure(proc)) { throw ['cannot apply non-procedure', proc]; }
         ks.push(function() { return proc(result); });
         env = kenv;
         return da;
