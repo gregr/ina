@@ -393,28 +393,41 @@ function test_log() {
   console.log(test_ctx.passed, 'out of', test_ctx.total, 'tests passed.');
 }
 
-tests = [
-  evaluate(null),
-  evaluate(true),
-  evaluate(4),
-  evaluate([['lambda', [['x', ['y', null]],
-             ['x', null]]],
-            [5, [6, null]]]),
-  evaluate([['lambda', [['x', ['y', null]],
-             [['pair', ['y', ['x', null]]], null]]],
-            [5, [6, null]]]),
-  evaluate(['if', [['head', [['quote', [[true, false], null]], null]],
-             [['quote', ['yes', null]],
-             [['quote', ['no', null]], null]]]]),
-  evaluate(['if', [['tail', [['quote', [[true, false], null]], null]],
-             [['quote', ['yes', null]],
-             [['quote', ['no', null]], null]]]]),
-  evaluate(['let', [[['x', [8, null]], null],
-            ['x', null]]]),
-  evaluate(['let', [[['x', [9, null]], null],
-            [['let', [[['x', [20, null]], null],
-              ['x', null]]], null]]]),
-  evaluate(['let', [[['x', [9, null]], null],
-            [['let', [[['y', [20, null]], null],
-              ['x', null]]], null]]])
-  ]
+function test() {
+  check_equal('literals',
+      [evaluate(null), evaluate(true), evaluate(4)], [null, true, 4]);
+  check_equal('lambda app 1',
+      evaluate([['lambda', [['x', ['y', null]],
+        ['x', null]]],
+        [5, [6, null]]]), 5);
+  check_equal('lambda app 2',
+      evaluate([['lambda', [['x', ['y', null]],
+        ['y', null]]],
+        [5, [6, null]]]), 6);
+  check_equal('lambda app 2',
+      evaluate([['lambda', [['x', ['y', null]],
+        [['pair', ['y', ['x', null]]], null]]],
+        [5, [6, null]]]), [6, 5]);
+  check_equal('if 1',
+      evaluate(['if', [['head', [['quote', [[true, false], null]], null]],
+        [['quote', ['yes', null]],
+        [['quote', ['no', null]], null]]]]), 'yes');
+  check_equal('if 2',
+      evaluate(['if', [['tail', [['quote', [[true, false], null]], null]],
+        [['quote', ['yes', null]],
+        [['quote', ['no', null]], null]]]]), 'no');
+  check_equal('let 1',
+      evaluate(['let', [[['x', [8, null]], null],
+        ['x', null]]]), 8);
+  check_equal('let 2',
+      evaluate(['let', [[['x', [9, null]], null],
+        [['let', [[['x', [20, null]], null],
+        ['x', null]]], null]]]), 20);
+  check_equal('let 3',
+      evaluate(['let', [[['x', [9, null]], null],
+        [['let', [[['y', [20, null]], null],
+        ['x', null]]], null]]]), 9);
+  test_log();
+}
+
+test();
