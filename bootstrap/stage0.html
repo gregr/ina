@@ -247,18 +247,17 @@ function evaluate(stx) {
         });
   }
   function native_text_to_list(txt) {
-    if (!is_text(t0)) { throw ['cannot text->list non-text', txt]; }
+    if (!is_text(txt)) { throw ['cannot text->list non-text', txt]; }
     var i = txt.length - 1;
     var answer = null;
     for (; i >= 0; --i) { answer = [txt.charAt(i), answer]; }
     return unwind(answer);
   }
-  // NOTE: codePointAt and String.fromCodePoint aren't supported in ES5
   function native_text_to_codes(txt) {
-    if (!is_text(t0)) { throw ['cannot text->codes non-text', txt]; }
+    if (!is_text(txt)) { throw ['cannot text->codes non-text', txt]; }
     var i = txt.length - 1;
     var answer = null;
-    for (; i >= 0; --i) { answer = [txt.charCodeAt(i), answer]; }
+    for (; i >= 0; --i) { answer = [txt.codePointAt(i), answer]; }
     return unwind(answer);
   }
   function native_text_from_codes(cs) {
@@ -266,7 +265,7 @@ function evaluate(stx) {
     cs = syntax_list(cs, err);
     var i = cs.length - 1;
     for (; i >= 0; --i) { if (!is_int32(cs[i])) { throw err; } }
-    return unwind(String.fromCharCode.apply(this, cs));
+    return unwind(String.fromCodePoint.apply(this, cs));
   }
 
   function native_nadd(n0) {
