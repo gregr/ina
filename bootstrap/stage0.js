@@ -199,6 +199,8 @@ function evaluate(stx) {
   function native_pair_huh(datum) { result = is_pair(datum); return unwind(); }
   function native_nil_huh(datum) { result = is_nil(datum); return unwind(); }
   function native_text_huh(datum) { result = is_text(datum); return unwind(); }
+  function native_number_huh(datum) { result = is_number(datum); return unwind(); }
+  function native_int32_huh(datum) { result = is_int32(datum); return unwind(); }
   function make_eq(name, is_x) {
     return function(x0) {
       if (!is_x(x0)) { throw ["invalid argument to '"+name+"'", x0]; }
