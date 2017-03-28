@@ -16,19 +16,19 @@ function is_pair(datum) {
 
 function env_extend(env, datum) { return [datum, env]; }
 function env_ref(env, idx) {
-  for (; idx >= 0; --idx) { env = env[1]; }
+  for (; idx > 0; --idx) { env = env[1]; }
   return env[0];
 }
 function env_find(env, found) {
   var index = 0;
-  for (; env != null; ++index) {
+  for (; env !== null; ++index) {
     if (found(env[0])) { return index; }
     env = env[1];
   }
   return undefined;
 }
 function env_find_name(env, name) {
-  var index = env_find_ref(env, function(b){return (key === b[0]);});
+  var index = env_find(env, function(b){return (name === b[0]);});
   if (index === undefined) { throw ['unbound variable', name]; }
   return index;
 }
