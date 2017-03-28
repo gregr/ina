@@ -364,3 +364,29 @@ function evaluate(stx) {
   while (k !== null) { k = k(); }
   return result;
 }
+
+tests = [
+  evaluate(null),
+  evaluate(true),
+  evaluate(4),
+  evaluate([['lambda', [['x', ['y', null]],
+             ['x', null]]],
+            [5, [6, null]]]),
+  evaluate([['lambda', [['x', ['y', null]],
+             [['pair', ['y', ['x', null]]], null]]],
+            [5, [6, null]]]),
+  evaluate(['if', [['head', [['quote', [[true, false], null]], null]],
+             [['quote', ['yes', null]],
+             [['quote', ['no', null]], null]]]]),
+  evaluate(['if', [['tail', [['quote', [[true, false], null]], null]],
+             [['quote', ['yes', null]],
+             [['quote', ['no', null]], null]]]]),
+  evaluate(['let', [[['x', [8, null]], null],
+            ['x', null]]]),
+  evaluate(['let', [[['x', [9, null]], null],
+            [['let', [[['x', [20, null]], null],
+              ['x', null]]], null]]]),
+  evaluate(['let', [[['x', [9, null]], null],
+            [['let', [[['y', [20, null]], null],
+              ['x', null]]], null]]])
+  ]
