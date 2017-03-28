@@ -170,15 +170,15 @@ function evaluate(stx) {
     // TODO:
   }
   function denote_let(senv, stx) {
-    var err = ['invalid let', orig_stx];
+    var err = ['invalid let', stx];
     stx = syntax_list_of_length(2, stx, err);
-    var bindings = array_map(function(binding) {
-      return syntax_list_of_length(2, binding, err);
+    var bindings = array_map(function(b) {
+      return syntax_list_of_length(2, b, err);
     }, syntax_list(stx[0], err));
-    var params = array_map(function(binding) {
-      if (!is_text(binding[0])) { throw err; } return binding[0];
+    var params = array_map(function(b) {
+      if (!is_text(b[0])) { throw err; } return b[0];
     }, bindings);
-    var args = array_map(function(binding) { return bindings[1]; }, bindings);
+    var args = array_map(function(b) { return b[1]; }, bindings);
     var body = stx[1];
     var dp = build_lambda(senv, array_to_list(params), body);
     return build_app(senv, dp, array_to_list(args));
