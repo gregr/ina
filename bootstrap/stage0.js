@@ -365,6 +365,34 @@ function evaluate(stx) {
   return result;
 }
 
+function deep_equal(a, b) {
+  if (a === b) { return true; }
+  if (is_closure(a) || is_closure(b)) {
+    throw ['procedure equality checking is not supported', a, b];
+  }
+  if (is_pair(a) && is_pair(b)) {
+    return deep_equal(a[0], b[0]) && deep_equal(a[1], b[1]);
+  }
+  return false;
+}
+
+var test_ctx = {verbose: false, passed: 0, total: 0, log: []};
+function check_equal(name, actual, expected) {
+  ++(test_ctx.total);
+  if (deep_equal(actual, expected)) {
+    ++(test_ctx.passed);
+    if (test_ctx.verbose) { test_ctx.log.push([name, actual]); }
+  } else {
+    test_ctx.log.push(
+        ['FAILED', name, 'ACTUAL', actual, 'EXPECTED', expected]);
+  }
+}
+function test_log() {
+  var log = test_ctx.log, l = log.length;
+  for (var i = 0; i < l; ++i) { console.log.apply(this, log[i]); }
+  console.log(test_ctx.passed, 'out of', test_ctx.total, 'tests passed.');
+}
+
 tests = [
   evaluate(null),
   evaluate(true),
