@@ -359,7 +359,7 @@ function evaluate(stx) {
         array_map(function(binding){return binding[1];}, operatives)));
 
   env = initial_env;
-  var k = denote(stx, initial_senv);
+  var k = denote(initial_senv, stx);
   while (k !== null) { k = k(); }
   return result;
 }
