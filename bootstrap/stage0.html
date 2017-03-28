@@ -80,16 +80,15 @@ function evaluate(stx) {
   // efficient to represent continuations as tagged data structures.
   var result, env = null, ks = [function(){return null;}];
 
-  // TODO: Might as well inline this everywhere.
-  function unwind() { return ks.pop(); }
+  function unwind(res) { result = res; return ks.pop(); }
 
   function denote_literal(datum) {
-    return function() { result = datum; return unwind(); };
+    return function() { return unwind(datum); };
   }
   function denote_var(senv, name) {
     var index = env_find_name(senv, name);
     if (env_ref(senv, index)[1] !== false) { throw ['invalid syntax', name]; }
-    return function() { result = env_ref(env, index); return unwind(); };
+    return function() { return unwind(env_ref(env, index)); };
   }
 
   function build_app(senv, dp, as) {
@@ -135,11 +134,10 @@ function evaluate(stx) {
     var dl = build_lambda(senv, params[1], body);
     return function() {
       var clo_env = env;
-      result = function(arg) {
-        env = env_extend(clo_env, arg);
-        return dl;
-      };
-      return unwind();
+      return unwind(function(arg) {
+          env = env_extend(clo_env, arg);
+          return dl;
+          });
     };
   }
   function denote_lambda(senv, stx) {
@@ -195,25 +193,23 @@ function evaluate(stx) {
     ['lambda', denote_lambda]];
 
   function native_procedure_huh(datum) {
-    result = is_closure(datum); return unwind();
+    return unwind(is_closure(datum));
   }
   function native_boolean_huh(datum) {
-    result = is_boolean(datum); return unwind();
+    return unwind(is_boolean(datum));
   }
-  function native_pair_huh(datum) { result = is_pair(datum); return unwind(); }
-  function native_nil_huh(datum) { result = is_nil(datum); return unwind(); }
-  function native_text_huh(datum) { result = is_text(datum); return unwind(); }
-  function native_number_huh(datum) { result = is_number(datum); return unwind(); }
-  function native_int32_huh(datum) { result = is_int32(datum); return unwind(); }
+  function native_pair_huh(datum) { return unwind(is_pair(datum)); }
+  function native_nil_huh(datum) { return unwind(is_nil(datum)); }
+  function native_text_huh(datum) { return unwind(is_text(datum)); }
+  function native_number_huh(datum) { return unwind(is_number(datum)); }
+  function native_int32_huh(datum) { return unwind(is_int32(datum)); }
   function make_eq(name, is_x) {
     return function(x0) {
       if (!is_x(x0)) { throw ["invalid argument to '"+name+"'", x0]; }
-      result = function(x1) {
-        if (!is_x(x1)) { throw ["invalid argument to '"+name+"'", x1]; }
-        result = (x0 === x1);
-        return unwind();
-      };
-      return unwind();
+      return unwind(function(x1) {
+          if (!is_x(x1)) { throw ["invalid argument to '"+name+"'", x1]; }
+          return unwind(x0 === x1);
+          });
     };
   }
   var native_text_eq = make_eq('text=?', is_text);
@@ -222,48 +218,40 @@ function evaluate(stx) {
   function make_lt(name, is_x) {
     return function(x0) {
       if (!is_x(x0)) { throw ["invalid argument to '"+name+"'", x0]; }
-      result = function(x1) {
-        if (!is_x(x1)) { throw ["invalid argument to '"+name+"'", x1]; }
-        result = (x0 < x1);
-        return unwind();
-      };
-      return unwind();
+      return unwind(function(x1) {
+          if (!is_x(x1)) { throw ["invalid argument to '"+name+"'", x1]; }
+          return unwind(x0 < x1);
+          });
     };
   }
   var native_text_lt = make_lt('text<?', is_text);
   var native_number_lt = make_lt('number<?', is_number);
   var native_int32_lt = make_lt('int32<?', is_int32);
   function native_pair(h) {
-    result = function(t) { result = [h, t]; return unwind(); };
-    return unwind();
+    return unwind(function(t) { return unwind([h, t]); });
   }
   function native_pair_head(p) {
     if (!is_pair(p)) { throw ['cannot take head of non-pair', p]; }
-    result = p[0];
-    return unwind();
+    return unwind(p[0]);
   }
   function native_pair_tail(p) {
     if (!is_pair(p)) { throw ['cannot take tail of non-pair', p]; }
-    result = p[1];
-    return unwind();
+    return unwind(p[1]);
   }
 
   function native_text_concat(t0) {
     if (!is_text(t0)) { throw ['cannot text-concat non-text', t0]; }
-    result = function(t1) {
-      if (!is_text(t1)) { throw ['cannot text-concat non-text', t1]; }
-      result = t0.concat(t1);
-      return unwind();
-    };
-    return unwind();
+    return unwind(function(t1) {
+        if (!is_text(t1)) { throw ['cannot text-concat non-text', t1]; }
+        return unwind(t0.concat(t1));
+        });
   }
   function native_text_to_list(txt) {
     if (!is_text(t0)) { throw ['cannot text->list non-text', txt]; }
     var i = txt.length - 1;
     var answer = null;
     for (; i >= 0; --i) { answer = [txt.charAt(i), answer]; }
-    result = answer;
-    return unwind();
+    return unwind(answer);
   }
   // NOTE: codePointAt and String.fromCodePoint aren't supported in ES5
   function native_text_to_codes(txt) {
@@ -271,57 +259,50 @@ function evaluate(stx) {
     var i = txt.length - 1;
     var answer = null;
     for (; i >= 0; --i) { answer = [txt.charCodeAt(i), answer]; }
-    result = answer;
-    return unwind();
+    return unwind(answer);
   }
   function native_text_from_codes(cs) {
     var err = ['invalid text codes', cs];
     cs = syntax_list(cs, err);
     var i = cs.length - 1;
     for (; i >= 0; --i) { if (!is_int32(cs[i])) { throw err; } }
-    result = String.fromCharCode.apply(this, cs);
-    return unwind();
+    return unwind(String.fromCharCode.apply(this, cs));
   }
 
   function native_nadd(n0) {
     if (!is_number(n0)) { throw ['cannot add non-number', n0]; }
-    result = function(n1) {
-      if (!is_number(n1)) { throw ['cannot add non-number', n1]; }
-      result = n0 + n1; return unwind();
-    };
-    return unwind();
+    return unwind(function(n1) {
+        if (!is_number(n1)) { throw ['cannot add non-number', n1]; }
+        return unwind(n0 + n1);
+        });
   }
   function native_nsub(n0) {
     if (!is_number(n0)) { throw ['cannot subtract non-number', n0]; }
-    result = function(n1) {
-      if (!is_number(n1)) { throw ['cannot subtract non-number', n1]; }
-      result = n0 - n1; return unwind();
-    };
-    return unwind();
+    return unwind(function(n1) {
+        if (!is_number(n1)) { throw ['cannot subtract non-number', n1]; }
+        return unwind(n0 - n1);
+        });
   }
   function native_nmul(n0) {
     if (!is_number(n0)) { throw ['cannot multiply non-number', n0]; }
-    result = function(n1) {
-      if (!is_number(n1)) { throw ['cannot multiply non-number', n1]; }
-      result = n0 * n1; return unwind();
-    };
-    return unwind();
+    return unwind(function(n1) {
+        if (!is_number(n1)) { throw ['cannot multiply non-number', n1]; }
+        return unwind(n0 * n1);
+        });
   }
   function native_ndiv(n0) {
     if (!is_number(n0)) { throw ['cannot divide non-number', n0]; }
-    result = function(n1) {
-      if (!is_number(n1)) { throw ['cannot divide non-number', n1]; }
-      result = n0 / n1; return unwind();
-    };
-    return unwind();
+    return unwind(function(n1) {
+        if (!is_number(n1)) { throw ['cannot divide non-number', n1]; }
+        return unwind(n0 / n1);
+        });
   }
   function native_nmod(n0) {
     if (!is_number(n0)) { throw ['cannot modulo non-number', n0]; }
-    result = function(n1) {
-      if (!is_number(n1)) { throw ['cannot modulo non-number', n1]; }
-      result = n0 % n1; return unwind();
-    };
-    return unwind();
+    return unwind(function(n1) {
+        if (!is_number(n1)) { throw ['cannot modulo non-number', n1]; }
+        return unwind(n0 % n1);
+        });
   }
 
   // TODO: More text and/or numerical operations?
