@@ -120,8 +120,8 @@ function evaluate(stx) {
       if (is_text(stx[0])) {
         var special = env_lookup(senv, stx[0]);
         if (typeof special === 'function') { return special(senv, stx[1]); }
-        else { return denote_app(senv, stx); }
       }
+      return denote_app(senv, stx);
     } else { throw ['unknown syntax', stx]; }
   }
 
