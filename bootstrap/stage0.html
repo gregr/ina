@@ -39,6 +39,87 @@ function token_dot(src, i, len) {
           (i+1 >= len || ch_boundary(src.charAt(i+1))));
 }
 
+var re_slash_text = /\\[^u]|\\u[0-9a-fA-F]{4}/g;
+function decode_text_slash(es) {
+  switch (es[1]) {
+    case '0': return '\0';
+    case 'b': return '\b';
+    case 't': return '\t';
+    case 'n': return '\n';
+    case 'v': return '\v';
+    case 'f': return '\f';
+    case 'r': return '\r';
+    // TODO: perform hex conversion directly for \\u[0-9a-fA-F]{4}.
+    //case 'u': return eval('"' + es + '"');
+    case '\n': return '';
+    default: return es[1];
+  }
+}
+function decode_text(src, start, end) {
+  return src.slice(start, end).replace(re_slash_text, decode_text_slash);
+}
+
+var bad_leading = ['#'];
+var bad_anywhere = ['\\',"'",'`',',',';','"','(',')','[',']','{','}','\0','\b'];
+function text_should_quote(text) {
+  var len = text.length;
+  if (token_numeric(text, 0, len) || token_dot(text, 0, len)) { return true; }
+  if (len === 0) { return true; }
+  var ch = text.charAt(0), blen = bad_leading.length;
+  for (var j = 0; j < blen; ++j) {
+    if (ch === bad_leading[j]) { return true; }
+  }
+  var blen = bad_anywhere.length;
+  for (var i = 0; i < len; ++i) {
+    var ch = text.charAt(i), cc = text.codePointAt(i);
+    if (cc_space(cc)) { return true; }
+    for (var j = 0; j < blen; ++j) {
+      if (ch === bad_anywhere[j]) { return true; }
+    }
+  }
+  return false;
+}
+function text_repeat(text, count) {
+  var result = text;
+  for (var i = 1; i < count; ++i) { result += text; }
+  return result;
+}
+function encode_char(ch) {
+  switch (ch) {
+    case '\0': return '\\0';
+    case '\b': return '\\b';
+    case '\t': return '\\t';
+    case '\n': return '\\n';
+    case '\v': return '\\v';
+    case '\f': return '\\f';
+    case '\r': return '\\r';
+    case '"':  return '\\"';
+    default:
+      var cc = ch.codePointAt(0);
+      if (cc != 32 && cc_space(cc)) {
+        var ustr = cc.toString(16);
+        return '\\u' + text_repeat('0', 4 - ustr.length) + ustr;
+      }
+      return;
+  }
+}
+function text_quoted(text) {
+  var quoted = '"', len = text.length, h = 0, i = 0;
+  for (; i < len; ++i) {
+    var ch = encode_char(text.charAt(i));
+    if (ch !== undefined) {
+      quoted += text.slice(h, i) + ch;
+      h = i+1;
+    }
+  }
+  quoted += text.slice(h, i) + '"';
+  return quoted;
+}
+
+// TODO: drop leading zeroes to avoid octal encoding surprises.
+// TODO: do not use eval.
+// function decode_number(src, start, end) { return eval(src.slice(start, end)); }
+
 function is_nil(datum) { return datum === null; }
 function is_closure(datum) { return typeof datum === 'function'; }
 function is_boolean(datum) { return typeof datum === 'boolean'; }
