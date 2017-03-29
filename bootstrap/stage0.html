@@ -5,6 +5,40 @@
 
 // TODO: read(/annotate), write
 
+function cc_digit_decimal(cc) { return cc >= 48 && cc <= 57; }
+function cc_digit_hexadecimal(cc) {
+  return cc_digit_decimal(cc) ||
+    (cc >= 65 && cc <= 70) || (cc >= 97 && cc <= 102);
+  }
+function cc_digit_binary(cc) { return cc === 48 || cc === 49; }
+function cc_hspace(cc) {
+  return cc === 32 || cc === 9 || cc === 160 || cc >= 0x2000 && cc <= 0x200A;
+}
+function cc_vspace(cc) {
+  return cc >= 10 && cc <= 13 || cc === 133 || cc === 0x2028 || cc === 0x02029;
+}
+function cc_space(cc) { return cc_hspace(cc) || cc_vspace(cc); }
+function ch_boundary(ch) {
+  switch (ch) {
+    case '(': case '[': case '{': case ')': case ']': case '}': case '"':
+    case "'": case '`': case ',': case ';': return true;
+    default: return cc_space(ch.codePointAt(0));
+  }
+}
+
+function token_numeric(src, i, len) {
+  var ch = src.charAt(i);
+  return (cc_digit_decimal(src.codePointAt(i)) ||
+          ((ch === '-' || ch === '+') && i+1 < len &&
+           (cc_digit_decimal(src.codePointAt(i+1)) ||
+            src.charAt(i+1) === '.')));
+}
+
+function token_dot(src, i, len) {
+  return (src.charAt(i) === '.' &&
+          (i+1 >= len || ch_boundary(src.charAt(i+1))));
+}
+
 function is_nil(datum) { return datum === null; }
 function is_closure(datum) { return typeof datum === 'function'; }
 function is_boolean(datum) { return typeof datum === 'boolean'; }
