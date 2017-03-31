@@ -116,6 +116,25 @@ function text_quoted(text) {
   return quoted;
 }
 
+// TODO: manage token count.
+function stream() {
+  return {src: source, token: 0, pos: 0, line: 0, col: 0, msg: ''};
+}
+function stream_finish(ss) { ss.pos = ss.src.length; }
+function stream_finished(ss) { return ss.pos === ss.src.length; }
+function stream_unexpected(ss, str) { ss.msg = 'unexpected `'+str+'`'; }
+function stream_expected(ss, str) { ss.msg = 'expected `'+str+'`'; }
+function stream_skip_whitespace(ss) {
+  var src = ss.src, i = ss.pos, len = src.length;
+  for (; i < len; ++i) {
+    var cc = src.charCodeAt(i);
+    if (cc_vspace(cc)) { ++ss.line; ss.col = 0; }
+    else if (cc_hspace(cc)) { ++ss.col; }
+    else { break; }
+  }
+  ss.pos = i; return i;
+}
+
 // TODO: drop leading zeroes to avoid octal encoding surprises.
 // TODO: do not use eval.
 // function decode_number(src, start, end) { return eval(src.slice(start, end)); }
