@@ -6,9 +6,11 @@
 // TODO: read(/annotate), write
 
 function cc_digit_decimal(cc) { return cc >= 48 && cc <= 57; }
+function cc_digit_hex_alpha_upper(cc) { return cc >= 65 && cc <= 70; }
+function cc_digit_hex_alpha_lower(cc) { return cc >= 97 && cc <= 102; }
 function cc_digit_hexadecimal(cc) {
   return cc_digit_decimal(cc) ||
-    (cc >= 65 && cc <= 70) || (cc >= 97 && cc <= 102);
+    cc_digit_hex_alpha_lower(cc) || cc_digit_hex_alpha_upper(cc);
   }
 function cc_digit_binary(cc) { return cc === 48 || cc === 49; }
 function cc_hspace(cc) {
@@ -39,7 +41,23 @@ function token_dot(src, i, len) {
           (i+1 >= len || ch_boundary(src.charAt(i+1))));
 }
 
-var re_slash_text = /\\[^u]|\\u[0-9a-fA-F]{4}/g;
+function hex_to_int(hex) {
+  var orig = hex;
+  var hex = Array.from(hex);
+  var len = hex.length;
+  var result = 0;
+  for (var i = 0; i < len; ++i) {
+    result *= 16;
+    var cc = hex[i].codePointAt(0);
+    if (cc_digit_decimal(cc))              { result += cc - 48; }
+    else if (cc_digit_hex_alpha_upper(cc)) { result += cc - 65 + 10; }
+    else if (cc_digit_hex_alpha_lower(cc)) { result += cc - 97 + 10; }
+    else { throw ['invalid hexadecimal', orig]; }
+  }
+  return result;
+}
+function hex_to_str(hex) { return String.fromCodePoint(hex_to_int(hex)); }
+var re_slash_text = /\\[^u]|\\u\{[0-9a-fA-F]*\}/g;
 function decode_text_slash(es) {
   switch (es[1]) {
     case '0': return '\0';
@@ -49,8 +67,7 @@ function decode_text_slash(es) {
     case 'v': return '\v';
     case 'f': return '\f';
     case 'r': return '\r';
-    // TODO: perform hex conversion directly for \\u[0-9a-fA-F]{4}.
-    //case 'u': return eval('"' + es + '"');
+    case 'u': return hex_to_str(es.slice(3, es.length-1));
     case '\n': return '';
     default: return es[1];
   }
