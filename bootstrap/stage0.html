@@ -61,12 +61,14 @@ var re_slash_text = /\\[^u]|\\u\{[0-9a-fA-F]*\}/g;
 function decode_text_slash(es) {
   switch (es[1]) {
     case '0': return '\0';
+    case 'a': return String.fromCodePoint(7);
     case 'b': return '\b';
     case 't': return '\t';
     case 'n': return '\n';
     case 'v': return '\v';
     case 'f': return '\f';
     case 'r': return '\r';
+    case 'e': return String.fromCodePoint(27);
     case 'u': return hex_to_str(es.slice(3, es.length-1));
     case '\n': return '';
     default: return es[1];
@@ -113,7 +115,9 @@ function encode_char(ch) {
     case '"':  return '\\"';
     default:
       var cc = ch.codePointAt(0);
-      if (cc != 32 && cc_space(cc)) {
+      if (cc === 7) { return '\\a'; }
+      else if (cc === 27) { return '\\e'; }
+      else if (cc !== 32 && cc_space(cc)) {
         var ustr = cc.toString(16);
         return '\\u' + text_repeat('0', 4 - ustr.length) + ustr;
       }
