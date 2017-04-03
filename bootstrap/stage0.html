@@ -5,9 +5,6 @@
 
 // TODO: handle unicode issues.
 // String#normalize('NFC') all inputs
-// ban String's length, charAt and codePointAt beyond 0,
-// use Array.from(string) to isolate symbols for length/pos/slice/etc.
-// then Array#join('') to reconstitute string
 // test using:
 //   i18n = 'Iñtërnâtiônàlizætiøn☃💩'
 //   marks = 'Z͑ͫ̓ͪ̂ͫ̽͏̴̙̤̞͉͚̯̞̠͍A̴̵̜̰͔ͫ͗͢L̠ͨͧͩ͘G̴̻͈͍͔̹̑͗̎̅͛́Ǫ̵̹̻̝̳͂̌̌͘!͖̬̰̙̗̿̋ͥͥ̂ͣ̐́́͜͞'
@@ -434,26 +431,22 @@ function evaluate(stx) {
         return unwind(t0.concat(t1));
         });
   }
-  function native_text_to_list(txt) {
-    if (!is_text(txt)) { throw ['cannot text->list non-text', txt]; }
-    var i = txt.length - 1;
+  function native_text_to_chars(txt) {
+    if (!is_text(txt)) { throw ['cannot text->chars non-text', txt]; }
+    var txt = Array.from(txt);
     var answer = null;
-    for (; i >= 0; --i) { answer = [txt.charAt(i), answer]; }
+    for (var i = txt.length-1; i >= 0; --i) { answer = [txt[i], answer]; }
     return unwind(answer);
   }
-  function native_text_to_codes(txt) {
-    if (!is_text(txt)) { throw ['cannot text->codes non-text', txt]; }
-    var i = txt.length - 1;
-    var answer = null;
-    for (; i >= 0; --i) { answer = [txt.codePointAt(i), answer]; }
-    return unwind(answer);
+  function native_char_to_code(ch) {
+    if (!is_text(ch)) { throw ['cannot char->code with non-char', ch]; }
+    var txt = Array.from(ch);
+    if (txt.length !== 1) { throw ['char->code expects one character', ch]; }
+    return unwind(cc_at(txt, 0));
   }
-  function native_text_from_codes(cs) {
-    var err = ['invalid text codes', cs];
-    cs = syntax_list(cs, err);
-    var i = cs.length - 1;
-    for (; i >= 0; --i) { if (!is_int32(cs[i])) { throw err; } }
-    return unwind(String.fromCodePoint.apply(this, cs));
+  function native_char_from_code(code) {
+    if (!is_int32(code)) { throw ['invalid text code', code]; }
+    return unwind(String.fromCodePoint(code));
   }
 
   function native_nadd(n0) {
@@ -511,9 +504,9 @@ function evaluate(stx) {
     ['head', native_pair_head],
     ['tail', native_pair_tail],
     ['text-concat', native_text_concat],
-    ['text->list', native_text_to_list],
-    ['text->codes', native_text_to_codes],
-    ['text<-codes', native_text_from_codes],
+    ['text->chars', native_text_to_chars],
+    ['char->code', native_char_to_code],
+    ['char<-code', native_char_from_code],
     ['+', native_nadd],
     ['-', native_nsub],
     ['*', native_nmul],
