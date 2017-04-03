@@ -102,7 +102,7 @@ function decode_text(src, start, end) {
 var bad_leading = ['#'];
 var bad_anywhere = ['\\',"'",'`',',',';','"','(',')','[',']','{','}','\0','\b'];
 function ch_in(ch, xs) {
-  for (var j = xs.length; j >= 0; --j) { if (ch === xs[j]) { return true; } }
+  for (var j = xs.length-1; j >= 0; --j) { if (ch === xs[j]) { return true; } }
   return false;
 }
 function text_should_quote(text) {
