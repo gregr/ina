@@ -3,7 +3,16 @@
 <script>
 'use strict';
 
-// TODO: read(/annotate), write
+// TODO: handle unicode issues.
+// String#normalize('NFC') all inputs
+// ban String's length, charAt and codePointAt beyond 0,
+// use Array.from(string) to isolate symbols for length/pos/slice/etc.
+// then Array#join('') to reconstitute string
+// test using:
+//   i18n = 'Iñtërnâtiônàlizætiøn☃💩'
+//   marks = 'Z͑ͫ̓ͪ̂ͫ̽͏̴̙̤̞͉͚̯̞̠͍A̴̵̜̰͔ͫ͗͢L̠ͨͧͩ͘G̴̻͈͍͔̹̑͗̎̅͛́Ǫ̵̹̻̝̳͂̌̌͘!͖̬̰̙̗̿̋ͥͥ̂ͣ̐́́͜͞'
+//   hangul = '깍'
+//   jamo = ['ᄁ', 'ᅡ', 'ᆨ']
 
 function cc_at(src, i) { return src[i].codePointAt(0); }
 function cc_digit_decimal(cc) { return cc >= 48 && cc <= 57; }
@@ -165,9 +174,24 @@ function stream_skip_whitespace(ss) {
   ss.pos = i; return i;
 }
 
+// TODO: read, wrapping read_stream
+
+// TODO: write
+
 // TODO: drop leading zeroes to avoid octal encoding surprises.
 // TODO: do not use eval.
+// [-,+][nan,inf]
 // function decode_number(src, start, end) { return eval(src.slice(start, end)); }
+
+// TODO:
+// ,@ unquote-splicing
+// #' syntax
+// #` quasisyntax
+// #, unsyntax
+// #,@ unsyntax-splicing
+
+// TODO: comments
+// ; #||# #;
 
 function is_nil(datum) { return datum === null; }
 function is_closure(datum) { return typeof datum === 'function'; }
