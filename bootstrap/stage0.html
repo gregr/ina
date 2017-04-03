@@ -21,6 +21,11 @@ function cc_vspace(cc) {
   return cc >= 10 && cc <= 13 || cc === 133 || cc === 0x2028 || cc === 0x02029;
 }
 function cc_space(cc) { return cc_hspace(cc) || cc_vspace(cc); }
+function cc_nonprintable(cc) {
+  // TODO: find other control character ranges.
+  return (cc < 9 || (cc > 13 && cc < 32) || (cc >= 127 && cc < 160)
+      || (cc >= 0xfff9 && cc <= 0xffff));
+}
 function ch_boundary(ch) {
   switch (ch) {
     case '(': case '[': case '{': case ')': case ']': case '}': case '"':
@@ -89,7 +94,8 @@ function text_should_quote(text) {
   if ((len === 0) || (token_numeric(s, 0, len) || token_dot(s, 0, len))
       || (ch_in(s[0], bad_leading))) { return true; }
   for (var i = 0; i < len; ++i) {
-    if (cc_space(cc_at(s, i)) || ch_in(s[i], bad_anywhere)) { return true; }
+    if (cc_nonprintable(cc_at(s, i)) || cc_space(cc_at(s, i))
+        || ch_in(s[i], bad_anywhere)) { return true; }
   }
   return false;
 }
@@ -112,9 +118,8 @@ function encode_char(ch) {
       var cc = ch.codePointAt(0);
       if (cc === 7) { return '\\a'; }
       else if (cc === 27) { return '\\e'; }
-      else if (cc !== 32 && cc_space(cc)) {
-        var ustr = cc.toString(16);
-        return '\\u' + text_repeat('0', 4 - ustr.length) + ustr;
+      else if (cc_nonprintable(cc) || (cc !== 32 && cc_space(cc))) {
+        return '\\u{' + cc.toString(16) + '}';
       }
       return;
   }
