@@ -5,6 +5,7 @@
 
 // TODO: read(/annotate), write
 
+function cc_at(src, i) { return src[i].codePointAt(0); }
 function cc_digit_decimal(cc) { return cc >= 48 && cc <= 57; }
 function cc_digit_hex_alpha_upper(cc) { return cc >= 65 && cc <= 70; }
 function cc_digit_hex_alpha_lower(cc) { return cc >= 97 && cc <= 102; }
@@ -29,16 +30,13 @@ function ch_boundary(ch) {
 }
 
 function token_numeric(src, i, len) {
-  var ch = src.charAt(i);
-  return (cc_digit_decimal(src.codePointAt(i)) ||
-          ((ch === '-' || ch === '+') && i+1 < len &&
-           (cc_digit_decimal(src.codePointAt(i+1)) ||
-            src.charAt(i+1) === '.')));
+  return (cc_digit_decimal(cc_at(src, i)) ||
+          ((src[i] === '-' || src[i] === '+') && i+1 < len &&
+           (cc_digit_decimal(cc_at(src, i+1)) || src[i+1] === '.')));
 }
 
 function token_dot(src, i, len) {
-  return (src.charAt(i) === '.' &&
-          (i+1 >= len || ch_boundary(src.charAt(i+1))));
+  return (src[i] === '.' && (i+1 >= len || ch_boundary(src[i+1])));
 }
 
 function hex_to_int(hex) {
@@ -48,7 +46,7 @@ function hex_to_int(hex) {
   var result = 0;
   for (var i = 0; i < len; ++i) {
     result *= 16;
-    var cc = hex[i].codePointAt(0);
+    var cc = cc_at(hex, i);
     if (cc_digit_decimal(cc))              { result += cc - 48; }
     else if (cc_digit_hex_alpha_upper(cc)) { result += cc - 65 + 10; }
     else if (cc_digit_hex_alpha_lower(cc)) { result += cc - 97 + 10; }
@@ -57,8 +55,8 @@ function hex_to_int(hex) {
   return result;
 }
 function hex_to_str(hex) { return String.fromCodePoint(hex_to_int(hex)); }
-var re_slash_text = /\\[^u]|\\u\{[0-9a-fA-F]*\}/g;
-function decode_text_slash(es) {
+var re_escaped = /\\[^u]|\\u\{[0-9a-fA-F]*\}/g;
+function decode_text_escaped(es) {
   switch (es[1]) {
     case '0': return '\0';
     case 'a': return String.fromCodePoint(7);
@@ -75,26 +73,23 @@ function decode_text_slash(es) {
   }
 }
 function decode_text(src, start, end) {
-  return src.slice(start, end).replace(re_slash_text, decode_text_slash);
+  return src.slice(start, end).join('').replace(
+      re_escaped, decode_text_escaped);
 }
 
 var bad_leading = ['#'];
 var bad_anywhere = ['\\',"'",'`',',',';','"','(',')','[',']','{','}','\0','\b'];
+function ch_in(ch, xs) {
+  for (var j = xs.length; j >= 0; --j) { if (ch === xs[j]) { return true; } }
+  return false;
+}
 function text_should_quote(text) {
-  var len = text.length;
-  if (token_numeric(text, 0, len) || token_dot(text, 0, len)) { return true; }
-  if (len === 0) { return true; }
-  var ch = text.charAt(0), blen = bad_leading.length;
-  for (var j = 0; j < blen; ++j) {
-    if (ch === bad_leading[j]) { return true; }
-  }
-  var blen = bad_anywhere.length;
+  var s = Array.from(text);
+  var len = s.length;
+  if ((len === 0) || (token_numeric(s, 0, len) || token_dot(s, 0, len))
+      || (ch_in(s[0], bad_leading))) { return true; }
   for (var i = 0; i < len; ++i) {
-    var ch = text.charAt(i), cc = text.codePointAt(i);
-    if (cc_space(cc)) { return true; }
-    for (var j = 0; j < blen; ++j) {
-      if (ch === bad_anywhere[j]) { return true; }
-    }
+    if (cc_space(cc_at(s, i)) || ch_in(s[i], bad_anywhere)) { return true; }
   }
   return false;
 }
@@ -125,11 +120,12 @@ function encode_char(ch) {
   }
 }
 function text_quoted(text) {
-  var quoted = '"', len = text.length, h = 0, i = 0;
+  var s = Array.from(text);
+  var quoted = '"', len = s.length, h = 0, i = 0;
   for (; i < len; ++i) {
-    var ch = encode_char(text.charAt(i));
+    var ch = encode_char(s[i]);
     if (ch !== undefined) {
-      quoted += text.slice(h, i) + ch;
+      quoted += s.slice(h, i).join('') + ch;
       h = i+1;
     }
   }
