@@ -22,7 +22,15 @@ function cc_vspace(cc) {
 }
 function cc_space(cc) { return cc_hspace(cc) || cc_vspace(cc); }
 function cc_nonprintable(cc) {
-  // TODO: find other control character ranges.
+  // TODO: anything non-graphical and non-blank.  So, anything not in these:
+  // http://unicode.org/cldr/utility/list-unicodeset.jsp?a=%5Cp%7BL%7D%7C%5Cp%7BN%7D%7C%5Cp%7BS%7D%7C%5Cp%7BP%7D%7C%5Cp%7BZs%7D&abb=on&c=on&esc=on&g=&i=
+  //   hblank:         Zs, \t
+  //   alphabetic,  L: Ll, Lm, Lo, Lt, Lu
+  //   numeric,     N: Nd, Nl, No
+  //   symbolic,    S: Sc, Sk, Sm, So
+  //   punctuation, P: Pc, Pd, Pe, Pf, Pi, Po, Ps
+  //   mark,        M: Mc, Me, Mn
+  // This is a hack.
   return (cc < 9 || (cc > 13 && cc < 32) || (cc >= 127 && cc < 160)
       || (cc >= 0xfff9 && cc <= 0xffff));
 }
