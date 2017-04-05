@@ -179,7 +179,7 @@ function stream_skip_whitespace(ss) {
 // [-,+][nan,inf]
 function read_stream_number(base, ss) {
   var src = ss.src, i = ss.pos, len = src.length, needs_digits = true;
-  var whole = 0, fraction = 0, exponent = 0;
+  var whole = 0, fraction = 0, exponent = 0, esign = 1;
   var cc_digit;
   switch (base) {
     case 2: cc_digit = cc_digit_binary; break;
@@ -194,8 +194,7 @@ function read_stream_number(base, ss) {
     }
     ss.col += i - ss.pos;
     ss.pos = i;
-    console.log(whole, fraction, base, exponent);
-    return (whole + fraction) * Math.pow(base, exponent);
+    return (whole + fraction) * Math.pow(base, esign * exponent);
   }
   for (; i < len; ++i) {
     var cc = cc_at(src, i);
@@ -210,16 +209,16 @@ function read_stream_number(base, ss) {
       var cc = cc_at(src, i);
       if (!cc_digit(cc)) { break; }
       needs_digits = false;
-      console.log(whole, fraction, base, exponent, hex_digit_cc_to_int(cc), divisor);
       fraction += hex_digit_cc_to_int(cc) / divisor;
       divisor *= base;
     }
   }
   if (i === len) { return decode(); }
   switch (src[i]) {
-    case 'e': case 'E':
+    case 'e': case 'E': case 'l': case 'L':
       needs_digits = true; if (++i === len) { return decode(); }
-      var ch = src[i]; if (ch === '-' || ch === '+') { ++i; }
+      var ch = src[i]; if ((ch === '-') || (ch === '+')) { ++i; }
+      if (ch === '-') { esign = -1; }
       for (; i < len; ++i) {
         var cc = cc_at(src, i);
         if (!cc_digit(cc)) { break; }
