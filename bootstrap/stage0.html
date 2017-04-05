@@ -173,14 +173,66 @@ function stream_skip_whitespace(ss) {
   ss.pos = i; return i;
 }
 
+// TODO:
+// base due to #x #d #o #b
+// -+ checking should happen externally
+// [-,+][nan,inf]
+function read_stream_number(base, ss) {
+  var src = ss.src, i = ss.pos, len = src.length, needs_digits = true;
+  var whole = 0, fraction = 0, exponent = 0;
+  var cc_digit;
+  switch (base) {
+    case 2: cc_digit = cc_digit_binary; break;
+    case 8: cc_digit = cc_digit_octal; break;
+    case 10: cc_digit = cc_digit_decimal; break;
+    case 16: cc_digit = cc_digit_hexadecimal; break;
+    default: throw ['invalid base', base];
+  }
+  var decode = function() {
+    if (needs_digits || (i < len && !ch_boundary(src[i]))) {
+      ss.msg = 'invalid number'; return;
+    }
+    ss.col += i - ss.pos;
+    ss.pos = i;
+    console.log(whole, fraction, base, exponent);
+    return (whole + fraction) * Math.pow(base, exponent);
+  }
+  for (; i < len; ++i) {
+    var cc = cc_at(src, i);
+    if (!cc_digit(cc)) { break; }
+    needs_digits = false;
+    whole = (whole * base) + hex_digit_cc_to_int(cc);
+  }
+  if (i === len) { return decode(); }
+  if (src[i] === '.') {
+    var divisor = base;
+    for (++i; i < len; ++i) {
+      var cc = cc_at(src, i);
+      if (!cc_digit(cc)) { break; }
+      needs_digits = false;
+      console.log(whole, fraction, base, exponent, hex_digit_cc_to_int(cc), divisor);
+      fraction += hex_digit_cc_to_int(cc) / divisor;
+      divisor *= base;
+    }
+  }
+  if (i === len) { return decode(); }
+  switch (src[i]) {
+    case 'e': case 'E':
+      needs_digits = true; if (++i === len) { return decode(); }
+      var ch = src[i]; if (ch === '-' || ch === '+') { ++i; }
+      for (; i < len; ++i) {
+        var cc = cc_at(src, i);
+        if (!cc_digit(cc)) { break; }
+        needs_digits = false;
+        exponent = (exponent * base) + hex_digit_cc_to_int(cc);
+      }
+  }
+  return decode();
+}
+
 // TODO: read, wrapping read_stream
 
 // TODO: write
-
-// TODO: drop leading zeroes to avoid octal encoding surprises.
-// TODO: do not use eval.
-// [-,+][nan,inf]
-// function decode_number(src, start, end) { return eval(src.slice(start, end)); }
 
 // TODO:
 // ,@ unquote-splicing
