@@ -163,7 +163,7 @@ function stream_expected(ss, str) { ss.msg = 'expected `'+str+'`'; }
 function stream_skip_whitespace(ss) {
   var src = ss.src, i = ss.pos, len = src.length;
   for (; i < len; ++i) {
-    var cc = src.charCodeAt(i);
+    var cc = cc_at(src, i);
     if (cc_vspace(cc)) { ++ss.line; ss.col = 0; }
     else if (cc_hspace(cc)) { ++ss.col; }
     else { break; }
