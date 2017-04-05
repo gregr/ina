@@ -58,18 +58,19 @@ function token_dot(src, i, len) {
   return (src[i] === '.' && (i+1 >= len || ch_boundary(src[i+1])));
 }
 
+function hex_digit_cc_to_int(cc) {
+  if (cc_digit_decimal(cc))              { return cc - 48; }
+  else if (cc_digit_hex_alpha_upper(cc)) { return cc - 65 + 10; }
+  else if (cc_digit_hex_alpha_lower(cc)) { return cc - 97 + 10; }
+}
+
 function hex_to_int(hex) {
-  var orig = hex;
-  var hex = Array.from(hex);
   var len = hex.length;
   var result = 0;
   for (var i = 0; i < len; ++i) {
-    result *= 16;
     var cc = cc_at(hex, i);
-    if (cc_digit_decimal(cc))              { result += cc - 48; }
-    else if (cc_digit_hex_alpha_upper(cc)) { result += cc - 65 + 10; }
-    else if (cc_digit_hex_alpha_lower(cc)) { result += cc - 97 + 10; }
-    else { throw ['invalid hexadecimal', orig]; }
+    if (!cc_digit_hexadecimal(cc)) { throw ['invalid hexadecimal', orig]; }
+    result = (result * 16) + hex_digit_cc_to_int(cc);
   }
   return result;
 }
