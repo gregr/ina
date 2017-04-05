@@ -153,8 +153,8 @@ function text_quoted(text) {
 }
 
 // TODO: manage token count.
-function stream() {
-  return {src: source, token: 0, pos: 0, line: 0, col: 0, msg: ''};
+function stream(source) {
+  return {src: Array.from(source), token: 0, pos: 0, line: 0, col: 0, msg: ''};
 }
 function stream_finish(ss) { ss.pos = ss.src.length; }
 function stream_finished(ss) { return ss.pos === ss.src.length; }
