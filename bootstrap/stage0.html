@@ -225,7 +225,6 @@ function text_quoted(text) {
 function stream(source) {
   return {src: Array.from(source), token: 0, pos: 0, line: 0, col: 0, msg: ''};
 }
-function stream_finish(ss) { ss.pos = ss.src.length; }
 function stream_finished(ss) { return ss.pos === ss.src.length; }
 function stream_unexpected(ss, str) { ss.msg = 'unexpected `'+str+'`'; }
 function stream_expected(ss, str) { ss.msg = 'expected `'+str+'`'; }
@@ -389,7 +388,7 @@ function read_stream(ss) {
   var src = ss.src, len = src.length, i;
   while (true) {
     i = stream_skip_whitespace(ss);
-    if (i >= len) { return stream_finish(ss); }
+    if (i >= len) { ss.msg = 'no data'; return; }
     var ch = src[i];
     switch (ch) {
       case '(': case '[': case '{':
