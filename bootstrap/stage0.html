@@ -58,12 +58,14 @@ function syntax_list(xs, err) {
   if (!is_nil(xs)) { throw err; }
   return result;
 }
-function array_to_list(xs) {
+function array_to_list_dotted(suffix, xs) {
   var i = xs.length - 1;
-  var result = null;
+  var result = suffix;
   for (; i >= 0; --i) { result = [xs[i], result]; }
   return result;
 }
+function array_to_list(xs) { return array_to_list_dotted(null, xs); }
+
 function array_map(f, xs) {
   var i = xs.length - 1;
   var result = [];
