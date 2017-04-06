@@ -351,6 +351,21 @@ function read_stream_text(ss) {
   return text.join('');
 }
 
+function read_stream(ss) {
+  var src = ss.src, len = src.length, i;
+  while (true) {
+    i = stream_skip_whitespace(ss);
+    if (i >= len) { return stream_finish(ss); }
+    var ch = src[i];
+    switch (ch) {
+      default:
+        if (token_numeric(src, i, len)) { return read_stream_number(10, ss); }
+        else if (token_dot(src, i, len)) { return stream_unexpected(ss, '.'); }
+        else { return read_stream_text(ss); }
+    }
+  }
+}
+
 // TODO: read, wrapping read_stream
 
 // TODO: write
