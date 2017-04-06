@@ -44,7 +44,7 @@ function cc_nonprintable(cc) {
 }
 function ch_boundary(ch) {
   switch (ch) {
-    case '(': case '[': case '{': case ')': case ']': case '}': case '"':
+    case '(': case '[': case '{': case ')': case ']': case '}':
     case "'": case '`': case ',': case ';': return true;
     default: return cc_space(ch.codePointAt(0));
   }
@@ -222,7 +222,6 @@ function read_stream_text_codepoint(ss) {
   }
   ss.col += i - ss.pos; ss.pos = i; return stream_expected(ss, '}');
 }
-
 function read_stream_text_escaped(ss) {
   var prefix = ss.src[ss.pos]; ++ss.pos; ++ss.col;
   switch (prefix) {
@@ -238,6 +237,28 @@ function read_stream_text_escaped(ss) {
     case 'u': return read_stream_text_codepoint(ss);
     default: return prefix;
   }
+}
+function read_stream_text(ss) {
+  var src = ss.src, i = ss.pos, len = src.length, text = [], quoted = false;
+  for (; i < len; ++i) {
+    var ch = src[i];
+    if (ch === '"') { quoted = !quoted; continue; }
+    if (!quoted && ch_boundary(ch)) { break; }
+    else if (ch === '\\') {
+      if (++i < len) {
+        if (src[i] === '\n') { ++ss.line; ss.col = 0; }
+        else {
+          ++ss.col; ss.pos = i;
+          ch = read_stream_text_escaped(ss); i = ss.pos;
+          if (ch === undefined) { return; }
+          text.push(ch);
+        }
+      } else { ss.pos = i; return stream_unexpected(ss, 'end-of-stream'); }
+    } else { text.push(ch); ++ss.col; }
+  }
+  ss.pos = i;
+  if (quoted) { return stream_unexpected(ss, 'end-of-stream'); }
+  return text.join('');
 }
 
 // TODO: read, wrapping read_stream
