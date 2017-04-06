@@ -384,7 +384,7 @@ function read_stream(ss) {
   var src = ss.src, len = src.length, i;
   while (true) {
     i = stream_skip_whitespace(ss);
-    if (i >= len) { ss.msg = 'no data'; return; }
+    if (i >= len) { ss.msg = ''; return; }
     var ch = src[i];
     switch (ch) {
       case '(': case '[': case '{':
@@ -490,8 +490,9 @@ function read_all(str) {
   var ss = stream(str), all = [];
   while (!stream_finished(ss)) {
     var datum = read_stream(ss);
-    if (datum === undefined) { throw ['read_all error', ss]; }
-    all.push(datum);
+    if (datum === undefined) {
+      if (ss.msg !== '') { throw ['read_all error', ss]; }
+    } else { all.push(datum); }
   }
   return all;
 }
