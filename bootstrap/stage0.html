@@ -300,9 +300,8 @@ function read_stream_text_codepoint(ss) {
   for (++i; i < len; ++i) {
     var ch = src[i];
     if (ch === '}') {
-      ss.col += i - ss.pos; ss.pos = i; return hex_to_str(code);
-    }
-    else if (!cc_digit_hexadecimal(cc_of(ch))) {
+      ++i; ss.col += i - ss.pos; ss.pos = i; return hex_to_str(code);
+    } else if (!cc_digit_hexadecimal(cc_of(ch))) {
       ss.col += i - ss.pos; ss.pos = i; return stream_unexpected(ss, ch);
     } else { code.push(ch); }
   }
@@ -335,7 +334,7 @@ function read_stream_text(ss) {
         if (src[i] === '\n') { ++ss.line; ss.col = 0; }
         else {
           ++ss.col; ss.pos = i;
-          ch = read_stream_text_escaped(ss); i = ss.pos;
+          ch = read_stream_text_escaped(ss); i = ss.pos - 1;
           if (ch === undefined) { return; }
           text.push(ch);
         }
