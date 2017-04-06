@@ -11,7 +11,8 @@
 //   hangul = '깍'
 //   jamo = ['ᄁ', 'ᅡ', 'ᆨ']
 
-function cc_at(src, i) { return src[i].codePointAt(0); }
+function cc_of(ch) { return ch.codePointAt(0); }
+function cc_at(src, i) { return cc_of(src[i]); }
 function cc_digit_decimal(cc) { return cc >= 48 && cc <= 57; }
 function cc_digit_octal(cc) { return cc >= 48 && cc <= 55; }
 function cc_digit_hex_alpha_upper(cc) { return cc >= 65 && cc <= 70; }
