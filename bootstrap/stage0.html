@@ -472,9 +472,20 @@ function read_stream(ss) {
         }
         break;
       default:
-        if (token_numeric(src, i, len)) { return read_stream_number(10, ss); }
-        else if (token_dot(src, i, len)) { return stream_unexpected(ss, '.'); }
-        else { return read_stream_text(ss); }
+        var pi;
+        if ((pi = token_prefix('+nan', src, i, len)) !== undefined) {
+          ss.pos = pi; ss.col += pi - i; return NaN;
+        } else if ((pi = token_prefix('-nan', src, i, len)) !== undefined) {
+          ss.pos = pi; ss.col += pi - i; return NaN;
+        } else if ((pi = token_prefix('+inf', src, i, len)) !== undefined) {
+          ss.pos = pi; ss.col += pi - i; return Infinity;
+        } else if ((pi = token_prefix('-inf', src, i, len)) !== undefined) {
+          ss.pos = pi; ss.col += pi - i; return -Infinity;
+        } else if (token_numeric(src, i, len)) {
+          return read_stream_number(10, ss);
+        } else if (token_dot(src, i, len)) {
+          return stream_unexpected(ss, '.');
+        } else { return read_stream_text(ss); }
     }
   }
 }
