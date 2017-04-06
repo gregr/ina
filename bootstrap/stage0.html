@@ -351,6 +351,34 @@ function read_stream_text(ss) {
   return text.join('');
 }
 
+function read_stream_sequence(ss) {
+  var len = ss.src.length, elements = [], element;
+  while ((ss.pos < len) && ((element = read_stream(ss)) !== undefined)) {
+    elements.push(element);
+  }
+  ss.msg = '';
+  return elements;
+}
+function read_stream_bracketed(prefix, delim, ss) {
+  var src = ss.src, len = src.length, i, delim, prefix;
+  var elements = read_stream_sequence(ss); i = ss.pos;
+  var tail = nil;
+  if (token_dot(src, i, len)) {
+    ++i; ++ss.pos; ++ss.col; tail = read_stream(ss);
+    if (tail === undefined || read_stream(ss) !== undefined) {
+      ss.msg = 'exactly one element must follow `.` in sequence';
+      return;
+    }
+  }
+  i = ss.pos;
+  if (i < len && src[i] === delim) {
+    ++ss.pos; ++ss.col;
+    elements = array_to_list_dotted(tail, elements);
+    if (prefix !== undefined) { elements = pair(prefix, elements); }
+    return elements;
+  } else { return stream_expected(ss, delim); }
+}
+
 function read_stream(ss) {
   var src = ss.src, len = src.length, i;
   while (true) {
@@ -358,6 +386,15 @@ function read_stream(ss) {
     if (i >= len) { return stream_finish(ss); }
     var ch = src[i];
     switch (ch) {
+      case '(': case '[': case '{':
+        var delim, prefix;
+        switch (ch) {
+          case '(': delim = ')'; break;
+          case '[': delim = ']'; prefix = '[]'; break;
+          case '{': delim = '}'; prefix = '{}'; break;
+        }
+        ++ss.pos; ++ss.col; return read_stream_bracketed(prefix, delim, ss);
+      case ')': case ']': case '}': return stream_unexpected(ss, ch);
       default:
         if (token_numeric(src, i, len)) { return read_stream_number(10, ss); }
         else if (token_dot(src, i, len)) { return stream_unexpected(ss, '.'); }
