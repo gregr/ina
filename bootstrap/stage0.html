@@ -419,6 +419,46 @@ function read_stream(ss) {
           else { ++ss.col; }
         }
         ss.pos = i; break;
+      case '#':
+        ch = src[++i]; ++ss.pos; ++ss.col;
+        switch (ch) {
+          case 't': case 'f':
+            if (++i === len || ch_boundary(src[i])) {
+              ++ss.pos; ++ss.col; return ch === 't';
+            } else { ss.msg = 'invalid `#` syntax'; return; }
+          case '(': case '[': case '{':
+            var delim, prefix;
+            switch (ch) {
+              case '(': delim = ')'; prefix = '#()'; break;
+              case '[': delim = ']'; prefix = '#[]'; break;
+              case '{': delim = '}'; prefix = '#{}'; break;
+            }
+            ++ss.pos; ++ss.col;
+            return read_stream_bracketed(prefix, delim, ss);
+          case "'": case '`': case ',':
+            var prefix;
+            switch (ch) {
+              case "'": prefix = 'syntax'; break;
+              case '`': prefix = 'quasisyntax'; break;
+              case ',':
+                if (src[i+1] === '@') {
+                  prefix = 'unsyntax-splicing'; ++ss.pos; ++ss.col;
+                } else { prefix = 'unsyntax'; }
+                break;
+            }
+            ++ss.pos; ++ss.col; return read_stream_quoted(prefix, ss);
+          case 'x': case 'd': case 'o': case 'b':
+            var base;
+            switch (ch) {
+              case 'x': base = 16; break;
+              case 'd': base = 10; break;
+              case 'o': base = 8; break;
+              case 'b': base = 2; break;
+            }
+            ++ss.pos; ++ss.col; return read_stream_number(base, ss);
+          default: ss.msg = 'invalid `#` syntax'; return;
+        }
+        break;
       default:
         if (token_numeric(src, i, len)) { return read_stream_number(10, ss); }
         else if (token_dot(src, i, len)) { return stream_unexpected(ss, '.'); }
