@@ -479,7 +479,15 @@ function read_stream(ss) {
   }
 }
 
-// TODO: read, wrapping read_stream
+function read_all(str) {
+  var ss = stream(str), all = [];
+  while (!stream_finished(ss)) {
+    var datum = read_stream(ss);
+    if (datum === undefined) { throw ['read_all error', ss]; }
+    all.push(datum);
+  }
+  return all;
+}
 
 // TODO: write
 
