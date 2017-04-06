@@ -3,6 +3,11 @@
 <script>
 'use strict';
 
+var nil = null;
+function pair(hd, tl) { return [hd, tl]; }
+function head(pr) { return pr[0]; }
+function tail(pr) { return pr[1]; }
+
 function is_nil(datum) { return datum === null; }
 function is_closure(datum) { return typeof datum === 'function'; }
 function is_boolean(datum) { return typeof datum === 'boolean'; }
