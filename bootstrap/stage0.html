@@ -126,12 +126,24 @@ function ch_boundary(ch) {
   }
 }
 
-function token_numeric(src, i, len) {
-  return (cc_digit_decimal(cc_at(src, i)) ||
-          ((src[i] === '-' || src[i] === '+') && i+1 < len &&
-           (cc_digit_decimal(cc_at(src, i+1)) || src[i+1] === '.')));
+function token_prefix(prefix, src, i, len) {
+  prefix = Array.from(prefix);
+  var j = 0, plen = prefix.length;
+  for (; (j < plen) && (i < len); ++i, ++j) {
+    if (prefix[j] !== src[i]) { return; }
+  }
+  if (j < plen) { return; }
+  return i;
 }
-
+function token_numeric(src, i, len) {
+  var prefixes = ['-.', '+.', '-', '+'];
+  var j = 0, plen = prefixes.length;
+  for (; j < plen; ++j) {
+    var pi = token_prefix(prefixes[j], src, i, len);
+    if (pi !== undefined) { i = pi; break; }
+  }
+  return cc_digit_decimal(cc_at(src, i));
+}
 function token_dot(src, i, len) {
   return (src[i] === '.' && (i+1 >= len || ch_boundary(src[i+1])));
 }
