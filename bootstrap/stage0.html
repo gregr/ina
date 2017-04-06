@@ -379,6 +379,12 @@ function read_stream_bracketed(prefix, delim, ss) {
   } else { return stream_expected(ss, delim); }
 }
 
+function read_stream_quoted(prefix, ss) {
+  var datum = read_stream(ss);
+  if (datum !== undefined) { return array_to_list([prefix, datum]); }
+  else { ss.msg = 'expected an element to '+prefix+''; return; }
+}
+
 function read_stream(ss) {
   var src = ss.src, len = src.length, i;
   while (true) {
@@ -395,6 +401,18 @@ function read_stream(ss) {
         }
         ++ss.pos; ++ss.col; return read_stream_bracketed(prefix, delim, ss);
       case ')': case ']': case '}': return stream_unexpected(ss, ch);
+      case "'": case '`': case ',':
+        var prefix;
+        switch (ch) {
+          case "'": prefix = 'quote'; break;
+          case '`': prefix = 'quasiquote'; break;
+          case ',':
+            if (src[i+1] === '@') {
+              prefix = 'unquote-splicing'; ++ss.pos; ++ss.col;
+            } else { prefix = 'unquote'; }
+            break;
+        }
+        ++ss.pos; ++ss.col; return read_stream_quoted(prefix, ss);
       case ';':
         for (; i < len; ++i) {
           if (cc_vspace(cc_at(src, i))) { ++ss.line; ss.col = 0; ++i; break; }
