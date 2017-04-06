@@ -239,9 +239,6 @@ function stream_skip_whitespace(ss) {
   ss.pos = i; return i;
 }
 
-// TODO:
-// base due to #x #d #o #b
-// [-,+][nan,inf]
 function read_stream_number(base, ss) {
   var src = ss.src, i = ss.pos, len = src.length, needs_digits = true;
   var whole = 0, fraction = 0, exponent = 0, sign = 1, esign = 1;
@@ -501,16 +498,6 @@ function read_all(str) {
 }
 
 // TODO: write
-
-// TODO:
-// ,@ unquote-splicing
-// #' syntax
-// #` quasisyntax
-// #, unsyntax
-// #,@ unsyntax-splicing
-
-// TODO: comments
-// ; #||# #;
 
 function evaluate(stx) {
   // TODO: It may be better to pass these registers around in an explicit
