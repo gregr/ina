@@ -3,6 +3,75 @@
 <script>
 'use strict';
 
+function is_nil(datum) { return datum === null; }
+function is_closure(datum) { return typeof datum === 'function'; }
+function is_boolean(datum) { return typeof datum === 'boolean'; }
+function is_text(datum) { return typeof datum === 'string'; }
+function is_number(datum) { return typeof datum === 'number'; }
+function is_int32(datum) {
+  return (typeof datum === 'number') && (datum === (datum | 0));
+}
+function is_pair(datum) {
+  return (typeof datum === 'object') && (datum !== null);
+}
+
+function env_extend(env, datum) { return [datum, env]; }
+function env_ref(env, idx) {
+  for (; idx > 0; --idx) { env = env[1]; }
+  return env[0];
+}
+function env_find(env, found) {
+  var index = 0;
+  for (; env !== null; ++index) {
+    if (found(env[0])) { return index; }
+    env = env[1];
+  }
+  return undefined;
+}
+function env_find_name(env, name) {
+  var index = env_find(env, function(b){return (name === b[0]);});
+  if (index === undefined) { throw ['unbound variable', name]; }
+  return index;
+}
+function env_lookup(env, name) {
+  var index = env_find_name(env, name);
+  return env_ref(env, index)[1];
+}
+
+// TODO: Expect annotated syntax.
+function syntax_list_of_length(len, xs, err) {
+  var result = [];
+  for (; len > 0; --len) {
+    if (!is_pair(xs)) { throw err; }
+    result.push(xs[0]);
+    xs = xs[1];
+  }
+  if (!is_nil(xs)) { throw err; }
+  return result;
+}
+function syntax_list(xs, err) {
+  var result = [];
+  while (is_pair(xs)) {
+    result.push(xs[0]);
+    xs = xs[1];
+  }
+  if (!is_nil(xs)) { throw err; }
+  return result;
+}
+function array_to_list(xs) {
+  var i = xs.length - 1;
+  var result = null;
+  for (; i >= 0; --i) { result = [xs[i], result]; }
+  return result;
+}
+function array_map(f, xs) {
+  var i = xs.length - 1;
+  var result = [];
+  result.length = xs.length;
+  for (; i >= 0; --i) { result[i] = f(xs[i]); }
+  return result;
+}
+
 // TODO: handle unicode issues.
 // String#normalize('NFC') all inputs
 // test using:
@@ -274,75 +343,6 @@ function read_stream_text(ss) {
 
 // TODO: comments
 // ; #||# #;
-
-function is_nil(datum) { return datum === null; }
-function is_closure(datum) { return typeof datum === 'function'; }
-function is_boolean(datum) { return typeof datum === 'boolean'; }
-function is_text(datum) { return typeof datum === 'string'; }
-function is_number(datum) { return typeof datum === 'number'; }
-function is_int32(datum) {
-  return (typeof datum === 'number') && (datum === (datum | 0));
-}
-function is_pair(datum) {
-  return (typeof datum === 'object') && (datum !== null);
-}
-
-function env_extend(env, datum) { return [datum, env]; }
-function env_ref(env, idx) {
-  for (; idx > 0; --idx) { env = env[1]; }
-  return env[0];
-}
-function env_find(env, found) {
-  var index = 0;
-  for (; env !== null; ++index) {
-    if (found(env[0])) { return index; }
-    env = env[1];
-  }
-  return undefined;
-}
-function env_find_name(env, name) {
-  var index = env_find(env, function(b){return (name === b[0]);});
-  if (index === undefined) { throw ['unbound variable', name]; }
-  return index;
-}
-function env_lookup(env, name) {
-  var index = env_find_name(env, name);
-  return env_ref(env, index)[1];
-}
-
-// TODO: Expect annotated syntax.
-function syntax_list_of_length(len, xs, err) {
-  var result = [];
-  for (; len > 0; --len) {
-    if (!is_pair(xs)) { throw err; }
-    result.push(xs[0]);
-    xs = xs[1];
-  }
-  if (!is_nil(xs)) { throw err; }
-  return result;
-}
-function syntax_list(xs, err) {
-  var result = [];
-  while (is_pair(xs)) {
-    result.push(xs[0]);
-    xs = xs[1];
-  }
-  if (!is_nil(xs)) { throw err; }
-  return result;
-}
-function array_to_list(xs) {
-  var i = xs.length - 1;
-  var result = null;
-  for (; i >= 0; --i) { result = [xs[i], result]; }
-  return result;
-}
-function array_map(f, xs) {
-  var i = xs.length - 1;
-  var result = [];
-  result.length = xs.length;
-  for (; i >= 0; --i) { result[i] = f(xs[i]); }
-  return result;
-}
 
 function evaluate(stx) {
   // TODO: It may be better to pass these registers around in an explicit
