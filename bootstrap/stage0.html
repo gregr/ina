@@ -65,7 +65,6 @@ function hex_digit_cc_to_int(cc) {
   else if (cc_digit_hex_alpha_upper(cc)) { return cc - 65 + 10; }
   else if (cc_digit_hex_alpha_lower(cc)) { return cc - 97 + 10; }
 }
-
 function hex_to_int(hex) {
   var len = hex.length;
   var result = 0;
@@ -77,27 +76,6 @@ function hex_to_int(hex) {
   return result;
 }
 function hex_to_str(hex) { return String.fromCodePoint(hex_to_int(hex)); }
-var re_escaped = /\\[^u]|\\u\{[0-9a-fA-F]*\}/g;
-function decode_text_escaped(es) {
-  switch (es[1]) {
-    case '0': return '\0';
-    case 'a': return String.fromCodePoint(7);
-    case 'b': return '\b';
-    case 't': return '\t';
-    case 'n': return '\n';
-    case 'v': return '\v';
-    case 'f': return '\f';
-    case 'r': return '\r';
-    case 'e': return String.fromCodePoint(27);
-    case 'u': return hex_to_str(es.slice(3, es.length-1));
-    case '\n': return '';
-    default: return es[1];
-  }
-}
-function decode_text(src, start, end) {
-  return src.slice(start, end).join('').replace(
-      re_escaped, decode_text_escaped);
-}
 
 var bad_leading = ['#'];
 var bad_anywhere = ['\\',"'",'`',',',';','"','(',')','[',']','{','}','\0','\b'];
@@ -228,6 +206,38 @@ function read_stream_number(base, ss) {
       }
   }
   return decode();
+}
+
+function read_stream_text_codepoint(ss) {
+  var src = ss.src, i = ss.pos, len = src.length, code = [];
+  if (i >= len || src[i] !== '{') { return stream_expected(ss, '{'); }
+  for (++i; i < len; ++i) {
+    var ch = src[i];
+    if (ch === '}') {
+      ss.col += i - ss.pos; ss.pos = i; return hex_to_str(code);
+    }
+    else if (!cc_digit_hexadecimal(cc_of(ch))) {
+      ss.col += i - ss.pos; ss.pos = i; return stream_unexpected(ss, ch);
+    } else { code.push(ch); }
+  }
+  ss.col += i - ss.pos; ss.pos = i; return stream_expected(ss, '}');
+}
+
+function read_stream_text_escaped(ss) {
+  var prefix = ss.src[ss.pos]; ++ss.pos; ++ss.col;
+  switch (prefix) {
+    case '0': return '\0';
+    case 'a': return String.fromCodePoint(7);
+    case 'b': return '\b';
+    case 't': return '\t';
+    case 'n': return '\n';
+    case 'v': return '\v';
+    case 'f': return '\f';
+    case 'r': return '\r';
+    case 'e': return String.fromCodePoint(27);
+    case 'u': return read_stream_text_codepoint(ss);
+    default: return prefix;
+  }
 }
 
 // TODO: read, wrapping read_stream
