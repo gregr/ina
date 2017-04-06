@@ -456,6 +456,19 @@ function read_stream(ss) {
               case 'b': base = 2; break;
             }
             ++ss.pos; ++ss.col; return read_stream_number(base, ss);
+          case ';':
+            ++ss.pos; ++ss.col;
+            if (read_stream(ss) === undefined) { return; }
+            break;
+          case '|':
+            for (++i, ++ss.col; i < len; ++i) {
+              var pi = token_prefix('|#', src, i, len);
+              if (pi !== undefined) { ss.pos = pi; ss.col += pi - i; break; }
+              if (cc_vspace(cc_at(src, i))) { ++ss.line; ss.col = 0; }
+              else { ++ss.col; }
+            }
+            if (i >= len) { return stream_expected(ss, '|#') };
+            break;
           default: ss.msg = 'invalid `#` syntax'; return;
         }
         break;
