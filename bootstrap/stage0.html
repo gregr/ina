@@ -797,6 +797,8 @@ function test_log() {
   console.log(test_ctx.passed, 'out of', test_ctx.total, 'tests passed.');
 }
 
+function read_eval(pstr) { return evaluate(read_all(pstr)[0]); }
+
 function test() {
   check_equal('read atoms',
       array_to_list(read_all(' one h\\u{1f4a9}l"lo\\two"rld 2 \n -3.14 .5 6.e1 #x1e2 #x1L2\t#b+11.1e1 #t #f')),
@@ -812,38 +814,32 @@ function test() {
         ]));
 
   check_equal('literals',
-      [evaluate(null), evaluate(true), evaluate(4)], [null, true, 4]);
+      [read_eval("'()"), read_eval('#t'), read_eval(' 4 ')],
+      [null, true, 4]);
   check_equal('lambda app 1',
-      evaluate([['lambda', [['x', ['y', null]],
-        ['x', null]]],
-        [5, [6, null]]]), 5);
+      read_eval('((lambda (x y) x) 5 6)'),
+      5);
   check_equal('lambda app 2',
-      evaluate([['lambda', [['x', ['y', null]],
-        ['y', null]]],
-        [5, [6, null]]]), 6);
-  check_equal('lambda app 2',
-      evaluate([['lambda', [['x', ['y', null]],
-        [['pair', ['y', ['x', null]]], null]]],
-        [5, [6, null]]]), [6, 5]);
+      read_eval('((lambda (x y) y) 5 6)'),
+      6);
+  check_equal('lambda app 3',
+      read_eval('((lambda (x y) (pair y x)) 5 6)'),
+      [6, 5]);
   check_equal('if 1',
-      evaluate(['if', [['head', [['quote', [[true, false], null]], null]],
-        [['quote', ['yes', null]],
-        [['quote', ['no', null]], null]]]]), 'yes');
+      read_eval("(if (head '(#t . #f)) 'yes 'no)"),
+      'yes');
   check_equal('if 2',
-      evaluate(['if', [['tail', [['quote', [[true, false], null]], null]],
-        [['quote', ['yes', null]],
-        [['quote', ['no', null]], null]]]]), 'no');
+      read_eval("(if (tail '(#t . #f)) 'yes 'no)"),
+      'no');
   check_equal('let 1',
-      evaluate(['let', [[['x', [8, null]], null],
-        ['x', null]]]), 8);
+      read_eval('(let ((x 8)) x)'),
+      8);
   check_equal('let 2',
-      evaluate(['let', [[['x', [9, null]], null],
-        [['let', [[['x', [20, null]], null],
-        ['x', null]]], null]]]), 20);
+      read_eval('(let ((x 9)) (let ((x 20)) x))'),
+      20);
   check_equal('let 3',
-      evaluate(['let', [[['x', [9, null]], null],
-        [['let', [[['y', [20, null]], null],
-        ['x', null]]], null]]]), 9);
+      read_eval('(let ((x 9)) (let ((y 20)) x))'),
+      9);
   test_log();
 }
 
