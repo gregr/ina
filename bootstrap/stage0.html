@@ -242,11 +242,10 @@ function stream_skip_whitespace(ss) {
 
 // TODO:
 // base due to #x #d #o #b
-// -+ checking should happen externally
 // [-,+][nan,inf]
 function read_stream_number(base, ss) {
   var src = ss.src, i = ss.pos, len = src.length, needs_digits = true;
-  var whole = 0, fraction = 0, exponent = 0, esign = 1;
+  var whole = 0, fraction = 0, exponent = 0, sign = 1, esign = 1;
   var cc_digit;
   switch (base) {
     case 2: cc_digit = cc_digit_binary; break;
@@ -261,8 +260,11 @@ function read_stream_number(base, ss) {
     }
     ss.col += i - ss.pos;
     ss.pos = i;
-    return (whole + fraction) * Math.pow(base, esign * exponent);
+    return sign * (whole + fraction) * Math.pow(base, esign * exponent);
   }
+  if (i === len) { return decode(); }
+  var ch = src[i]; if ((ch === '-') || (ch === '+')) { ++i; }
+  if (ch === '-') { sign = -1; }
   for (; i < len; ++i) {
     var cc = cc_at(src, i);
     if (!cc_digit(cc)) { break; }
