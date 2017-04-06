@@ -395,6 +395,12 @@ function read_stream(ss) {
         }
         ++ss.pos; ++ss.col; return read_stream_bracketed(prefix, delim, ss);
       case ')': case ']': case '}': return stream_unexpected(ss, ch);
+      case ';':
+        for (; i < len; ++i) {
+          if (cc_vspace(cc_at(src, i))) { ++ss.line; ss.col = 0; ++i; break; }
+          else { ++ss.col; }
+        }
+        ss.pos = i; break;
       default:
         if (token_numeric(src, i, len)) { return read_stream_number(10, ss); }
         else if (token_dot(src, i, len)) { return stream_unexpected(ss, '.'); }
