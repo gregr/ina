@@ -840,6 +840,62 @@ function test() {
   check_equal('let 3',
       read_eval('(let ((x 9)) (let ((y 20)) x))'),
       9);
+
+  // TODO: simplify these tests using quasiquote.
+  check_equal('fix 1',
+      read_eval(
+        "(let ((fix (lambda (f)"+
+        "             ((lambda (d) (d d))"+
+        "              (lambda (x) (f (lambda (a) (x x a))))))))"+
+        "  (let ((concat "+
+        "          (fix (lambda (concat xs ys)"+
+        "                 (if (nil? xs)"+
+        "                   ys"+
+        "                   (pair (head xs)"+
+        "                         (concat (tail xs) ys)))))))"+
+        "    (pair (concat '() '())"+
+        "     (pair (concat '(foo) '(bar))"+
+        "      (pair (concat '(1 2) '(3 4))"+
+        "       '())))))"),
+      read_eval("'(() (foo bar) (1 2 3 4))"));
+
+  check_equal('fix* 1',
+      read_eval(
+        "(let ((fix (lambda (f)"+
+        "             ((lambda (d) (d d))"+
+        "              (lambda (x) (f (lambda (a) (x x a))))))))"+
+        "  (let ((map (fix (lambda (map f xs)"+
+        "                    (if (nil? xs)"+
+        "                      '()"+
+        "                      (pair (f (head xs)) (map f (tail xs)))))))"+
+        "        (apply (fix (lambda (apply f args)"+
+        "                      (if (nil? args)"+
+        "                        f"+
+        "                        (apply (f (head args)) (tail args)))))))"+
+        "    (let ((fix*"+
+        "            (fix (lambda (self fs)"+
+        "                   (map (lambda (fi x)"+
+        "                          ((apply fi (self fs)) x)) fs)))))"+
+        "      (let ((even&odd"+
+        "              (fix* (pair (lambda (even? odd? n)"+
+        "                            (if (nil? n)"+
+        "                              #t"+
+        "                              (odd? (tail n))))"+
+        "                    (pair (lambda (even? odd? n)"+
+        "                            (if (nil? n)"+
+        "                              #f"+
+        "                              (even? (tail n))))"+
+        "                      '())))))"+
+        "        (let ((even? (head even&odd)) (odd? (head (tail even&odd))))"+
+        "          (pair (even? '())"+
+        "           (pair (odd? '())"+
+        "            (pair (even? '(s))"+
+        "             (pair (odd? '(s))"+
+        "              (pair (even? '(s s))"+
+        "               (pair (odd? '(s s))"+
+        "                '())))))))))))"),
+      read_eval("'(#t #f #f #t #t #f)"));
+
   test_log();
 }
 
