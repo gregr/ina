@@ -588,13 +588,37 @@ function evaluate(stx) {
       return dc;
     };
   }
+
   function denote_quote(senv, stx) {
     stx = syntax_list_of_length(1, stx, ['invalid quote', stx]);
     return denote_literal(stx[0]);
   }
-  function denote_qq(senv, stx) {
-    // TODO:
+  function build_qq(senv, stx) {
+    if (is_pair(stx)) {
+      var hd = head(stx), tl = tail(stx);
+      if (hd === 'unquote') {
+        tl = syntax_list_of_length(1, tl, ['invalid unquote', tl])[0];
+        return denote(senv, tl);
+      } else {
+        var dh = build_qq(senv, hd), dt = build_qq(senv, tl);
+        return function() {
+          var kenv = env;
+          ks.push(function() {
+            var ph = result;
+            ks.push(function() { return unwind(pair(ph, result)); });
+            env = kenv;
+            return dt;
+          });
+          return dh;
+        };
+      }
+    } else { return denote_literal(stx); }
   }
+  function denote_qq(senv, stx) {
+    stx = syntax_list_of_length(1, stx, ['invalid quasiquote', stx])[0];
+    return build_qq(senv, stx);
+  }
+
   function denote_let(senv, stx) {
     var err = ['invalid let', stx];
     stx = syntax_list_of_length(2, stx, err);
@@ -840,6 +864,18 @@ function test() {
   check_equal('let 3',
       read_eval('(let ((x 9)) (let ((y 20)) x))'),
       9);
+
+  check_equal('qq 1', read_eval('`one'), 'one');
+  check_equal('qq 2',
+      read_eval('`((a 1) (b 2))'),
+      array_to_list([
+        array_to_list(['a', 1]),
+        array_to_list(['b', 2])]));
+  check_equal('qq 3',
+      read_eval("`((a 1) ,(pair 'b `(3)))"),
+      array_to_list([
+        array_to_list(['a', 1]),
+        array_to_list(['b', 3])]));
 
   // TODO: simplify these tests using quasiquote.
   check_equal('fix 1',
