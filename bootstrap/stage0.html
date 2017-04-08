@@ -877,7 +877,6 @@ function test() {
         array_to_list(['a', 1]),
         array_to_list(['b', 3])]));
 
-  // TODO: simplify these tests using quasiquote.
   check_equal('fix 1',
       read_eval(
         "(let ((fix (lambda (f)"+
@@ -889,10 +888,9 @@ function test() {
         "                   ys"+
         "                   (pair (head xs)"+
         "                         (concat (tail xs) ys)))))))"+
-        "    (pair (concat '() '())"+
-        "     (pair (concat '(foo) '(bar))"+
-        "      (pair (concat '(1 2) '(3 4))"+
-        "       '())))))"),
+        "    `(,(concat '() '())"+
+        "      ,(concat '(foo) '(bar))"+
+        "      ,(concat '(1 2) '(3 4)))))"),
       read_eval("'(() (foo bar) (1 2 3 4))"));
 
   check_equal('fix* 1',
@@ -923,13 +921,9 @@ function test() {
         "                              (even? (tail n))))"+
         "                      '())))))"+
         "        (let ((even? (head even&odd)) (odd? (head (tail even&odd))))"+
-        "          (pair (even? '())"+
-        "           (pair (odd? '())"+
-        "            (pair (even? '(s))"+
-        "             (pair (odd? '(s))"+
-        "              (pair (even? '(s s))"+
-        "               (pair (odd? '(s s))"+
-        "                '())))))))))))"),
+        "          `(,(even? '())    ,(odd? '())"+
+        "            ,(even? '(s))   ,(odd? '(s))"+
+        "            ,(even? '(s s)) ,(odd? '(s s))))))))"),
       read_eval("'(#t #f #f #t #t #f)"));
 
   test_log();
