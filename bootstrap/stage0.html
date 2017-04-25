@@ -191,11 +191,6 @@ function text_should_quote(text) {
   }
   return false;
 }
-function text_repeat(text, count) {
-  var result = text;
-  for (var i = 1; i < count; ++i) { result += text; }
-  return result;
-}
 function encode_char(ch) {
   switch (ch) {
     case '\0': return '\\0';
@@ -226,7 +221,7 @@ function text_quoted(text) {
       h = i+1;
     }
   }
-  quoted += text.slice(h, i) + '"';
+  quoted += s.slice(h, i).join('') + '"';
   return quoted;
 }
 
@@ -538,7 +533,24 @@ function strip_metadata(stx) {
   } else { return datum; }
 }
 
-// TODO: write
+function write(datum) {
+  if (is_pair(datum)) {
+    var elements = ['('];
+    do { elements.push(write(head(datum)), ' '); datum = tail(datum); }
+    while(is_pair(datum));
+    if (!is_nil(datum)) { elements.push('. ', write(datum), ' '); }
+    elements[elements.length - 1] = ')';
+    return elements.join('');
+  }
+  if (is_text(datum)) {
+    if (text_should_quote(datum)) { return text_quoted(datum); }
+    else { return datum; }
+  }
+  if (is_number(datum)) { return datum.toString(); }
+  if (datum === nil)    { return '()'; }
+  if (datum === true)   { return '#t'; }
+  if (datum === false)  { return '#f'; }
+}
 
 function evaluate(stx) {
   // TODO: It may be better to pass these registers around in an explicit
@@ -913,6 +925,17 @@ function test() {
             '{}', 'ei ght', array_to_list(['nine']), 10
             ])])
         ]));
+
+  check_equal('write atoms',
+      array_map(write, array_map(strip_metadata,
+          read_all(' one h\\u{1f4a9}l"lo\\two"rld 2 \n -3.14 .5 6.e1 #x1e2 #x1L2\t#b+11.1e1 #t #f'))).join(' '),
+      'one "h\u{1f4a9}llo\\tworld" 2 -3.14 .5 60 482 256 7 #t #f'
+      );
+  check_equal('write compounds',
+      array_map(write, array_map(strip_metadata,
+          read_all(' (1 [t"wo" 3] 4) #;(five 6) #| com\nments |# #[ 7 {ei\\ ght (nine) 10 } ] ;etc.'))).join(' ') ,
+      '(1 ("[]" two 3) 4) ("#[]" 7 ("{}" "ei ght" (nine) 10))'
+      );
 
   check_equal('literals',
       [read_eval("'()"), read_eval('#t'), read_eval(' 4 ')],
