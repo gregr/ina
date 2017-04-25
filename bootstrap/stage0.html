@@ -151,7 +151,7 @@ function token_numeric(src, i, len) {
     var pi = token_prefix(prefixes[j], src, i, len);
     if (pi !== undefined) { i = pi; break; }
   }
-  return cc_digit_decimal(cc_at(src, i));
+  return (i < len) && cc_digit_decimal(cc_at(src, i));
 }
 function token_dot(src, i, len) {
   return (src[i] === '.' && (i+1 >= len || ch_boundary(src[i+1])));
