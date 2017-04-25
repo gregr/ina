@@ -402,16 +402,8 @@ function read_stream_quoted(prefix, ss) {
 }
 
 function read_stream(ss) {
-  stream_skip_whitespace(ss);
-  var ann = annotation(ss);
-  var datum = read_stream_raw(ss);
-  if (datum === undefined) { return; }
-  return pair(ann, datum);
-}
-
-function read_stream_raw(ss) {
-  var src = ss.src, len = src.length, i, ann;
-  while (true) {
+  var not_done = true, src = ss.src, len = src.length, i, ann, result;
+  while (not_done) {
     i = stream_skip_whitespace(ss);
     ann = annotation(ss);
     if (i >= len) { ss.msg = ''; return; }
@@ -425,7 +417,8 @@ function read_stream_raw(ss) {
           case '{': delim = '}'; prefix = '{}'; break;
         }
         if (prefix !== undefined) { prefix = pair(ann, prefix); }
-        ++ss.pos; ++ss.col; return read_stream_bracketed(prefix, delim, ss);
+        ++ss.pos; ++ss.col; result = read_stream_bracketed(prefix, delim, ss);
+        not_done = false; break;
       case ')': case ']': case '}': return stream_unexpected(ss, ch);
       case "'": case '`': case ',':
         var prefix;
@@ -439,7 +432,8 @@ function read_stream_raw(ss) {
             break;
         }
         if (prefix !== undefined) { prefix = pair(ann, prefix); }
-        ++ss.pos; ++ss.col; return read_stream_quoted(prefix, ss);
+        ++ss.pos; ++ss.col; result = read_stream_quoted(prefix, ss);
+        not_done = false; break;
       case ';':
         for (; i < len; ++i) {
           if (cc_vspace(cc_at(src, i))) { ++ss.line; ss.col = 0; ++i; break; }
@@ -451,7 +445,8 @@ function read_stream_raw(ss) {
         switch (ch) {
           case 't': case 'f':
             if (++i === len || ch_boundary(src[i])) {
-              ++ss.pos; ++ss.col; return ch === 't';
+              ++ss.pos; ++ss.col; result = (ch === 't');
+              not_done = false; break;
             } else { ss.msg = 'invalid `#` syntax'; return; }
           case '(': case '[': case '{':
             var delim, prefix;
@@ -462,7 +457,8 @@ function read_stream_raw(ss) {
             }
             if (prefix !== undefined) { prefix = pair(ann, prefix); }
             ++ss.pos; ++ss.col;
-            return read_stream_bracketed(prefix, delim, ss);
+            result = read_stream_bracketed(prefix, delim, ss);
+            not_done = false; break;
           case "'": case '`': case ',':
             var prefix;
             switch (ch) {
@@ -475,7 +471,8 @@ function read_stream_raw(ss) {
                 break;
             }
             if (prefix !== undefined) { prefix = pair(ann, prefix); }
-            ++ss.pos; ++ss.col; return read_stream_quoted(prefix, ss);
+            ++ss.pos; ++ss.col; result = read_stream_quoted(prefix, ss);
+            not_done = false; break;
           case 'x': case 'd': case 'o': case 'b':
             var base;
             switch (ch) {
@@ -484,7 +481,8 @@ function read_stream_raw(ss) {
               case 'o': base = 8; break;
               case 'b': base = 2; break;
             }
-            ++ss.pos; ++ss.col; return read_stream_number(base, ss);
+            ++ss.pos; ++ss.col; result = read_stream_number(base, ss);
+            not_done = false; break;
           case ';':
             ++ss.pos; ++ss.col;
             if (read_stream(ss) === undefined) { return; }
@@ -504,20 +502,22 @@ function read_stream_raw(ss) {
       default:
         var pi;
         if ((pi = token_prefix('+nan', src, i, len)) !== undefined) {
-          ss.pos = pi; ss.col += pi - i; return NaN;
+          ss.pos = pi; ss.col += pi - i; result = NaN;
         } else if ((pi = token_prefix('-nan', src, i, len)) !== undefined) {
-          ss.pos = pi; ss.col += pi - i; return NaN;
+          ss.pos = pi; ss.col += pi - i; result = NaN;
         } else if ((pi = token_prefix('+inf', src, i, len)) !== undefined) {
-          ss.pos = pi; ss.col += pi - i; return Infinity;
+          ss.pos = pi; ss.col += pi - i; result = Infinity;
         } else if ((pi = token_prefix('-inf', src, i, len)) !== undefined) {
-          ss.pos = pi; ss.col += pi - i; return -Infinity;
+          ss.pos = pi; ss.col += pi - i; result = -Infinity;
         } else if (token_numeric(src, i, len)) {
-          return read_stream_number(10, ss);
+          result = read_stream_number(10, ss);
         } else if (token_dot(src, i, len)) {
           return stream_unexpected(ss, '.');
-        } else { return read_stream_text(ss); }
+        } else { result = read_stream_text(ss); }
+        not_done = false;
     }
   }
+  if (result !== undefined) { return pair(ann, result); }
 }
 
 function read_all(str) {
