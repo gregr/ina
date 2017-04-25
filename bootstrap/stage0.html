@@ -895,7 +895,7 @@ function check_equal(name, actual, expected) {
     if (test_ctx.verbose) { test_ctx.log.push([name, actual]); }
   } else {
     test_ctx.log.push(
-        ['FAILED', name, 'ACTUAL', actual, 'EXPECTED', expected]);
+        ['FAILED', name, 'ACTUAL', actual, write(actual), 'EXPECTED', expected, write(expected)]);
   }
 }
 function test_log() {
