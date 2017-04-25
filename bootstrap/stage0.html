@@ -31,45 +31,54 @@ function env_find(env, found) {
     if (found(env[0])) { return index; }
     env = env[1];
   }
-  return undefined;
+  return;
 }
-function env_find_name(env, name) {
+function env_find_name(env, name, stx) {
   var index = env_find(env, function(b){return (name === b[0]);});
-  if (index === undefined) { throw ['unbound variable', name]; }
+  if (index === undefined) { throw ['unbound variable', stx]; }
   return index;
 }
-function env_lookup(env, name) {
-  var index = env_find_name(env, name);
+function env_lookup(env, name, stx) {
+  var index = env_find_name(env, name, stx);
   return env_ref(env, index)[1];
 }
 
-// TODO: Expect annotated syntax.
 function syntax_list_of_length(len, xs, err) {
   var result = [];
+  xs = tail(xs);
   for (; len > 0; --len) {
     if (!is_pair(xs)) { throw err; }
-    result.push(xs[0]);
-    xs = xs[1];
+    result.push(head(xs));
+    xs = tail(tail(xs));
   }
   if (!is_nil(xs)) { throw err; }
   return result;
 }
 function syntax_list(xs, err) {
   var result = [];
+  xs = tail(xs);
   while (is_pair(xs)) {
-    result.push(xs[0]);
-    xs = xs[1];
+    result.push(head(xs));
+    xs = tail(tail(xs));
   }
   if (!is_nil(xs)) { throw err; }
   return result;
 }
-function array_to_list_dotted(suffix, xs) {
+function array_to_list_dotted(annotate, suffix, xs) {
   var i = xs.length - 1;
   var result = suffix;
-  for (; i >= 0; --i) { result = [xs[i], result]; }
+  for (; i >= 0; --i) {
+    result = pair(xs[i], result);
+    if (annotate !== false) { result = annotate(xs[i], result); }
+  }
   return result;
 }
-function array_to_list(xs) { return array_to_list_dotted(null, xs); }
+function array_to_list_annotated(annotate, xs) {
+  var suffix = null;
+  if (annotate !== false) { suffix = annotated(false, suffix); }
+  return array_to_list_dotted(annotate, suffix, xs);
+}
+function array_to_list(xs) { return array_to_list_annotated(false, xs); }
 
 function array_map(f, xs) {
   var i = xs.length - 1;
@@ -158,7 +167,7 @@ function hex_to_int(hex) {
   var result = 0;
   for (var i = 0; i < len; ++i) {
     var cc = cc_at(hex, i);
-    if (!cc_digit_hexadecimal(cc)) { throw ['invalid hexadecimal', orig]; }
+    if (!cc_digit_hexadecimal(cc)) { throw ['invalid hexadecimal', hex]; }
     result = (result * 16) + hex_digit_cc_to_int(cc);
   }
   return result;
@@ -221,7 +230,6 @@ function text_quoted(text) {
   return quoted;
 }
 
-// TODO: manage token count.
 function stream(source) {
   return {src: Array.from(source), token: 0, pos: 0, line: 0, col: 0, msg: ''};
 }
@@ -346,6 +354,14 @@ function read_stream_text(ss) {
   return text.join('');
 }
 
+function annotation(ss) {
+  var src;
+  if (ss === false) { src = null; }
+  else { src = array_to_list([ss.token++]); }
+  return pair('syntax', src);
+}
+function annotated(ss, datum) { return pair(annotation(ss), datum); }
+
 function read_stream_sequence(ss) {
   var len = ss.src.length, elements = [], element;
   while ((ss.pos < len) && ((element = read_stream(ss)) !== undefined)) {
@@ -355,35 +371,49 @@ function read_stream_sequence(ss) {
   return elements;
 }
 function read_stream_bracketed(prefix, delim, ss) {
-  var src = ss.src, len = src.length, i, delim, prefix;
+  var src = ss.src, len = src.length, i, delim, prefix, suffix;
+  var annotate = function(ex, datum){ return annotated(ss, datum); }
   var elements = read_stream_sequence(ss); i = ss.pos;
-  var tail = nil;
   if (token_dot(src, i, len)) {
-    ++i; ++ss.pos; ++ss.col; tail = read_stream(ss);
-    if (tail === undefined || read_stream(ss) !== undefined) {
+    ++i; ++ss.pos; ++ss.col; suffix = read_stream(ss);
+    if (suffix === undefined || read_stream(ss) !== undefined) {
       ss.msg = 'exactly one element must follow `.` in sequence';
       return;
     }
-  }
+  } else { suffix = annotated(ss, nil); }
   i = ss.pos;
   if (i < len && src[i] === delim) {
     ++ss.pos; ++ss.col;
-    elements = array_to_list_dotted(tail, elements);
-    if (prefix !== undefined) { elements = pair(prefix, elements); }
-    return elements;
+    elements = array_to_list_dotted(annotate, suffix, elements);
+    if (prefix !== undefined) {
+      elements = annotate(prefix, pair(prefix, elements));
+    }
+    return tail(elements);
   } else { return stream_expected(ss, delim); }
 }
 
 function read_stream_quoted(prefix, ss) {
   var datum = read_stream(ss);
-  if (datum !== undefined) { return array_to_list([prefix, datum]); }
+  if (datum !== undefined) {
+    var annotate = function(ex, datum){ return annotated(ss, datum); }
+    return tail(array_to_list_annotated(annotate, [prefix, datum]));
+  }
   else { ss.msg = 'expected an element to '+prefix+''; return; }
 }
 
 function read_stream(ss) {
-  var src = ss.src, len = src.length, i;
+  stream_skip_whitespace(ss);
+  var ann = annotation(ss);
+  var datum = read_stream_raw(ss);
+  if (datum === undefined) { return; }
+  return pair(ann, datum);
+}
+
+function read_stream_raw(ss) {
+  var src = ss.src, len = src.length, i, ann;
   while (true) {
     i = stream_skip_whitespace(ss);
+    ann = annotation(ss);
     if (i >= len) { ss.msg = ''; return; }
     var ch = src[i];
     switch (ch) {
@@ -394,6 +424,7 @@ function read_stream(ss) {
           case '[': delim = ']'; prefix = '[]'; break;
           case '{': delim = '}'; prefix = '{}'; break;
         }
+        if (prefix !== undefined) { prefix = pair(ann, prefix); }
         ++ss.pos; ++ss.col; return read_stream_bracketed(prefix, delim, ss);
       case ')': case ']': case '}': return stream_unexpected(ss, ch);
       case "'": case '`': case ',':
@@ -407,6 +438,7 @@ function read_stream(ss) {
             } else { prefix = 'unquote'; }
             break;
         }
+        if (prefix !== undefined) { prefix = pair(ann, prefix); }
         ++ss.pos; ++ss.col; return read_stream_quoted(prefix, ss);
       case ';':
         for (; i < len; ++i) {
@@ -428,6 +460,7 @@ function read_stream(ss) {
               case '[': delim = ']'; prefix = '#[]'; break;
               case '{': delim = '}'; prefix = '#{}'; break;
             }
+            if (prefix !== undefined) { prefix = pair(ann, prefix); }
             ++ss.pos; ++ss.col;
             return read_stream_bracketed(prefix, delim, ss);
           case "'": case '`': case ',':
@@ -441,6 +474,7 @@ function read_stream(ss) {
                 } else { prefix = 'unsyntax'; }
                 break;
             }
+            if (prefix !== undefined) { prefix = pair(ann, prefix); }
             ++ss.pos; ++ss.col; return read_stream_quoted(prefix, ss);
           case 'x': case 'd': case 'o': case 'b':
             var base;
@@ -497,6 +531,13 @@ function read_all(str) {
   return all;
 }
 
+function strip_metadata(stx) {
+  var datum = tail(stx);
+  if (is_pair(datum)) {
+    return pair(strip_metadata(head(datum)), strip_metadata(tail(datum)));
+  } else { return datum; }
+}
+
 // TODO: write
 
 function evaluate(stx) {
@@ -510,44 +551,53 @@ function evaluate(stx) {
   function denote_literal(datum) {
     return function() { return unwind(datum); };
   }
-  function denote_var(senv, name) {
+  function denote_var(senv, stx) {
+    var name = tail(stx);
     var index = env_find_name(senv, name);
-    if (env_ref(senv, index)[1] !== false) { throw ['invalid syntax', name]; }
+    if (env_ref(senv, index)[1] !== false) { throw ['invalid syntax', stx]; }
     return function() { return unwind(env_ref(env, index)); };
   }
 
-  function build_app(senv, dp, as) {
+  function build_app(senv, dp, mas) {
+    var as = tail(mas);
     if (is_nil(as)) { return dp; }
-    var da = denote(senv, as[0]);
+    var da = denote(senv, head(as));
     var dapp = function(){
       var kenv = env;
-      ks.push(function() {
+      ks.push(function(){
         var proc = result;
-        if (!is_closure(proc)) { throw ['cannot apply non-procedure', proc]; }
+        if (!is_closure(proc)) {
+          throw ['cannot apply non-procedure', [proc, mas]];
+        }
         ks.push(function() { return proc(result); });
         env = kenv;
         return da;
       });
       return dp;
     };
-    return build_app(senv, dapp, as[1]);
+    return build_app(senv, dapp, tail(as));
   }
   function denote_app(senv, stx) {
     var err = ['invalid application', stx];
-    if (!is_pair(stx)) { throw err; }
-    syntax_list(stx[1], err);
-    return build_app(senv, denote(senv, stx[0]), stx[1]);
+    var datum = tail(stx);
+    if (!is_pair(datum)) { throw err; }
+    syntax_list(tail(datum), err);
+    return build_app(senv, denote(senv, head(datum)), tail(datum));
   }
 
   function denote(senv, stx) {
-    if (is_nil(stx) || is_boolean(stx) || is_number(stx)) {
-      return denote_literal(stx);
-    } else if (is_text(stx)) {
+    var datum = tail(stx);
+    if (is_nil(datum) || is_boolean(datum) || is_number(datum)) {
+      return denote_literal(datum);
+    } else if (is_text(datum)) {
       return denote_var(senv, stx);
-    } else if (is_pair(stx)) {
-      if (is_text(stx[0])) {
-        var special = env_lookup(senv, stx[0]);
-        if (typeof special === 'function') { return special(senv, stx[1]); }
+    } else if (is_pair(datum)) {
+      var dh = tail(head(datum));
+      if (is_text(dh)) {
+        var special = env_lookup(senv, dh, head(datum));
+        if (typeof special === 'function') {
+          return special(senv, stx);
+        }
       }
       return denote_app(senv, stx);
     } else { throw ['unknown syntax', stx]; }
@@ -555,8 +605,8 @@ function evaluate(stx) {
 
   function build_lambda(senv, params, body) {
     if (is_nil(params)) { return denote(senv, body); }
-    senv = env_extend(senv, [params[0], false]);
-    var dl = build_lambda(senv, params[1], body);
+    senv = env_extend(senv, [tail(head(params)), false]);
+    var dl = build_lambda(senv, tail(params), body);
     return function() {
       var clo_env = env;
       return unwind(function(arg) {
@@ -567,18 +617,18 @@ function evaluate(stx) {
   }
   function denote_lambda(senv, stx) {
     var err = ['invalid lambda', stx];
-    stx = syntax_list_of_length(2, stx, err);
-    var params = stx[0], body = stx[1];
-    if (!is_pair(params)) { throw err; }
-    array_map(function(p){ if (!is_text(p)) { throw err; } },
-              syntax_list(params, err));
-    return build_lambda(senv, params, body);
+    stx = syntax_list_of_length(3, stx, err);
+    var params = stx[1], body = stx[2];
+    if (!is_pair(tail(params))) { throw err; }
+    params = syntax_list(params, err);
+    array_map(function(p){ if (!is_text(tail(p))) { throw err; } }, params);
+    return build_lambda(senv, array_to_list(params), body);
   }
   function denote_if(senv, stx) {
-    stx = syntax_list_of_length(3, stx, ['invalid if', stx]);
-    var dc = denote(senv, stx[0]);
-    var dt = denote(senv, stx[1]);
-    var df = denote(senv, stx[2]);
+    stx = syntax_list_of_length(4, stx, ['invalid if', stx]);
+    var dc = denote(senv, stx[1]);
+    var dt = denote(senv, stx[2]);
+    var df = denote(senv, stx[3]);
     return function() {
       var kenv = env;
       ks.push(function(){
@@ -590,52 +640,73 @@ function evaluate(stx) {
   }
 
   function denote_quote(senv, stx) {
-    stx = syntax_list_of_length(1, stx, ['invalid quote', stx]);
-    return denote_literal(stx[0]);
+    stx = syntax_list_of_length(2, stx, ['invalid quote', stx]);
+    return denote_literal(strip_metadata(stx[1]));
   }
-  function build_qq(senv, stx) {
-    if (is_pair(stx)) {
-      var hd = head(stx), tl = tail(stx);
-      if (hd === 'unquote') {
-        tl = syntax_list_of_length(1, tl, ['invalid unquote', tl])[0];
+  function denote_syntax_quote(senv, stx) {
+    stx = syntax_list_of_length(2, stx, ['invalid syntactic quote', stx]);
+    return denote_literal(stx[1]);
+  }
+  function build_qq(senv, stx, should_strip) {
+    var datum = tail(stx);
+    if (is_pair(datum)) {
+      var hd = head(datum), tl = tail(datum);
+      var undo;
+      if (should_strip) { undo = 'unquote'; }
+      else { undo = 'unsyntax'; }
+      if (tail(hd) === undo) {
+        tl = syntax_list_of_length(1, tl, ['invalid ' + undo, stx])[0];
         return denote(senv, tl);
       } else {
-        var dh = build_qq(senv, hd), dt = build_qq(senv, tl);
+        var dh = build_qq(senv, hd, should_strip),
+            dt = build_qq(senv, tl, should_strip),
+            metadata = head(stx);
         return function() {
           var kenv = env;
           ks.push(function() {
             var ph = result;
-            ks.push(function() { return unwind(pair(ph, result)); });
+            ks.push(function() {
+              if (should_strip) { return unwind(pair(ph, result)); }
+              else { return unwind(pair(metadata, pair(ph, result))); }
+              });
             env = kenv;
             return dt;
           });
           return dh;
         };
       }
-    } else { return denote_literal(stx); }
+    } else if (should_strip) { return denote_literal(datum); }
+    else { return denote_literal(stx); }
   }
   function denote_qq(senv, stx) {
-    stx = syntax_list_of_length(1, stx, ['invalid quasiquote', stx])[0];
-    return build_qq(senv, stx);
+    stx = syntax_list_of_length(2, stx, ['invalid quasiquote', stx])[1];
+    return build_qq(senv, stx, true);
+  }
+  function denote_syntax_qq(senv, stx) {
+    stx = syntax_list_of_length(2, stx, ['invalid quasisyntax', stx])[1];
+    return build_qq(senv, stx, false);
   }
 
   function denote_let(senv, stx) {
     var err = ['invalid let', stx];
-    stx = syntax_list_of_length(2, stx, err);
+    stx = syntax_list_of_length(3, stx, err);
     var bindings = array_map(function(b) {
       return syntax_list_of_length(2, b, err);
-    }, syntax_list(stx[0], err));
+    }, syntax_list(stx[1], err));
     var params = array_map(function(b) {
-      if (!is_text(b[0])) { throw err; } return b[0];
+      if (!is_text(tail(b[0]))) { throw err; } return b[0];
     }, bindings);
     var args = array_map(function(b) { return b[1]; }, bindings);
-    var body = stx[1];
+    var body = stx[2];
     var dp = build_lambda(senv, array_to_list(params), body);
-    return build_app(senv, dp, array_to_list(args));
+    var annotate = function(ex, datum){ return pair(head(datum), datum); };
+    return build_app(senv, dp, array_to_list_annotated(annotate, args));
   }
 
   var operatives = [
     ['let', denote_let],
+    ['quasisyntax', denote_syntax_qq],
+    ['syntax', denote_syntax_quote],
     ['quasiquote', denote_qq],
     ['quote', denote_quote],
     ['if', denote_if],
@@ -825,10 +896,16 @@ function read_eval(pstr) { return evaluate(read_all(pstr)[0]); }
 
 function test() {
   check_equal('read atoms',
-      array_to_list(read_all(' one h\\u{1f4a9}l"lo\\two"rld 2 \n -3.14 .5 6.e1 #x1e2 #x1L2\t#b+11.1e1 #t #f')),
+      array_to_list(array_map(strip_metadata, read_all(
+            ' one h\\u{1f4a9}l"lo\\two"rld 2 \n -3.14 .5 6.e1 #x1e2 #x1L2\t#b+11.1e1 #t #f'))),
       array_to_list(['one', 'h\u{1f4a9}llo\tworld', 2, -3.14, '.5', 60, 482, 256, 7, true, false]));
   check_equal('read compounds',
-      array_to_list(read_all(' (1 [t"wo" 3] 4) #;(five 6) #| com\nments |# #[ 7 {ei\\ ght (nine) 10 } ] ;etc.')),
+      array_to_list(
+        array_map(strip_metadata,
+          read_all(
+            ' (1 [t"wo" 3] 4) #;(five 6) #| com\nments |# #[ 7 {ei\\ ght (nine) 10 } ] ;etc.')
+          )
+        ),
       array_to_list([
         array_to_list([1, array_to_list(['[]', 'two', 3]), 4]),
         array_to_list(
