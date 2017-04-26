@@ -21,6 +21,30 @@ function text_width(text, px) {
   return ctx.measureText(text).width;
 }
 
+// `html_encode` should be sufficient as long as we control the construction
+// of HTML/CSS/JS.  User content must pass through our construction APIs.
+// Since we maintain the original content, there's no need for `html_decode`.
+var html_encode_replacement = {
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;',
+  '/': '&#x2F', '`': '&#x60'
+};
+function html_encode_replace(str) { return html_encode_replacement[str]; }
+function html_encode(str) {
+  return str.replace(/[&<>"'\/`]/g, html_encode_replace);
+}
+// `encodeURI` is not safe for user input, as it preserves special characters
+// used across a full URI.  Instead, build URIs manually using these.
+function uri_path_encode(str) { return encodeURIComponent(str); }
+function uri_path_decode(up) { return decodeURIComponent(str); }
+// Replace space with + rather than %20 in application/x-www-form-urlencoded
+// content, such as anything to the right of ? in a URL
+function uri_query_encode(str) {
+  return encodeURIComponent(str).replace(/%20/g, '+');
+}
+function uri_query_decode(uq) {
+  return decodeURIComponent(uq.replace(/\+/g, '%20'));
+}
+
 var nil = null;
 function pair(hd, tl) { return [hd, tl]; }
 function head(pr) { return pr[0]; }
