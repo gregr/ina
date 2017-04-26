@@ -3,6 +3,24 @@
 <script>
 'use strict';
 
+function text_size(text, px) {
+  var node = document.createElement('span');
+  node.innerHTML = text;
+  node.style = 'position: absolute; visibility: hidden; height: auto; width: auto; white-space: nowrap; font-family: monospace;';
+  node.style.fontSize = px.toString() + 'px';
+  document.body.appendChild(node);
+  var result = [node.offsetWidth, node.offsetHeight];
+  document.body.removeChild(node);
+  return result;
+}
+
+function text_width(text, px) {
+  var cvs = document.createElement('canvas');
+  var ctx = cvs.getContext('2d');
+  ctx.font = px.toString() + 'px monospace';
+  return ctx.measureText(text).width;
+}
+
 var nil = null;
 function pair(hd, tl) { return [hd, tl]; }
 function head(pr) { return pr[0]; }
