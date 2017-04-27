@@ -1,7 +1,89 @@
 <!DOCTYPE html>
-<div>test</div>
+<style>
+.hspan {
+  display: inline;
+  font-family: monospace;
+  //min-height: 10px;
+}
+.tabular {
+  display: table;
+}
+.hcell {
+  display: table-cell;
+  //border: 1px solid;
+}
+.vcell {
+  display: table-row;
+  //border: 1px solid #000000;
+}
+.hframe {
+  //display: inline;
+  display: inline-block;
+  vertical-align: top;
+  //border: 1px solid;
+  //margin: 1px;
+  margin-left: 1px;
+  margin-right: 1px;
+}
+.hblock {
+  display: inline-block;
+  margin: 0px;
+}
+.vframe {
+  display: block;
+  // border: 1px solid #000000;
+}
+.vfree {
+  display: block;
+  margin: 1px;
+  // border: 1px solid #000000;
+}
+.chassis {
+  display: inline-block;
+  //vertical-align: top;
+  // border-collapse: collapse;  // for internal table items
+  margin: 1px;
+  // border: 2px solid #336666;
+  //font-family: monospace;
+}
+.box {
+  //display: inline-block;
+  //border: 1px solid #000000;
+}
+.atom {
+  cursor: pointer;
+  font-family: monospace;
+  white-space: pre;
+  min-width: 10px;
+  min-height: 10px;
+}
+.boolean {
+  background-color: #00ff00;
+}
+.number {
+  background-color: #ff9900;
+}
+.text {
+  background-color: #00ffff;
+}
+.any {
+  background-color: #aacccc;
+}
+</style>
+<div id="main">test</div>
 <script>
 'use strict';
+var main = document.getElementById('main');
+var main_history = [];
+function main_assign(data) { main.innerHTML = html_data(data); }
+function main_history_clear() { main_history = []; main_assign(main_history); }
+function main_eval(text) {
+  var exprs = read_all(text);
+  for (var i = 0, len = exprs.length; i < len; ++i) {
+    main_history.push(evaluate(exprs[i]));
+    main_assign(main_history);
+  }
+}
 
 function text_size(text, px) {
   var node = document.createElement('span');
@@ -592,6 +674,43 @@ function write(datum) {
   if (datum === nil)    { return '()'; }
   if (datum === true)   { return '#t'; }
   if (datum === false)  { return '#f'; }
+}
+
+// TODO: (fg/bg)colored text
+function html_text(text) {
+  return '<span class="hspan">' + html_encode(text) + '</span>';
+}
+function html_atom(datum) {
+  var cls;
+  if (is_number(datum)) { cls = 'number'; }
+  else if (is_text(datum)) { cls = 'text'; }
+  else if (is_boolean(datum)) { cls = 'boolean'; }
+  else { cls = 'any'; }
+  return ('<div class="hframe"><span class="atom box '+cls+'">'
+          + html_encode(write(datum))
+          + '</span></div>');
+}
+function html_pair(datum) {
+  // TODO: pretty width
+  //var elements = [html_text('(')];
+  var elements = [];
+  do { elements.push(html_datum(head(datum))); datum = tail(datum); }
+  while(is_pair(datum));
+  if (!is_nil(datum)) { elements.push(html_text(' . '), html_datum(datum)); }
+  elements.push(html_text(')'));
+  return '<div class="hframe"><div class="hcell">'+html_text('(')+'</div><div class="hcell">' + elements.join('') + '</div></div>';
+}
+function html_datum(datum) {
+  if (is_pair(datum)) { return html_pair(datum); }
+  else { return html_atom(datum); }
+}
+function vertical(item) {
+  return '<div class="vfree">' + item + '</div>';
+}
+function html_data(data) {
+  // TODO: prettify
+  data = array_map(vertical, array_map(html_datum, data));
+  return '<div class="chassis">' + data.join('') + '</div>';
 }
 
 function evaluate(stx) {
