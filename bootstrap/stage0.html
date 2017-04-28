@@ -657,12 +657,16 @@ function strip_metadata(stx) {
   } else { return datum; }
 }
 
-function write(datum) {
+function write_raw(datum, write_closure) {
   if (is_pair(datum)) {
     var elements = ['('];
-    do { elements.push(write(head(datum)), ' '); datum = tail(datum); }
-    while(is_pair(datum));
-    if (!is_nil(datum)) { elements.push('. ', write(datum), ' '); }
+    do {
+      elements.push(write_raw(head(datum), write_closure), ' ');
+      datum = tail(datum);
+    } while(is_pair(datum));
+    if (!is_nil(datum)) {
+      elements.push('. ', write_raw(datum, write_closure), ' ');
+    }
     elements[elements.length - 1] = ')';
     return elements.join('');
   }
@@ -674,6 +678,12 @@ function write(datum) {
   if (datum === nil)    { return '()'; }
   if (datum === true)   { return '#t'; }
   if (datum === false)  { return '#f'; }
+  if (is_closure(datum) && (write_closure !== false)) {
+    return write_closure(datum);
+  }
+}
+function write(datum) {
+  return write_raw(datum, function(p){ return '#<procedure>'; });
 }
 
 // TODO: (fg/bg)colored text
