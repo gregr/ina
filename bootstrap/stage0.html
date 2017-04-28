@@ -690,20 +690,22 @@ function html_atom(datum) {
           + html_encode(write(datum))
           + '</span></div>');
 }
-function html_pair(datum) {
+function html_pair(datum, suffix) {
   // TODO: pretty width
-  //var elements = [html_text('(')];
   var elements = [];
-  do { elements.push(html_datum(head(datum))); datum = tail(datum); }
-  while(is_pair(datum));
-  if (!is_nil(datum)) { elements.push(html_text(' . '), html_datum(datum)); }
-  elements.push(html_text(')'));
+  while(is_pair(datum) && !is_nil(tail(datum))) {
+    elements.push(html_datum(head(datum))); datum = tail(datum);
+  }
+  if (!is_pair(datum)) { elements.push(html_text(' . ')); }
+  else { datum = head(datum); }
+  elements.push(html_datum_suffix(datum, html_text(')') + suffix));
   return '<div class="hframe"><div class="hcell">'+html_text('(')+'</div><div class="hcell">' + elements.join('') + '</div></div>';
 }
-function html_datum(datum) {
-  if (is_pair(datum)) { return html_pair(datum); }
-  else { return html_atom(datum); }
+function html_datum_suffix(datum, suffix) {
+  if (is_pair(datum)) { return html_pair(datum, suffix); }
+  else { return html_atom(datum) + suffix; }
 }
+function html_datum(datum) { return html_datum_suffix(datum, ''); }
 function vertical(item) {
   return '<div class="vfree">' + item + '</div>';
 }
