@@ -353,8 +353,13 @@ function stream(source) {
   return {src: Array.from(source), token: 0, pos: 0, line: 0, col: 0, msg: ''};
 }
 function stream_finished(ss) { return ss.pos === ss.src.length; }
-function stream_unexpected(ss, str) { ss.msg = 'unexpected `'+str+'`'; }
-function stream_expected(ss, str) { ss.msg = 'expected `'+str+'`'; }
+function stream_ok(ss) { return ss.msg === ''; }
+function stream_error(ss, msg) { if (stream_ok(ss)) { ss.msg = msg; } }
+function stream_error_clear(ss) { ss.msg = ''; }
+function stream_expected(ss, str) { stream_error(ss, 'expected `'+str+'`'); }
+function stream_unexpected(ss, str) {
+  stream_error(ss, 'unexpected `'+str+'`');
+}
 function stream_skip_whitespace(ss) {
   var src = ss.src, i = ss.pos, len = src.length;
   for (; i < len; ++i) {
@@ -379,7 +384,7 @@ function read_stream_number(base, ss) {
   }
   var decode = function() {
     if (needs_digits || (i < len && !ch_boundary(src[i]))) {
-      ss.msg = 'invalid number'; return;
+      return stream_error(ss, 'invalid number');
     }
     ss.col += i - ss.pos;
     ss.pos = i;
@@ -486,7 +491,7 @@ function read_stream_sequence(ss) {
   while ((ss.pos < len) && ((element = read_stream(ss)) !== undefined)) {
     elements.push(element);
   }
-  ss.msg = '';
+  stream_error_clear(ss);
   return elements;
 }
 function read_stream_bracketed(prefix, delim, ss) {
@@ -496,8 +501,8 @@ function read_stream_bracketed(prefix, delim, ss) {
   if (token_dot(src, i, len)) {
     ++i; ++ss.pos; ++ss.col; suffix = read_stream(ss);
     if (suffix === undefined || read_stream(ss) !== undefined) {
-      ss.msg = 'exactly one element must follow `.` in sequence';
-      return;
+      return stream_error(
+          ss, 'exactly one element must follow `.` in sequence');
     }
   } else { suffix = annotated(ss, nil); }
   i = ss.pos;
@@ -511,13 +516,13 @@ function read_stream_bracketed(prefix, delim, ss) {
   } else { return stream_expected(ss, delim); }
 }
 
-function read_stream_quoted(prefix, ss) {
+function read_stream_quoted(prefix_name, prefix, ss) {
   var datum = read_stream(ss);
   if (datum !== undefined) {
     var annotate = function(ex, datum){ return annotated(ss, datum); }
     return tail(array_to_list_annotated(annotate, [prefix, datum]));
   }
-  else { ss.msg = 'expected an element to '+prefix+''; return; }
+  else { return stream_error(ss, 'expected one argument to '+prefix_name); }
 }
 
 function read_stream(ss) {
@@ -525,7 +530,7 @@ function read_stream(ss) {
   while (not_done) {
     i = stream_skip_whitespace(ss);
     ann = annotation(ss);
-    if (i >= len) { ss.msg = ''; return; }
+    if (i >= len) { return stream_error_clear(ss); }
     var ch = src[i];
     switch (ch) {
       case '(': case '[': case '{':
@@ -550,8 +555,8 @@ function read_stream(ss) {
             } else { prefix = 'unquote'; }
             break;
         }
-        if (prefix !== undefined) { prefix = pair(ann, prefix); }
-        ++ss.pos; ++ss.col; result = read_stream_quoted(prefix, ss);
+        ++ss.pos; ++ss.col;
+        result = read_stream_quoted(prefix, pair(ann, prefix), ss);
         not_done = false; break;
       case ';':
         for (; i < len; ++i) {
@@ -566,7 +571,7 @@ function read_stream(ss) {
             if (++i === len || ch_boundary(src[i])) {
               ++ss.pos; ++ss.col; result = (ch === 't');
               not_done = false; break;
-            } else { ss.msg = 'invalid `#` syntax'; return; }
+            } else { return stream_error(ss, 'invalid `#` syntax'); }
           case '(': case '[': case '{':
             var delim, prefix;
             switch (ch) {
@@ -589,8 +594,8 @@ function read_stream(ss) {
                 } else { prefix = 'unsyntax'; }
                 break;
             }
-            if (prefix !== undefined) { prefix = pair(ann, prefix); }
-            ++ss.pos; ++ss.col; result = read_stream_quoted(prefix, ss);
+            ++ss.pos; ++ss.col;
+            result = read_stream_quoted(prefix, pair(ann, prefix), ss);
             not_done = false; break;
           case 'x': case 'd': case 'o': case 'b':
             var base;
@@ -615,7 +620,7 @@ function read_stream(ss) {
             }
             if (i >= len) { return stream_expected(ss, '|#') };
             break;
-          default: ss.msg = 'invalid `#` syntax'; return;
+          default: return stream_error(ss, 'invalid `#` syntax');
         }
         break;
       default:
@@ -644,7 +649,7 @@ function read_all(str) {
   while (!stream_finished(ss)) {
     var datum = read_stream(ss);
     if (datum === undefined) {
-      if (ss.msg !== '') { throw ['read_all error', ss]; }
+      if (!stream_ok(ss)) { throw ['read_all error', ss]; }
     } else { all.push(datum); }
   }
   return all;
