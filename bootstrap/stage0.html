@@ -486,21 +486,23 @@ function annotation(ss) {
 }
 function annotated(ss, datum) { return pair(annotation(ss), datum); }
 
-function read_stream_sequence(ss) {
+function read_stream_sequence(ss, delim) {
   var len = ss.src.length, elements = [], element;
-  while ((ss.pos < len) && ((element = read_stream(ss)) !== undefined)) {
+  while ((ss.pos < len) &&
+         ((element = read_stream_expecting(ss, delim)) !== undefined)) {
     elements.push(element);
   }
-  stream_error_clear(ss);
-  return elements;
+  if (stream_ok(ss)) { return elements; }
 }
 function read_stream_bracketed(prefix, delim, ss) {
   var src = ss.src, len = src.length, i, delim, prefix, suffix;
   var annotate = function(ex, datum){ return annotated(ss, datum); }
-  var elements = read_stream_sequence(ss); i = ss.pos;
+  var elements = read_stream_sequence(ss, delim); i = ss.pos;
+  if (elements === undefined) { return; }
   if (token_dot(src, i, len)) {
     ++i; ++ss.pos; ++ss.col; suffix = read_stream(ss);
-    if (suffix === undefined || read_stream(ss) !== undefined) {
+    if ((suffix === undefined) ||
+        (read_stream_expecting(ss, delim) !== undefined)) {
       return stream_error(
           ss, 'exactly one element must follow `.` in sequence');
     }
@@ -525,7 +527,8 @@ function read_stream_quoted(prefix_name, prefix, ss) {
   else { return stream_error(ss, 'expected one argument to '+prefix_name); }
 }
 
-function read_stream(ss) {
+function read_stream(ss) { return read_stream_expecting(ss, false); }
+function read_stream_expecting(ss, delim) {
   var not_done = true, src = ss.src, len = src.length, i, ann, result;
   while (not_done) {
     i = stream_skip_whitespace(ss);
@@ -543,7 +546,9 @@ function read_stream(ss) {
         if (prefix !== undefined) { prefix = pair(ann, prefix); }
         ++ss.pos; ++ss.col; result = read_stream_bracketed(prefix, delim, ss);
         not_done = false; break;
-      case ')': case ']': case '}': return stream_unexpected(ss, ch);
+      case ')': case ']': case '}':
+        if (delim === ch) { return; }
+        else { return stream_unexpected(ss, ch); }
       case "'": case '`': case ',':
         var prefix;
         switch (ch) {
@@ -636,7 +641,8 @@ function read_stream(ss) {
         } else if (token_numeric(src, i, len)) {
           result = read_stream_number(10, ss);
         } else if (token_dot(src, i, len)) {
-          return stream_unexpected(ss, '.');
+          if (delim !== false) { return; }
+          else { return stream_unexpected(ss, '.'); }
         } else { result = read_stream_text(ss); }
         not_done = false;
     }
