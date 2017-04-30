@@ -77,6 +77,13 @@ var main = document.getElementById('main');
 var main_history = [];
 function main_assign(data) { main.innerHTML = html_data(data); }
 function main_history_clear() { main_history = []; main_assign(main_history); }
+function main_print(text) {
+  var exprs = read_all(text);
+  for (var i = 0, len = exprs.length; i < len; ++i) {
+    main_history.push(strip_metadata(exprs[i]));
+    main_assign(main_history);
+  }
+}
 function main_eval(text) {
   var exprs = read_all(text);
   for (var i = 0, len = exprs.length; i < len; ++i) {
