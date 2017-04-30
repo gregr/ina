@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <style>
+html, body {
+  height: 100%;
+}
 .hspan {
   display: inline;
   font-family: monospace;
@@ -69,10 +72,47 @@
 .any {
   background-color: #aacccc;
 }
+#drop-target {
+  display: inline-block;
+  border: 2px dashed #666666;
+  background-color: #ccc;
+  border-radius: 10px;
+  padding: 50px;
+  box-shadow: inset 0 0 3px #000;
+  text-align: center;
+}
 </style>
+<div id="drop-target">drop data here</div>
 <div id="main">test</div>
 <script>
 'use strict';
+
+function onFileSelect(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  var files = e.dataTransfer.files;
+  var reader = new FileReader();
+  reader.onload = function(e) { main_print(e.target.result); };
+  //reader.onload = function(e) { main_eval(e.target.result); };
+  for (var i = 0, len = files.length; i < len; ++i) {
+    reader.readAsText(files[i]);
+  }
+}
+function onDragOver(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+}
+
+// Prevent reloading page with dragged files when accidentally missing the drop
+// target by setting html and body heights to 100% to protect a larger area.
+function ignore(e) { e.preventDefault(); }
+var enames = ['dragover', 'drop'];
+[].forEach.call(enames, function(ename) { document.body.addEventListener(ename, ignore, false); });
+var drop_target = document.getElementById('drop-target');
+var ehs = [['dragover', onDragOver], ['drop', onFileSelect]];
+[].forEach.call(ehs, function(eh) { drop_target.addEventListener(eh[0], eh[1], false); });
+
 var main = document.getElementById('main');
 var main_history = [];
 function main_assign(data) { main.innerHTML = html_data(data); }
