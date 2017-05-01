@@ -1,8 +1,5 @@
 <!DOCTYPE html>
 <style>
-html, body {
-  height: 100%;
-}
 .hspan {
   display: inline;
   font-family: monospace;
@@ -104,11 +101,10 @@ function onDragOver(e) {
   e.dataTransfer.dropEffect = 'copy';
 }
 
-// Prevent reloading page with dragged files when accidentally missing the drop
-// target by setting html and body heights to 100% to protect a larger area.
+// Avoid accidentally reloading page with dragged files.
 function ignore(e) { e.preventDefault(); }
 var enames = ['dragover', 'drop'];
-[].forEach.call(enames, function(ename) { document.body.addEventListener(ename, ignore, false); });
+[].forEach.call(enames, function(ename) { document.addEventListener(ename, ignore, false); });
 var drop_target = document.getElementById('drop-target');
 var ehs = [['dragover', onDragOver], ['drop', onFileSelect]];
 [].forEach.call(ehs, function(eh) { drop_target.addEventListener(eh[0], eh[1], false); });
