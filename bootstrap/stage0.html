@@ -728,6 +728,12 @@ function strip_metadata(stx) {
     return pair(strip_metadata(head(datum)), strip_metadata(tail(datum)));
   } else { return datum; }
 }
+function fake_metadata(datum) {
+  if (is_pair(datum)) {
+    datum = pair(fake_metadata(head(datum)), fake_metadata(tail(datum)));
+  }
+  return pair(annotation(false), datum);
+}
 
 function write_raw(datum, write_closure) {
   if (is_pair(datum)) {
