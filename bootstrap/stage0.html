@@ -80,6 +80,10 @@
 }
 </style>
 <div id="drop-target">drop data here</div>
+<div>
+  <label for="file-input">Read data from file</label>
+  <input id="file-input" type="file" multiple>
+</div>
 <div id="main">test</div>
 <script>
 'use strict';
@@ -87,11 +91,22 @@
 function onFileSelect(e) {
   e.stopPropagation();
   e.preventDefault();
-  var files = e.dataTransfer.files;
-  var reader = new FileReader();
-  reader.onload = function(e) { main_print(e.target.result); };
-  //reader.onload = function(e) { main_eval(e.target.result); };
+  var files = e.target.files;
   for (var i = 0, len = files.length; i < len; ++i) {
+    var reader = new FileReader();
+    reader.onload = function(e) { main_print(e.target.result); };
+    //reader.onload = function(e) { main_eval(e.target.result); };
+    reader.readAsText(files[i]);
+  }
+}
+function onFileDrop(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  var files = e.dataTransfer.files;
+  for (var i = 0, len = files.length; i < len; ++i) {
+    var reader = new FileReader();
+    reader.onload = function(e) { main_print(e.target.result); };
+    //reader.onload = function(e) { main_eval(e.target.result); };
     reader.readAsText(files[i]);
   }
 }
@@ -106,8 +121,11 @@ function ignore(e) { e.preventDefault(); }
 var enames = ['dragover', 'drop'];
 [].forEach.call(enames, function(ename) { document.addEventListener(ename, ignore, false); });
 var drop_target = document.getElementById('drop-target');
-var ehs = [['dragover', onDragOver], ['drop', onFileSelect]];
+var ehs = [['dragover', onDragOver], ['drop', onFileDrop]];
 [].forEach.call(ehs, function(eh) { drop_target.addEventListener(eh[0], eh[1], false); });
+
+var file_input = document.getElementById('file-input');
+file_input.addEventListener('change', onFileSelect, false);
 
 var main = document.getElementById('main');
 var main_history = [];
