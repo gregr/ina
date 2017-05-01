@@ -84,7 +84,14 @@
   <label for="file-input">Read data from file</label>
   <input id="file-input" type="file" multiple>
 </div>
-<div id="main"><div>test</div></div>
+<div>
+  <div><textarea id="text-input" rows="10" cols="80" resizable></textarea></div>
+  <div>
+    <input id="parse-text-input" type="button" value="parse">
+    <input id="clear-text-input" type="button" value="clear">
+  </div>
+</div>
+<div id="main"><div></div></div>
 <script>
 'use strict';
 
@@ -126,6 +133,14 @@ var ehs = [['dragover', onDragOver], ['drop', onFileDrop]];
 
 var file_input = document.getElementById('file-input');
 file_input.addEventListener('change', onFileSelect, false);
+
+var text_input = document.getElementById('text-input');
+var clear_button = document.getElementById('clear-text-input');
+function clear_text_input() { text_input.value = ''; }
+clear_button.addEventListener('click', clear_text_input, false);
+var parse_button = document.getElementById('parse-text-input');
+function parse_text_input() { main_print(text_input.value); }
+parse_button.addEventListener('click', parse_text_input, false);
 
 var main = document.getElementById('main');
 var main_history = [];
