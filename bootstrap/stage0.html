@@ -793,7 +793,7 @@ function html_pair(datum, suffix) {
 }
 function html_datum_suffix(datum, suffix) {
   if (is_pair(datum)) { return html_pair(datum, suffix); }
-  else { return html_atom(datum) + suffix; }
+  else { return '<div class="hframe">' + html_atom(datum) + suffix + '</div>'; }
 }
 function html_datum(datum) { return html_datum_suffix(datum, ''); }
 
