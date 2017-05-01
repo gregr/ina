@@ -799,10 +799,21 @@ function html_datum(datum) { return html_datum_suffix(datum, ''); }
 
 function html_evaluable(stx) {
   var data = html_datum(strip_metadata(stx));
+  var eval_click = function(){
+    main_history_append(fake_metadata(evaluate(stx)));
+  };
+  var eval_button = document.createElement('input');
+  eval_button.type = 'button';
+  eval_button.value = 'eval';
+  eval_button.addEventListener('click', eval_click, false);
+  var eval_div = document.createElement('div');
+  eval_div.className = 'hcell';
+  eval_div.appendChild(eval_button);
   var data_div = document.createElement('div');
   data_div.className = 'hcell';
   data_div.innerHTML = data;
   var frag = document.createDocumentFragment();
+  frag.appendChild(eval_div);
   frag.appendChild(data_div);
   return frag;
 }
