@@ -851,7 +851,7 @@ function html_datum_suffix(datum, suffix) {
 }
 function html_datum(datum) { return html_datum_suffix(datum, ''); }
 
-function html_evaluable(stx) {
+function html_evaluable(history_index, stx) {
   var data = html_datum(strip_metadata(stx));
   var eval_click = function(){
     main_history_append(fake_metadata(evaluate(stx)));
@@ -860,15 +860,21 @@ function html_evaluable(stx) {
   eval_button.type = 'button';
   eval_button.value = 'eval';
   eval_button.addEventListener('click', eval_click, false);
-  var eval_div = document.createElement('div');
-  eval_div.className = 'hcell';
-  eval_div.appendChild(eval_button);
+  var remove_click = function(){ main_history_remove(history_index); };
+  var remove_button = document.createElement('input');
+  remove_button.type = 'button';
+  remove_button.value = 'remove';
+  remove_button.addEventListener('click', remove_click, false);
+  var button_div = document.createElement('div');
+  button_div.className = 'vcell';
+  button_div.appendChild(eval_button);
+  button_div.appendChild(remove_button);
   var data_div = document.createElement('div');
-  data_div.className = 'hcell';
+  data_div.className = 'vcell';
   data_div.innerHTML = data;
   var frag = document.createDocumentFragment();
-  frag.appendChild(eval_div);
   frag.appendChild(data_div);
+  frag.appendChild(button_div);
   return frag;
 }
 
@@ -880,7 +886,7 @@ function vertical(item) {
 }
 function html_data(data) {
   // TODO: prettify
-  data = array_map(vertical, array_map(html_evaluable, data));
+  data = array_map(vertical, array_map_index(html_evaluable, data));
   var div = document.createElement('div');
   div.className = 'chassis';
   for (var i = 0, l = data.length; i < l; ++i) { div.appendChild(data[i]); }
