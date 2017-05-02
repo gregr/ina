@@ -93,6 +93,9 @@
     <input id="clear-text-input" type="button" value="clear">
     <input id="parse-text-input" type="button" value="parse">
   </div>
+  <div>
+    <input id="print-history" type="button" value="print data">
+  </div>
 </div>
 <div id="main"><div></div></div>
 <script>
@@ -135,6 +138,14 @@ function save_data_file() {
 }
 var save_button = document.getElementById('save-text-input');
 save_button.addEventListener('click', save_data_file, false);
+
+var print_history_button = document.getElementById('print-history');
+function print_history() {
+  var history = array_map(write, array_map(strip_metadata, main_history));
+  history = (text_input.value === '' ? [] : [text_input.value]).concat(history);
+  text_input.value = history.join('\n');
+}
+print_history_button.addEventListener('click', print_history, false);
 
 // Avoid accidentally reloading page with dragged files.
 function ignore(e) { e.preventDefault(); }
