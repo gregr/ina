@@ -1,1 +1,1374 @@
-TODO
+<!DOCTYPE html>
+<style>
+.hspan {
+  display: inline;
+  font-family: monospace;
+  //min-height: 10px;
+}
+.tabular {
+  display: table;
+}
+.hcell {
+  display: table-cell;
+  //border: 1px solid;
+}
+.vcell {
+  display: table-row;
+  //border: 1px solid #000000;
+}
+.hframe {
+  //display: inline;
+  display: inline-block;
+  vertical-align: top;
+  //border: 1px solid;
+  //margin: 1px;
+  margin-left: 1px;
+  margin-right: 1px;
+}
+.hblock {
+  display: inline-block;
+  margin: 0px;
+}
+.vframe {
+  display: block;
+  // border: 1px solid #000000;
+}
+.vfree {
+  display: block;
+  margin: 1px;
+  // border: 1px solid #000000;
+}
+.chassis {
+  display: inline-block;
+  //vertical-align: top;
+  // border-collapse: collapse;  // for internal table items
+  margin: 1px;
+  // border: 2px solid #336666;
+  //font-family: monospace;
+}
+.box {
+  //display: inline-block;
+  //border: 1px solid #000000;
+}
+.atom {
+  cursor: pointer;
+  font-family: monospace;
+  white-space: pre;
+  min-width: 10px;
+  min-height: 10px;
+}
+.boolean {
+  background-color: #00ff00;
+}
+.number {
+  background-color: #ff9900;
+}
+.text {
+  background-color: #00ffff;
+}
+.any {
+  background-color: #aacccc;
+}
+#drop-target {
+  display: inline-block;
+  border: 2px dashed #666666;
+  background-color: #ccc;
+  border-radius: 10px;
+  padding: 50px;
+  box-shadow: inset 0 0 3px #000;
+  text-align: center;
+}
+#file-input {
+  display: none;
+}
+
+</style>
+<div>
+  <div><textarea id="text-input" rows="10" cols="80" resizable></textarea></div>
+  <div>
+    <input id="file-input" type="file" multiple>
+    <input id="load-text-input" type="button" value="open">
+    <input id="save-text-input" type="button" value="save as">
+    <input id="save-name-text-input" type="text" value="saved-data.scm">
+    <input id="clear-text-input" type="button" value="clear text">
+    <input id="parse-text-input" type="button" value="parse">
+  </div>
+  <div>
+    <input id="print-history" type="button" value="print data">
+    <input id="clear-history" type="button" value="clear data">
+  </div>
+</div>
+<div id="main"><div></div></div>
+<script>
+'use strict';
+
+var text_input = document.getElementById('text-input');
+
+function load_files(files) {
+  for (var i = 0, len = files.length; i < len; ++i) {
+    var reader = new FileReader();
+    reader.onload = function(e) { text_input.value += e.target.result; };
+    reader.readAsText(files[i]);
+  }
+}
+function onFileSelect(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  load_files(e.target.files);
+}
+function onFileDrop(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  load_files(e.dataTransfer.files);
+}
+function onDragOver(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+}
+
+var save_name_text_input = document.getElementById('save-name-text-input');
+function save_data_file() {
+  var data = new Blob([text_input.value], {type: 'text/plain;charset=utf-8'});
+  var anchor = document.createElement('a');
+  anchor.download = save_name_text_input.value;
+  var url = window.URL.createObjectURL(data);
+  anchor.href = url;
+  anchor.click();
+  window.URL.revokeObjectURL(url);
+}
+var save_button = document.getElementById('save-text-input');
+save_button.addEventListener('click', save_data_file, false);
+
+var print_history_button = document.getElementById('print-history');
+function print_history() {
+  var history = array_map(write, array_map(strip_metadata, main_history));
+  history = (text_input.value === '' ? [] : [text_input.value]).concat(history);
+  text_input.value = history.join('\n');
+}
+print_history_button.addEventListener('click', print_history, false);
+var clear_history_button = document.getElementById('clear-history');
+clear_history_button.addEventListener('click', main_history_clear, false);
+
+// Avoid accidentally reloading page with dragged files.
+function ignore(e) { e.preventDefault(); }
+var enames = ['dragover', 'drop'];
+[].forEach.call(enames, function(ename) { document.addEventListener(ename, ignore, false); });
+var ehs = [['dragover', onDragOver], ['drop', onFileDrop]];
+[].forEach.call(ehs, function(eh) { text_input.addEventListener(eh[0], eh[1], false); });
+
+var file_input = document.getElementById('file-input');
+file_input.addEventListener('change', onFileSelect, false);
+var open_button = document.getElementById('load-text-input');
+open_button.addEventListener('click', function(){file_input.click();}, false);
+
+var clear_button = document.getElementById('clear-text-input');
+function clear_text_input() { text_input.value = ''; }
+clear_button.addEventListener('click', clear_text_input, false);
+var parse_button = document.getElementById('parse-text-input');
+function parse_text_input() { main_print(text_input.value); }
+parse_button.addEventListener('click', parse_text_input, false);
+
+var main = document.getElementById('main');
+var main_history = [];
+function main_assign(data) {
+  main.removeChild(main.children[0]);
+  main.appendChild(html_data(data));
+}
+function main_history_clear() { main_history = []; main_assign(main_history); }
+function main_history_remove(index) {
+  main_history.splice(index, 1);
+  main_assign(main_history);
+}
+function main_history_append(item) { main_history.push(item); main_assign(main_history); }
+function main_print(text) {
+  var exprs = read_all(text);
+  for (var i = 0, len = exprs.length; i < len; ++i) {
+    main_history_append(exprs[i]);
+  }
+}
+function main_eval(text) {
+  var exprs = read_all(text);
+  for (var i = 0, len = exprs.length; i < len; ++i) {
+    main_history_append(fake_metadata(evaluate(exprs[i])));
+  }
+}
+
+function text_size(text, px) {
+  var node = document.createElement('span');
+  node.innerHTML = text;
+  node.style = 'position: absolute; visibility: hidden; height: auto; width: auto; white-space: nowrap; font-family: monospace;';
+  node.style.fontSize = px.toString() + 'px';
+  document.body.appendChild(node);
+  var result = [node.offsetWidth, node.offsetHeight];
+  document.body.removeChild(node);
+  return result;
+}
+
+function text_width(text, px) {
+  var cvs = document.createElement('canvas');
+  var ctx = cvs.getContext('2d');
+  ctx.font = px.toString() + 'px monospace';
+  return ctx.measureText(text).width;
+}
+
+// `html_encode` should be sufficient as long as we control the construction
+// of HTML/CSS/JS.  User content must pass through our construction APIs.
+// Since we maintain the original content, there's no need for `html_decode`.
+var html_encode_replacement = {
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;',
+  '/': '&#x2F', '`': '&#x60'
+};
+function html_encode_replace(str) { return html_encode_replacement[str]; }
+function html_encode(str) {
+  return str.replace(/[&<>"'\/`]/g, html_encode_replace);
+}
+// `encodeURI` is not safe for user input, as it preserves special characters
+// used across a full URI.  Instead, build URIs manually using these.
+function uri_path_encode(str) { return encodeURIComponent(str); }
+function uri_path_decode(up) { return decodeURIComponent(str); }
+// Replace space with + rather than %20 in application/x-www-form-urlencoded
+// content, such as anything to the right of ? in a URL
+function uri_query_encode(str) {
+  return encodeURIComponent(str).replace(/%20/g, '+');
+}
+function uri_query_decode(uq) {
+  return decodeURIComponent(uq.replace(/\+/g, '%20'));
+}
+
+var nil = null;
+function pair(hd, tl) { return [hd, tl]; }
+function head(pr) { return pr[0]; }
+function tail(pr) { return pr[1]; }
+
+function is_nil(datum) { return datum === null; }
+function is_closure(datum) { return typeof datum === 'function'; }
+function is_boolean(datum) { return typeof datum === 'boolean'; }
+function is_text(datum) { return typeof datum === 'string'; }
+function is_number(datum) { return typeof datum === 'number'; }
+function is_int32(datum) {
+  return (typeof datum === 'number') && (datum === (datum | 0));
+}
+function is_pair(datum) {
+  return (typeof datum === 'object') && (datum !== null);
+}
+
+function env_extend(env, datum) { return [datum, env]; }
+function env_ref(env, idx) {
+  for (; idx > 0; --idx) { env = env[1]; }
+  return env[0];
+}
+function env_find(env, found) {
+  var index = 0;
+  for (; env !== null; ++index) {
+    if (found(env[0])) { return index; }
+    env = env[1];
+  }
+  return;
+}
+function env_find_name(env, name, stx) {
+  var index = env_find(env, function(b){return (name === b[0]);});
+  if (index === undefined) { throw ['unbound variable', stx]; }
+  return index;
+}
+function env_lookup(env, name, stx) {
+  var index = env_find_name(env, name, stx);
+  return env_ref(env, index)[1];
+}
+
+function syntax_list_of_length(len, xs, err) {
+  var result = [];
+  xs = tail(xs);
+  for (; len > 0; --len) {
+    if (!is_pair(xs)) { throw err; }
+    result.push(head(xs));
+    xs = tail(tail(xs));
+  }
+  if (!is_nil(xs)) { throw err; }
+  return result;
+}
+function syntax_list(xs, err) {
+  var result = [];
+  xs = tail(xs);
+  while (is_pair(xs)) {
+    result.push(head(xs));
+    xs = tail(tail(xs));
+  }
+  if (!is_nil(xs)) { throw err; }
+  return result;
+}
+function array_to_list_dotted(annotate, suffix, xs) {
+  var i = xs.length - 1;
+  var result = suffix;
+  for (; i >= 0; --i) {
+    result = pair(xs[i], result);
+    if (annotate !== false) { result = annotate(xs[i], result); }
+  }
+  return result;
+}
+function array_to_list_annotated(annotate, xs) {
+  var suffix = null;
+  if (annotate !== false) { suffix = annotated(false, suffix); }
+  return array_to_list_dotted(annotate, suffix, xs);
+}
+function array_to_list(xs) { return array_to_list_annotated(false, xs); }
+
+function array_map(f, xs) {
+  var i = xs.length - 1;
+  var result = [];
+  result.length = xs.length;
+  for (; i >= 0; --i) { result[i] = f(xs[i]); }
+  return result;
+}
+
+function array_map_index(f, xs) {
+  var i = xs.length - 1;
+  var result = [];
+  result.length = xs.length;
+  for (; i >= 0; --i) { result[i] = f(i, xs[i]); }
+  return result;
+}
+
+// TODO: handle unicode issues.
+// String#normalize('NFC') all inputs
+// test using:
+//   i18n = 'Iñtërnâtiônàlizætiøn☃💩'
+//   marks = 'Z͑ͫ̓ͪ̂ͫ̽͏̴̙̤̞͉͚̯̞̠͍A̴̵̜̰͔ͫ͗͢L̠ͨͧͩ͘G̴̻͈͍͔̹̑͗̎̅͛́Ǫ̵̹̻̝̳͂̌̌͘!͖̬̰̙̗̿̋ͥͥ̂ͣ̐́́͜͞'
+//   hangul = '깍'
+//   jamo = ['ᄁ', 'ᅡ', 'ᆨ']
+
+function cc_of(ch) { return ch.codePointAt(0); }
+function cc_at(src, i) { return cc_of(src[i]); }
+function cc_digit_decimal(cc) { return cc >= 48 && cc <= 57; }
+function cc_digit_octal(cc) { return cc >= 48 && cc <= 55; }
+function cc_digit_hex_alpha_upper(cc) { return cc >= 65 && cc <= 70; }
+function cc_digit_hex_alpha_lower(cc) { return cc >= 97 && cc <= 102; }
+function cc_digit_hexadecimal(cc) {
+  return cc_digit_decimal(cc) ||
+    cc_digit_hex_alpha_lower(cc) || cc_digit_hex_alpha_upper(cc);
+  }
+function cc_digit_binary(cc) { return cc === 48 || cc === 49; }
+function cc_hspace(cc) {
+  return cc === 32 || cc === 9 || cc === 160 || cc >= 0x2000 && cc <= 0x200A;
+}
+function cc_vspace(cc) {
+  return cc >= 10 && cc <= 13 || cc === 133 || cc === 0x2028 || cc === 0x02029;
+}
+function cc_space(cc) { return cc_hspace(cc) || cc_vspace(cc); }
+function cc_nonprintable(cc) {
+  // TODO: anything non-graphical and non-blank.  So, anything not in these:
+  // http://unicode.org/cldr/utility/list-unicodeset.jsp?a=%5Cp%7BL%7D%7C%5Cp%7BN%7D%7C%5Cp%7BS%7D%7C%5Cp%7BP%7D%7C%5Cp%7BZs%7D&abb=on&c=on&esc=on&g=&i=
+  //   hblank:         Zs, \t
+  //   alphabetic,  L: Ll, Lm, Lo, Lt, Lu
+  //   numeric,     N: Nd, Nl, No
+  //   symbolic,    S: Sc, Sk, Sm, So
+  //   punctuation, P: Pc, Pd, Pe, Pf, Pi, Po, Ps
+  //   mark,        M: Mc, Me, Mn
+  // This is a hack.
+  return (cc < 9 || (cc > 13 && cc < 32) || (cc >= 127 && cc < 160)
+      || (cc >= 0xfff9 && cc <= 0xffff));
+}
+function ch_boundary(ch) {
+  switch (ch) {
+    case '(': case '[': case '{': case ')': case ']': case '}':
+    case "'": case '`': case ',': case ';': return true;
+    default: return cc_space(ch.codePointAt(0));
+  }
+}
+
+function token_prefix(prefix, src, i, len) {
+  prefix = Array.from(prefix);
+  var j = 0, plen = prefix.length;
+  for (; (j < plen) && (i < len); ++i, ++j) {
+    if (prefix[j] !== src[i]) { return; }
+  }
+  if (j < plen) { return; }
+  return i;
+}
+function token_numeric(src, i, len) {
+  var prefixes = ['-.', '+.', '-', '+'];
+  var j = 0, plen = prefixes.length;
+  for (; j < plen; ++j) {
+    var pi = token_prefix(prefixes[j], src, i, len);
+    if (pi !== undefined) { i = pi; break; }
+  }
+  return (i < len) && cc_digit_decimal(cc_at(src, i));
+}
+function token_dot(src, i, len) {
+  return (src[i] === '.' && (i+1 >= len || ch_boundary(src[i+1])));
+}
+
+function hex_digit_cc_to_int(cc) {
+  if (cc_digit_decimal(cc))              { return cc - 48; }
+  else if (cc_digit_hex_alpha_upper(cc)) { return cc - 65 + 10; }
+  else if (cc_digit_hex_alpha_lower(cc)) { return cc - 97 + 10; }
+}
+function hex_to_int(hex) {
+  var len = hex.length;
+  var result = 0;
+  for (var i = 0; i < len; ++i) {
+    var cc = cc_at(hex, i);
+    if (!cc_digit_hexadecimal(cc)) { throw ['invalid hexadecimal', hex]; }
+    result = (result * 16) + hex_digit_cc_to_int(cc);
+  }
+  return result;
+}
+function hex_to_str(hex) { return String.fromCodePoint(hex_to_int(hex)); }
+
+var bad_leading = ['#'];
+var bad_anywhere = ['\\',"'",'`',',',';','"','(',')','[',']','{','}','\0','\b'];
+function ch_in(ch, xs) {
+  for (var j = xs.length-1; j >= 0; --j) { if (ch === xs[j]) { return true; } }
+  return false;
+}
+function text_should_quote(text) {
+  var s = Array.from(text);
+  var len = s.length;
+  if ((len === 0) || (token_numeric(s, 0, len) || token_dot(s, 0, len))
+      || (ch_in(s[0], bad_leading))) { return true; }
+  for (var i = 0; i < len; ++i) {
+    if (cc_nonprintable(cc_at(s, i)) || cc_space(cc_at(s, i))
+        || ch_in(s[i], bad_anywhere)) { return true; }
+  }
+  return false;
+}
+function encode_char(ch) {
+  switch (ch) {
+    case '\0': return '\\0';
+    case '\b': return '\\b';
+    case '\t': return '\\t';
+    case '\n': return '\\n';
+    case '\v': return '\\v';
+    case '\f': return '\\f';
+    case '\r': return '\\r';
+    case '"':  return '\\"';
+    default:
+      var cc = ch.codePointAt(0);
+      if (cc === 7) { return '\\a'; }
+      else if (cc === 27) { return '\\e'; }
+      else if (cc_nonprintable(cc) || (cc !== 32 && cc_space(cc))) {
+        return '\\u{' + cc.toString(16) + '}';
+      }
+      return;
+  }
+}
+function text_quoted(text) {
+  var s = Array.from(text);
+  var quoted = '"', len = s.length, h = 0, i = 0;
+  for (; i < len; ++i) {
+    var ch = encode_char(s[i]);
+    if (ch !== undefined) {
+      quoted += s.slice(h, i).join('') + ch;
+      h = i+1;
+    }
+  }
+  quoted += s.slice(h, i).join('') + '"';
+  return quoted;
+}
+
+function stream(source) {
+  return {src: Array.from(source), token: 0, pos: 0, line: 0, col: 0, msg: ''};
+}
+function stream_finished(ss) { return ss.pos === ss.src.length; }
+function stream_ok(ss) { return ss.msg === ''; }
+function stream_error(ss, msg) { if (stream_ok(ss)) { ss.msg = msg; } }
+function stream_error_clear(ss) { ss.msg = ''; }
+function stream_expected(ss, str) { stream_error(ss, 'expected `'+str+'`'); }
+function stream_unexpected(ss, str) {
+  stream_error(ss, 'unexpected `'+str+'`');
+}
+function stream_skip_whitespace(ss) {
+  var src = ss.src, i = ss.pos, len = src.length;
+  for (; i < len; ++i) {
+    var cc = cc_at(src, i);
+    if (cc_vspace(cc)) { ++ss.line; ss.col = 0; }
+    else if (cc_hspace(cc)) { ++ss.col; }
+    else { break; }
+  }
+  ss.pos = i; return i;
+}
+
+function read_stream_number(base, ss) {
+  var src = ss.src, i = ss.pos, len = src.length, needs_digits = true;
+  var whole = 0, fraction = 0, exponent = 0, sign = 1, esign = 1;
+  var cc_digit;
+  switch (base) {
+    case 2: cc_digit = cc_digit_binary; break;
+    case 8: cc_digit = cc_digit_octal; break;
+    case 10: cc_digit = cc_digit_decimal; break;
+    case 16: cc_digit = cc_digit_hexadecimal; break;
+    default: throw ['invalid base', base];
+  }
+  var decode = function() {
+    if (needs_digits || (i < len && !ch_boundary(src[i]))) {
+      return stream_error(ss, 'invalid number');
+    }
+    ss.col += i - ss.pos;
+    ss.pos = i;
+    return sign * (whole + fraction) * Math.pow(base, esign * exponent);
+  }
+  if (i === len) { return decode(); }
+  var ch = src[i]; if ((ch === '-') || (ch === '+')) { ++i; }
+  if (ch === '-') { sign = -1; }
+  for (; i < len; ++i) {
+    var cc = cc_at(src, i);
+    if (!cc_digit(cc)) { break; }
+    needs_digits = false;
+    whole = (whole * base) + hex_digit_cc_to_int(cc);
+  }
+  if (i === len) { return decode(); }
+  if (src[i] === '.') {
+    var divisor = base;
+    for (++i; i < len; ++i) {
+      var cc = cc_at(src, i);
+      if (!cc_digit(cc)) { break; }
+      needs_digits = false;
+      fraction += hex_digit_cc_to_int(cc) / divisor;
+      divisor *= base;
+    }
+  }
+  if (i === len) { return decode(); }
+  switch (src[i]) {
+    case 'e': case 'E': case 'l': case 'L':
+      needs_digits = true; if (++i === len) { return decode(); }
+      var ch = src[i]; if ((ch === '-') || (ch === '+')) { ++i; }
+      if (ch === '-') { esign = -1; }
+      for (; i < len; ++i) {
+        var cc = cc_at(src, i);
+        if (!cc_digit(cc)) { break; }
+        needs_digits = false;
+        exponent = (exponent * base) + hex_digit_cc_to_int(cc);
+      }
+  }
+  return decode();
+}
+
+function read_stream_text_codepoint(ss) {
+  var src = ss.src, i = ss.pos, len = src.length, code = [];
+  if (i >= len || src[i] !== '{') { return stream_expected(ss, '{'); }
+  for (++i; i < len; ++i) {
+    var ch = src[i];
+    if (ch === '}') {
+      ++i; ss.col += i - ss.pos; ss.pos = i; return hex_to_str(code);
+    } else if (!cc_digit_hexadecimal(cc_of(ch))) {
+      ss.col += i - ss.pos; ss.pos = i; return stream_unexpected(ss, ch);
+    } else { code.push(ch); }
+  }
+  ss.col += i - ss.pos; ss.pos = i; return stream_expected(ss, '}');
+}
+function read_stream_text_escaped(ss) {
+  var prefix = ss.src[ss.pos]; ++ss.pos; ++ss.col;
+  switch (prefix) {
+    case '0': return '\0';
+    case 'a': return String.fromCodePoint(7);
+    case 'b': return '\b';
+    case 't': return '\t';
+    case 'n': return '\n';
+    case 'v': return '\v';
+    case 'f': return '\f';
+    case 'r': return '\r';
+    case 'e': return String.fromCodePoint(27);
+    case 'u': return read_stream_text_codepoint(ss);
+    default: return prefix;
+  }
+}
+function read_stream_text(ss) {
+  var src = ss.src, i = ss.pos, len = src.length, text = [], quoted = false;
+  for (; i < len; ++i) {
+    var ch = src[i];
+    if (ch === '"') { quoted = !quoted; continue; }
+    if (!quoted && ch_boundary(ch)) { break; }
+    else if (ch === '\\') {
+      if (++i < len) {
+        if (src[i] === '\n') { ++ss.line; ss.col = 0; }
+        else {
+          ++ss.col; ss.pos = i;
+          ch = read_stream_text_escaped(ss); i = ss.pos - 1;
+          if (ch === undefined) { return; }
+          text.push(ch);
+        }
+      } else { ss.pos = i; return stream_unexpected(ss, 'end-of-stream'); }
+    } else { text.push(ch); ++ss.col; }
+  }
+  ss.pos = i;
+  if (quoted) { return stream_unexpected(ss, 'end-of-stream'); }
+  return text.join('');
+}
+
+function annotation(ss) {
+  var src;
+  if (ss === false) { src = null; }
+  else { src = array_to_list([ss.token++]); }
+  return pair('syntax', src);
+}
+function annotated(ss, datum) { return pair(annotation(ss), datum); }
+
+function read_stream_sequence(ss, delim) {
+  var len = ss.src.length, elements = [], element;
+  while ((ss.pos < len) &&
+         ((element = read_stream_expecting(ss, delim)) !== undefined)) {
+    elements.push(element);
+  }
+  if (stream_ok(ss)) { return elements; }
+}
+function read_stream_bracketed(prefix, delim, ss) {
+  var src = ss.src, len = src.length, i, delim, prefix, suffix;
+  var annotate = function(ex, datum){ return annotated(ss, datum); }
+  var elements = read_stream_sequence(ss, delim); i = ss.pos;
+  if (elements === undefined) { return; }
+  if (token_dot(src, i, len)) {
+    ++i; ++ss.pos; ++ss.col; suffix = read_stream(ss);
+    if ((suffix === undefined) ||
+        (read_stream_expecting(ss, delim) !== undefined)) {
+      return stream_error(
+          ss, 'exactly one element must follow `.` in sequence');
+    }
+  } else { suffix = annotated(ss, nil); }
+  i = ss.pos;
+  if (i < len && src[i] === delim) {
+    ++ss.pos; ++ss.col;
+    elements = array_to_list_dotted(annotate, suffix, elements);
+    if (prefix !== undefined) {
+      elements = annotate(prefix, pair(prefix, elements));
+    }
+    return tail(elements);
+  } else { return stream_expected(ss, delim); }
+}
+
+function read_stream_quoted(prefix_name, prefix, ss) {
+  var datum = read_stream(ss);
+  if (datum !== undefined) {
+    var annotate = function(ex, datum){ return annotated(ss, datum); }
+    return tail(array_to_list_annotated(annotate, [prefix, datum]));
+  }
+  else { return stream_error(ss, 'expected one argument to '+prefix_name); }
+}
+
+function read_stream(ss) { return read_stream_expecting(ss, false); }
+function read_stream_expecting(ss, delim) {
+  var not_done = true, src = ss.src, len = src.length, i, ann, result;
+  while (not_done) {
+    i = stream_skip_whitespace(ss);
+    ann = annotation(ss);
+    if (i >= len) { return stream_error_clear(ss); }
+    var ch = src[i];
+    switch (ch) {
+      case '(': case '[': case '{':
+        var delim, prefix;
+        switch (ch) {
+          case '(': delim = ')'; break;
+          case '[': delim = ']'; prefix = '[]'; break;
+          case '{': delim = '}'; prefix = '{}'; break;
+        }
+        if (prefix !== undefined) { prefix = pair(ann, prefix); }
+        ++ss.pos; ++ss.col; result = read_stream_bracketed(prefix, delim, ss);
+        not_done = false; break;
+      case ')': case ']': case '}':
+        if (delim === ch) { return; }
+        else { return stream_unexpected(ss, ch); }
+      case "'": case '`': case ',':
+        var prefix;
+        switch (ch) {
+          case "'": prefix = 'quote'; break;
+          case '`': prefix = 'quasiquote'; break;
+          case ',':
+            if (src[i+1] === '@') {
+              prefix = 'unquote-splicing'; ++ss.pos; ++ss.col;
+            } else { prefix = 'unquote'; }
+            break;
+        }
+        ++ss.pos; ++ss.col;
+        result = read_stream_quoted(prefix, pair(ann, prefix), ss);
+        not_done = false; break;
+      case ';':
+        for (; i < len; ++i) {
+          if (cc_vspace(cc_at(src, i))) { ++ss.line; ss.col = 0; ++i; break; }
+          else { ++ss.col; }
+        }
+        ss.pos = i; break;
+      case '#':
+        ch = src[++i]; ++ss.pos; ++ss.col;
+        switch (ch) {
+          case 't': case 'f':
+            if (++i === len || ch_boundary(src[i])) {
+              ++ss.pos; ++ss.col; result = (ch === 't');
+              not_done = false; break;
+            } else { return stream_error(ss, 'invalid `#` syntax'); }
+          case '(': case '[': case '{':
+            var delim, prefix;
+            switch (ch) {
+              case '(': delim = ')'; prefix = '#()'; break;
+              case '[': delim = ']'; prefix = '#[]'; break;
+              case '{': delim = '}'; prefix = '#{}'; break;
+            }
+            if (prefix !== undefined) { prefix = pair(ann, prefix); }
+            ++ss.pos; ++ss.col;
+            result = read_stream_bracketed(prefix, delim, ss);
+            not_done = false; break;
+          case "'": case '`': case ',':
+            var prefix;
+            switch (ch) {
+              case "'": prefix = 'syntax'; break;
+              case '`': prefix = 'quasisyntax'; break;
+              case ',':
+                if (src[i+1] === '@') {
+                  prefix = 'unsyntax-splicing'; ++ss.pos; ++ss.col;
+                } else { prefix = 'unsyntax'; }
+                break;
+            }
+            ++ss.pos; ++ss.col;
+            result = read_stream_quoted(prefix, pair(ann, prefix), ss);
+            not_done = false; break;
+          case 'x': case 'd': case 'o': case 'b':
+            var base;
+            switch (ch) {
+              case 'x': base = 16; break;
+              case 'd': base = 10; break;
+              case 'o': base = 8; break;
+              case 'b': base = 2; break;
+            }
+            ++ss.pos; ++ss.col; result = read_stream_number(base, ss);
+            not_done = false; break;
+          case ';':
+            ++ss.pos; ++ss.col;
+            if (read_stream(ss) === undefined) { return; }
+            break;
+          case '|':
+            for (++i, ++ss.col; i < len; ++i) {
+              var pi = token_prefix('|#', src, i, len);
+              if (pi !== undefined) { ss.pos = pi; ss.col += pi - i; break; }
+              if (cc_vspace(cc_at(src, i))) { ++ss.line; ss.col = 0; }
+              else { ++ss.col; }
+            }
+            if (i >= len) { return stream_expected(ss, '|#') };
+            break;
+          default: return stream_error(ss, 'invalid `#` syntax');
+        }
+        break;
+      default:
+        var pi;
+        if ((pi = token_prefix('+nan', src, i, len)) !== undefined) {
+          ss.pos = pi; ss.col += pi - i; result = NaN;
+        } else if ((pi = token_prefix('-nan', src, i, len)) !== undefined) {
+          ss.pos = pi; ss.col += pi - i; result = NaN;
+        } else if ((pi = token_prefix('+inf', src, i, len)) !== undefined) {
+          ss.pos = pi; ss.col += pi - i; result = Infinity;
+        } else if ((pi = token_prefix('-inf', src, i, len)) !== undefined) {
+          ss.pos = pi; ss.col += pi - i; result = -Infinity;
+        } else if (token_numeric(src, i, len)) {
+          result = read_stream_number(10, ss);
+        } else if (token_dot(src, i, len)) {
+          if (delim !== false) { return; }
+          else { return stream_unexpected(ss, '.'); }
+        } else { result = read_stream_text(ss); }
+        not_done = false;
+    }
+  }
+  if (result !== undefined) { return pair(ann, result); }
+}
+
+function read_all(str) {
+  var ss = stream(str), all = [];
+  while (!stream_finished(ss)) {
+    var datum = read_stream(ss);
+    if (datum === undefined) {
+      if (!stream_ok(ss)) { throw ['read_all error', ss]; }
+    } else { all.push(datum); }
+  }
+  return all;
+}
+
+function strip_metadata(stx) {
+  var datum = tail(stx);
+  if (is_pair(datum)) {
+    return pair(strip_metadata(head(datum)), strip_metadata(tail(datum)));
+  } else { return datum; }
+}
+function fake_metadata(datum) {
+  if (is_pair(datum)) {
+    datum = pair(fake_metadata(head(datum)), fake_metadata(tail(datum)));
+  }
+  return pair(annotation(false), datum);
+}
+
+function write_raw(datum, write_closure) {
+  if (is_pair(datum)) {
+    var elements = ['('];
+    do {
+      elements.push(write_raw(head(datum), write_closure), ' ');
+      datum = tail(datum);
+    } while(is_pair(datum));
+    if (!is_nil(datum)) {
+      elements.push('. ', write_raw(datum, write_closure), ' ');
+    }
+    elements[elements.length - 1] = ')';
+    return elements.join('');
+  }
+  if (is_text(datum)) {
+    if (text_should_quote(datum)) { return text_quoted(datum); }
+    else { return datum; }
+  }
+  if (is_number(datum)) { return datum.toString(); }
+  if (datum === nil)    { return '()'; }
+  if (datum === true)   { return '#t'; }
+  if (datum === false)  { return '#f'; }
+  if (is_closure(datum) && (write_closure !== false)) {
+    return write_closure(datum);
+  }
+}
+function write(datum) {
+  return write_raw(datum, function(p){ return '#<procedure>'; });
+}
+
+// TODO: (fg/bg)colored text
+function html_text(text) {
+  return '<span class="hspan">' + html_encode(text) + '</span>';
+}
+function html_atom(datum) {
+  var cls;
+  if (is_number(datum)) { cls = 'number'; }
+  else if (is_text(datum)) { cls = 'text'; }
+  else if (is_boolean(datum)) { cls = 'boolean'; }
+  else { cls = 'any'; }
+  return ('<div class="hframe"><span class="atom box '+cls+'">'
+          + html_encode(write(datum))
+          + '</span></div>');
+}
+function html_pair(datum, suffix) {
+  // TODO: pretty width
+  var elements = [];
+  while(is_pair(datum) && !is_nil(tail(datum))) {
+    elements.push(html_datum(head(datum))); datum = tail(datum);
+  }
+  if (!is_pair(datum)) { elements.push(html_text(' . ')); }
+  else { datum = head(datum); }
+  elements.push(html_datum_suffix(datum, html_text(')') + suffix));
+  return '<div class="hframe"><div class="hcell">'+html_text('(')+'</div><div class="hcell">' + elements.join('') + '</div></div>';
+}
+function html_datum_suffix(datum, suffix) {
+  if (is_pair(datum)) { return html_pair(datum, suffix); }
+  else { return '<div class="hframe">' + html_atom(datum) + suffix + '</div>'; }
+}
+function html_datum(datum) { return html_datum_suffix(datum, ''); }
+
+function html_evaluable(history_index, stx) {
+  var data = html_datum(strip_metadata(stx));
+  var eval_click = function(){
+    main_history_append(fake_metadata(evaluate(stx)));
+  };
+  var eval_button = document.createElement('input');
+  eval_button.type = 'button';
+  eval_button.value = 'eval';
+  eval_button.addEventListener('click', eval_click, false);
+  var remove_click = function(){ main_history_remove(history_index); };
+  var remove_button = document.createElement('input');
+  remove_button.type = 'button';
+  remove_button.value = 'remove';
+  remove_button.addEventListener('click', remove_click, false);
+  var button_div = document.createElement('div');
+  button_div.className = 'vcell';
+  button_div.appendChild(eval_button);
+  button_div.appendChild(remove_button);
+  var data_div = document.createElement('div');
+  data_div.className = 'vcell';
+  data_div.innerHTML = data;
+  var frag = document.createDocumentFragment();
+  frag.appendChild(data_div);
+  frag.appendChild(button_div);
+  return frag;
+}
+
+function vertical(item) {
+  var div = document.createElement('div');
+  div.className = 'vfree';
+  div.appendChild(item);
+  return div;
+}
+function html_data(data) {
+  // TODO: prettify
+  data = array_map(vertical, array_map_index(html_evaluable, data));
+  var div = document.createElement('div');
+  div.className = 'chassis';
+  for (var i = 0, l = data.length; i < l; ++i) { div.appendChild(data[i]); }
+  return div;
+}
+
+function evaluate(stx) {
+  // TODO: It may be better to pass these registers around in an explicit
+  // context rather than capturing them in closures.  It may also be more
+  // efficient to represent continuations as tagged data structures.
+  var result, env = null, ks = [function(){return null;}];
+
+  function unwind(res) { result = res; return ks.pop(); }
+
+  function denote_literal(datum) {
+    return function() { return unwind(datum); };
+  }
+  function denote_var(senv, stx) {
+    var name = tail(stx);
+    var index = env_find_name(senv, name);
+    if (env_ref(senv, index)[1] !== false) { throw ['invalid syntax', stx]; }
+    return function() { return unwind(env_ref(env, index)); };
+  }
+
+  function build_app(senv, dp, mas) {
+    var as = tail(mas);
+    if (is_nil(as)) { return dp; }
+    var da = denote(senv, head(as));
+    var dapp = function(){
+      var kenv = env;
+      ks.push(function(){
+        var proc = result;
+        if (!is_closure(proc)) {
+          throw ['cannot apply non-procedure', [proc, mas]];
+        }
+        ks.push(function() { return proc(result); });
+        env = kenv;
+        return da;
+      });
+      return dp;
+    };
+    return build_app(senv, dapp, tail(as));
+  }
+  function denote_app(senv, stx) {
+    var err = ['invalid application', stx];
+    var datum = tail(stx);
+    if (!is_pair(datum)) { throw err; }
+    syntax_list(tail(datum), err);
+    return build_app(senv, denote(senv, head(datum)), tail(datum));
+  }
+
+  function denote(senv, stx) {
+    var datum = tail(stx);
+    if (is_nil(datum) || is_boolean(datum) || is_number(datum)) {
+      return denote_literal(datum);
+    } else if (is_text(datum)) {
+      return denote_var(senv, stx);
+    } else if (is_pair(datum)) {
+      var dh = tail(head(datum));
+      if (is_text(dh)) {
+        var special = env_lookup(senv, dh, head(datum));
+        if (typeof special === 'function') {
+          return special(senv, stx);
+        }
+      }
+      return denote_app(senv, stx);
+    } else { throw ['unknown syntax', stx]; }
+  }
+
+  function build_lambda(senv, params, body) {
+    if (is_nil(params)) { return denote(senv, body); }
+    senv = env_extend(senv, [tail(head(params)), false]);
+    var dl = build_lambda(senv, tail(params), body);
+    return function() {
+      var clo_env = env;
+      return unwind(function(arg) {
+          env = env_extend(clo_env, arg);
+          return dl;
+          });
+    };
+  }
+  function denote_lambda(senv, stx) {
+    var err = ['invalid lambda', stx];
+    stx = syntax_list_of_length(3, stx, err);
+    var params = stx[1], body = stx[2];
+    if (!is_pair(tail(params))) { throw err; }
+    params = syntax_list(params, err);
+    array_map(function(p){ if (!is_text(tail(p))) { throw err; } }, params);
+    return build_lambda(senv, array_to_list(params), body);
+  }
+  function denote_if(senv, stx) {
+    stx = syntax_list_of_length(4, stx, ['invalid if', stx]);
+    var dc = denote(senv, stx[1]);
+    var dt = denote(senv, stx[2]);
+    var df = denote(senv, stx[3]);
+    return function() {
+      var kenv = env;
+      ks.push(function(){
+        env = kenv;
+        if (result === false) { return df; } else { return dt; }
+      });
+      return dc;
+    };
+  }
+
+  function denote_quote(senv, stx) {
+    stx = syntax_list_of_length(2, stx, ['invalid quote', stx]);
+    return denote_literal(strip_metadata(stx[1]));
+  }
+  function denote_syntax_quote(senv, stx) {
+    stx = syntax_list_of_length(2, stx, ['invalid syntactic quote', stx]);
+    return denote_literal(stx[1]);
+  }
+  function build_qq(senv, stx, should_strip) {
+    var datum = tail(stx);
+    if (is_pair(datum)) {
+      var hd = head(datum), tl = tail(datum);
+      var undo;
+      if (should_strip) { undo = 'unquote'; }
+      else { undo = 'unsyntax'; }
+      if (tail(hd) === undo) {
+        tl = syntax_list_of_length(1, tl, ['invalid ' + undo, stx])[0];
+        return denote(senv, tl);
+      } else {
+        var dh = build_qq(senv, hd, should_strip),
+            dt = build_qq(senv, tl, should_strip),
+            metadata = head(stx);
+        return function() {
+          var kenv = env;
+          ks.push(function() {
+            var ph = result;
+            ks.push(function() {
+              if (should_strip) { return unwind(pair(ph, result)); }
+              else { return unwind(pair(metadata, pair(ph, result))); }
+              });
+            env = kenv;
+            return dt;
+          });
+          return dh;
+        };
+      }
+    } else if (should_strip) { return denote_literal(datum); }
+    else { return denote_literal(stx); }
+  }
+  function denote_qq(senv, stx) {
+    stx = syntax_list_of_length(2, stx, ['invalid quasiquote', stx])[1];
+    return build_qq(senv, stx, true);
+  }
+  function denote_syntax_qq(senv, stx) {
+    stx = syntax_list_of_length(2, stx, ['invalid quasisyntax', stx])[1];
+    return build_qq(senv, stx, false);
+  }
+
+  function denote_let(senv, stx) {
+    var err = ['invalid let', stx];
+    stx = syntax_list_of_length(3, stx, err);
+    var bindings = array_map(function(b) {
+      return syntax_list_of_length(2, b, err);
+    }, syntax_list(stx[1], err));
+    var params = array_map(function(b) {
+      if (!is_text(tail(b[0]))) { throw err; } return b[0];
+    }, bindings);
+    var args = array_map(function(b) { return b[1]; }, bindings);
+    var body = stx[2];
+    var dp = build_lambda(senv, array_to_list(params), body);
+    var annotate = function(ex, datum){ return pair(head(datum), datum); };
+    return build_app(senv, dp, array_to_list_annotated(annotate, args));
+  }
+
+  var operatives = [
+    ['let', denote_let],
+    ['quasisyntax', denote_syntax_qq],
+    ['syntax', denote_syntax_quote],
+    ['quasiquote', denote_qq],
+    ['quote', denote_quote],
+    ['if', denote_if],
+    ['lambda', denote_lambda]];
+
+  function native_procedure_huh(datum) {
+    return unwind(is_closure(datum));
+  }
+  function native_boolean_huh(datum) {
+    return unwind(is_boolean(datum));
+  }
+  function native_pair_huh(datum) { return unwind(is_pair(datum)); }
+  function native_nil_huh(datum) { return unwind(is_nil(datum)); }
+  function native_text_huh(datum) { return unwind(is_text(datum)); }
+  function native_number_huh(datum) { return unwind(is_number(datum)); }
+  function native_int32_huh(datum) { return unwind(is_int32(datum)); }
+  function make_eq(name, is_x) {
+    return function(x0) {
+      if (!is_x(x0)) { throw ["invalid argument to '"+name+"'", x0]; }
+      return unwind(function(x1) {
+          if (!is_x(x1)) { throw ["invalid argument to '"+name+"'", x1]; }
+          return unwind(x0 === x1);
+          });
+    };
+  }
+  var native_text_eq = make_eq('text=?', is_text);
+  var native_number_eq = make_eq('number=?', is_number);
+  var native_int32_eq = make_eq('int32=?', is_int32);
+  function make_lt(name, is_x) {
+    return function(x0) {
+      if (!is_x(x0)) { throw ["invalid argument to '"+name+"'", x0]; }
+      return unwind(function(x1) {
+          if (!is_x(x1)) { throw ["invalid argument to '"+name+"'", x1]; }
+          return unwind(x0 < x1);
+          });
+    };
+  }
+  var native_text_lt = make_lt('text<?', is_text);
+  var native_number_lt = make_lt('number<?', is_number);
+  var native_int32_lt = make_lt('int32<?', is_int32);
+  function native_pair(h) {
+    return unwind(function(t) { return unwind([h, t]); });
+  }
+  function native_pair_head(p) {
+    if (!is_pair(p)) { throw ['cannot take head of non-pair', p]; }
+    return unwind(p[0]);
+  }
+  function native_pair_tail(p) {
+    if (!is_pair(p)) { throw ['cannot take tail of non-pair', p]; }
+    return unwind(p[1]);
+  }
+
+  function native_text_concat(t0) {
+    if (!is_text(t0)) { throw ['cannot text-concat non-text', t0]; }
+    return unwind(function(t1) {
+        if (!is_text(t1)) { throw ['cannot text-concat non-text', t1]; }
+        return unwind(t0.concat(t1));
+        });
+  }
+  function native_text_to_chars(txt) {
+    if (!is_text(txt)) { throw ['cannot text->chars non-text', txt]; }
+    var txt = Array.from(txt);
+    var answer = null;
+    for (var i = txt.length-1; i >= 0; --i) { answer = [txt[i], answer]; }
+    return unwind(answer);
+  }
+  function native_char_to_code(ch) {
+    if (!is_text(ch)) { throw ['cannot char->code with non-char', ch]; }
+    var txt = Array.from(ch);
+    if (txt.length !== 1) { throw ['char->code expects one character', ch]; }
+    return unwind(cc_at(txt, 0));
+  }
+  function native_char_from_code(code) {
+    if (!is_int32(code)) { throw ['invalid text code', code]; }
+    return unwind(String.fromCodePoint(code));
+  }
+
+  function native_nadd(n0) {
+    if (!is_number(n0)) { throw ['cannot add non-number', n0]; }
+    return unwind(function(n1) {
+        if (!is_number(n1)) { throw ['cannot add non-number', n1]; }
+        return unwind(n0 + n1);
+        });
+  }
+  function native_nsub(n0) {
+    if (!is_number(n0)) { throw ['cannot subtract non-number', n0]; }
+    return unwind(function(n1) {
+        if (!is_number(n1)) { throw ['cannot subtract non-number', n1]; }
+        return unwind(n0 - n1);
+        });
+  }
+  function native_nmul(n0) {
+    if (!is_number(n0)) { throw ['cannot multiply non-number', n0]; }
+    return unwind(function(n1) {
+        if (!is_number(n1)) { throw ['cannot multiply non-number', n1]; }
+        return unwind(n0 * n1);
+        });
+  }
+  function native_ndiv(n0) {
+    if (!is_number(n0)) { throw ['cannot divide non-number', n0]; }
+    return unwind(function(n1) {
+        if (!is_number(n1)) { throw ['cannot divide non-number', n1]; }
+        return unwind(n0 / n1);
+        });
+  }
+  function native_nmod(n0) {
+    if (!is_number(n0)) { throw ['cannot modulo non-number', n0]; }
+    return unwind(function(n1) {
+        if (!is_number(n1)) { throw ['cannot modulo non-number', n1]; }
+        return unwind(n0 % n1);
+        });
+  }
+
+  // TODO: More text and/or numerical operations?
+  var applicatives = [
+    ['procedure?', native_procedure_huh],
+    ['pair?', native_pair_huh],
+    ['nil?', native_nil_huh],
+    ['boolean?', native_boolean_huh],
+    ['text?', native_text_huh],
+    ['number?', native_number_huh],
+    ['int32?', native_int32_huh],
+    ['text=?', native_text_eq],
+    ['text<?', native_text_lt],
+    ['number=?', native_number_eq],
+    ['number<?', native_number_lt],
+    ['int32=?', native_int32_eq],
+    ['int32<?', native_int32_lt],
+    ['pair', native_pair],
+    ['head', native_pair_head],
+    ['tail', native_pair_tail],
+    ['text-concat', native_text_concat],
+    ['text->chars', native_text_to_chars],
+    ['char->code', native_char_to_code],
+    ['char<-code', native_char_from_code],
+    ['+', native_nadd],
+    ['-', native_nsub],
+    ['*', native_nmul],
+    ['/', native_ndiv],
+    ['%', native_nmod]];
+
+  var initial_senv =
+    array_to_list(
+      array_map(function(binding){return [binding[0],false];},
+                applicatives).concat(operatives));
+
+  var initial_env =
+    array_to_list(
+      array_map(function(binding){return binding[1];}, applicatives).concat(
+        array_map(function(binding){return binding[1];}, operatives)));
+
+  env = initial_env;
+  var k = denote(initial_senv, stx);
+  while (k !== null) { k = k(); }
+  return result;
+}
+
+function deep_equal(a, b) {
+  if (a === b) { return true; }
+  if (is_closure(a) || is_closure(b)) {
+    throw ['procedure equality checking is not supported', a, b];
+  }
+  if (is_pair(a) && is_pair(b)) {
+    return deep_equal(a[0], b[0]) && deep_equal(a[1], b[1]);
+  }
+  return false;
+}
+
+var test_ctx = {verbose: false, passed: 0, total: 0, log: []};
+function check_equal(name, actual, expected) {
+  ++(test_ctx.total);
+  if (deep_equal(actual, expected)) {
+    ++(test_ctx.passed);
+    if (test_ctx.verbose) { test_ctx.log.push([name, actual]); }
+  } else {
+    test_ctx.log.push(
+        ['FAILED', name, 'ACTUAL', actual, write(actual), 'EXPECTED', expected, write(expected)]);
+  }
+}
+function test_log() {
+  var log = test_ctx.log, l = log.length;
+  for (var i = 0; i < l; ++i) { console.log.apply(this, log[i]); }
+  console.log(test_ctx.passed, 'out of', test_ctx.total, 'tests passed.');
+}
+
+function read_eval(pstr) { return evaluate(read_all(pstr)[0]); }
+
+function test() {
+  check_equal('read atoms',
+      array_to_list(array_map(strip_metadata, read_all(
+            ' one h\\u{1f4a9}l"lo\\two"rld 2 \n -3.14 .5 6.e1 #x1e2 #x1L2\t#b+11.1e1 #t #f'))),
+      array_to_list(['one', 'h\u{1f4a9}llo\tworld', 2, -3.14, '.5', 60, 482, 256, 7, true, false]));
+  check_equal('read compounds',
+      array_to_list(
+        array_map(strip_metadata,
+          read_all(
+            ' (1 [t"wo" 3] 4) #;(five 6) #| com\nments |# #[ 7 {ei\\ ght (nine) 10 } ] ;etc.')
+          )
+        ),
+      array_to_list([
+        array_to_list([1, array_to_list(['[]', 'two', 3]), 4]),
+        array_to_list(
+          ['#[]', 7, array_to_list([
+            '{}', 'ei ght', array_to_list(['nine']), 10
+            ])])
+        ]));
+
+  check_equal('write atoms',
+      array_map(write, array_map(strip_metadata,
+          read_all(' one h\\u{1f4a9}l"lo\\two"rld 2 \n -3.14 .5 6.e1 #x1e2 #x1L2\t#b+11.1e1 #t #f'))).join(' '),
+      'one "h\u{1f4a9}llo\\tworld" 2 -3.14 .5 60 482 256 7 #t #f'
+      );
+  check_equal('write compounds',
+      array_map(write, array_map(strip_metadata,
+          read_all(' (1 [t"wo" 3] 4) #;(five 6) #| com\nments |# #[ 7 {ei\\ ght (nine) 10 } ] ;etc.'))).join(' ') ,
+      '(1 ("[]" two 3) 4) ("#[]" 7 ("{}" "ei ght" (nine) 10))'
+      );
+
+  check_equal('literals',
+      [read_eval("'()"), read_eval('#t'), read_eval(' 4 ')],
+      [null, true, 4]);
+  check_equal('lambda app 1',
+      read_eval('((lambda (x y) x) 5 6)'),
+      5);
+  check_equal('lambda app 2',
+      read_eval('((lambda (x y) y) 5 6)'),
+      6);
+  check_equal('lambda app 3',
+      read_eval('((lambda (x y) (pair y x)) 5 6)'),
+      [6, 5]);
+  check_equal('if 1',
+      read_eval("(if (head '(#t . #f)) 'yes 'no)"),
+      'yes');
+  check_equal('if 2',
+      read_eval("(if (tail '(#t . #f)) 'yes 'no)"),
+      'no');
+  check_equal('let 1',
+      read_eval('(let ((x 8)) x)'),
+      8);
+  check_equal('let 2',
+      read_eval('(let ((x 9)) (let ((x 20)) x))'),
+      20);
+  check_equal('let 3',
+      read_eval('(let ((x 9)) (let ((y 20)) x))'),
+      9);
+
+  check_equal('qq 1', read_eval('`one'), 'one');
+  check_equal('qq 2',
+      read_eval('`((a 1) (b 2))'),
+      array_to_list([
+        array_to_list(['a', 1]),
+        array_to_list(['b', 2])]));
+  check_equal('qq 3',
+      read_eval("`((a 1) ,(pair 'b `(3)))"),
+      array_to_list([
+        array_to_list(['a', 1]),
+        array_to_list(['b', 3])]));
+
+  check_equal('fix 1',
+      read_eval(
+        "(let ((fix (lambda (f)"+
+        "             ((lambda (d) (d d))"+
+        "              (lambda (x) (f (lambda (a) (x x a))))))))"+
+        "  (let ((concat "+
+        "          (fix (lambda (concat xs ys)"+
+        "                 (if (nil? xs)"+
+        "                   ys"+
+        "                   (pair (head xs)"+
+        "                         (concat (tail xs) ys)))))))"+
+        "    `(,(concat '() '())"+
+        "      ,(concat '(foo) '(bar))"+
+        "      ,(concat '(1 2) '(3 4)))))"),
+      read_eval("'(() (foo bar) (1 2 3 4))"));
+
+  check_equal('fix* 1',
+      read_eval(
+        "(let ((fix (lambda (f)"+
+        "             ((lambda (d) (d d))"+
+        "              (lambda (x) (f (lambda (a) (x x a))))))))"+
+        "  (let ((map (fix (lambda (map f xs)"+
+        "                    (if (nil? xs)"+
+        "                      '()"+
+        "                      (pair (f (head xs)) (map f (tail xs)))))))"+
+        "        (apply (fix (lambda (apply f args)"+
+        "                      (if (nil? args)"+
+        "                        f"+
+        "                        (apply (f (head args)) (tail args)))))))"+
+        "    (let ((fix*"+
+        "            (fix (lambda (self fs)"+
+        "                   (map (lambda (fi x)"+
+        "                          ((apply fi (self fs)) x)) fs)))))"+
+        "      (let ((even&odd"+
+        "              (fix* (pair (lambda (even? odd? n)"+
+        "                            (if (nil? n)"+
+        "                              #t"+
+        "                              (odd? (tail n))))"+
+        "                    (pair (lambda (even? odd? n)"+
+        "                            (if (nil? n)"+
+        "                              #f"+
+        "                              (even? (tail n))))"+
+        "                      '())))))"+
+        "        (let ((even? (head even&odd)) (odd? (head (tail even&odd))))"+
+        "          `(,(even? '())    ,(odd? '())"+
+        "            ,(even? '(s))   ,(odd? '(s))"+
+        "            ,(even? '(s s)) ,(odd? '(s s))))))))"),
+      read_eval("'(#t #f #f #t #t #f)"));
+
+  test_log();
+}
+
+test();
+</script>
