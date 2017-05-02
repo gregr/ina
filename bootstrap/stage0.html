@@ -193,7 +193,7 @@ function main_print(text) {
 function main_eval(text) {
   var exprs = read_all(text);
   for (var i = 0, len = exprs.length; i < len; ++i) {
-    main_history_append(fake_metadata(evaluate(exprs[i])));
+    main_history_append(to_syntax(evaluate(exprs[i])));
   }
 }
 
@@ -787,11 +787,12 @@ function strip_metadata(stx) {
     return pair(strip_metadata(head(datum)), strip_metadata(tail(datum)));
   } else { return datum; }
 }
-function fake_metadata(datum) {
+function to_syntax0(datum) { return pair(annotation(false), datum); }
+function to_syntax(datum) {
   if (is_pair(datum)) {
-    datum = pair(fake_metadata(head(datum)), fake_metadata(tail(datum)));
+    datum = pair(to_syntax(head(datum)), to_syntax(tail(datum)));
   }
-  return pair(annotation(false), datum);
+  return to_syntax0(datum);
 }
 
 function write_raw(datum, write_closure) {
@@ -857,7 +858,7 @@ function html_datum(datum) { return html_datum_suffix(datum, ''); }
 function html_evaluable(history_index, stx) {
   var data = html_datum(strip_metadata(stx));
   var eval_click = function(){
-    try { main_history_append(fake_metadata(evaluate(stx))); }
+    try { main_history_append(to_syntax(evaluate(stx))); }
     catch (error) {
       window.alert(error[0] + ': ' + write(strip_metadata(error[1])));
     }
@@ -926,7 +927,8 @@ function evaluate(stx) {
       ks.push(function(){
         var proc = result;
         if (!is_closure(proc)) {
-          throw ['cannot apply non-procedure', [proc, mas]];
+          throw ['cannot apply non-procedure',
+                 to_syntax0(pair(to_syntax0(proc), mas))];
         }
         ks.push(function() { return proc(result); });
         env = kenv;
@@ -1096,9 +1098,13 @@ function evaluate(stx) {
   var native_int32_eq = make_eq('int32=?', is_int32);
   function make_lt(name, is_x) {
     return function(x0) {
-      if (!is_x(x0)) { throw ["invalid argument to '"+name+"'", x0]; }
+      if (!is_x(x0)) {
+        throw ["invalid argument to '"+name+"'", to_syntax0(x0)];
+      }
       return unwind(function(x1) {
-          if (!is_x(x1)) { throw ["invalid argument to '"+name+"'", x1]; }
+          if (!is_x(x1)) {
+            throw ["invalid argument to '"+name+"'", to_syntax0(x1)];
+          }
           return unwind(x0 < x1);
           });
     };
@@ -1110,71 +1116,71 @@ function evaluate(stx) {
     return unwind(function(t) { return unwind([h, t]); });
   }
   function native_pair_head(p) {
-    if (!is_pair(p)) { throw ['cannot take head of non-pair', p]; }
+    if (!is_pair(p)) { throw ['cannot take head of non-pair', to_syntax0(p)]; }
     return unwind(p[0]);
   }
   function native_pair_tail(p) {
-    if (!is_pair(p)) { throw ['cannot take tail of non-pair', p]; }
+    if (!is_pair(p)) { throw ['cannot take tail of non-pair', to_syntax0(p)]; }
     return unwind(p[1]);
   }
 
   function native_text_concat(t0) {
-    if (!is_text(t0)) { throw ['cannot text-concat non-text', t0]; }
+    if (!is_text(t0)) { throw ['cannot text-concat non-text', to_syntax0(t0)]; }
     return unwind(function(t1) {
-        if (!is_text(t1)) { throw ['cannot text-concat non-text', t1]; }
+        if (!is_text(t1)) { throw ['cannot text-concat non-text', to_syntax0(t1)]; }
         return unwind(t0.concat(t1));
         });
   }
   function native_text_to_chars(txt) {
-    if (!is_text(txt)) { throw ['cannot text->chars non-text', txt]; }
+    if (!is_text(txt)) { throw ['cannot text->chars non-text', to_syntax0(txt)]; }
     var txt = Array.from(txt);
     var answer = null;
     for (var i = txt.length-1; i >= 0; --i) { answer = [txt[i], answer]; }
     return unwind(answer);
   }
   function native_char_to_code(ch) {
-    if (!is_text(ch)) { throw ['cannot char->code with non-char', ch]; }
+    if (!is_text(ch)) { throw ['cannot char->code with non-char', to_syntax0(ch)]; }
     var txt = Array.from(ch);
-    if (txt.length !== 1) { throw ['char->code expects one character', ch]; }
+    if (txt.length !== 1) { throw ['char->code expects one character', to_syntax0(ch)]; }
     return unwind(cc_at(txt, 0));
   }
   function native_char_from_code(code) {
-    if (!is_int32(code)) { throw ['invalid text code', code]; }
+    if (!is_int32(code)) { throw ['invalid text code', to_syntax0(code)]; }
     return unwind(String.fromCodePoint(code));
   }
 
   function native_nadd(n0) {
-    if (!is_number(n0)) { throw ['cannot add non-number', n0]; }
+    if (!is_number(n0)) { throw ['cannot add non-number', to_syntax0(n0)]; }
     return unwind(function(n1) {
-        if (!is_number(n1)) { throw ['cannot add non-number', n1]; }
+        if (!is_number(n1)) { throw ['cannot add non-number', to_syntax0(n1)]; }
         return unwind(n0 + n1);
         });
   }
   function native_nsub(n0) {
-    if (!is_number(n0)) { throw ['cannot subtract non-number', n0]; }
+    if (!is_number(n0)) { throw ['cannot subtract non-number', to_syntax0(n0)]; }
     return unwind(function(n1) {
-        if (!is_number(n1)) { throw ['cannot subtract non-number', n1]; }
+        if (!is_number(n1)) { throw ['cannot subtract non-number', to_syntax0(n1)]; }
         return unwind(n0 - n1);
         });
   }
   function native_nmul(n0) {
-    if (!is_number(n0)) { throw ['cannot multiply non-number', n0]; }
+    if (!is_number(n0)) { throw ['cannot multiply non-number', to_syntax0(n0)]; }
     return unwind(function(n1) {
-        if (!is_number(n1)) { throw ['cannot multiply non-number', n1]; }
+        if (!is_number(n1)) { throw ['cannot multiply non-number', to_syntax0(n1)]; }
         return unwind(n0 * n1);
         });
   }
   function native_ndiv(n0) {
-    if (!is_number(n0)) { throw ['cannot divide non-number', n0]; }
+    if (!is_number(n0)) { throw ['cannot divide non-number', to_syntax0(n0)]; }
     return unwind(function(n1) {
-        if (!is_number(n1)) { throw ['cannot divide non-number', n1]; }
+        if (!is_number(n1)) { throw ['cannot divide non-number', to_syntax0(n1)]; }
         return unwind(n0 / n1);
         });
   }
   function native_nmod(n0) {
-    if (!is_number(n0)) { throw ['cannot modulo non-number', n0]; }
+    if (!is_number(n0)) { throw ['cannot modulo non-number', to_syntax0(n0)]; }
     return unwind(function(n1) {
-        if (!is_number(n1)) { throw ['cannot modulo non-number', n1]; }
+        if (!is_number(n1)) { throw ['cannot modulo non-number', to_syntax0(n1)]; }
         return unwind(n0 % n1);
         });
   }
