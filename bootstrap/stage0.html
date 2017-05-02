@@ -854,7 +854,10 @@ function html_datum(datum) { return html_datum_suffix(datum, ''); }
 function html_evaluable(history_index, stx) {
   var data = html_datum(strip_metadata(stx));
   var eval_click = function(){
-    main_history_append(fake_metadata(evaluate(stx)));
+    try { main_history_append(fake_metadata(evaluate(stx))); }
+    catch (error) {
+      window.alert(error[0] + ': ' + write(strip_metadata(error[1])));
+    }
   };
   var eval_button = document.createElement('input');
   eval_button.type = 'button';
