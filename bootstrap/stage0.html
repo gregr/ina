@@ -176,6 +176,10 @@ function main_assign(data) {
   main.appendChild(html_data(data));
 }
 function main_history_clear() { main_history = []; main_assign(main_history); }
+function main_history_remove(index) {
+  main_history.splice(index, 1);
+  main_assign(main_history);
+}
 function main_history_append(item) { main_history.push(item); main_assign(main_history); }
 function main_print(text) {
   var exprs = read_all(text);
