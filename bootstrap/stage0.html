@@ -88,6 +88,8 @@
   <div>
     <input id="file-input" type="file" multiple>
     <input id="load-text-input" type="button" value="open">
+    <input id="save-text-input" type="button" value="save as">
+    <input id="save-name-text-input" type="text" value="saved-data.scm">
     <input id="clear-text-input" type="button" value="clear">
     <input id="parse-text-input" type="button" value="parse">
   </div>
@@ -120,6 +122,19 @@ function onDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'copy';
 }
+
+var save_name_text_input = document.getElementById('save-name-text-input');
+function save_data_file() {
+  var data = new Blob([text_input.value], {type: 'text/plain;charset=utf-8'});
+  var anchor = document.createElement('a');
+  anchor.download = save_name_text_input.value;
+  var url = window.URL.createObjectURL(data);
+  anchor.href = url;
+  anchor.click();
+  window.URL.revokeObjectURL(url);
+}
+var save_button = document.getElementById('save-text-input');
+save_button.addEventListener('click', save_data_file, false);
 
 // Avoid accidentally reloading page with dragged files.
 function ignore(e) { e.preventDefault(); }
