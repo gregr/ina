@@ -906,7 +906,7 @@ function evaluate(stx) {
   }
   function denote_var(senv, stx) {
     var name = tail(stx);
-    var index = env_find_name(senv, name);
+    var index = env_find_name(senv, name, stx);
     if (env_ref(senv, index)[1] !== false) { throw ['invalid syntax', stx]; }
     return function() { return unwind(env_ref(env, index)); };
   }
