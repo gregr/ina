@@ -317,6 +317,14 @@ function array_map(f, xs) {
   return result;
 }
 
+function array_map_index(f, xs) {
+  var i = xs.length - 1;
+  var result = [];
+  result.length = xs.length;
+  for (; i >= 0; --i) { result[i] = f(i, xs[i]); }
+  return result;
+}
+
 // TODO: handle unicode issues.
 // String#normalize('NFC') all inputs
 // test using:
