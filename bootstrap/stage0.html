@@ -90,11 +90,12 @@
     <input id="load-text-input" type="button" value="open">
     <input id="save-text-input" type="button" value="save as">
     <input id="save-name-text-input" type="text" value="saved-data.scm">
-    <input id="clear-text-input" type="button" value="clear">
+    <input id="clear-text-input" type="button" value="clear text">
     <input id="parse-text-input" type="button" value="parse">
   </div>
   <div>
     <input id="print-history" type="button" value="print data">
+    <input id="clear-history" type="button" value="clear data">
   </div>
 </div>
 <div id="main"><div></div></div>
@@ -146,6 +147,8 @@ function print_history() {
   text_input.value = history.join('\n');
 }
 print_history_button.addEventListener('click', print_history, false);
+var clear_history_button = document.getElementById('clear-history');
+clear_history_button.addEventListener('click', main_history_clear, false);
 
 // Avoid accidentally reloading page with dragged files.
 function ignore(e) { e.preventDefault(); }
