@@ -93,7 +93,7 @@
 
 </style>
 <div>
-  <div><textarea id="text-input" rows="10" cols="80" resizable></textarea></div>
+  <div><textarea id="text-input" rows="20" cols="80" resizable></textarea></div>
   <div>
     <input id="file-input" type="file" multiple>
     <input id="load-text-input" type="button" value="open">
@@ -112,6 +112,36 @@
 'use strict';
 
 var text_input = document.getElementById('text-input');
+
+var initial_text = "\
+`(1 ,(+ 2 3) - #x1f\n\
+  (hello\\ world \\u{1f4Ab} . \\u{1f320})\n\
+  (a (bunch (of (nested (lists)) exce\"pt (this is not rea\"lly\\ a\\ li\"st)!\"))))\n\
+\n\
+'((+ 3 2) is equal to (+ 4 1) (they are both 5))\n\
+`(,(+ 3 2) is equal to ,(+ 4 1) (they are both 5))\n\
+\n\
+(pair (nil? '()) (pair? '()))\n\
+(if (head '(#t . #f)) 'yes 'no)\n\
+(if (tail '(#t . #f)) 'yes 'no)\n\
+\n\
+((lambda (x) `(,x ',x))\n\
+ '(lambda (x) `(,x ',x)))\n\
+\n\
+((lambda (x)\n\
+   (pair x (pair (pair 'quote (pair x '())) '())))\n\
+ '(lambda (x)\n\
+    (pair x (pair (pair 'quote (pair x '())) '()))))\n\
+\n\
+(let ((square (lambda (n) (* n n))))\n\
+  `(,(square -3) ,(square 4)))\n\
+\n\
+(let ((x 5))\n\
+ (let ((x 4)\n\
+       (y x))\n\
+  `(shadowing-x: ,x original-x: ,y)))"
+
+text_input.value = initial_text;
 
 function load_files(files) {
   for (var i = 0, len = files.length; i < len; ++i) {
