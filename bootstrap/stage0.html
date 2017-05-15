@@ -19,9 +19,7 @@
 .hframe {
   //display: inline;
   display: inline-block;
-  vertical-align: top;
-  //border: 1px solid;
-  //margin: 1px;
+  vertical-align: middle;
   margin-left: 1px;
   margin-right: 1px;
 }
@@ -50,18 +48,26 @@
   //display: inline-block;
   //border: 1px solid #000000;
 }
+.pair {
+  border: 1px solid;
+  border-radius: 4px;
+  margin: 1px;
+  background: rgba(204, 204, 204, 0.2);
+  //background-color: #cccccc;
+}
 .atom {
   cursor: pointer;
   font-family: monospace;
   white-space: pre;
   min-width: 10px;
   min-height: 10px;
+  border-radius: 2px;
 }
 .boolean {
   background-color: #00ff00;
 }
 .number {
-  background-color: #ff9900;
+  background-color: #ffcc00;
 }
 .text {
   background-color: #00ffff;
@@ -844,10 +850,10 @@ function html_pair(datum, suffix) {
   while(is_pair(datum) && !is_nil(tail(datum))) {
     elements.push(html_datum(head(datum))); datum = tail(datum);
   }
-  if (!is_pair(datum)) { elements.push(html_text(' . ')); }
+  if (!is_pair(datum)) { elements.push(html_text('.')); }
   else { datum = head(datum); }
-  elements.push(html_datum_suffix(datum, html_text(')') + suffix));
-  return '<div class="hframe"><div class="hcell">'+html_text('(')+'</div><div class="hcell">' + elements.join('') + '</div></div>';
+  elements.push(html_datum_suffix(datum, suffix));
+  return '<div class="hframe pair"><div class="hcell"></div><div class="hcell">' + elements.join('') + '</div></div>';
 }
 function html_datum_suffix(datum, suffix) {
   if (is_pair(datum)) { return html_pair(datum, suffix); }
