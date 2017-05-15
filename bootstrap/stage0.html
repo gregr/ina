@@ -219,6 +219,10 @@ function main_history_remove(index) {
   main_history.splice(index, 1);
   main_assign(main_history);
 }
+function main_history_insert(index, item) {
+  main_history.splice(index, 0, item);
+  main_assign(main_history);
+}
 function main_history_append(item) { main_history.push(item); main_assign(main_history); }
 function main_print(text) {
   var exprs = read_all(text);
@@ -894,7 +898,7 @@ function html_datum(datum) { return html_datum_suffix(datum, ''); }
 function html_evaluable(history_index, stx) {
   var data = html_datum(strip_metadata(stx));
   var eval_click = function(){
-    try { main_history_append(to_syntax(evaluate(stx))); }
+    try { main_history_insert(history_index + 1, to_syntax(evaluate(stx))); }
     catch (error) {
       window.alert(error[0] + ': ' + write(strip_metadata(error[1])));
     }
