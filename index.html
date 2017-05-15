@@ -19,9 +19,7 @@
 .hframe {
   //display: inline;
   display: inline-block;
-  vertical-align: top;
-  //border: 1px solid;
-  //margin: 1px;
+  vertical-align: middle;
   margin-left: 1px;
   margin-right: 1px;
 }
@@ -50,18 +48,26 @@
   //display: inline-block;
   //border: 1px solid #000000;
 }
+.pair {
+  border: 1px solid;
+  border-radius: 4px;
+  margin: 1px;
+  background: rgba(204, 204, 204, 0.2);
+  //background-color: #cccccc;
+}
 .atom {
   cursor: pointer;
   font-family: monospace;
   white-space: pre;
   min-width: 10px;
   min-height: 10px;
+  border-radius: 2px;
 }
 .boolean {
   background-color: #00ff00;
 }
 .number {
-  background-color: #ff9900;
+  background-color: #ffcc00;
 }
 .text {
   background-color: #00ffff;
@@ -87,7 +93,7 @@
 
 </style>
 <div>
-  <div><textarea id="text-input" rows="10" cols="80" resizable></textarea></div>
+  <div><textarea id="text-input" rows="20" cols="80" resizable></textarea></div>
   <div>
     <input id="file-input" type="file" multiple>
     <input id="load-text-input" type="button" value="open">
@@ -106,6 +112,36 @@
 'use strict';
 
 var text_input = document.getElementById('text-input');
+
+var initial_text = "\
+`(1 ,(+ 2 3) - #x1f\n\
+  (hello\\ world \\u{1f4Ab} . \\u{1f320})\n\
+  (a (bunch (of (nested (lists)) exce\"pt (this is not rea\"lly\\ a\\ li\"st)!\"))))\n\
+\n\
+'((+ 3 2) is equal to (+ 4 1) (they are both 5))\n\
+`(,(+ 3 2) is equal to ,(+ 4 1) (they are both 5))\n\
+\n\
+(pair (nil? '()) (pair? '()))\n\
+(if (head '(#t . #f)) 'yes 'no)\n\
+(if (tail '(#t . #f)) 'yes 'no)\n\
+\n\
+((lambda (x) `(,x ',x))\n\
+ '(lambda (x) `(,x ',x)))\n\
+\n\
+((lambda (x)\n\
+   (pair x (pair (pair 'quote (pair x '())) '())))\n\
+ '(lambda (x)\n\
+    (pair x (pair (pair 'quote (pair x '())) '()))))\n\
+\n\
+(let ((square (lambda (n) (* n n))))\n\
+  `(,(square -3) ,(square 4)))\n\
+\n\
+(let ((x 5))\n\
+ (let ((x 4)\n\
+       (y x))\n\
+  `(shadowing-x: ,x original-x: ,y)))"
+
+text_input.value = initial_text;
 
 function load_files(files) {
   for (var i = 0, len = files.length; i < len; ++i) {
@@ -181,6 +217,10 @@ function main_assign(data) {
 function main_history_clear() { main_history = []; main_assign(main_history); }
 function main_history_remove(index) {
   main_history.splice(index, 1);
+  main_assign(main_history);
+}
+function main_history_insert(index, item) {
+  main_history.splice(index, 0, item);
   main_assign(main_history);
 }
 function main_history_append(item) { main_history.push(item); main_assign(main_history); }
@@ -844,10 +884,10 @@ function html_pair(datum, suffix) {
   while(is_pair(datum) && !is_nil(tail(datum))) {
     elements.push(html_datum(head(datum))); datum = tail(datum);
   }
-  if (!is_pair(datum)) { elements.push(html_text(' . ')); }
+  if (!is_pair(datum)) { elements.push(html_text('.')); }
   else { datum = head(datum); }
-  elements.push(html_datum_suffix(datum, html_text(')') + suffix));
-  return '<div class="hframe"><div class="hcell">'+html_text('(')+'</div><div class="hcell">' + elements.join('') + '</div></div>';
+  elements.push(html_datum_suffix(datum, suffix));
+  return '<div class="hframe pair"><div class="hcell"></div><div class="hcell">' + elements.join('') + '</div></div>';
 }
 function html_datum_suffix(datum, suffix) {
   if (is_pair(datum)) { return html_pair(datum, suffix); }
@@ -858,7 +898,7 @@ function html_datum(datum) { return html_datum_suffix(datum, ''); }
 function html_evaluable(history_index, stx) {
   var data = html_datum(strip_metadata(stx));
   var eval_click = function(){
-    try { main_history_append(to_syntax(evaluate(stx))); }
+    try { main_history_insert(history_index + 1, to_syntax(evaluate(stx))); }
     catch (error) {
       window.alert(error[0] + ': ' + write(strip_metadata(error[1])));
     }
