@@ -75,7 +75,7 @@
               (if (evaluate condition env)
                 (evaluate alt-true env)
                 (evaluate alt-false env))))
-           (else (evaluate-application head (cdr expr) env))))))
+           (else (error 'evaluate (format "unbound variable ~s" head)))))))
     (else (error 'evaluate (format "invalid syntax ~s" expr)))))
 
 (define env-initial

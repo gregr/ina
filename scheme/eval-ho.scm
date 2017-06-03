@@ -80,7 +80,7 @@
                    (dt (denote alt-true env))
                    (df (denote alt-false env)))
               (lambda (env) (if (dc env) (dt env) (df env)))))
-           (else (denote-application head (cdr expr) env))))))
+           (else (error 'denote (format "unbound variable ~s" head)))))))
     (else (error 'denote (format "invalid syntax ~s" expr)))))
 
 (define env-initial
