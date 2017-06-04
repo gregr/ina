@@ -23,9 +23,10 @@
 (define (bound? env datum)
   (env-lookup/k env datum (const #t) (const #f)))
 
+(define (evaluate-procedure body params env)
+  (lambda args (evaluate body (env-extend* env params args))))
 (define (evaluate-application proc args env)
-  (apply (evaluate proc env)
-         (map (lambda (arg) (evaluate arg env)) args)))
+  (apply proc (map (lambda (arg) (evaluate arg env)) args)))
 
 (define (pattern-match/k hole? pat datum k-succeed k-fail)
   (if (hole? pat)
@@ -59,14 +60,14 @@
     ((pair? expr)
      (let ((head (car expr)))
        (if (or (not (symbol? head)) (bound? env head))
-         (evaluate-application head (cdr expr) env)
+         (evaluate-application (evaluate head env) (cdr expr) env)
          (case head
            ((quote) (car (syntax-pattern '(quote #f) expr)))
            ((lambda)
             (let* ((parts (syntax-pattern '(lambda #f #f) expr))
                    (params (car parts))
                    (body (cadr parts)))
-              (lambda args (evaluate body (env-extend* env params args)))))
+              (evaluate-procedure body params env)))
            ((if)
             (let* ((parts (syntax-pattern '(if #f #f #f) expr))
                    (condition (car parts))
@@ -75,6 +76,15 @@
               (if (evaluate condition env)
                 (evaluate alt-true env)
                 (evaluate alt-false env))))
+           ((let)  ;; TODO: optionally-named.
+            (let* ((parts (syntax-pattern '(let #f #f) expr))
+                   (bindings (map (lambda (b) (syntax-pattern '(#f #f) b))
+                                  (car parts)))
+                   (body (cadr parts))
+                   (params (map car bindings))
+                   (args (map cadr bindings)))
+              (evaluate-application
+                (evaluate-procedure body params env) args env)))
            (else (error 'evaluate (format "unbound variable ~s" head)))))))
     (else (error 'evaluate (format "invalid syntax ~s" expr)))))
 
