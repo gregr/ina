@@ -96,6 +96,27 @@
                    (args (map cadr bindings)))
               (denote-application
                 (denote-procedure body params env) args env)))
+           ((quasiquote)
+            (let loop ((level 0) (qq-expr (car (syntax-pattern
+                                                 '(quasiquote #f) expr))))
+              (case-pattern
+                qq-expr
+                `(((,'unquote #f)
+                   ,(lambda (datum)
+                      (if (= 0 level)
+                        (denote datum env)
+                        (let ((dd (loop (- level 1) datum)))
+                          (lambda (env) `(,'unquote ,(dd env)))))))
+                  ((quasiquote #f)
+                   ,(lambda (datum)
+                      (let ((dd (loop (+ level 1) datum)))
+                        (lambda (env) `(,'quasiquote ,(dd env))))))
+                  ((#f . #f)
+                   ,(lambda (a d)
+                      (let ((da (loop level a))
+                            (dd (loop level d)))
+                        (lambda (env) `(,(da env) . ,(dd env))))))
+                  (#f ,denote-literal)))))
            (else (error 'denote (format "unbound variable ~s" head)))))))
     (else (error 'denote (format "invalid syntax ~s" expr)))))
 
