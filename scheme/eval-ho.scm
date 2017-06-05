@@ -14,7 +14,8 @@
 (define (denote-application dproc args env)
   (let ((dargs (map (lambda (arg) (denote arg env)) args)))
     (lambda (env) (apply (dproc env) (map (lambda (darg) (darg env)) dargs)))))
-(define (denote-if dc dt df) (lambda (env) (if (dc env) (dt env) (df env))))
+(define (denote-if dc tdt tdf)
+  (let ((dt (tdt)) (df (tdf))) (lambda (env) (if (dc env) (dt env) (df env)))))
 
 (define (denote expr env)
   (cond
@@ -34,8 +35,8 @@
            ((if)
             (let* ((parts (syntax-pattern '(if #f #f #f) expr)))
               (denote-if (denote (car parts) env)
-                         (denote (cadr parts) env)
-                         (denote (caddr parts) env))))
+                         (lambda () (denote (cadr parts) env))
+                         (lambda () (denote (caddr parts) env)))))
            ((let)  ;; TODO: optionally-named.
             (let* ((parts (syntax-pattern '(let #f #f) expr))
                    (bindings (map (lambda (b) (syntax-pattern '(#f #f) b))
