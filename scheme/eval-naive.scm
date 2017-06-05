@@ -1,6 +1,7 @@
 ;; TODO: letrec quasiquote vector vector-ref vector?
 
 (define (id v) v)
+(define (id* . v) v)
 (define (const k) (lambda _ k))
 
 (define env-empty '())
@@ -30,27 +31,27 @@
 
 (define (pattern-match/k hole? pat datum k-succeed k-fail)
   (if (hole? pat)
-    (k-succeed (list datum))
+    (k-succeed datum)
     (cond
       ((and (pair? pat) (pair? datum))
        (pattern-match/k
          hole?
          (car pat)
          (car datum)
-         (lambda (a)
+         (lambda a
            (pattern-match/k
              hole?
              (cdr pat)
              (cdr datum)
-             (lambda (d) (k-succeed (append a d)))
+             (lambda d (apply k-succeed (append a d)))
              (lambda (failure) (k-fail (cons `(cdr ,pat ,datum) failure)))))
          (lambda (failure) (k-fail (cons `(car ,pat ,datum) failure)))))
-      ((eqv? pat datum) (k-succeed '()))
+      ((eqv? pat datum) (k-succeed))
       (else (k-fail `((_ ,pat ,datum)))))))
 
 (define (syntax-pattern pattern datum)
   (pattern-match/k
-    not pattern datum id
+    not pattern datum id*
     (lambda (failure) (error 'syntax-pattern "bad syntax ~s" failure))))
 (define (case-pattern datum pc*-all)
   (let loop ((pc* pc*-all))
@@ -97,18 +98,16 @@
               (case-pattern
                 qq-expr
                 `(((,'unquote #f)
-                   ,(lambda (parts)
+                   ,(lambda (datum)
                       (if (= 0 level)
-                        (evaluate (car parts) env)
-                        `(,'unquote ,(loop (- level 1) (car parts))))))
+                        (evaluate datum env)
+                        `(,'unquote ,(loop (- level 1) datum)))))
                   ((quasiquote #f)
-                   ,(lambda (parts)
-                      `(,'quasiquote ,(loop (+ level 1) (car parts)))))
+                   ,(lambda (datum)
+                      `(,'quasiquote ,(loop (+ level 1) datum))))
                   ((#f . #f)
-                   ,(lambda (parts)
-                      `(,(loop level (car parts))
-                         . ,(loop level (cadr parts)))))
-                  (#f ,(lambda (parts) (car parts)))))))
+                   ,(lambda (a d) `(,(loop level a) . ,(loop level d))))
+                  (#f ,id)))))
            (else (error 'evaluate (format "unbound variable ~s" head)))))))
     (else (error 'evaluate (format "invalid syntax ~s" expr)))))
 
