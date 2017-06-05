@@ -105,6 +105,15 @@
                   ((quasiquote #f)
                    ,(lambda (datum)
                       `(,'quasiquote ,(loop (+ level 1) datum))))
+                  (,'unquote
+                    ,(lambda _ (error 'evaluate-quasiquote
+                                      (format "bad unquote ~s" expr))))
+                  ((,'unquote)
+                   ,(lambda _ (error 'evaluate-quasiquote
+                                     (format "bad unquote ~s" expr))))
+                  ((,'unquote #f #f . #f)
+                   ,(lambda _ (error 'evaluate-quasiquote
+                                     (format "bad unquote ~s" expr))))
                   ((#f . #f)
                    ,(lambda (a d) `(,(loop level a) . ,(loop level d))))
                   (#f ,id)))))
