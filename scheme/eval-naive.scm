@@ -10,6 +10,7 @@
 ;; flatten environment representation, strip/gc closure environments
 (load "common.scm")
 
+(define (denote-reference env idx name) (env-lookup env name))
 (define (denote-procedure body params env)
   (lambda args (denote body (env-extend* env params args))))
 (define (denote-application proc args env)
@@ -18,7 +19,7 @@
 (define (denote expr env)
   (cond
     ((or (boolean? expr) (number? expr)) expr)
-    ((symbol? expr) (env-lookup env expr))
+    ((symbol? expr) (denote-reference env (env-index env expr) expr))
     ((pair? expr)
      (let ((head (car expr)))
        (if (or (not (symbol? head)) (bound? env head))

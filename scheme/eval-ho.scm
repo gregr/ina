@@ -1,6 +1,6 @@
 (load "common.scm")
 
-(define (denote-reference idx name) (lambda (env) (env-ref env idx)))
+(define (denote-reference env idx name) (lambda (env) (env-ref env idx)))
 (define (denote-literal value) (lambda (env) value))
 (define (denote-pair da dd) (lambda (env) `(,(da env) . ,(dd env))))
 (define (denote-list ds)
@@ -19,7 +19,7 @@
 (define (denote expr env)
   (cond
     ((or (boolean? expr) (number? expr)) (denote-literal expr))
-    ((symbol? expr) (denote-reference (env-index env expr) expr))
+    ((symbol? expr) (denote-reference env (env-index env expr) expr))
     ((pair? expr)
      (let ((head (car expr)))
        (if (or (not (symbol? head)) (bound? env head))
