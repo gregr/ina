@@ -1,4 +1,5 @@
 (define (id v) v)
+(define (id* . v) v)
 (define (const k) (lambda _ k))
 
 (define env-empty '())
@@ -32,28 +33,34 @@
 
 (define (pattern-match/k hole? pat datum k-succeed k-fail)
   (if (hole? pat)
-    (k-succeed (list datum))
+    (k-succeed datum)
     (cond
       ((and (pair? pat) (pair? datum))
        (pattern-match/k
          hole?
          (car pat)
          (car datum)
-         (lambda (a)
+         (lambda a
            (pattern-match/k
              hole?
              (cdr pat)
              (cdr datum)
-             (lambda (d) (k-succeed (append a d)))
+             (lambda d (apply k-succeed (append a d)))
              (lambda (failure) (k-fail (cons `(cdr ,pat ,datum) failure)))))
          (lambda (failure) (k-fail (cons `(car ,pat ,datum) failure)))))
-      ((eqv? pat datum) (k-succeed '()))
+      ((eqv? pat datum) (k-succeed))
       (else (k-fail `((_ ,pat ,datum)))))))
 
 (define (syntax-pattern pattern datum)
   (pattern-match/k
-    not pattern datum id
+    not pattern datum id*
     (lambda (failure) (error 'syntax-pattern "bad syntax ~s" failure))))
+(define (case-pattern datum pc*-all)
+  (let loop ((pc* pc*-all))
+    (if (null? pc*)
+      (error 'case-pattern "no match for ~s with ~s" datum (map car pc*-all))
+      (pattern-match/k
+        not (caar pc*) datum (cadar pc*) (lambda (_) (loop (cdr pc*)))))))
 
 (define (denote expr env)
   (cond
