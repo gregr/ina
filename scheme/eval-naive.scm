@@ -11,6 +11,13 @@
 (load "common.scm")
 
 (define (denote-reference env idx name) (env-lookup env name))
+(define (denote-literal expr) expr)
+(define (denote-pair da dd) `(,da . ,dd))
+(define (denote-list ds)
+  (let loop ((ds ds))
+    (if (null? ds)
+      (denote-literal '())
+      (denote-pair (car ds) (loop (cdr ds))))))
 (define (denote-procedure body params env)
   (lambda args (denote body (env-extend* env params args))))
 (define (denote-application proc args env)
@@ -18,7 +25,7 @@
 
 (define (denote expr env)
   (cond
-    ((or (boolean? expr) (number? expr)) expr)
+    ((or (boolean? expr) (number? expr)) (denote-literal expr))
     ((symbol? expr) (denote-reference env (env-index env expr) expr))
     ((pair? expr)
      (let ((head (car expr)))
@@ -57,10 +64,12 @@
                    ,(lambda (datum)
                       (if (= 0 level)
                         (denote datum env)
-                        `(,'unquote ,(loop (- level 1) datum)))))
+                        (denote-list (list (denote-literal 'unquote)
+                                           (loop (- level 1) datum))))))
                   ((quasiquote #f)
                    ,(lambda (datum)
-                      `(,'quasiquote ,(loop (+ level 1) datum))))
+                      (denote-list (list (denote-literal 'quasiquote)
+                                         (loop (+ level 1) datum)))))
                   (,'unquote
                     ,(lambda _ (error 'denote-quasiquote
                                       (format "bad unquote ~s" expr))))
@@ -71,8 +80,8 @@
                    ,(lambda _ (error 'denote-quasiquote
                                      (format "bad unquote ~s" expr))))
                   ((#f . #f)
-                   ,(lambda (a d) `(,(loop level a) . ,(loop level d))))
-                  (#f ,id)))))
+                   ,(lambda (a d) (denote-pair (loop level a) (loop level d))))
+                  (#f ,denote-literal)))))
            (else (error 'denote (format "unbound variable ~s" head)))))))
     (else (error 'denote (format "invalid syntax ~s" expr)))))
 
