@@ -24,6 +24,13 @@
 (define (bound? env datum) (env-index/k env datum (const #t) (const #f)))
 
 (define (denote-literal value) `(literal ,value))
+(define (denote-pair da dd)
+  `(application ,(denote-literal `(,procedure-tag cons)) (,da ,dd)))
+(define (denote-list ds)
+  (let loop ((ds ds))
+    (if (null? ds)
+      (denote-literal '())
+      (denote-pair (car ds) (loop (cdr ds))))))
 (define (denote-procedure body params env)
   (let ((dbody (denote body (env-extend* env params params))))
     `(lambda ,params ,dbody)))
@@ -96,6 +103,24 @@
                    (args (map cadr bindings)))
               (denote-application
                 (denote-procedure body params env) args env)))
+           ((quasiquote)
+            (let loop ((level 0) (qq-expr (car (syntax-pattern
+                                                 '(quasiquote #f) expr))))
+              (case-pattern
+                qq-expr
+                `(((,'unquote #f)
+                   ,(lambda (datum)
+                      (if (= 0 level)
+                        (denote datum env)
+                        (denote-list (list (denote-literal 'unquote)
+                                           (loop (- level 1) datum))))))
+                  ((quasiquote #f)
+                   ,(lambda (datum)
+                      (denote-list (list (denote-literal 'quasiquote)
+                                         (loop (+ level 1) datum)))))
+                  ((#f . #f)
+                   ,(lambda (a d) (denote-pair (loop level a) (loop level d))))
+                  (#f ,denote-literal)))))
            (else (error 'denote (format "unbound variable ~s" head)))))))
     (else (error 'denote (format "invalid syntax ~s" expr)))))
 
