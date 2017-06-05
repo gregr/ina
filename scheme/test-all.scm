@@ -9,3 +9,7 @@
 (printf "\nFirst order evaluate\n")
 (load "eval-fo.scm")
 (load "test.scm")
+
+(printf "\neval\n")
+(define (evaluate expr env) (eval expr))
+(load "test.scm")
