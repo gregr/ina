@@ -1,4 +1,13 @@
-;; TODO: letrec quasiquote vector vector-ref vector?
+;; TODO: aim for self-applicability.
+;; vector, vector-ref, vector?, strings
+;; let*, letrec, cond, case, and, or
+;; named let, begin/define, define within lambda and let
+;; define equal? in terms of something like eqv?, be careful about procedures
+;; gensym, error, format, list, list-ref, null?, boolean?, length, map, =, +, -,
+;; caar, cadr, cdar, cadar, caddr, cadddr
+;; effect/identity issues: gensyms, equality of pairs, vectors, procedures
+;; factor out 'denote' and other utilities
+;; flatten environment representation, strip/gc closure environments
 
 (define (id v) v)
 (define (id* . v) v)
