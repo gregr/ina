@@ -61,13 +61,13 @@
                       (denote-list (list (denote-literal 'quasiquote)
                                          (loop (+ level 1) datum)))))
                   (,'unquote
-                    ,(lambda _ (error 'evaluate-quasiquote
+                    ,(lambda _ (error 'denote-quasiquote
                                       (format "bad unquote ~s" expr))))
                   ((,'unquote)
-                   ,(lambda _ (error 'evaluate-quasiquote
+                   ,(lambda _ (error 'denote-quasiquote
                                      (format "bad unquote ~s" expr))))
                   ((,'unquote #f #f . #f)
-                   ,(lambda _ (error 'evaluate-quasiquote
+                   ,(lambda _ (error 'denote-quasiquote
                                      (format "bad unquote ~s" expr))))
                   ((#f . #f)
                    ,(lambda (a d) (denote-pair (loop level a) (loop level d))))
