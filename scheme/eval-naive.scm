@@ -22,6 +22,7 @@
   (lambda args (denote body (env-extend* env params args))))
 (define (denote-application proc args env)
   (apply proc (map (lambda (arg) (denote arg env)) args)))
+(define (denote-if dc tdt tdf) (if dc (tdt) (tdf)))
 
 (define (denote expr env)
   (cond
@@ -39,13 +40,10 @@
                    (body (cadr parts)))
               (denote-procedure body params env)))
            ((if)
-            (let* ((parts (syntax-pattern '(if #f #f #f) expr))
-                   (condition (car parts))
-                   (alt-true (cadr parts))
-                   (alt-false (caddr parts)))
-              (if (denote condition env)
-                (denote alt-true env)
-                (denote alt-false env))))
+            (let* ((parts (syntax-pattern '(if #f #f #f) expr)))
+              (denote-if (denote (car parts) env)
+                         (lambda () (denote (cadr parts) env))
+                         (lambda () (denote (caddr parts) env)))))
            ((let)  ;; TODO: optionally-named.
             (let* ((parts (syntax-pattern '(let #f #f) expr))
                    (bindings (map (lambda (b) (syntax-pattern '(#f #f) b))
