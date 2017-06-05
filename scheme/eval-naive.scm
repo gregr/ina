@@ -52,6 +52,12 @@
   (pattern-match/k
     not pattern datum id
     (lambda (failure) (error 'syntax-pattern "bad syntax ~s" failure))))
+(define (case-pattern datum pc*-all)
+  (let loop ((pc* pc*-all))
+    (if (null? pc*)
+      (error 'case-pattern "no match for ~s with ~s" datum (map car pc*-all))
+      (pattern-match/k
+        not (caar pc*) datum (cadar pc*) (lambda (_) (loop (cdr pc*)))))))
 
 (define (evaluate expr env)
   (cond
@@ -85,6 +91,24 @@
                    (args (map cadr bindings)))
               (evaluate-application
                 (evaluate-procedure body params env) args env)))
+           ((quasiquote)
+            (let loop ((level 0) (qq-expr (car (syntax-pattern
+                                                 '(quasiquote #f) expr))))
+              (case-pattern
+                qq-expr
+                `(((,'unquote #f)
+                   ,(lambda (parts)
+                      (if (= 0 level)
+                        (evaluate (car parts) env)
+                        `(,'unquote ,(loop (- level 1) (car parts))))))
+                  ((quasiquote #f)
+                   ,(lambda (parts)
+                      `(,'quasiquote ,(loop (+ level 1) (car parts)))))
+                  ((#f . #f)
+                   ,(lambda (parts)
+                      `(,(loop level (car parts))
+                         . ,(loop level (cadr parts)))))
+                  (#f ,(lambda (parts) (car parts)))))))
            (else (error 'evaluate (format "unbound variable ~s" head)))))))
     (else (error 'evaluate (format "invalid syntax ~s" expr)))))
 
