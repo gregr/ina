@@ -33,7 +33,7 @@
        (if (or (not (symbol? head)) (bound? env head))
          (denote-application (denote head env) (cdr expr) env)
          (case head
-           ((quote) (car (syntax-pattern '(quote #f) expr)))
+           ((quote) (denote-literal (car (syntax-pattern '(quote #f) expr))))
            ((lambda)
             (let* ((parts (syntax-pattern '(lambda #f #f) expr))
                    (params (car parts))
