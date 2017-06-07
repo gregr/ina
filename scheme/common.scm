@@ -10,15 +10,6 @@
     ((symbol? name*) (env-extend1 env name* val*))
     (else (env-extend* (env-extend1 env (car name*) (car val*))
                        (cdr name*) (cdr val*)))))
-(define (env-lookup/k env name k-bound k-unbound)
-  (cond
-    ((null? env) (k-unbound))
-    ((equal? (car (car env)) name) (k-bound (cdr (car env))))
-    (else (env-lookup/k (cdr env) name k-bound k-unbound))))
-(define (env-lookup env name)
-  (env-lookup/k
-    env name id
-    (lambda () (error 'env-lookup (format "unbound variable ~s" name)))))
 (define (env-index/k env name k-bound k-unbound)
   (let loop ((env env) (idx 0))
     (cond
@@ -28,10 +19,9 @@
 (define (env-index env name)
   (env-index/k
     env name id
-    (lambda () (error 'env-lookup (format "unbound variable ~s" name)))))
+    (lambda () (error 'env-index (format "unbound variable ~s" name)))))
 (define (env-ref env idx) (cdr (list-ref env idx)))
-(define (bound? env datum)
-  (env-lookup/k env datum (const #t) (const #f)))
+(define (bound? env datum) (env-index/k env datum (const #t) (const #f)))
 
 (define (pattern-match/k hole? pat datum k-succeed k-fail)
   (if (hole? pat)

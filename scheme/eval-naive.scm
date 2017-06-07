@@ -9,7 +9,7 @@
 ;; flatten environment representation, strip/gc closure environments
 (load "common.scm")
 
-(define (denote-reference env idx name) (env-lookup env name))
+(define (denote-reference env idx name) (env-ref env idx))
 (define (denote-literal expr) expr)
 (define (denote-pair da dd) `(,da . ,dd))
 (define (denote-procedure body params env)
