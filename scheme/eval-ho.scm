@@ -1,6 +1,6 @@
 (load "common.scm")
 
-(define (denote-reference env idx name) (lambda (env) (env-ref env idx)))
+(define (denote-reference env addr name) (lambda (env) (env-ref env addr)))
 (define (denote-literal value) (lambda (env) value))
 (define (denote-pair da dd) (lambda (env) `(,(da env) . ,(dd env))))
 (define (denote-procedure body params env)
@@ -13,16 +13,17 @@
   (let ((dt (tdt)) (df (tdf))) (lambda (env) (if (dc env) (dt env) (df env)))))
 
 (define env-initial
-  `((cons . ,cons)
-    (car . ,car)
-    (cdr . ,cdr)
-    (not . ,not)
-    (equal? . ,equal?)
-    (pair? . ,pair?)
-    (symbol? . ,symbol?)
-    (number? . ,number?)
-    (procedure? . ,procedure?)
-    (apply . ,apply)
-    . ,env-empty))
+  (env-extend-bindings
+    env-empty
+    `((cons . ,cons)
+      (car . ,car)
+      (cdr . ,cdr)
+      (not . ,not)
+      (equal? . ,equal?)
+      (pair? . ,pair?)
+      (symbol? . ,symbol?)
+      (number? . ,number?)
+      (procedure? . ,procedure?)
+      (apply . ,apply))))
 
 (define (evaluate expr env) ((denote expr env) env))

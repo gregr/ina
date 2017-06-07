@@ -1,6 +1,6 @@
 (load "common.scm")
 
-(define (denote-reference env idx name) `(reference ,idx ,name))
+(define (denote-reference env addr name) `(reference ,addr ,name))
 (define (denote-literal value) `(literal ,value))
 (define (denote-pair da dd)
   `(application ,(denote-literal `(,procedure-tag cons)) (,da ,dd)))
@@ -71,16 +71,17 @@
     (else (error 'evaluate-fo (format "invalid expression ~s" expr)))))
 
 (define env-initial
-  `((cons . (,procedure-tag cons))
-    (car . (,procedure-tag car))
-    (cdr . (,procedure-tag cdr))
-    (not . (,procedure-tag not))
-    (equal? . (,procedure-tag equal?))
-    (pair? . (,procedure-tag pair?))
-    (symbol? . (,procedure-tag symbol?))
-    (number? . (,procedure-tag number?))
-    (procedure? . (,procedure-tag procedure?))
-    (apply . (,procedure-tag apply))
-    . ,env-empty))
+  (env-extend-bindings
+    env-empty
+    `((cons . (,procedure-tag cons))
+      (car . (,procedure-tag car))
+      (cdr . (,procedure-tag cdr))
+      (not . (,procedure-tag not))
+      (equal? . (,procedure-tag equal?))
+      (pair? . (,procedure-tag pair?))
+      (symbol? . (,procedure-tag symbol?))
+      (number? . (,procedure-tag number?))
+      (procedure? . (,procedure-tag procedure?))
+      (apply . (,procedure-tag apply)))))
 
 (define (evaluate expr env) (evaluate-fo (denote expr env) env))
