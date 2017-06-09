@@ -11,5 +11,9 @@
 (load "test.scm")
 
 (printf "\neval\n")
+(define (vector-reify v)
+  (if (vector? v)
+    v
+    (error 'vector-reify (format "invalid vector ~s" v))))
 (define (evaluate expr env) (eval expr))
 (load "test.scm")

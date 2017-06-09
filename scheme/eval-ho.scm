@@ -1,5 +1,10 @@
 (load "common.scm")
 
+(define (vector-reify v)
+  (if (vector? v)
+    v
+    (error 'vector-reify (format "invalid vector ~s" v))))
+
 (define (denote-reference env addr name) (lambda (env) (env-ref env addr)))
 (define (denote-literal value) (lambda (env) value))
 (define (denote-pair da dd) (lambda (env) `(,(da env) . ,(dd env))))
@@ -23,6 +28,10 @@
       (symbol? . ,symbol?)
       (number? . ,number?)
       (procedure? . ,procedure?)
+      (vector? . ,vector?)
+      (vector . ,vector)
+      (vector-length . ,vector-length)
+      (vector-ref . ,vector-ref)
       (apply . ,apply))))
 
 (define (evaluate expr env) ((denote expr env) env))

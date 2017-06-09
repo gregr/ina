@@ -15,6 +15,32 @@
   (map ev '('() #t 4))
   '(() #t 4))
 
+(test 'vector-1
+  (map vector-reify (map ev '((vector)
+                              (vector 5)
+                              (vector 3 1 2))))
+  '(#() #(5) #(3 1 2)))
+(test 'vector-2
+  (map ev '((vector-length (vector))
+            (vector-length (vector 5))
+            (vector-length (vector 3 1 2))))
+  '(0 1 3))
+(test 'vector-3
+  (map ev '((vector-ref (vector 5) 0)
+            (vector-ref (vector 3 1 2) 0)
+            (vector-ref (vector 3 1 2) 1)
+            (vector-ref (vector 3 1 2) 2)))
+  '(5 3 1 2))
+(test 'vector-4
+  (map ev '((vector? (vector))
+            (vector? (vector 5))
+            (vector? (vector 3 1 2))
+            (vector? #t)
+            (vector? '(x x))
+            (vector? (lambda x x))
+            (vector? apply)))
+  '(#t #t #t #f #f #f #f))
+
 (test 'pair-1
   (ev '(pair? '(x x)))
   #t)
@@ -26,6 +52,9 @@
   #f)
 (test 'pair-4
   (ev '(pair? apply))
+  #f)
+(test 'pair-5
+  (ev '(pair? (vector 3 1 2)))
   #f)
 
 (test 'procedure-1
@@ -40,6 +69,9 @@
 (test 'procedure-4
   (ev '(procedure? apply))
   #t)
+(test 'procedure-5
+  (ev '(procedure? (vector 3 1 2)))
+  #f)
 
 (test 'lambda-app-1
   (ev '((lambda (x y) x) 5 6))

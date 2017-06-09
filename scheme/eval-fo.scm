@@ -13,6 +13,22 @@
 
 (define (primitive name) (procedure-fo name))
 
+(define vector-tag 'vector)
+(define (vector-fo vec) (tagged vector-tag vec))
+(define (vector-fo? datum) (tagged? vector-tag datum))
+(define (vector-fo/op op-name argc op args)
+  (if (= argc (length args))
+    (if (vector-fo? (car args))
+      (apply op (cons (tagged-payload (car args)) (cdr args)))
+      (error op-name
+             (format "expected first argument to be a vector ~s" args)))
+    (error op-name
+           (format "invalid number of arguments, ~s expected ~s" argc args))))
+(define (vector-reify vfo)
+  (if (vector-fo? vfo)
+    (tagged-payload vfo)
+    (error 'vector-reify (format "invalid vector ~s" vfo))))
+
 (define (denote-reference env addr name) `(reference ,addr ,name))
 (define (denote-literal value) `(literal ,value))
 (define (denote-pair da dd)
@@ -40,6 +56,10 @@
        (error 'apply-procedure-fo?
               (format "procedure? expects 1 argument ~s" args))))
     ((apply) (apply apply-fo args))
+    ((vector) (vector-fo (apply vector args)))
+    ((vector?) (apply vector-fo? args))
+    ((vector-length) (vector-fo/op 'vector-length 1 vector-length args))
+    ((vector-ref) (vector-fo/op 'vector-ref 2 vector-ref args))
     (else (error 'apply-primitive (format "invalid primitive ~s" proc)))))
 
 (define (apply-fo proc args)
@@ -81,6 +101,10 @@
       (symbol? . ,(primitive 'symbol?))
       (number? . ,(primitive 'number?))
       (procedure? . ,(primitive 'procedure?))
+      (vector? . ,(primitive 'vector?))
+      (vector . ,(primitive 'vector))
+      (vector-length . ,(primitive 'vector-length))
+      (vector-ref . ,(primitive 'vector-ref))
       (apply . ,(primitive 'apply)))))
 
 (define (evaluate expr env) (evaluate-fo (denote expr env) env))
