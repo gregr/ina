@@ -13,6 +13,8 @@
 
 (define procedure-tag (gensym "#%procedure"))
 
+(define (primitive name) `(,procedure-tag ,name))
+
 (define (apply-fo proc args)
   (define (real-pair? datum)
     (and (pair? datum) (not (eq? procedure-tag (car datum)))))
@@ -72,15 +74,15 @@
 (define env-initial
   (env-extend-bindings
     env-empty
-    `((cons . (,procedure-tag cons))
-      (car . (,procedure-tag car))
-      (cdr . (,procedure-tag cdr))
-      (not . (,procedure-tag not))
-      (equal? . (,procedure-tag equal?))
-      (pair? . (,procedure-tag pair?))
-      (symbol? . (,procedure-tag symbol?))
-      (number? . (,procedure-tag number?))
-      (procedure? . (,procedure-tag procedure?))
-      (apply . (,procedure-tag apply)))))
+    `((cons . ,(primitive 'cons))
+      (car . ,(primitive 'car))
+      (cdr . ,(primitive 'cdr))
+      (not . ,(primitive 'not))
+      (equal? . ,(primitive 'equal?))
+      (pair? . ,(primitive 'pair?))
+      (symbol? . ,(primitive 'symbol?))
+      (number? . ,(primitive 'number?))
+      (procedure? . ,(primitive 'procedure?))
+      (apply . ,(primitive 'apply)))))
 
 (define (evaluate expr env) (evaluate-fo (denote expr env) env))
