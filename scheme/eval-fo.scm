@@ -7,9 +7,8 @@
 (define (denote-procedure body params env)
   (let ((dbody (denote body (env-extend* env params params))))
     `(lambda ,params ,dbody)))
-(define (denote-application dproc args env)
-  (let ((dargs (map (lambda (arg) (denote arg env)) args)))
-    `(application ,dproc ,dargs)))
+(define (denote-application dproc dargs)
+  `(application ,dproc ,dargs))
 (define (denote-if dc tdt tdf) `(if ,dc ,(tdt) ,(tdf)))
 
 (define procedure-tag (gensym "#%procedure"))

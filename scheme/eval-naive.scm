@@ -14,8 +14,7 @@
 (define (denote-pair da dd) `(,da . ,dd))
 (define (denote-procedure body params env)
   (lambda args (denote body (env-extend* env params args))))
-(define (denote-application proc args env)
-  (apply proc (map (lambda (arg) (denote arg env)) args)))
+(define (denote-application dproc dargs) (apply dproc dargs))
 (define (denote-if dc tdt tdf) (if dc (tdt) (tdf)))
 
 (define env-initial

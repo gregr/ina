@@ -88,6 +88,7 @@
     (if (null? ds)
       (denote-literal '())
       (denote-pair (car ds) (loop (cdr ds))))))
+(define (denote* expr* env) (map (lambda (e) (denote e env)) expr*))
 (define (denote expr env)
   (cond
     ((or (boolean? expr) (number? expr)) (denote-literal expr))
@@ -95,7 +96,7 @@
     ((pair? expr)
      (let ((head (car expr)))
        (if (or (not (symbol? head)) (bound? env head))
-         (denote-application (denote head env) (cdr expr) env)
+         (denote-application (denote head env) (denote* (cdr expr) env))
          (case head
            ((quote) (denote-literal (car (syntax-pattern '(quote #f) expr))))
            ((lambda)
@@ -116,7 +117,7 @@
                    (params (map car bindings))
                    (args (map cadr bindings)))
               (denote-application
-                (denote-procedure body params env) args env)))
+                (denote-procedure body params env) (denote* args env))))
            ((quasiquote)
             (let loop ((level 0) (qq-expr (car (syntax-pattern
                                                  '(quasiquote #f) expr))))
