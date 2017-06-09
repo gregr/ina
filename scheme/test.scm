@@ -171,22 +171,22 @@
                                '()
                                (cons (f (car xs)) (map f (cdr xs)))))))))
            (let ((fix*
-                   (fix (lambda (self)
-                          (lambda (fs)
+                   (fix (lambda (fix*)
+                          (lambda fs
                             (map (lambda (fi)
                                    (lambda a
-                                     (apply (apply fi (self fs)) a))) fs))))))
+                                     (apply (apply fi (apply fix* fs)) a)))
+                                 fs))))))
              (let ((even&odd
-                     (fix* (cons (lambda (even? odd?)
-                                   (lambda (n) (if (null? n)
-                                                 #t
-                                                 (odd? (cdr n)))))
-                                 (cons (lambda (even? odd?)
-                                         (lambda (n)
-                                           (if (null? n)
-                                             #f
-                                             (even? (cdr n)))))
-                                       '())))))
+                     (fix* (lambda (even? odd?)
+                             (lambda (n) (if (null? n)
+                                           #t
+                                           (odd? (cdr n)))))
+                           (lambda (even? odd?)
+                             (lambda (n)
+                               (if (null? n)
+                                 #f
+                                 (even? (cdr n))))))))
                (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
                  `(,(even? '()) ,(odd? '())
                                 ,(even? '(s))   ,(odd? '(s))
@@ -204,22 +204,22 @@
                                '()
                                (cons (f (car xs)) (map f (cdr xs)))))))))
            (let ((fix*
-                   (fix (lambda (self)
-                          (lambda (fs)
+                   (fix (lambda (fix*)
+                          (lambda fs
                             (map (lambda (fi)
                                    (lambda a
-                                     (apply (apply fi (self fs)) a))) fs))))))
+                                     (apply (apply fi (apply fix* fs)) a)))
+                                 fs))))))
              (let ((even&odd
-                     (fix* (cons (lambda (even? odd?)
-                                   (lambda (n) (if (null? n)
-                                                 #t
-                                                 (odd? (cdr n)))))
-                                 (cons (lambda (even? odd?)
-                                         (lambda (n)
-                                           (if (null? n)
-                                             #f
-                                             (even? (cdr n)))))
-                                       '())))))
+                     (fix* (lambda (even? odd?)
+                             (lambda (n) (if (null? n)
+                                           #t
+                                           (odd? (cdr n)))))
+                           (lambda (even? odd?)
+                             (lambda (n)
+                               (if (null? n)
+                                 #f
+                                 (even? (cdr n))))))))
                (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
                  `(,(even? '()) ,(odd? '())
                                 ,(even? '(s))   ,(odd? '(s))
@@ -234,22 +234,22 @@
                           '()
                           (cons (f (car xs)) (map f (cdr xs)))))))))
       (let ((fix*
-              (fix (lambda (self)
-                     (lambda (fs)
+              (fix (lambda (fix*)
+                     (lambda fs
                        (map (lambda (fi)
                               (lambda a
-                                (apply (apply fi (self fs)) a))) fs))))))
+                                (apply (apply fi (apply fix* fs)) a)))
+                            fs))))))
         (let ((even&odd
-                (fix* (cons (lambda (even? odd?)
-                              (lambda (n) (if (null? n)
-                                            #t
-                                            (odd? (cdr n)))))
-                            (cons (lambda (even? odd?)
-                                    (lambda (n)
-                                      (if (null? n)
-                                        #f
-                                        (even? (cdr n)))))
-                                  '())))))
+                (fix* (lambda (even? odd?)
+                        (lambda (n) (if (null? n)
+                                      #t
+                                      (odd? (cdr n)))))
+                      (lambda (even? odd?)
+                        (lambda (n)
+                          (if (null? n)
+                            #f
+                            (even? (cdr n))))))))
           (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
             `(,(even? '()) ,(odd? '())
                            ,(even? '(s))   ,(odd? '(s))
