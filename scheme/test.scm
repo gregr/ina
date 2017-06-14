@@ -135,6 +135,13 @@
   (let ((op (lambda (x) (cdr x))) (datum '(#t . #f)) (ta 'yes) (fa 'no))
     (if (op datum) ta fa)))
 
+(test 'let*-1
+  (ev '(let* ((a 1) (b `(2 ,a))) b))
+  '(2 1))
+(test 'let*-2
+  (ev '(let* ((a 1) (b `(2 ,a))) b))
+  (let* ((a 1) (b `(2 ,a))) b))
+
 (test 'qq-1
   (ev '`one)
   'one)
