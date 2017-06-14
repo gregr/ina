@@ -90,6 +90,8 @@
       (denote-literal '())
       (denote-pair (car ds) (loop (cdr ds))))))
 (define (denote* expr* env) (map (lambda (e) (denote e env)) expr*))
+(define (denote-let pdbody param* arg* env)
+  (denote-application (denote-procedure pdbody param* env) (denote* arg* env)))
 (define (denote expr env)
   (cond
     ((or (boolean? expr) (number? expr)) (denote-literal expr))
@@ -104,7 +106,7 @@
             (let* ((parts (syntax-pattern '(lambda #f #f) expr))
                    (params (car parts))
                    (body (cadr parts)))
-              (denote-procedure body params env)))
+              (denote-procedure (pdenote body) params env)))
            ((if)
             (let* ((parts (syntax-pattern '(if #f #f #f) expr)))
               (denote-if (denote (car parts) env)
@@ -117,8 +119,7 @@
                    (body (cadr parts))
                    (params (map car bindings))
                    (args (map cadr bindings)))
-              (denote-application
-                (denote-procedure body params env) (denote* args env))))
+              (denote-let (pdenote body) params args env)))
            ((quasiquote)
             (let loop ((level 0) (qq-expr (car (syntax-pattern
                                                  '(quasiquote #f) expr))))
@@ -148,3 +149,7 @@
                   (#f ,denote-literal)))))
            (else (error 'denote (format "unbound variable ~s" head)))))))
     (else (error 'denote (format "invalid syntax ~s" expr)))))
+
+(define (pdenote expr) (lambda (env) (denote expr env)))
+(define (pdenote-let pdbody param* arg*)
+  (lambda (env) (denote-let pdbody param* arg* env)))

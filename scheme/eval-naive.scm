@@ -17,8 +17,8 @@
 (define (denote-reference env addr name) (env-ref env addr))
 (define (denote-literal expr) expr)
 (define (denote-pair da dd) `(,da . ,dd))
-(define (denote-procedure body params env)
-  (lambda args (denote body (env-extend* env params args))))
+(define (denote-procedure pdbody params env)
+  (lambda args (pdbody (env-extend* env params args))))
 (define (denote-application dproc dargs) (apply dproc dargs))
 (define (denote-if dc tdt tdf) (if dc (tdt) (tdf)))
 

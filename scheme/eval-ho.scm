@@ -9,7 +9,7 @@
 (define (denote-literal value) (lambda (env) value))
 (define (denote-pair da dd) (lambda (env) `(,(da env) . ,(dd env))))
 (define (denote-procedure pdbody params env)
-  (let ((dbody (denote body (env-extend-param* env params))))
+  (let ((dbody (pdbody (env-extend-param* env params))))
     (lambda (env) (lambda args (dbody (env-extend* env params args))))))
 (define (denote-application dproc dargs)
   (lambda (env) (apply (dproc env) (map (lambda (darg) (darg env)) dargs))))

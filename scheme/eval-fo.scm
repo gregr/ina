@@ -34,7 +34,7 @@
 (define (denote-pair da dd)
   `(application ,(denote-literal (primitive 'cons)) (,da ,dd)))
 (define (denote-procedure pdbody params env)
-  (let ((dbody (denote body (env-extend-param* env params))))
+  (let ((dbody (pdbody (env-extend-param* env params))))
     `(lambda ,params ,dbody)))
 (define (denote-application dproc dargs)
   `(application ,dproc ,dargs))
