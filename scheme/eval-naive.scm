@@ -1,12 +1,18 @@
 ;; TODO: aim for self-applicability.
-;; vector, vector-ref, vector?, strings
+;; Do letrec, named let, begin/define last
+;; begin/define should define error-producing procs first, then let-bound non-procs, then letrec procs
+;; Do these first:
+;; cond, case, and, or
+;;
+;; list, list-ref, list-tail, null?, boolean?, length, map, reverse
+;; caar, cadr, cdar, cadar, caddr, cadddr
+;; define equal? in terms of something like eqv?
+;; identity issues: equality of pairs, vectors, procedures
+;; optional (would have to remove uses of these):
+;; error, strings, format
 ;; let*, letrec, cond, case, and, or
 ;; named let, begin/define, define within lambda and let
-;; define equal? in terms of something like eqv?, be careful about procedures
-;; gensym, error, format, list, list-ref, null?, boolean?, length, map, =, +, -,
-;; caar, cadr, cdar, cadar, caddr, cadddr
-;; effect/identity issues: gensyms, equality of pairs, vectors, procedures
-;; flatten environment representation, strip/gc closure environments
+;; =, +, -
 (load "common.scm")
 
 (define (vector-reify v)
