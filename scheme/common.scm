@@ -22,6 +22,7 @@
 (define (env-extend-bindings env bindings)
   `(,(bindings->frame bindings) . ,env))
 (define (env-extend* env param* val*) `(,(frame-new param* val*) . ,env))
+(define (env-extend-param* env param*) (env-extend* env param* param*))
 (define (env-address/k env name k-bound k-unbound)
   (let loop-frame ((env env) (ei 0))
     (if (null? env) (k-unbound)
