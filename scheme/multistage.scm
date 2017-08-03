@@ -16,7 +16,8 @@
              expr  ;; #,@ is only valid for procedure application code.
              `((((unsyntax-splicing #f))
                 ,(lambda (rest)
-                   (list 'unquote (ms-denote rest env (- level 1)))))
+                   (list (if (= 1 level) 'unquote 'unsyntax)
+                         (ms-denote rest env (- level 1)))))
                ((#f) ,(lambda (e) `(,(ms-denote e env level))))
                ((#f . #f) ,(lambda (ea ed)
                              `(,(ms-denote ea env level) . ,(loop ed))))
@@ -40,10 +41,12 @@
                  ,(ms-denote body (env-extend* env params ms-params) level))))
            ((quasisyntax)
             (let ((expr (car (syntax-pattern '(quasisyntax #f) expr))))
-              (list 'quasiquote (ms-denote expr env (+ level 1)))))
+              (list (if (= 0 level) 'quasiquote 'quasisyntax)
+                    (ms-denote expr env (+ level 1)))))
            ((unsyntax)
             (let ((expr (car (syntax-pattern '(unsyntax #f) expr))))
-              (list 'unquote (ms-denote expr env (- level 1)))))
+              (list (if (= 1 level) 'unquote 'unsyntax)
+                    (ms-denote expr env (- level 1)))))
            ((if) (let* ((parts (syntax-pattern '(if #f #f #f) expr)))
                    `(if ,(ms-denote (car parts) env level)
                       ,(ms-denote (cadr parts) env level)
@@ -52,7 +55,7 @@
            (else (error 'ms-denote (format "unbound variable ~s" head)))))))
     (else (error 'ms-denote (format "invalid syntax ~s" expr)))))
 
-(define (ms-eval expr env) (eval (ms-denote expr env 1)))
+(define (ms-eval expr env) (eval (ms-denote expr env 0)))
 
 (define (test-denote* expr* env) (map (lambda (e) (test-denote e env)) expr*))
 
