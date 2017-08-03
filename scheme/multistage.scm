@@ -44,7 +44,11 @@
             (let ((expr (car (syntax-pattern '(unsyntax #f) expr))))
               (let ((code (ms-denote expr env (- level 1))))
                 (if (= 1 level) (eval code) (list 'unquote code)))))
-           ;; TODO: if, quasiquote
+           ((if) (let* ((parts (syntax-pattern '(if #f #f #f) expr)))
+                   `(if ,(ms-denote (car parts) env level)
+                      ,(ms-denote (cadr parts) env level)
+                      ,(ms-denote (caddr parts) env level))))
+           ;; TODO: quasiquote
            (else (error 'ms-denote (format "unbound variable ~s" head)))))))
     (else (error 'ms-denote (format "invalid syntax ~s" expr)))))
 
@@ -161,7 +165,7 @@
       (env-extend* . ,env-extend*)
       )))
 
-(define test0
+(define test0a
   (ms-eval
     '((lambda (eta)
         #`(lambda (x)
@@ -170,6 +174,27 @@
       (lambda (f)
         #`(lambda (x)
             #,(f #`x))))
+    env-initial))
+
+(define test0b
+  (ms-eval
+    '#`(lambda (x)
+         #,((lambda (t f)
+              #`(if (cdr '(#t . #f)) #,t #,f)) #`x 'no))
+    env-initial))
+
+(define test0c
+  (ms-eval
+    '#`(lambda (x)
+         #,((lambda (t f)
+              (if (cdr '(#t . #f)) t f)) #`x 'no))
+    env-initial))
+
+(define test0d
+  (ms-eval
+    '#`(lambda (x)
+         ((lambda (t f)
+            #,(if (cdr '(#t . #f)) #`t #`f)) x 'no))
     env-initial))
 
 (define test1
