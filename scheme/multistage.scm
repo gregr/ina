@@ -168,6 +168,8 @@
       (env-extend* . env-extend*)
       )))
 
+(define (ms-run expr) (ms-eval expr env-initial))
+
 (define test0a-failure
   ((lambda (eta)
      `(lambda (x)
@@ -178,52 +180,46 @@
         ,(f `x)))))
 
 (define test0
-  (ms-eval
+  (ms-run
     '((lambda (eta)
         #`(lambda (x)
             #,(eta (lambda (y)
                      #`(+ x #,y)))))
       (lambda (f)
         #`(lambda (x)
-            #,(f #`x))))
-    env-initial))
+            #,(f #`x))))))
 
 (define test0a
-  (ms-eval
+  (ms-run
     '#`((lambda (eta)
           #`(lambda (x)
               #,(eta (lambda (y)
                        #`(+ x #,y)))))
         (lambda (f)
           #`(lambda (x)
-              #,(f #`x))))
-    env-initial))
+              #,(f #`x))))))
 
 (define test0b
-  (ms-eval
+  (ms-run
     '#`(lambda (x)
          #,((lambda (t f)
-              #`(if (cdr '(#t . #f)) #,t #,f)) #`x 'no))
-    env-initial))
+              #`(if (cdr '(#t . #f)) #,t #,f)) #`x 'no))))
 
 (define test0c
-  (ms-eval
+  (ms-run
     '#`(lambda (x)
          #,((lambda (t f)
-              (if (cdr '(#t . #f)) t f)) #`x 'no))
-    env-initial))
+              (if (cdr '(#t . #f)) t f)) #`x 'no))))
 
 (define test0d
-  (ms-eval
+  (ms-run
     '#`(lambda (x)
          ((lambda (t f)
-            #,(if (cdr '(#t . #f)) #`t #`f)) x 'no))
-    env-initial))
+            #,(if (cdr '(#t . #f)) #`t #`f)) x 'no))))
 
 (define test1
-  (ms-eval
-    '#`((lambda args (list args args)) . #,(list 1 2))
-    env-initial))
+  (ms-run
+    '#`((lambda args (list args args)) . #,(list 1 2))))
 
 (define test2
   (test-denote
