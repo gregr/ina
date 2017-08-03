@@ -16,10 +16,8 @@
        (if (or (not (symbol? head)) (bound? env head))
          (let loop ((expr expr))
            (case-pattern
-             expr  ;; #,@ is only valid for procedure application code.
-             `((((unsyntax-splicing #f))
-                ,(lambda (rest) (escape rest env level)))
-               ((unsyntax #f)
+             expr
+             `(((unsyntax #f)
                 ,(lambda (rest) (escape rest env level)))
                ((#f . #f) ,(lambda (ea ed)
                              `(,(ms-denote ea env level) . ,(loop ed))))
@@ -88,7 +86,8 @@
     ((pair? expr)
      (let ((head (car expr)))
        (if (or (not (symbol? head)) (bound? env head))
-         (ms-eval '#`(#,(test-denote head env) #,@(test-denote* (cdr expr) env))
+         (ms-eval '#`(#,(test-denote head env)
+                      . #,(test-denote* (cdr expr) env))
                   (env-extend-bindings
                     env-initial
                     `((head . (quote ,head))
@@ -113,7 +112,7 @@
                    (params (map car bindings))
                    (args (map cadr bindings)))
               (ms-eval '#`(#,(test-lambda params body env)
-                           #,@(test-denote* args env))
+                           . #,(test-denote* args env))
                        (env-extend-bindings
                          env-initial
                          `((test-lambda . (quote ,test-lambda))
