@@ -34,11 +34,9 @@
                    (ms-params (let loop ((params params))
                                 (cond
                                   ((null? params) '())
-                                  ((symbol? params)
-                                   (gensym (symbol->string params)))
+                                  ((symbol? params) (gensym))
                                   ((pair? params)
-                                   (cons (gensym (symbol->string (car params)))
-                                         (loop (cdr params))))))))
+                                   (cons (gensym) (loop (cdr params))))))))
               `(lambda ,ms-params
                  ,(ms-denote body (env-extend* env params ms-params) level))))
            ((quasisyntax)
