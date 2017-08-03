@@ -16,8 +16,7 @@
              expr  ;; #,@ is only valid for procedure application code.
              `((((unsyntax-splicing #f))
                 ,(lambda (rest)
-                   (let ((code (ms-denote* rest env (- level 1))))
-                     (if (= 1 level) (eval code) (list 'unquote code)))))
+                   (list 'unquote (ms-denote rest env (- level 1)))))
                ((#f) ,(lambda (e) `(,(ms-denote e env level))))
                ((#f . #f) ,(lambda (ea ed)
                              `(,(ms-denote ea env level) . ,(loop ed))))
@@ -44,8 +43,7 @@
               (list 'quasiquote (ms-denote expr env (+ level 1)))))
            ((unsyntax)
             (let ((expr (car (syntax-pattern '(unsyntax #f) expr))))
-              (let ((code (ms-denote expr env (- level 1))))
-                (if (= 1 level) (eval code) (list 'unquote code)))))
+              (list 'unquote (ms-denote expr env (- level 1)))))
            ((if) (let* ((parts (syntax-pattern '(if #f #f #f) expr)))
                    `(if ,(ms-denote (car parts) env level)
                       ,(ms-denote (cadr parts) env level)
@@ -201,7 +199,7 @@
 
 (define test1
   (ms-eval
-    '((lambda args (list args args)) #,@(list 1 2))
+    '#`((lambda args (list args args)) #,@(list 1 2))
     env-initial))
 
 (define test2
