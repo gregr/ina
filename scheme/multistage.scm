@@ -110,7 +110,7 @@
                            #,@(test-denote* args env))
                        (env-extend-bindings
                          env-initial
-                         `((test-lambda . ,test-lambda)
+                         `((test-lambda . (quote ,test-lambda))
                            (body . (quote ,body))
                            (env . (quote ,env))
                            (params . (quote ,params))
@@ -133,7 +133,7 @@
                         #,(test-denote (car args) env))
                     (env-extend-bindings
                       env-initial
-                      `((loop . ,loop)
+                      `((loop . (quote ,loop))
                         (env . (quote ,env))
                         (params . (quote ,params))
                         (args . (quote ,args)))))))))
@@ -143,29 +143,38 @@
 (define env-initial
   (env-extend-bindings
     env-empty
-    `((cons . ,cons)
-      (car . ,car)
-      (cdr . ,cdr)
-      (not . ,not)
-      (equal? . ,equal?)
-      (pair? . ,pair?)
-      (symbol? . ,symbol?)
-      (number? . ,number?)
-      (procedure? . ,procedure?)
-      (vector? . ,vector?)
-      (vector . ,vector)
-      (vector-length . ,vector-length)
-      (vector-ref . ,vector-ref)
-      (apply . ,apply)
-      (list . ,list)
-      (+ . ,+)
-      (test-denote . ,test-denote)
-      (test-denote* . ,test-denote*)
-      (test-lambda-args . ,test-lambda-args)
-      (env-extend* . ,env-extend*)
+    `((cons . cons)
+      (car . car)
+      (cdr . cdr)
+      (not . not)
+      (equal? . equal?)
+      (pair? . pair?)
+      (symbol? . symbol?)
+      (number? . number?)
+      (procedure? . procedure?)
+      (vector? . vector?)
+      (vector . vector)
+      (vector-length . vector-length)
+      (vector-ref . vector-ref)
+      (apply . apply)
+      (list . list)
+      (+ . +)
+      (test-denote . test-denote)
+      (test-denote* . test-denote*)
+      (test-lambda-args . test-lambda-args)
+      (env-extend* . env-extend*)
       )))
 
-(define test0a
+(define test0a-failure
+  ((lambda (eta)
+     `(lambda (x)
+        ,(eta (lambda (y)
+                `(+ x ,y)))))
+   (lambda (f)
+     `(lambda (x)
+        ,(f `x)))))
+
+(define test0
   (ms-eval
     '((lambda (eta)
         #`(lambda (x)
@@ -174,6 +183,17 @@
       (lambda (f)
         #`(lambda (x)
             #,(f #`x))))
+    env-initial))
+
+(define test0a
+  (ms-eval
+    '#`((lambda (eta)
+          #`(lambda (x)
+              #,(eta (lambda (y)
+                       #`(+ x #,y)))))
+        (lambda (f)
+          #`(lambda (x)
+              #,(f #`x))))
     env-initial))
 
 (define test0b
