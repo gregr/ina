@@ -211,3 +211,24 @@
     ((e-cons? e) (cons (e-cons-c e) (map print-expr (e-cons-ea* e))))
     ((e-app? e) (cons (e-app-f e) (map print-expr (e-app-ea* e))))
     (else #f)))
+
+(define prog1
+  `(((False 0) (True 0) (Z 0) (S 1))
+
+    (define (add (Z) y) y)
+    (define (add (S x) y) (S (add x y)))
+
+    (define (mult (Z) y) (Z))
+    (define (mult (S x) y) (add y (mult x y)))
+
+    (define (sqr x) (mult x x))
+
+    (define (even (Z)) (True))
+    (define (even (S x)) (odd x))
+
+    (define (odd (Z)) (False))
+    (define (odd (S x)) (even x))
+
+    (define (add2 (Z) y) y)
+    (define (add2 (S x) y) (add2 x (S y)))
+    ))
