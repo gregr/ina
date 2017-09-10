@@ -211,6 +211,53 @@
     ((e-app? e) (cons (e-app-f e) (map print-expr (e-app-ea* e))))
     (else #f)))
 
+(define (eval/program program expr)
+  (define (subst e expr)
+    (define (subst* e es) (map (lambda (ea) (subst e ea)) es))
+    (cond
+      ((e-var? expr) (env-pa e (e-var-name expr)))
+      ((e-cons? expr) (e-cons (e-cons-c expr) (subst* e (e-cons-ea* expr))))
+      ((e-app? expr) (e-app (env-fn e (e-app-f expr))
+                            (subst* e (e-app-ea* expr))))
+      (else (error 'subst-expr (format "invalid expr: ~s" expr)))))
+  (define (apply-fn fn arg*)
+    (cond
+      ((fn-indifferent? fn)
+       (let ((e (env-apply program (fn-indifferent-param* fn) arg*)))
+         (eval-expr (subst e (fn-indifferent-body fn)))))
+      ((fn-curious? fn)
+       (let* ((arg0 (eval-expr (car arg*)))
+              (ctor (and (e-cons? arg0) (e-cons-c arg0)))
+              (arg1* (cdr arg*)))
+         (if ctor
+           (let loop ((clause* (fn-curious-clause* fn)))
+             (cond
+               ((null? clause*) (format "invalid ctor: ~s ~s" arg0 fn))
+               ((eqv? (pattern-ctor (p-clause-pattern (car clause*))) ctor)
+                (let* ((pp* (pattern-param* (p-clause-pattern (car clause*))))
+                       (param* (append pp* (p-clause-param* (car clause*))))
+                       (a* (append (e-cons-ea* arg0) arg1*)))
+                  (eval-expr (subst (env-apply program param* a*)
+                                    (p-clause-body (car clause*))))))
+               (else (loop (cdr clause*)))))
+           (e-app fn (cons arg0 arg1*)))))
+      (else (error 'apply-fn (format "invalid fn: ~s" fn)))))
+  (define (eval-expr expr)
+    (cond
+      ((or (e-var? expr) (e-cons? expr)) expr)
+      ((e-app? expr) (apply-fn (e-app-f expr) (e-app-ea* expr)))
+      (else (error 'eval-expr (format "invalid expr: ~s" expr)))))
+  (define (eval*-expr expr0)
+    (define (ee* es) (map eval*-expr es))
+    (define expr (eval-expr expr0))
+    (cond
+      ((e-var? expr) expr)
+      ((e-cons? expr) (e-cons (e-cons-c expr) (ee* (e-cons-ea* expr))))
+      ((e-app? expr) (e-app (e-app-f expr) (ee* (e-app-ea* expr))))
+      (else (error 'eval*-expr (format "invalid expr: ~s" expr)))))
+  (eval*-expr (subst (env program '()) expr)))
+
+
 (define prog1
   `(((False 0) (True 0) (Z 0) (S 1))
 
