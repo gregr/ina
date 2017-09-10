@@ -211,6 +211,8 @@
     ((e-app? e) (cons (e-app-f e) (map print-expr (e-app-ea* e))))
     (else #f)))
 
+(define (parse/program prog stx) (parse-expr (env prog '()) stx))
+
 (define (eval/program program expr)
   (define (subst e expr)
     (define (subst* e es) (map (lambda (ea) (subst e ea)) es))
@@ -256,6 +258,11 @@
       ((e-app? expr) (e-app (e-app-f expr) (ee* (e-app-ea* expr))))
       (else (error 'eval*-expr (format "invalid expr: ~s" expr)))))
   (eval*-expr (subst (env program '()) expr)))
+
+(define (parse-eval-print pstx estx)
+  (define prog (parse-program pstx))
+  (define expr (parse/program prog estx))
+  (print-expr (eval/program prog expr)))
 
 
 (define prog1
