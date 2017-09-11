@@ -52,17 +52,28 @@
 (define (fn-indifferent-name fn) (cadr fn))
 (define (fn-indifferent-param* fn) (caddr fn))
 (define (fn-indifferent-body fn) (cadddr fn))
+(define (fn-indifferent-arity fn) (length (fn-indifferent-param* fn)))
 
 (define (fn-curious name clause*) `(fn-c ,name ,clause*))
 (define (fn-curious? v) (tagged? 'fn-c v))
 (define (fn-curious-name fn) (cadr fn))
 (define (fn-curious-clause* fn) (caddr fn))
+(define (fn-curious-arity fn)
+  (+ 1 (length (p-clause-param* (car (fn-curious-clause* fn))))))
 (define (fn-curious-extend fn clause*)
-  (fn-curious (fn-curious-name fn) (append clause* (fn-curious-clause* fn))))
+  (and (or (= (fn-curious-arity fn)
+              (+ 1 (length (p-clause-param* (car clause*)))))
+           (error 'fn-curious-extend
+                  (format "mismatching arity: ~s ~s" fn clause*)))
+       (fn-curious (fn-curious-name fn)
+                   (append clause* (fn-curious-clause* fn)))))
 
 (define (fn-name fn)
   (or (and (fn-indifferent? fn) (fn-indifferent-name fn))
       (and (fn-curious? fn) (fn-curious-name fn))))
+(define (fn-arity fn)
+  (or (and (fn-indifferent? fn) (fn-indifferent-arity fn))
+      (and (fn-curious? fn) (fn-curious-arity fn))))
 
 (define (p-clause pattern param* body) `(p-clause ,pattern ,param* ,body))
 (define (p-clause? v) (tagged? 'p-clause v))
@@ -181,10 +192,14 @@
   (define (validate-body body)
     (cond
       ((e-app? body)
-       (and (or (env-fn e (e-app-f body))
-                (error 'validate-program
-                       (format "undefined function: ~s" (print-expr body))))
-            (andmap validate-body (e-app-ea* body))))
+       (let ((fn (or (env-fn e (e-app-f body))
+                     (error 'validate-program (format "undefined function: ~s"
+                                                      (print-expr body))))))
+         (and fn (or (= (fn-arity fn) (length (e-app-ea* body)))
+                     (error 'validate-program
+                            (format "invalid application arity: ~s ~s"
+                                    (fn-arity fn) (print-expr body))))
+              (andmap validate-body (e-app-ea* body)))))
       ((e-cons? body) (andmap validate-body (e-cons-ea* body)))
       (else #t)))
   (define e (env program '()))
