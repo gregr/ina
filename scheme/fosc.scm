@@ -172,8 +172,9 @@
 
 (define (parse-expr e stx)
   (cond
-    ((symbol? stx) (if (env-pa e stx) (e-var stx)
-                     (error 'parse-expr (format "unbound variable: ~s ~s" e stx))))
+    ((symbol? stx)
+     (if (env-pa e stx) (e-var stx)
+       (error 'parse-expr (format "unbound variable: ~s ~s" e stx))))
     ((and (pair? stx) (symbol? (car stx)))
      (let ((arg* (map (lambda (stx) (parse-expr e stx)) (cdr stx)))
            (ctor (env-ctor e (car stx))))
@@ -220,19 +221,18 @@
         ,(print-expr (fn-indifferent-body fn))))
     (map print-fnc (fn-curious-clause* fn))))
 (define (print-expr e)
+  (define (print-fn fn) (if (symbol? fn) fn (fn-name fn)))
   (cond
     ((e-var? e) (e-var-name e))
     ((e-cons? e) (cons (e-cons-c e) (map print-expr (e-cons-ea* e))))
-    ((e-app? e) (cons (e-app-f e) (map print-expr (e-app-ea* e))))
+    ((e-app? e) (cons (print-fn (e-app-f e)) (map print-expr (e-app-ea* e))))
     (else #f)))
-
-(define (parse/program prog stx) (parse-expr (env prog '()) stx))
 
 (define (eval/program program expr)
   (define (subst e expr)
     (define (subst* e es) (map (lambda (ea) (subst e ea)) es))
     (cond
-      ((e-var? expr) (env-pa e (e-var-name expr)))
+      ((e-var? expr) (or (env-pa e (e-var-name expr)) expr))
       ((e-cons? expr) (e-cons (e-cons-c expr) (subst* e (e-cons-ea* expr))))
       ((e-app? expr) (e-app (env-fn e (e-app-f expr))
                             (subst* e (e-app-ea* expr))))
@@ -274,9 +274,9 @@
       (else (error 'eval*-expr (format "invalid expr: ~s" expr)))))
   (eval*-expr (subst (env program '()) expr)))
 
-(define (parse-eval-print pstx estx)
+(define (parse-eval-print pstx estx free)
   (define prog (parse-program pstx))
-  (define expr (parse/program prog estx))
+  (define expr (parse-expr (env-apply prog free (map e-var free)) estx))
   (print-expr (eval/program prog expr)))
 
 
