@@ -100,11 +100,6 @@
 (define (e-let-arg e) (caddr e))
 (define (e-let-body e) (cadddr e))
 
-(define (pattern c n*) `(pattern ,c ,n*))
-(define (pattern? v) (tagged? 'pattern v))
-(define (pattern-ctor p) (cadr p))
-(define (pattern-param* p) (caddr p))
-
 
 (define (parse-program stx)
   (or (and (pair? stx)
@@ -147,7 +142,7 @@
   (define (parse-def-curious name pat-stx param*-stx body-stx)
     (define pattern (parse-pattern ctor* pat-stx))
     (define param* (parse-name* param*-stx))
-    (define pa* (append (pattern-param* pattern) param*))
+    (define pa* (append (e-cons-ea* pattern) param*))
     (define body (parse-expr (env-apply (program ctor* '()) pa* pa*) body-stx))
     (fn-curious name (list (p-clause pattern param* body))))
   (define (extend def* def)
@@ -171,10 +166,10 @@
        name*))
 (define (parse-pattern ctor* stx)
   (or (and (pair? stx) (symbol? (car stx))
-           (let* ((p (pattern (car stx) (parse-name* (cdr stx))))
+           (let* ((p (e-cons (car stx) (parse-name* (cdr stx))))
                   (ctor (assoc (car stx) ctor*))
                   (arity (and ctor (cadr ctor))))
-             (and ctor (= arity (length (pattern-param* p))) p)))
+             (and ctor (= arity (length (e-cons-ea* p))) p)))
       (error 'parse-pattern (format "invalid pattern: ~s" stx))))
 
 (define (parse-expr e stx)
@@ -228,7 +223,7 @@
   (define name (fn-name fn))
   (define (print-fnc c)
     (define pat (p-clause-pattern c))
-    `(define (,name (,(pattern-ctor pat) . ,(pattern-param* pat))
+    `(define (,name (,(e-cons-c pat) . ,(e-cons-ea* pat))
                     . ,(p-clause-param* c))
        ,(print-expr (p-clause-body c))))
   (if (fn-indifferent? fn)
