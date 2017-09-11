@@ -184,7 +184,7 @@
        (and (or (env-fn e (e-app-f body))
                 (error 'validate-program
                        (format "undefined function: ~s" (print-expr body))))
-            (andmap validate-body (e-cons-ea* body))))
+            (andmap validate-body (e-app-ea* body))))
       ((e-cons? body) (andmap validate-body (e-cons-ea* body)))
       (else #t)))
   (define e (env program '()))
