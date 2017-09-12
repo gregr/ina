@@ -380,6 +380,17 @@
 (define (build-tree drive expr)
   (let bt ((expr expr)) (list expr (lambda () (step-map bt (drive expr))))))
 
+(define (print-tree depth tree)
+  (define (pt tree) (print-tree (- depth 1) tree))
+  (list (print-expr (car tree))
+        (if (= 0 depth) (cadr tree) (step-map pt ((cadr tree))))))
+
+(define (parse-drive-print pstx estx free depth)
+  (define prog (parse-program pstx))
+  (define e (env-apply prog free (map e-var free)))
+  (define expr (parse-expr e estx))
+  (print-tree depth (build-tree (drive-machine prog) (subst e expr))))
+
 
 (define prog1
   `(((False 0) (True 0) (Z 0) (S 1))
