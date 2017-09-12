@@ -296,6 +296,95 @@
   (print-expr (eval/program prog expr)))
 
 
+(define s-stop '(stop))
+(define (s-stop? v) (tagged? 'stop v))
+(define (s-transient e) `(transient ,e))
+(define (s-transient? v) (tagged? 'transient v))
+(define (s-transient-e v) (cadr v))
+(define (s-decompose parts) `(decompose ,parts))
+(define (s-decompose? v) (tagged? 'decompose v))
+(define (s-decompose-parts v) (cadr v))
+(define (s-variants choices) `(variants ,choices))
+(define (s-variants? v) (tagged? 'variants v))
+(define (s-variants-choices v) (cadr v))
+(define (s-variant var pat body) `(,var ,pat ,body))
+(define (s-variant-var v) (car v))
+(define (s-variant-pat v) (cadr v))
+(define (s-variant-body v) (caddr v))
+(define (s-fold label renaming) `(fold ,label ,renaming))
+(define (s-fold? v) (tagged? 'fold v))
+(define (s-fold-label v) (cadr v))
+(define (s-fold-renaming v) (caddr v))
+
+(define (fresh-var name) (e-var (gensym (symbol->string name))))
+
+(define (drive-machine prog)
+  (define (drive expr)
+    (cond
+      ((e-var? expr) s-stop)
+      ((and (e-cons? expr) (null? (e-cons-ea* expr))) s-stop)
+      ((e-cons? expr) (s-decompose (e-cons-ea* expr)))
+      ((e-let? expr) (s-decompose (list (e-let-arg expr) (e-let-body expr))))
+      ((and (e-app? expr) (fn-indifferent? (e-app-f expr)))
+       (let ((fn (e-app-f expr)))
+         (s-transient
+           (subst (env-apply prog (fn-indifferent-param* fn) (e-app-ea* expr))
+                  (fn-indifferent-body fn)))))
+      ((and (e-app? expr) (fn-curious? (e-app-f expr)))
+       (let ((fn (e-app-f expr)))
+         (let ((arg0 (car (e-app-ea* expr))) (arg1* (cdr (e-app-ea* expr))))
+           (cond
+             ((e-cons? arg0)
+              (apply-curious prog fn arg0 arg1* s-transient))
+             ((e-var? arg0)
+              (s-variants
+                (map (lambda (pc)
+                       (define pat (p-clause-pattern pc))
+                       (define ec (e-cons (e-cons-c pat)
+                                          (map fresh-var (e-cons-ea* pat))))
+                       (apply-curious prog fn ec arg1*
+                                      (lambda (t) (s-variant arg0 ec t))))
+                     (fn-curious-clause* fn))))
+             (else
+               (lambda ()
+                 (let retry ((inner (drive arg0)))
+                   (define (ctx t) (e-app (e-app-f expr) (cons t arg1*)))
+                   (cond
+                     ((procedure? inner) (retry (inner)))
+                     ((s-transient? inner)
+                      (s-transient (ctx (s-transient-e inner))))
+                     ((s-variants? inner)
+                      (s-variants
+                        (map (lambda (v) (s-variant (s-variant-var v)
+                                                    (s-variant-pat v)
+                                                    (ctx (s-variant-body v))))
+                             (s-variants-choices inner))))
+                     (else (error 'drive (format "impossible inner: ~s"
+                                                 inner)))))))))))
+      (else (error 'drive (format "invalid expr: ~s" expr)))))
+  drive)
+
+(define (build-tree drive expr)
+  (let bt ((expr expr))
+    (cons (print-expr expr)
+          (lambda ()
+            (let retry ((driven (drive expr)))
+              (cond ((procedure? driven) (retry (driven)))
+                    ((s-stop? driven) s-stop)
+                    ((s-transient? driven)
+                     (s-transient (bt (s-transient-e driven))))
+                    ((s-decompose? driven)
+                     (s-decompose (map bt (s-decompose-parts driven))))
+                    ((s-variants? driven)
+                     (s-variants
+                       (map (lambda (v) (s-variant (s-variant-var v)
+                                                   (s-variant-pat v)
+                                                   (bt (s-variant-body v))))
+                            (s-variants-choices driven))))
+                    (else (error 'build-tree (format "invalid step: ~s"
+                                                     driven)))))))))
+
+
 (define prog1
   `(((False 0) (True 0) (Z 0) (S 1))
 
