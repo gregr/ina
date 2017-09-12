@@ -364,25 +364,21 @@
       (else (error 'drive (format "invalid expr: ~s" expr)))))
   drive)
 
-(define (build-tree drive expr)
-  (let bt ((expr expr))
-    (cons (print-expr expr)
-          (lambda ()
-            (let retry ((driven (drive expr)))
-              (cond ((procedure? driven) (retry (driven)))
-                    ((s-stop? driven) s-stop)
-                    ((s-transient? driven)
-                     (s-transient (bt (s-transient-e driven))))
-                    ((s-decompose? driven)
-                     (s-decompose (map bt (s-decompose-parts driven))))
-                    ((s-variants? driven)
-                     (s-variants
-                       (map (lambda (v) (s-variant (s-variant-var v)
+(define (step-map f step)
+  (let retry ((step step))
+    (cond ((procedure? step) (retry (step)))
+          ((s-stop? step) s-stop)
+          ((s-transient? step) (s-transient (f (s-transient-e step))))
+          ((s-decompose? step) (s-decompose (map f (s-decompose-parts step))))
+          ((s-variants? step)
+           (s-variants (map (lambda (v) (s-variant (s-variant-var v)
                                                    (s-variant-pat v)
-                                                   (bt (s-variant-body v))))
-                            (s-variants-choices driven))))
-                    (else (error 'build-tree (format "invalid step: ~s"
-                                                     driven)))))))))
+                                                   (f (s-variant-body v))))
+                            (s-variants-choices step))))
+          (else (error 'step-map (format "invalid step: ~s" step))))))
+
+(define (build-tree drive expr)
+  (let bt ((expr expr)) (list expr (lambda () (step-map bt (drive expr))))))
 
 
 (define prog1
