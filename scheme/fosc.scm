@@ -381,9 +381,9 @@
   (let bt ((expr expr)) (list expr (lambda () (step-map bt (drive expr))))))
 
 (define (print-tree depth tree)
-  (define (pt tree) (print-tree (- depth 1) tree))
+  (define (pt tree) (print-tree (and depth (- depth 1)) tree))
   (list (print-expr (car tree))
-        (if (= 0 depth) (cadr tree) (step-map pt ((cadr tree))))))
+        (if (eqv? 0 depth) (cadr tree) (step-map pt ((cadr tree))))))
 
 (define (parse-drive-print pstx estx free depth)
   (define prog (parse-program pstx))
