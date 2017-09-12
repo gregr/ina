@@ -377,19 +377,43 @@
                             (s-variants-choices step))))
           (else (error 'step-map (format "invalid step: ~s" step))))))
 
-(define (build-tree drive expr)
-  (let bt ((expr expr)) (list expr (lambda () (step-map bt (drive expr))))))
+(define (size-expr e)
+  (cond ((e-var? e) 1)
+        ((e-cons? e) (apply + 1 (map size-expr (e-cons-ea* e))))
+        ((e-app? e) (apply + 1 (map size-expr (e-app-ea* e))))
+        ((e-let? e) (+ 1 (size-expr (e-let-arg e)) (size-expr (e-let-body e))))
+        (else (error 'size-expr (format "cannot size expr: ~s" e)))))
+
+(define (can-generalize expr)
+  (and (e-app? expr) (not (andmap e-var? (e-app-ea* expr)))))
+
+(define (generalize expr)
+  (when (not (e-app? expr)) (error 'generalize (format "non-app: ~s" expr)))
+  (let* ((var (fresh-var 'g)) (fn (e-app-f expr)) (ea* (e-app-ea* expr))
+         (size-max (apply max (map size-expr ea*))))
+    (if (null? ea*) expr
+      (let loop ((prefix '()) (suffix ea*))
+        (if (= size-max (size-expr (car suffix)))
+          (e-let var (car suffix)
+            (e-app fn (append prefix (cons var (cdr suffix)))))
+          (loop (cons (car suffix) prefix) (cdr suffix)))))))
+
+(define (build-tree drive expr size-max)
+  (let bt ((expr expr))
+    (if (and size-max (can-generalize expr) (< size-max (size-expr expr)))
+      (bt (generalize expr))
+      (list expr (lambda () (step-map bt (drive expr)))))))
 
 (define (print-tree depth tree)
   (define (pt tree) (print-tree (and depth (- depth 1)) tree))
   (list (print-expr (car tree))
         (if (eqv? 0 depth) (cadr tree) (step-map pt ((cadr tree))))))
 
-(define (parse-drive-print pstx estx free depth)
+(define (parse-drive-print pstx estx free size-max depth)
   (define prog (parse-program pstx))
   (define e (env-apply prog free (map e-var free)))
   (define expr (parse-expr e estx))
-  (print-tree depth (build-tree (drive-machine prog) (subst e expr))))
+  (print-tree depth (build-tree (drive-machine prog) (subst e expr) size-max)))
 
 
 (define prog1
