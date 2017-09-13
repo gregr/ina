@@ -233,6 +233,9 @@
                    ,(print-expr (e-let-body e))))
     (else #f)))
 
+(define (list-foldr f acc xs)
+  (if (null? xs) acc (f (car xs) (list-foldr f acc (cdr xs)))))
+
 (define (subst-let e expr)
   (subst (env-let e (e-let-param expr) (e-let-arg expr)) (e-let-body expr)))
 (define (subst e expr)
@@ -421,9 +424,7 @@
       (let ((c1 (check car cdr a as)))
         (and c1 (or (and (eq? #t c1) as)
                     (let ((c2 (check cdr car a as))) (and c2 (cons a as)))))))
-    (define (append-bi-unique as bs)
-      (if (null? as) bs
-        (cons-bi-unique (car as) (append-bi-unique (cdr as) bs))))
+    (define (append-bi-unique as bs) (list-foldr cons-bi-unique bs as))
     (if (null? e1s) '()
       (let ((result (renaming (car e1s) (car e2s))))
         (and result (let ((result* (o2o* (cdr e1s) (cdr e2s))))
