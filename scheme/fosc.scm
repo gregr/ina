@@ -398,16 +398,21 @@
             (e-app fn (append prefix (cons var (cdr suffix)))))
           (loop (cons (car suffix) prefix) (cdr suffix)))))))
 
+(define (node label expr step) (list label expr step))
+(define (node-label n) (car n))
+(define (node-expr n) (cadr n))
+(define (node-step n) (caddr n))
+
 (define (build-tree drive expr size-max)
   (let bt ((expr expr))
     (if (and size-max (can-generalize expr) (< size-max (size-expr expr)))
       (bt (generalize expr))
-      (list (gensym "l") expr (lambda () (step-map bt (drive expr)))))))
+      (node (gensym "l") expr (lambda () (step-map bt (drive expr)))))))
 
 (define (print-tree depth tree)
   (define (pt tree) (print-tree (and depth (- depth 1)) tree))
-  (list (car tree) (print-expr (cadr tree))
-        (if (eqv? 0 depth) (caddr tree) (step-map pt ((caddr tree))))))
+  (list (node-label tree) (print-expr (node-expr tree))
+        (if (eqv? 0 depth) (node-step tree) (step-map pt (node-step tree)))))
 
 (define (parse-drive-print pstx estx free size-max depth)
   (define prog (parse-program pstx))
