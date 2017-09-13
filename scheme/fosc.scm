@@ -360,7 +360,6 @@
 (define (step-map f step)
   (let retry ((step step))
     (cond ((procedure? step) (retry (step)))
-          ((s-stop? step) s-stop)
           ((s-transient? step) (s-transient (f (s-transient-e step))))
           ((s-decompose? step) (s-decompose (map f (s-decompose-parts step))))
           ((s-variants? step)
@@ -368,6 +367,7 @@
                                                    (s-variant-pat v)
                                                    (f (s-variant-body v))))
                             (s-variants-choices step))))
+          ((or (s-stop? step) (s-fold? step)) step)
           (else (error 'step-map (format "invalid step: ~s" step))))))
 
 (define (size-expr e)
