@@ -48,6 +48,10 @@
 (define (program? v) (tagged? 'program v))
 (define (program-ctor* p) (cadr p))
 (define (program-def* p) (caddr p))
+(define (program-fn p name)
+  (let loop ((fn* (program-def* p)))
+    (and (pair? fn*)
+         (if (eq? name (fn-name (car fn*))) (car fn*) (loop (cdr fn*))))))
 
 (define (fn-indifferent name param* body) `(fn-i ,name ,param* ,body))
 (define (fn-indifferent? v) (tagged? 'fn-i v))
@@ -245,8 +249,7 @@
   (cond
     ((e-var? expr) (or (env-pa e (e-var-name expr)) expr))
     ((e-cons? expr) (e-cons (e-cons-c expr) (subst* e (e-cons-ea* expr))))
-    ((e-app? expr) (e-app (env-fn e (e-app-f expr))
-                          (subst* e (e-app-ea* expr))))
+    ((e-app? expr) (e-app (e-app-f expr) (subst* e (e-app-ea* expr))))
     ((e-let? expr) (subst (env-let e (e-let-param expr) (e-let-arg expr))
                           (e-let-body expr)))
     (else (error 'subst (format "invalid expr: ~s" expr)))))
@@ -264,7 +267,7 @@
              (k (subst (env-apply program param* a*)
                        (p-clause-body (car clause*))))))
           (else (loop (cdr clause*)))))
-      (e-app fn (cons arg0 arg1*)))))
+      (e-app (fn-curious-name fn) (cons arg0 arg1*)))))
 
 (define (eval/program program expr)
   (define (apply-fn fn arg*)
@@ -278,7 +281,8 @@
   (define (eval-expr expr)
     (cond
       ((or (e-var? expr) (e-cons? expr)) expr)
-      ((e-app? expr) (apply-fn (e-app-f expr) (e-app-ea* expr)))
+      ((e-app? expr) (apply-fn (program-fn program (e-app-f expr))
+                               (e-app-ea* expr)))
       (else (error 'eval-expr (format "invalid expr: ~s" expr)))))
   (define (eval*-expr expr0)
     (define (ee* es) (map eval*-expr es))
@@ -325,42 +329,42 @@
       ((and (e-cons? expr) (null? (e-cons-ea* expr))) s-stop)
       ((e-cons? expr) (s-decompose (e-cons-ea* expr)))
       ((e-let? expr) (s-decompose (list (e-let-arg expr) (e-let-body expr))))
-      ((and (e-app? expr) (fn-indifferent? (e-app-f expr)))
-       (let ((fn (e-app-f expr)))
-         (s-transient
-           (subst (env-apply prog (fn-indifferent-param* fn) (e-app-ea* expr))
-                  (fn-indifferent-body fn)))))
-      ((and (e-app? expr) (fn-curious? (e-app-f expr)))
-       (let ((fn (e-app-f expr)))
-         (let ((arg0 (car (e-app-ea* expr))) (arg1* (cdr (e-app-ea* expr))))
-           (cond
-             ((e-cons? arg0)
-              (apply-curious prog fn arg0 arg1* s-transient))
-             ((e-var? arg0)
-              (s-variants
-                (map (lambda (pc)
-                       (define pat (p-clause-pattern pc))
-                       (define ec (e-cons (e-cons-c pat)
-                                          (map fresh-var (e-cons-ea* pat))))
-                       (apply-curious prog fn ec arg1*
-                                      (lambda (t) (s-variant arg0 ec t))))
-                     (fn-curious-clause* fn))))
-             (else
-               (lambda ()
-                 (let retry ((inner (drive arg0)))
-                   (define (ctx t) (e-app (e-app-f expr) (cons t arg1*)))
-                   (cond
-                     ((procedure? inner) (retry (inner)))
-                     ((s-transient? inner)
-                      (s-transient (ctx (s-transient-e inner))))
-                     ((s-variants? inner)
-                      (s-variants
-                        (map (lambda (v) (s-variant (s-variant-var v)
-                                                    (s-variant-pat v)
-                                                    (ctx (s-variant-body v))))
-                             (s-variants-choices inner))))
-                     (else (error 'drive (format "impossible inner: ~s"
-                                                 inner)))))))))))
+      ((e-app? expr)
+       (let ((fn (program-fn prog (e-app-f expr))))
+         (if (fn-indifferent? fn)
+           (s-transient
+             (subst (env-apply prog (fn-indifferent-param* fn)
+                               (e-app-ea* expr)) (fn-indifferent-body fn)))
+           (let ((arg0 (car (e-app-ea* expr))) (arg1* (cdr (e-app-ea* expr))))
+             (cond
+               ((e-cons? arg0)
+                (apply-curious prog fn arg0 arg1* s-transient))
+               ((e-var? arg0)
+                (s-variants
+                  (map (lambda (pc)
+                         (define pat (p-clause-pattern pc))
+                         (define ec (e-cons (e-cons-c pat)
+                                            (map fresh-var (e-cons-ea* pat))))
+                         (apply-curious prog fn ec arg1*
+                                        (lambda (t) (s-variant arg0 ec t))))
+                       (fn-curious-clause* fn))))
+               (else
+                 (lambda ()
+                   (let retry ((inner (drive arg0)))
+                     (define (ctx t) (e-app (e-app-f expr) (cons t arg1*)))
+                     (cond
+                       ((procedure? inner) (retry (inner)))
+                       ((s-transient? inner)
+                        (s-transient (ctx (s-transient-e inner))))
+                       ((s-variants? inner)
+                        (s-variants
+                          (map (lambda (v)
+                                 (s-variant (s-variant-var v)
+                                            (s-variant-pat v)
+                                            (ctx (s-variant-body v))))
+                               (s-variants-choices inner))))
+                       (else (error 'drive (format "impossible inner: ~s"
+                                                   inner))))))))))))
       (else (error 'drive (format "invalid expr: ~s" expr)))))
   drive)
 
