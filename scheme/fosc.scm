@@ -233,14 +233,15 @@
                    ,(print-expr (e-let-body e))))
     (else #f)))
 
+(define (subst-let e expr)
+  (subst (env-let e (e-let-param expr) (e-let-arg expr)) (e-let-body expr)))
 (define (subst e expr)
   (define (subst* e es) (map (lambda (ea) (subst e ea)) es))
   (cond
     ((e-var? expr) (or (env-pa e (e-var-name expr)) expr))
     ((e-cons? expr) (e-cons (e-cons-c expr) (subst* e (e-cons-ea* expr))))
     ((e-app? expr) (e-app (e-app-f expr) (subst* e (e-app-ea* expr))))
-    ((e-let? expr) (subst (env-let e (e-let-param expr) (e-let-arg expr))
-                          (e-let-body expr)))
+    ((e-let? expr) (subst-let e expr))
     (else (error 'subst (format "invalid expr: ~s" expr)))))
 
 (define (apply-curious program fn arg0 arg1* k)
