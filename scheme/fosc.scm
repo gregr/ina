@@ -12,17 +12,12 @@
 
 (define (tagged? t v) (and (pair? v) (eq? t (car v))))
 
-(define (env prog pa*) `(env ,prog ,pa*))
-(define (env-prog e) (cadr e))
-(define (env-ctor* e) (program-ctor* (env-prog e)))
-(define (env-pa* e) (caddr e))
-(define (env-apply prog param* arg*) (env prog (bind-param* param* arg*)))
+(define (env pa*) `(env ,pa*))
+(define env-empty (env '()))
+(define (env-pa* e) (cadr e))
+(define (env-apply param* arg*) (env (bind-param* param* arg*)))
 (define (env-let e p a)
-  (env (env-prog e) (append (bind-param* (list p) (list a)) (env-pa* e))))
-(define (env-ctor e name)
-  (let loop ((ctor* (env-ctor* e)))
-    (and (pair? ctor*)
-         (if (eq? name (caar ctor*)) (car ctor*) (loop (cdr ctor*))))))
+  (env (append (bind-param* (list p) (list a)) (env-pa* e))))
 (define (env-pa e name)
   (let loop ((pa* (env-pa* e)))
     (and (pair? pa*)
@@ -39,6 +34,10 @@
 (define (program? v) (tagged? 'program v))
 (define (program-ctor* p) (cadr p))
 (define (program-def* p) (caddr p))
+(define (program-ctor p name)
+  (let loop ((ctor* (program-ctor* p)))
+    (and (pair? ctor*)
+         (if (eq? name (caar ctor*)) (car ctor*) (loop (cdr ctor*))))))
 (define (program-fn p name)
   (let loop ((fn* (program-def* p)))
     (and (pair? fn*)
@@ -131,14 +130,14 @@
       (error 'parse-def (format "invalid definition: ~s" stx))))
   (define (parse-def-indifferent name param*-stx body-stx)
     (define param* (parse-name* param*-stx))
-    (define body (parse-expr (env-apply (program ctor* '())
-                                        param* param*) body-stx))
+    (define body (parse-expr (program ctor* '())
+                             (env-apply param* param*) body-stx))
     (fn-indifferent name param* body))
   (define (parse-def-curious name pat-stx param*-stx body-stx)
     (define pattern (parse-pattern ctor* pat-stx))
     (define param* (parse-name* param*-stx))
     (define pa* (append (e-cons-ea* pattern) param*))
-    (define body (parse-expr (env-apply (program ctor* '()) pa* pa*) body-stx))
+    (define body (parse-expr (program ctor* '()) (env-apply pa* pa*) body-stx))
     (fn-curious name (list (p-clause pattern param* body))))
   (define (extend def* def)
     (if (and (fn-curious? def) (pair? def*) (fn-curious? (car def*))
@@ -167,7 +166,7 @@
              (and ctor (= arity (length (e-cons-ea* p))) p)))
       (error 'parse-pattern (format "invalid pattern: ~s" stx))))
 
-(define (parse-expr e stx)
+(define (parse-expr p e stx)
   (cond
     ((symbol? stx)
      (if (env-pa e stx) (e-var stx)
@@ -175,12 +174,12 @@
     ((and (pair? stx) (eq? 'let (car stx)))
      (if (and (pair? (cdr stx)) (symbol? (cadr stx))
               (pair? (cddr stx)) (pair? (cdddr stx)) (null? (cddddr stx)))
-       (e-let (cadr stx) (parse-expr e (caddr stx))
-              (parse-expr (env-let e (cadr stx) (cadr stx)) (cadddr stx)))
+       (e-let (cadr stx) (parse-expr p e (caddr stx))
+              (parse-expr p (env-let e (cadr stx) (cadr stx)) (cadddr stx)))
        (error 'parse-expr (format "invalid let expr: ~s" stx))))
     ((and (pair? stx) (symbol? (car stx)))
-     (let ((arg* (map (lambda (stx) (parse-expr e stx)) (cdr stx)))
-           (ctor (env-ctor e (car stx))))
+     (let ((arg* (map (lambda (stx) (parse-expr p e stx)) (cdr stx)))
+           (ctor (program-ctor p (car stx))))
        (if ctor
          (if (= (cadr ctor) (length arg*))
            (e-cons (car ctor) arg*)
@@ -208,7 +207,6 @@
       ((e-let? body) (and (validate-body (e-let-arg body))
                           (validate-body (e-let-body body))))
       (else #t)))
-  (define e (env program '()))
   (andmap validate-def (program-def* program)))
 
 (define (print-program program)
@@ -255,8 +253,7 @@
            (let* ((pp* (e-cons-ea* (p-clause-pattern (car clause*))))
                   (param* (append pp* (p-clause-param* (car clause*))))
                   (a* (append (e-cons-ea* arg0) arg1*)))
-             (k (subst (env-apply program param* a*)
-                       (p-clause-body (car clause*))))))
+             (k (subst (env-apply param* a*) (p-clause-body (car clause*))))))
           (else (loop (cdr clause*)))))
       (e-app (fn-curious-name fn) (cons arg0 arg1*)))))
 
@@ -264,7 +261,7 @@
   (define (apply-fn fn arg*)
     (cond
       ((fn-indifferent? fn)
-       (let ((e (env-apply program (fn-indifferent-param* fn) arg*)))
+       (let ((e (env-apply (fn-indifferent-param* fn) arg*)))
          (eval-expr (subst e (fn-indifferent-body fn)))))
       ((fn-curious? fn)
        (apply-curious program fn (eval-expr (car arg*)) (cdr arg*) eval-expr))
@@ -283,11 +280,11 @@
       ((e-cons? expr) (e-cons (e-cons-c expr) (ee* (e-cons-ea* expr))))
       ((e-app? expr) (e-app (e-app-f expr) (ee* (e-app-ea* expr))))
       (else (error 'eval*-expr (format "invalid expr: ~s" expr)))))
-  (eval*-expr (subst (env program '()) expr)))
+  (eval*-expr (subst env-empty expr)))
 
 (define (parse-eval-print pstx estx free)
   (define prog (parse-program pstx))
-  (define expr (parse-expr (env-apply prog free (map e-var free)) estx))
+  (define expr (parse-expr prog (env-apply free (map e-var free)) estx))
   (print-expr (eval/program prog expr)))
 
 
@@ -324,7 +321,7 @@
        (let ((fn (program-fn prog (e-app-f expr))))
          (if (fn-indifferent? fn)
            (s-transient
-             (subst (env-apply prog (fn-indifferent-param* fn)
+             (subst (env-apply (fn-indifferent-param* fn)
                                (e-app-ea* expr)) (fn-indifferent-body fn)))
            (let ((arg0 (car (e-app-ea* expr))) (arg1* (cdr (e-app-ea* expr))))
              (cond
@@ -411,8 +408,8 @@
 
 (define (parse-drive-print pstx estx free size-max depth)
   (define prog (parse-program pstx))
-  (define e (env-apply prog free (map e-var free)))
-  (define expr (parse-expr e estx))
+  (define e (env-apply free (map e-var free)))
+  (define expr (parse-expr prog e estx))
   (print-tree depth (build-tree (drive-machine prog) (subst e expr) size-max)))
 
 
