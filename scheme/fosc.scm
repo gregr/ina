@@ -404,7 +404,7 @@
 
 (define (print-tree depth tree)
   (define (pt tree) (print-tree (and depth (- depth 1)) tree))
-  (list (node-label tree) (print-expr (node-expr tree))
+  (node (node-label tree) (print-expr (node-expr tree))
         (if (eqv? 0 depth) (node-step tree) (step-map pt (node-step tree)))))
 
 (define (parse-drive-print pstx estx free size-max depth)
