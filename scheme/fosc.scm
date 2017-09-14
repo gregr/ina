@@ -437,9 +437,11 @@
       (node (gensym "l") expr (lambda () (step-map bt (drive expr)))))))
 
 (define (print-tree depth tree)
-  (define (pt tree) (print-tree (and depth (- depth 1)) tree))
+  (define (pt tree)
+    (print-tree (and depth (if (= 0 depth) 0 (- depth 1))) tree))
+  (define step (node-step tree))
   (node (node-label tree) (print-expr (node-expr tree))
-        (if (eqv? 0 depth) (node-step tree) (step-map pt (node-step tree)))))
+        (if (and (procedure? step) (eqv? 0 depth)) step (step-map pt step))))
 
 (define (renaming e1 e2)
   (define (o2o* e1s e2s)
