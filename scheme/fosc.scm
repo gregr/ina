@@ -569,7 +569,7 @@
 
 
 (define prog1
-  `(((False 0) (True 0) (Z 0) (S 1))
+  '(((False 0) (True 0) (Z 0) (S 1))
 
     (define (add (Z) y) y)
     (define (add (S x) y) (S (add x y)))
@@ -588,3 +588,272 @@
     (define (add2 (Z) y) y)
     (define (add2 (S x) y) (add2 x (S y)))
     ))
+
+(define kmp
+  '(((False 0) (True 0) (Nil 0) (Cons 2) (A 0) (B 0))
+    (define (if (True) t f) t)
+    (define (if (False) t f) f)
+    (define (A? (A)) (True))
+    (define (A? (B)) (False))
+    (define (B? (A)) (False))
+    (define (B? (B)) (True))
+    (define (eq (A) y) (A? y))
+    (define (eq (B) y) (B? y))
+
+    (define (match p s) (m p s p s))
+
+    (define (m (Nil) ss op os) (True))
+    (define (m (Cons p pp) ss op os) (x ss p pp op os))
+
+    (define (x (Nil) p pp op os) (False))
+    (define (x (Cons s ss) p pp op os) (if (eq p s) (m pp ss op os) (n os op)))
+
+    (define (n (Nil) op) (False))
+    (define (n (Cons s ss) op) (m op ss op ss))))
+
+;; examples
+(define kmp1
+  (parse-eval-print
+    kmp
+    '(match
+       (Cons (A) (Cons (A) (Cons (B) (Nil))))
+       (Cons (A) (Cons (A) (Cons (B) (Nil)))))
+    '()))
+
+(define kmp2
+  (parse-eval-print
+    kmp
+    '(match
+       (Cons (A) (Cons (A) (Cons (B) (Nil))))
+       (Cons (B) (Cons (A) (Cons (A) (Cons (B) (Cons (A) (Nil)))))))
+    '()))
+
+(define kmp3
+  (parse-eval-print
+    kmp
+    '(match
+       (Cons (A) (Cons (A) (Cons (B) (Nil))))
+       (Cons (A) (Cons (B) (Cons (A) (Cons (B) (Cons (A) (Nil)))))))
+    '()))
+
+(define kmpx
+  (parse-eval-print
+    kmp
+    '(match (Cons (A) (Cons (A) (Cons (B) (Nil)))) X)
+    '(X)))
+
+(define kmpt1
+  (parse-transform-print
+    kmp
+    '(match
+       (Cons (A) (Cons (A) (Cons (B) (Nil))))
+       (Cons (A) (Cons (A) (Cons (B) (Nil)))))
+    '()
+    80 20))
+
+(define kmpt2
+  (parse-transform-print
+    kmp
+    '(match
+       (Cons (A) (Cons (A) (Cons (B) (Nil))))
+       (Cons (B) (Cons (A) (Cons (A) (Cons (B) (Cons (A) (Nil)))))))
+    '()
+    80 20))
+
+(define kmpt3
+  (parse-transform-print
+    kmp
+    '(match
+       (Cons (A) (Cons (A) (Cons (B) (Nil))))
+       (Cons (A) (Cons (B) (Cons (A) (Cons (B) (Cons (A) (Nil)))))))
+    '()
+    80 20))
+
+(define kmptx
+  (parse-transform-print
+    kmp
+    '(match (Cons (A) (Cons (A) (Cons (B) (Nil)))) X)
+    '(X)
+    40 20))
+
+;; unsimplified transformations
+(define kmpv1
+  '(((False 0) (True 0) (Nil 0) (Cons 2) (A 0) (B 0))
+    (define (f3144) (f3145))
+    (define (f3145) (f3146))
+    (define (f3146) (let g3126 (f3150) (f3147 g3126)))
+    (define (f3150) (f3151))
+    (define (f3151) (f3152))
+    (define (f3152) (f3153))
+    (define (f3153) (f3154))
+    (define (f3154) (f3155))
+    (define (f3155) (f3156))
+    (define (f3156) (f3157))
+    (define (f3157) (f3158))
+    (define (f3158) (f3159))
+    (define (f3159) (f3160))
+    (define (f3160) (True))
+    (define (f3147 g3126) (f3148 g3126))
+    (define (f3148 g3126) (f3149 g3126))
+    (define (f3149 g3126) g3126)))
+  ;(expr: (f3144))
+
+(define kmpv2
+  '(((False 0) (True 0) (Nil 0) (Cons 2) (A 0) (B 0))
+    (define (f3240) (f3241))
+    (define (f3241) (f3242))
+    (define (f3242) (let g3164 (f3263) (f3243 g3164)))
+    (define (f3263) (f3264))
+    (define (f3264) (let g3169 (f3268) (f3265 g3169)))
+    (define (f3268) (f3269))
+    (define (f3269) (let g3174 (f3290) (f3270 g3174)))
+    (define (f3290) (True))
+    (define (f3270 g3174) (f3271 g3174))
+    (define (f3271 g3174) (f3272 g3174))
+    (define (f3272 g3174) (f3273))
+    (define (f3273) (f3274))
+    (define (f3274) (f3275))
+    (define (f3275) (let g3184 (f3279) (f3276 g3184)))
+    (define (f3279) (f3280))
+    (define (f3280) (let g3189 (f3284) (f3281 g3189)))
+    (define (f3284) (f3285))
+    (define (f3285) (let g3194 (f3289) (f3286 g3194)))
+    (define (f3289) (True))
+    (define (f3286 g3194) (f3287 g3194))
+    (define (f3287 g3194) (f3288 g3194))
+    (define (f3288 g3194) g3194)
+    (define (f3281 g3189) (f3282 g3189))
+    (define (f3282 g3189) (f3283 g3189))
+    (define (f3283 g3189) g3189)
+    (define (f3276 g3184) (f3277 g3184))
+    (define (f3277 g3184) (f3278 g3184))
+    (define (f3278 g3184) g3184)
+    (define (f3265 g3169) (f3266 g3169))
+    (define (f3266 g3169) (f3267 g3169))
+    (define (f3267 g3169) g3169)
+    (define (f3243 g3164) (f3244 g3164))
+    (define (f3244 g3164) (f3245 g3164))
+    (define (f3245 g3164) (f3246))
+    (define (f3246) (f3247))
+    (define (f3247) (f3248))
+    (define (f3248) (let g3216 (f3252) (f3249 g3216)))
+    (define (f3252) (f3253))
+    (define (f3253) (let g3221 (f3257) (f3254 g3221)))
+    (define (f3257) (f3258))
+    (define (f3258) (let g3226 (f3262) (f3259 g3226)))
+    (define (f3262) (True))
+    (define (f3259 g3226) (f3260 g3226))
+    (define (f3260 g3226) (f3261 g3226))
+    (define (f3261 g3226) g3226)
+    (define (f3254 g3221) (f3255 g3221))
+    (define (f3255 g3221) (f3256 g3221))
+    (define (f3256 g3221) g3221)
+    (define (f3249 g3216) (f3250 g3216))
+    (define (f3250 g3216) (f3251 g3216))
+    (define (f3251 g3216) g3216)))
+  ;(expr: (f3240))
+
+(define kmpv3
+  '(((False 0) (True 0) (Nil 0) (Cons 2) (A 0) (B 0))
+    (define (f3426) (f3427))
+    (define (f3427) (f3428))
+    (define (f3428) (let g3294 (f3432) (f3429 g3294)))
+    (define (f3432) (f3433))
+    (define (f3433) (let g3299 (f3479) (f3434 g3299)))
+    (define (f3479) (f3480))
+    (define (f3480) (let g3304 (f3526) (f3481 g3304)))
+    (define (f3526) (True))
+    (define (f3481 g3304) (f3482 g3304))
+    (define (f3482 g3304) (f3483 g3304))
+    (define (f3483 g3304) (f3484))
+    (define (f3484) (f3485))
+    (define (f3485) (f3486))
+    (define (f3486) (let g3314 (f3515) (f3487 g3314)))
+    (define (f3515) (f3516))
+    (define (f3516) (let g3319 (f3520) (f3517 g3319)))
+    (define (f3520) (f3521))
+    (define (f3521) (let g3324 (f3525) (f3522 g3324)))
+    (define (f3525) (True))
+    (define (f3522 g3324) (f3523 g3324))
+    (define (f3523 g3324) (f3524 g3324))
+    (define (f3524 g3324) g3324)
+    (define (f3517 g3319) (f3518 g3319))
+    (define (f3518 g3319) (f3519 g3319))
+    (define (f3519 g3319) g3319)
+    (define (f3487 g3314) (f3488 g3314))
+    (define (f3488 g3314) (f3489 g3314))
+    (define (f3489 g3314) (f3490))
+    (define (f3490) (f3491))
+    (define (f3491) (f3492))
+    (define (f3492) (let g3340 (f3496) (f3493 g3340)))
+    (define (f3496) (f3497))
+    (define (f3497) (f3498))
+    (define (f3498) (f3499))
+    (define (f3499) (f3500))
+    (define (f3500) (f3501))
+    (define (f3501) (f3502))
+    (define (f3502) (f3503))
+    (define (f3503) (f3504))
+    (define (f3504) (f3505))
+    (define (f3505) (f3506))
+    (define (f3506) (f3507))
+    (define (f3507) (f3508))
+    (define (f3508) (f3509))
+    (define (f3509) (f3510))
+    (define (f3510) (f3511))
+    (define (f3511) (f3512))
+    (define (f3512) (f3513))
+    (define (f3513) (f3514))
+    (define (f3514) (False))
+    (define (f3493 g3340) (f3494 g3340))
+    (define (f3494 g3340) (f3495 g3340))
+    (define (f3495 g3340) g3340)
+    (define (f3434 g3299) (f3435 g3299))
+    (define (f3435 g3299) (f3436 g3299))
+    (define (f3436 g3299) (f3437))
+    (define (f3437) (f3438))
+    (define (f3438) (f3439))
+    (define (f3439) (let g3371 (f3468) (f3440 g3371)))
+    (define (f3468) (f3469))
+    (define (f3469) (let g3376 (f3473) (f3470 g3376)))
+    (define (f3473) (f3474))
+    (define (f3474) (let g3381 (f3478) (f3475 g3381)))
+    (define (f3478) (True))
+    (define (f3475 g3381) (f3476 g3381))
+    (define (f3476 g3381) (f3477 g3381))
+    (define (f3477 g3381) g3381)
+    (define (f3470 g3376) (f3471 g3376))
+    (define (f3471 g3376) (f3472 g3376))
+    (define (f3472 g3376) g3376)
+    (define (f3440 g3371) (f3441 g3371))
+    (define (f3441 g3371) (f3442 g3371))
+    (define (f3442 g3371) (f3443))
+    (define (f3443) (f3444))
+    (define (f3444) (f3445))
+    (define (f3445) (let g3397 (f3449) (f3446 g3397)))
+    (define (f3449) (f3450))
+    (define (f3450) (f3451))
+    (define (f3451) (f3452))
+    (define (f3452) (f3453))
+    (define (f3453) (f3454))
+    (define (f3454) (f3455))
+    (define (f3455) (f3456))
+    (define (f3456) (f3457))
+    (define (f3457) (f3458))
+    (define (f3458) (f3459))
+    (define (f3459) (f3460))
+    (define (f3460) (f3461))
+    (define (f3461) (f3462))
+    (define (f3462) (f3463))
+    (define (f3463) (f3464))
+    (define (f3464) (f3465))
+    (define (f3465) (f3466))
+    (define (f3466) (f3467))
+    (define (f3467) (False))
+    (define (f3446 g3397) (f3447 g3397))
+    (define (f3447 g3397) (f3448 g3397))
+    (define (f3448 g3397) g3397)
+    (define (f3429 g3294) (f3430 g3294))
+    (define (f3430 g3294) (f3431 g3294))
+    (define (f3431 g3294) g3294)))
+;  (expr: (f3426))
