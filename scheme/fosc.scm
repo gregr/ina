@@ -595,7 +595,8 @@
 
 
 (define prog1
-  '(((False 0) (True 0) (Z 0) (S 1) (quote 1) (+ 2) (* 2) (Even? 1) (Odd? 1))
+  '(((False 0) (True 0) (Z 0) (S 1)
+     (quote 1) (+ 2) (* 2) (Even? 1) (Odd? 1) (lambda 1) (var 1) (app 2))
 
     (define (add (Z) y) y)
     (define (add (S x) y) (S (add x y)))
@@ -628,6 +629,42 @@
     (define (eval-arith (* a b)) (mult2 (eval-arith a) (eval-arith b)))
     (define (eval-arith (Even? n)) (even? (eval-arith n)))
     (define (eval-arith (Odd? n)) (odd? (eval-arith n)))
+    (define (eval-arith (lambda body)) (lambda body))
+    (define (eval-arith (app proc arg)) (apply (eval-arith proc) (eval-arith arg)))
+
+    (define (apply (lambda body) arg) (eval-arith (propagate body arg)))
+
+    (define (propagate (quote datum) val) (quote datum))
+    (define (propagate (+ a b) val) (+ (propagate a val) (propagate b val)))
+    (define (propagate (* a b) val) (* (propagate a val) (propagate b val)))
+    (define (propagate (Even? x) val) (Even? (propagate x val)))
+    (define (propagate (Odd? x) val) (Odd? (propagate x val)))
+    (define (propagate (lambda body) val) (lambda (propagate body (lift val))))
+    (define (propagate (app proc arg) val)
+      (app (propagate proc val) (propagate arg val)))
+    (define (propagate (var idx) val) (substitute idx val))
+
+    (define (lift (True)) (True))
+    (define (lift (False)) (False))
+    (define (lift (Z)) (Z))
+    (define (lift (S x)) (S x))
+    (define (lift (+ a b)) (+ (lift a) (lift b)))
+    (define (lift (* a b)) (* (lift a) (lift b)))
+    (define (lift (Even? x)) (Even? (lift x)))
+    (define (lift (Odd? x)) (Odd? (lift x)))
+    (define (lift (quote val)) (quote (lift val)))
+    (define (lift (lambda body)) (lambda (lift body)))
+    (define (lift (app proc arg)) (app (lift proc) (lift arg)))
+    (define (lift (var idx)) (var (S idx)))
+
+    (define (substitute (Z) val) (literal val))
+    (define (substitute (S x) val) (var x))
+
+    (define (literal (lambda body)) (lambda body))
+    (define (literal (True)) '(True))
+    (define (literal (False)) '(False))
+    (define (literal (Z)) '(Z))
+    (define (literal (S x)) '(S x))
     ))
 
 ;; prog1 examples
@@ -667,7 +704,7 @@
     40
     1))
 
-(define futamura1
+(define futamura1-1
   (parse-transform-print
     prog1
     ;'(eval-arith (+ 'X 'X))
@@ -679,6 +716,72 @@
     '(X)
     40
     1))
+
+(define futamura1-2
+  (parse-transform-print
+    prog1
+    '(eval-arith (app (lambda (+ (var (Z)) (var (Z)))) 'X))
+    '(X)
+    80 1))
+
+(define futamura1-3
+  (parse-transform-print
+    prog1
+    '(eval-arith (app (app (lambda (var (Z)))
+                           (lambda (+ (var (Z)) (var (Z)))))
+                      'X))
+    '(X)
+    80 1))
+
+(define futamura1-4
+  (parse-transform-print
+    prog1
+    '(eval-arith (app (app (lambda
+                             (lambda (app (app (var (Z)) (var (S (Z))))
+                                          (var (S (Z))))))
+                           (lambda
+                             (lambda (+ (var (Z)) (var (S (Z)))))))
+                      'X))
+    '(X)
+    120 1))
+
+(define futamura1-5
+  (parse-transform-print
+    prog1
+    '(eval-arith (app (app (lambda
+                             (lambda (app (app (var (Z)) (var (S (Z))))
+                                          (var (S (Z))))))
+                           (lambda
+                             (lambda (+ (var (Z)) (var (S (Z)))))))
+                      'X))
+    '(X)
+    120 1))
+
+(define futamura1-6
+  (parse-transform-print
+    prog1
+    '(eval-arith (app (app (lambda
+                             (lambda
+                               (Even? (app (app (var (Z)) (var (S (Z))))
+                                           (var (S (Z)))))))
+                           (lambda
+                             (lambda (+ (var (Z)) (var (S (Z)))))))
+                      'X))
+    '(X)
+    120 1))
+
+(define futamura1-7
+  (parse-transform-print
+    prog1
+    '(eval-arith (Even? (app (app (lambda
+                                    (lambda
+                                      (app (app (var (Z)) (var (S (Z))))
+                                                  (var (S (Z))))))
+                                  (lambda
+                                    (lambda (+ (var (Z)) (var (S (Z)))))))
+                             'X)))
+    '(X)
+    120 1))
 
 (define kmp
   '(((False 0) (True 0) (Nil 0) (Cons 2) (A 0) (B 0))
