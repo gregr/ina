@@ -309,7 +309,8 @@
 (define (s-fold-label v) (cadr v))
 (define (s-fold-renaming v) (caddr v))
 
-(define (fresh-var name) (e-var (gensym (symbol->string name))))
+(define (fresh-name name) (gensym (symbol->string name)))
+(define (fresh-var name) (e-var (fresh-name name)))
 
 (define (drive-machine prog)
   (define (drive expr)
@@ -332,10 +333,13 @@
                 (s-variants
                   (map (lambda (pc)
                          (define pat (p-clause-pattern pc))
-                         (define ec (e-cons (e-cons-c pat)
+                         (define ce (e-cons (e-cons-c pat)
                                             (map fresh-var (e-cons-ea* pat))))
-                         (apply-curious prog fn ec arg1*
-                                        (lambda (t) (s-variant arg0 ec t))))
+                         (define cp (e-cons (e-cons-c pat)
+                                            (map fresh-name (e-cons-ea* pat))))
+                         (apply-curious
+                           prog fn ce arg1*
+                           (lambda (t) (s-variant (e-var-name arg0) cp t))))
                        (fn-curious-clause* fn))))
                (else
                  (lambda ()
@@ -387,7 +391,7 @@
     (if (null? ea*) expr
       (let loop ((prefix '()) (suffix ea*))
         (if (= size-max (size-expr (car suffix)))
-          (e-let var (car suffix)
+          (e-let (e-var-name var) (car suffix)
             (e-app fn (append prefix (cons var (cdr suffix)))))
           (loop (cons (car suffix) prefix) (cdr suffix)))))))
 
