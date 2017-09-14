@@ -482,6 +482,21 @@
           (step-map (lambda (t) (loop t (cons tree seen)))
                     (node-step tree))))))
 
+(define (simplify-tree tree)
+  (define (recursive? step)
+    (cond ((s-transient? step) (recursive? (node-step (s-transient-e step))))
+          ((s-decompose? step)
+           (ormap recursive? (map node-step (s-decompose-parts step))))
+          ((s-variants? step)
+           (ormap recursive? (map node-step (map s-variant-body
+                                                 (s-variants-choices step)))))
+          ((s-fold? step) (eqv? (node-label tree) (s-fold-label step)))
+          (else #f)))
+  (define step (node-step tree))
+  (if (and (s-transient? step) (not (recursive? step)))
+    (simplify-tree (s-transient-e step))
+    (node (node-label tree) (node-expr tree) (step-map simplify-tree step))))
+
 (define (tree->task ctors tree)
   (define (tt* t* apps)
     (list-foldr (lambda (t edefs)
@@ -540,8 +555,9 @@
   (define prog (parse-program pstx))
   (define e (env-apply free (map e-var free)))
   (define expr (parse-expr prog e estx))
-  (define tree (fold-tree (build-tree (drive-machine prog)
-                                      (subst e expr) size-max)))
+  (define tree (simplify-tree
+                 (fold-tree (build-tree (drive-machine prog)
+                                        (subst e expr) size-max))))
   (define task (tree->task (program-ctor* prog) tree))
   `((tree: ,(print-tree depth tree))
     (program: ,(print-program (car task)))
