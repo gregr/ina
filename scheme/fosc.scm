@@ -236,8 +236,6 @@
 (define (list-foldr f acc xs)
   (if (null? xs) acc (f (car xs) (list-foldr f acc (cdr xs)))))
 
-(define (subst-let e expr)
-  (subst (env-let e (e-let-param expr) (e-let-arg expr)) (e-let-body expr)))
 (define (subst e expr)
   (define (subst* e es) (map (lambda (ea) (subst e ea)) es))
   (cond
@@ -246,6 +244,8 @@
     ((e-app? expr) (e-app (e-app-f expr) (subst* e (e-app-ea* expr))))
     ((e-let? expr) (subst-let e expr))
     (else (error 'subst (format "invalid expr: ~s" expr)))))
+(define (subst-let e expr)
+  (subst (env-let e (e-let-param expr) (e-let-arg expr)) (e-let-body expr)))
 
 (define (apply-curious program fn arg0 arg1* k)
   (let ((ctor (and (e-cons? arg0) (e-cons-c arg0))))
