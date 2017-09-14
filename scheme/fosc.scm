@@ -211,9 +211,15 @@
       (else #t)))
   (andmap validate-def (program-def* program)))
 
+(define (list-foldl f acc xs)
+  (if (null? xs) acc (list-foldl f (f (car xs) acc) (cdr xs))))
+(define (list-foldr f acc xs)
+  (if (null? xs) acc (f (car xs) (list-foldr f acc (cdr xs)))))
+(define (flatten xss) (list-foldr append '() xss))
+
 (define (print-program program)
   (cons (program-ctor* program)
-        (append* (map print-def (program-def* program)))))
+        (flatten (map print-def (program-def* program)))))
 (define (print-def fn)
   (define name (fn-name fn))
   (define (print-fnc c)
@@ -235,12 +241,7 @@
                    ,(print-expr (e-let-body e))))
     (else #f)))
 
-(define (list-foldl f acc xs)
-  (if (null? xs) acc (list-foldl f (f (car xs) acc) (cdr xs))))
-(define (list-foldr f acc xs)
-  (if (null? xs) acc (f (car xs) (list-foldr f acc (cdr xs)))))
 (define (sum xs) (list-foldl + 0 xs))
-
 (define (free-vars expr)
   (define (free-vars* e*)
     (define (insert n ns) (if (memv n ns) ns (cons n ns)))
@@ -531,7 +532,7 @@
               (vs (free-vars expr))
               (pv (car vs))
               (multi? (and (< 1 (var-count pv expr))
-                           (memv pv (append* (map free-vars
+                           (memv pv (flatten (map free-vars
                                                   (map node-expr cbodies))))))
               (param* (if multi? vs (cdr vs)))
               (vs (if multi? (cons pv vs) vs))
