@@ -624,15 +624,15 @@
     (define (double (Z)) (Z))
     (define (double (S x)) (S (S (double x))))
 
-    (define (eval-arith (quote datum)) datum)
-    (define (eval-arith (+ a b)) (add3 (eval-arith a) (eval-arith b)))
-    (define (eval-arith (* a b)) (mult2 (eval-arith a) (eval-arith b)))
-    (define (eval-arith (Even? n)) (even? (eval-arith n)))
-    (define (eval-arith (Odd? n)) (odd? (eval-arith n)))
-    (define (eval-arith (lambda body)) (lambda body))
-    (define (eval-arith (app proc arg)) (apply (eval-arith proc) (eval-arith arg)))
+    (define (eval (quote datum)) datum)
+    (define (eval (+ a b)) (add3 (eval a) (eval b)))
+    (define (eval (* a b)) (mult2 (eval a) (eval b)))
+    (define (eval (Even? n)) (even? (eval n)))
+    (define (eval (Odd? n)) (odd? (eval n)))
+    (define (eval (lambda body)) (lambda body))
+    (define (eval (app proc arg)) (apply (eval proc) (eval arg)))
 
-    (define (apply (lambda body) arg) (eval-arith (propagate body arg)))
+    (define (apply (lambda body) arg) (eval (propagate body arg)))
 
     (define (propagate (quote datum) val) (quote datum))
     (define (propagate (+ a b) val) (+ (propagate a val) (propagate b val)))
@@ -707,12 +707,12 @@
 (define futamura1-1
   (parse-transform-print
     prog1
-    ;'(eval-arith (+ 'X 'X))
-    ;'(eval-arith (Even? (+ 'X 'X)))
-    ;'(eval-arith (Even? (* '(S (S (Z))) 'X)))
-    ;'(eval-arith (Even? (* '(S (S (Z))) (+ '(S (Z)) 'X))))
-    ;'(eval-arith (Even? (+ '(S (Z)) (* '(S (S (Z))) (+ '(S (Z)) 'X)))))
-    '(eval-arith (Odd? (+ '(S (Z)) (* '(S (S (Z))) (+ '(S (Z)) 'X)))))
+    ;'(eval (+ 'X 'X))
+    ;'(eval (Even? (+ 'X 'X)))
+    ;'(eval (Even? (* '(S (S (Z))) 'X)))
+    ;'(eval (Even? (* '(S (S (Z))) (+ '(S (Z)) 'X))))
+    ;'(eval (Even? (+ '(S (Z)) (* '(S (S (Z))) (+ '(S (Z)) 'X)))))
+    '(eval (Odd? (+ '(S (Z)) (* '(S (S (Z))) (+ '(S (Z)) 'X)))))
     '(X)
     40
     1))
@@ -720,66 +720,66 @@
 (define futamura1-2
   (parse-transform-print
     prog1
-    '(eval-arith (app (lambda (+ (var (Z)) (var (Z)))) 'X))
+    '(eval (app (lambda (+ (var (Z)) (var (Z)))) 'X))
     '(X)
     80 1))
 
 (define futamura1-3
   (parse-transform-print
     prog1
-    '(eval-arith (app (app (lambda (var (Z)))
-                           (lambda (+ (var (Z)) (var (Z)))))
-                      'X))
+    '(eval (app (app (lambda (var (Z)))
+                     (lambda (+ (var (Z)) (var (Z)))))
+                'X))
     '(X)
     80 1))
 
 (define futamura1-4
   (parse-transform-print
     prog1
-    '(eval-arith (app (app (lambda
-                             (lambda (app (app (var (Z)) (var (S (Z))))
-                                          (var (S (Z))))))
-                           (lambda
-                             (lambda (+ (var (Z)) (var (S (Z)))))))
-                      'X))
+    '(eval (app (app (lambda
+                       (lambda (app (app (var (Z)) (var (S (Z))))
+                                    (var (S (Z))))))
+                     (lambda
+                       (lambda (+ (var (Z)) (var (S (Z)))))))
+                'X))
     '(X)
     120 1))
 
 (define futamura1-5
   (parse-transform-print
     prog1
-    '(eval-arith (app (app (lambda
-                             (lambda (app (app (var (Z)) (var (S (Z))))
-                                          (var (S (Z))))))
-                           (lambda
-                             (lambda (+ (var (Z)) (var (S (Z)))))))
-                      'X))
+    '(eval (app (app (lambda
+                       (lambda (app (app (var (Z)) (var (S (Z))))
+                                    (var (S (Z))))))
+                     (lambda
+                       (lambda (+ (var (Z)) (var (S (Z)))))))
+                'X))
     '(X)
     120 1))
 
 (define futamura1-6
   (parse-transform-print
     prog1
-    '(eval-arith (app (app (lambda
-                             (lambda
-                               (Even? (app (app (var (Z)) (var (S (Z))))
-                                           (var (S (Z)))))))
-                           (lambda
-                             (lambda (+ (var (Z)) (var (S (Z)))))))
-                      'X))
+    '(eval (app (app (lambda
+                       (lambda
+                         (Even? (app (app (var (Z)) (var (S (Z))))
+                                     (var (S (Z)))))))
+                     (lambda
+                       (lambda (+ (var (Z)) (var (S (Z)))))))
+                'X))
     '(X)
     120 1))
 
 (define futamura1-7
   (parse-transform-print
     prog1
-    '(eval-arith (Even? (app (app (lambda
-                                    (lambda
-                                      (app (app (var (Z)) (var (S (Z))))
-                                                  (var (S (Z))))))
-                                  (lambda
-                                    (lambda (+ (var (Z)) (var (S (Z)))))))
-                             'X)))
+    '(eval (Even? (app (app (lambda
+                              (lambda
+                                (app (app (var (Z)) (var (S (Z))))
+                                     (var (S (Z))))))
+                            (lambda
+                              (lambda (+ (var (Z)) (var (S (Z)))))))
+                       'X)))
     '(X)
     120 1))
 
