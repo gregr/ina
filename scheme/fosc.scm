@@ -583,7 +583,7 @@
 
 
 (define prog1
-  '(((False 0) (True 0) (Z 0) (S 1))
+  '(((False 0) (True 0) (Z 0) (S 1) (quote 1) (+ 2) (* 2) (Even? 1) (Odd? 1))
 
     (define (add (Z) y) y)
     (define (add (S x) y) (S (add x y)))
@@ -593,15 +593,80 @@
 
     (define (sqr x) (mult x x))
 
-    (define (even (Z)) (True))
-    (define (even (S x)) (odd x))
+    (define (even? (Z)) (True))
+    (define (even? (S x)) (odd? x))
 
-    (define (odd (Z)) (False))
-    (define (odd (S x)) (even x))
+    (define (odd? (Z)) (False))
+    (define (odd? (S x)) (even? x))
 
     (define (add2 (Z) y) y)
     (define (add2 (S x) y) (add2 x (S y)))
+
+    (define (add3 (Z) y) y)
+    (define (add3 (S x) y) (S (add3 y x)))
+
+    (define (mult2 (Z) y) (Z))
+    (define (mult2 (S x) y) (add3 (mult2 x y) y))
+
+    (define (double (Z)) (Z))
+    (define (double (S x)) (S (S (double x))))
+
+    (define (eval-arith (quote datum)) datum)
+    (define (eval-arith (+ a b)) (add3 (eval-arith a) (eval-arith b)))
+    (define (eval-arith (* a b)) (mult2 (eval-arith a) (eval-arith b)))
+    (define (eval-arith (Even? n)) (even? (eval-arith n)))
+    (define (eval-arith (Odd? n)) (odd? (eval-arith n)))
     ))
+
+;; prog1 examples
+(define double-t
+  (parse-transform-print
+    prog1
+    ;'(double X)
+    ;'(add3 X X)
+    '(mult2 (S (S (Z))) X)
+    '(X)
+    10
+    1))
+
+(define even-double-t
+  (parse-transform-print
+    prog1
+    ;'(even? (double X))
+    ;'(even? (add3 X X))
+    '(even? (mult2 (S (S (Z))) X))
+    '(X)
+    40
+    1))
+
+(define add-assoc-t1
+  (parse-transform-print
+    prog1
+    '(add (add W X) Y)
+    '(W X Y)
+    40
+    1))
+
+(define add-assoc-t2
+  (parse-transform-print
+    prog1
+    '(add W (add X Y))
+    '(W X Y)
+    40
+    1))
+
+(define futamura1
+  (parse-transform-print
+    prog1
+    ;'(eval-arith (+ 'X 'X))
+    ;'(eval-arith (Even? (+ 'X 'X)))
+    ;'(eval-arith (Even? (* '(S (S (Z))) 'X)))
+    ;'(eval-arith (Even? (* '(S (S (Z))) (+ '(S (Z)) 'X))))
+    ;'(eval-arith (Even? (+ '(S (Z)) (* '(S (S (Z))) (+ '(S (Z)) 'X)))))
+    '(eval-arith (Odd? (+ '(S (Z)) (* '(S (S (Z))) (+ '(S (Z)) 'X)))))
+    '(X)
+    40
+    1))
 
 (define kmp
   '(((False 0) (True 0) (Nil 0) (Cons 2) (A 0) (B 0))
@@ -625,7 +690,7 @@
     (define (n (Nil) op) (False))
     (define (n (Cons s ss) op) (m op ss op ss))))
 
-;; examples
+;; kmp examples
 (define kmp1
   (parse-eval-print
     kmp
