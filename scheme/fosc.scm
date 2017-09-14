@@ -363,13 +363,12 @@
                 (s-variants
                   (map (lambda (pc)
                          (define pat (p-clause-pattern pc))
-                         (define ce (e-cons (e-cons-c pat)
-                                            (map fresh-var (e-cons-ea* pat))))
-                         (define cp (e-cons (e-cons-c pat)
-                                            (map fresh-name (e-cons-ea* pat))))
+                         (define vs (map fresh-var (e-cons-ea* pat)))
+                         (define ce (e-cons (e-cons-c pat) vs))
+                         (define p (e-cons (e-cons-c pat) (map e-var-name vs)))
                          (apply-curious
                            prog fn ce arg1*
-                           (lambda (t) (s-variant (e-var-name arg0) cp t))))
+                           (lambda (t) (s-variant (e-var-name arg0) p t))))
                        (fn-curious-clause* fn))))
                (else
                  (lambda ()
