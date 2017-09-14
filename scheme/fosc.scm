@@ -390,6 +390,20 @@
       (else (error 'drive (format "invalid expr: ~s" expr)))))
   drive)
 
+(define (propagate-vps step)
+  (cond
+    ((procedure? step) (lambda () (propagate-vps (step))))
+    ((s-variants? step)
+     (s-variants
+       (map (lambda (c)
+              (define cv (s-variant-var c))
+              (define cp (s-variant-pat c))
+              (define cd (e-cons (e-cons-c cp) (map e-var (e-cons-ea* cp))))
+              (s-variant cv cp (subst (env (list (binding cv cd)))
+                                      (s-variant-body c))))
+            (s-variants-choices step))))
+    (else step)))
+
 (define (step-map f step)
   (let retry ((step step))
     (cond ((procedure? step) (retry (step)))
@@ -558,9 +572,9 @@
   (define prog (parse-program pstx))
   (define e (env-apply free (map e-var free)))
   (define expr (parse-expr prog e estx))
+  (define drive (lambda (e) (propagate-vps ((drive-machine prog) e))))
   (define tree (simplify-tree
-                 (fold-tree (build-tree (drive-machine prog)
-                                        (subst e expr) size-max))))
+                 (fold-tree (build-tree drive (subst e expr) size-max))))
   (define task (tree->task (program-ctor* prog) tree))
   `((tree: ,(print-tree depth tree))
     (program: ,(print-program (car task)))
