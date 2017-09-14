@@ -532,13 +532,16 @@
   (list (program ctors (cadr result)) (car result)))
 
 
-(define (parse-drive-print pstx estx free size-max depth)
+(define (parse-transform-print pstx estx free size-max depth)
   (define prog (parse-program pstx))
   (define e (env-apply free (map e-var free)))
   (define expr (parse-expr prog e estx))
-  (print-tree depth (fold-tree (build-tree (drive-machine prog)
-                                           (subst e expr) size-max))))
-
+  (define tree (fold-tree (build-tree (drive-machine prog)
+                                      (subst e expr) size-max)))
+  (define task (tree->task (program-ctor* prog) tree))
+  `((tree: ,(print-tree depth tree))
+    (program: ,(print-program (car task)))
+    (expr: ,(print-expr (cadr task)))))
 
 
 (define prog1
