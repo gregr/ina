@@ -279,7 +279,8 @@
     (if ctor
       (let loop ((clause* (fn-curious-clause* fn)))
         (cond
-          ((null? clause*) (format "invalid ctor: ~s ~s" arg0 fn))
+          ((null? clause*)
+           (error 'apply-curious (format "invalid ctor: ~s ~s" arg0 fn)))
           ((eqv? (e-cons-c (p-clause-pattern (car clause*))) ctor)
            (let* ((pp* (e-cons-ea* (p-clause-pattern (car clause*))))
                   (param* (append pp* (p-clause-param* (car clause*))))
