@@ -126,7 +126,7 @@
              (null? (cdddr stx))
              (pair? (cadr stx))
              (symbol? (caadr stx)))
-      (if (pair? (cadadr stx))
+      (if (and (pair? (cdadr stx)) (pair? (cadadr stx)))
         (parse-def-curious (caadr stx) (cadadr stx) (cddadr stx) (caddr stx))
         (parse-def-indifferent (caadr stx) (cdadr stx) (caddr stx)))
       (error 'parse-def (format "invalid definition: ~s" stx))))
