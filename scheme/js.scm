@@ -64,8 +64,7 @@
 (define (comma* s*) (string-join s* ","))
 
 (define (js-var stx) (symbol->string stx))
-;; TODO: convert or validate double.
-(define (js-number stx) (number->string stx))
+(define (js-number stx) (number->string (exact->inexact stx)))
 ;; TODO: escape properly.
 (define (js-string stx) (string-append "\"" stx "\""))
 
