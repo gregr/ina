@@ -9,6 +9,8 @@
     (`(throw ,expr) (string-append "throw " (js-expr expr) ";"))
     (`(break ,label) (string-append "break " (js-label label) ";"))
     (`(continue ,label) (string-append "continue " (js-label label) ";"))
+    (`(break) "break;")
+    (`(continue) "continue;")
     (`(if/else ,test ,(? list? true*) ,(? list? false*))
       (string-append "if(" (js-expr test) "){"
                      (adjacent* (js-stmt* true*)) "}else{"
