@@ -1,3 +1,6 @@
+;; WARNING: This is not a fully abstract code generator.  Assume insecurity by
+;; default.  These operations do very little sanity checking and validation.
+
 ;; TODO: JSON subset
 
 (define (js-stmt* stx*) (map js-stmt stx*))
@@ -40,6 +43,7 @@
       (string-append (js-label label) ":" (js-stmt stmt)))
     (`(block ,(? list? stmt*))
       (string-append "{;" (adjacent* (js-stmt* stmt*)) "}"))
+    ('debugger "debugger;")
     (_ (string-append (js-expr stx) ";"))))
 
 (define (js-binding* binding*) (map js-binding binding*))
@@ -66,6 +70,8 @@
 (define (js-var stx) (symbol->string stx))
 (define (js-number stx) (number->string (exact->inexact stx)))
 (define (js-string stx) (with-output-to-string (lambda () (write stx))))
+(define (js-regexp pattern flags)
+  (string-append "/" (string-replace pattern "/" "\\/") "/" flags))
 
 (define (js-kv* kv*) (map (lambda (kv) (js-kv kv)) kv*))
 (define (js-kv kv)
@@ -91,7 +97,6 @@
 
 (define (js-expr* stx*) (map (lambda (stx) (js-expr stx)) stx*))
 (define (js-expr stx)
-  ;; TODO: support regular expressions, debugger, this, new.
   (match stx
     ((? number?) (js-number stx))
     ((? string?) (js-string stx))
@@ -99,6 +104,7 @@
     (#t "false")
     ('null "null")
     ('undefined "undefined")
+    (`(regexp ,pattern ,flags) (js-regexp pattern flags))
     (`(array ,(? list? element*))
       (string-append "[" (comma* (js-expr* element*)) "]"))
     (`(object ,(? list? kv*))
@@ -149,4 +155,5 @@
     (`(< ,ea ,eb) (js-binop "<" ea eb))
     (`(<= ,ea ,eb) (js-binop "<=" ea eb))
     (`(comma ,ea ,eb) (js-binop "," ea eb))
-    (`(delete ,expr) (js-unop "delete " expr))))
+    (`(delete ,expr) (js-unop "delete " expr))
+    (`(new ,expr) (js-unop "new " expr))))
