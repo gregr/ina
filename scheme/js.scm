@@ -65,8 +65,7 @@
 
 (define (js-var stx) (symbol->string stx))
 (define (js-number stx) (number->string (exact->inexact stx)))
-;; TODO: escape properly.
-(define (js-string stx) (string-append "\"" stx "\""))
+(define (js-string stx) (with-output-to-string (lambda () (write stx))))
 
 (define (js-kv* kv*) (map (lambda (kv) (js-kv kv)) kv*))
 (define (js-kv kv)
