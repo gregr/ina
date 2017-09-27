@@ -158,8 +158,7 @@
 (test 'fix-1
   (ev '(let ((fix (lambda (f)
                     ((lambda (d) (d d))
-                     (lambda (x) (f (lambda a (apply (x x) a)))))))
-             (null? (lambda (x) (equal? '() x))))
+                     (lambda (x) (f (lambda a (apply (x x) a))))))))
          (let ((append
                  (fix (lambda (append)
                         (lambda (xs ys)
@@ -174,8 +173,7 @@
 (test 'fix-2
   (ev '(let ((fix (lambda (f)
                     ((lambda (d) (d d))
-                     (lambda (x) (f (lambda a (apply (x x) a)))))))
-             (null? (lambda (x) (equal? '() x))))
+                     (lambda (x) (f (lambda a (apply (x x) a))))))))
          (let ((append
                  (fix (lambda (append)
                         (lambda (xs ys)
@@ -187,8 +185,7 @@
              ,(append '(1 2) '(3 4))))))
   (let ((fix (lambda (f)
                ((lambda (d) (d d))
-                (lambda (x) (f (lambda a (apply (x x) a)))))))
-        (null? (lambda (x) (equal? '() x))))
+                (lambda (x) (f (lambda a (apply (x x) a))))))))
     (let ((append
             (fix (lambda (append)
                    (lambda (xs ys)
@@ -202,8 +199,7 @@
 (test 'fix*-1
   (ev '(let ((fix (lambda (f)
                     ((lambda (d) (d d))
-                     (lambda (x) (f (lambda a (apply (x x) a)))))))
-             (null? (lambda (x) (equal? '() x))))
+                     (lambda (x) (f (lambda a (apply (x x) a))))))))
          (let ((map (fix (lambda (map)
                            (lambda (f xs)
                              (if (null? xs)
@@ -235,8 +231,7 @@
 (test 'fix*-2
   (ev '(let ((fix (lambda (f)
                     ((lambda (d) (d d))
-                     (lambda (x) (f (lambda a (apply (x x) a)))))))
-             (null? (lambda (x) (equal? '() x))))
+                     (lambda (x) (f (lambda a (apply (x x) a))))))))
          (let ((map (fix (lambda (map)
                            (lambda (f xs)
                              (if (null? xs)
@@ -265,8 +260,7 @@
                                 ,(even? '(s s)) ,(odd? '(s s)))))))))
   (let ((fix (lambda (f)
                ((lambda (d) (d d))
-                (lambda (x) (f (lambda a (apply (x x) a)))))))
-        (null? (lambda (x) (equal? '() x))))
+                (lambda (x) (f (lambda a (apply (x x) a))))))))
     (let ((map (fix (lambda (map)
                       (lambda (f xs)
                         (if (null? xs)
