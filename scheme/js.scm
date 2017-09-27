@@ -1,8 +1,6 @@
 ;; WARNING: This is not a fully abstract code generator.  Assume insecurity by
 ;; default.  These operations do very little sanity checking and validation.
 
-;; TODO: JSON subset
-
 (define (js-stmt* stx*) (map js-stmt stx*))
 (define (js-stmt stx)
   (match stx
@@ -101,7 +99,7 @@
     ((? number?) (js-number stx))
     ((? string?) (js-string stx))
     (#t "true")
-    (#t "false")
+    (#f "false")
     ('null "null")
     ('undefined "undefined")
     (`(regexp ,pattern ,flags) (js-regexp pattern flags))
@@ -110,8 +108,8 @@
     (`(object ,(? list? kv*))
       (string-append "{" (comma* (js-kv* kv*)) "}"))
     (`(function ,(? list? param*) ,(? list? body*))
-      (string-append "function(" (comma* (sym->ident* param*))
-                     "){\"use strict\";" (adjacent* (js-stmt* body*)) "}"))
+      (string-append "(function(" (comma* (sym->ident* param*))
+                     "){\"use strict\";" (adjacent* (js-stmt* body*)) "})"))
     (`(app ,rator ,(? list? rand*))
       (string-append (js-expr rator) "(" (comma* (js-expr* rand*)) ")"))
     (`(?: ,test ,true ,false)
