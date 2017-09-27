@@ -22,7 +22,7 @@
       (string-append "for("(js-stmt pre) ";" (js-expr test) ";"
                      (js-expr iter) "){" (adjacent* (js-stmt* stmt*)) "}"))
     (`(for/in ,(? symbol? iname) ,obj ,(? list? stmt*))
-      (string-append "for(var " (js-ref iname) " in " (js-expr obj)
+      (string-append "for(var " (js-var iname) " in " (js-expr obj)
                      "){" (adjacent* (js-stmt* stmt*)) "}"))
     (`(while ,test ,(? list? stmt*))
       (string-append "while(" (js-expr test) "){"
@@ -36,7 +36,7 @@
     (`(try/catch/finally ,(? list? try*) ,(? symbol? ename)
                          ,(? list? catch*) ,(? list? finally*))
       (string-append "try{" (adjacent* (js-stmt* try*))
-                     "}catch(" (js-ref ename) "){"
+                     "}catch(" (js-var ename) "){"
                      (adjacent* (js-stmt* catch*)) "}finally{"
                      (adjacent* (js-stmt* finally*)) "}"))
     (`(labeled ,(and (not #f) label) stmt)
@@ -68,7 +68,8 @@
 (define (comma* s*) (string-join s* ","))
 
 (define (js-var stx) (symbol->string stx))
-(define (js-number stx) (number->string (exact->inexact stx)))
+(define (js-number stx)
+  (number->string (if (integer? stx) stx (exact->inexact stx))))
 (define (js-string stx) (with-output-to-string (lambda () (write stx))))
 (define (js-regexp pattern flags)
   (string-append "/" (string-replace pattern "/" "\\/") "/" flags))
@@ -87,8 +88,7 @@
 (define (js-ref/lhs lhs stx)
   (match stx
     ((? symbol?) (js-var stx))
-    (`(index ,ref ,index)
-      (string-append (lhs ref) "[" (js-expr index) "]"))))
+    (`(get ,ref ,index) (string-append (lhs ref) "[" (js-expr index) "]"))))
 (define (js-ref stx) (js-ref/lhs js-ref stx))
 (define (js-put op lhs rhs)
   (string-append "(" (js-ref lhs) op (js-expr rhs) ")"))
@@ -116,7 +116,6 @@
       (string-append (js-expr rator) "(" (comma* (js-expr* rand*)) ")"))
     (`(?: ,test ,true ,false)
       (string-append (js-expr test) "?" (js-expr true) ":" (js-expr false)))
-    (`(get ,ref) (js-ref/lhs js-expr ref))
     (`(put ,lhs ,rhs) (js-put "=" lhs rhs))
     (`(put+ ,lhs ,rhs) (js-put "+=" lhs rhs))
     (`(put- ,lhs ,rhs) (js-put "-=" lhs rhs))
@@ -156,4 +155,5 @@
     (`(<= ,ea ,eb) (js-binop "<=" ea eb))
     (`(comma ,ea ,eb) (js-binop "," ea eb))
     (`(delete ,expr) (js-unop "delete " expr))
-    (`(new ,expr) (js-unop "new " expr))))
+    (`(new ,expr) (js-unop "new " expr))
+    (_ (js-ref/lhs js-expr stx))))
