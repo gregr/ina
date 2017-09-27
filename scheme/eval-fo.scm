@@ -12,6 +12,8 @@
 (define (procedure-fo? datum) (tagged? procedure-tag datum))
 
 (define (primitive name) (procedure-fo name))
+(define (primitive? datum)
+  (and (procedure-fo? datum) (symbol? (tagged-payload datum))))
 
 (define vector-tag 'vector)
 (define (vector-fo vec) (tagged vector-tag vec))
@@ -60,7 +62,7 @@
     ((vector?) (apply vector-fo? args))
     ((vector-length) (vector-fo/op 'vector-length 1 vector-length args))
     ((vector-ref) (vector-fo/op 'vector-ref 2 vector-ref args))
-    (else (error 'apply-primitive (format "invalid primitive ~s" proc)))))
+    (else (error 'apply-primitive (format "invalid primitive ~s" pname)))))
 
 (define (apply-fo proc args)
   (define (err) (error 'apply-fo (format "invalid procedure ~s" proc)))
