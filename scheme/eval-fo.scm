@@ -18,14 +18,16 @@
 (define vector-tag 'vector)
 (define (vector-fo vec) (tagged vector-tag vec))
 (define (vector-fo? datum) (tagged? vector-tag datum))
-(define (vector-fo/op op-name argc op args)
-  (if (= argc (length args))
-    (if (vector-fo? (car args))
-      (apply op (cons (tagged-payload (car args)) (cdr args)))
-      (error op-name
-             (format "expected first argument to be a vector ~s" args)))
-    (error op-name
-           (format "invalid number of arguments, ~s expected ~s" argc args))))
+(define (vector-fo-length v)
+  (if (vector-fo? v)
+    (vector-length (tagged-payload v))
+    (error 'vector-fo-length
+           (format "expected a vector ~s" v))))
+(define (vector-fo-ref v i)
+  (if (vector-fo? v)
+    (vector-ref (tagged-payload v) i)
+    (error 'vector-fo-ref
+           (format "expected first argument to be a vector ~s" v))))
 (define (vector-reify vfo)
   (if (vector-fo? vfo)
     (tagged-payload vfo)
@@ -62,8 +64,8 @@
     ((apply) (apply apply-fo args))
     ((vector) (vector-fo (apply vector args)))
     ((vector?) (apply vector-fo? args))
-    ((vector-length) (vector-fo/op 'vector-length 1 vector-length args))
-    ((vector-ref) (vector-fo/op 'vector-ref 2 vector-ref args))
+    ((vector-length) (apply vector-fo-length args))
+    ((vector-ref) (apply vector-fo-ref args))
     (else (error 'apply-primitive (format "invalid primitive ~s" pname)))))
 
 (define (apply-fo proc args)
