@@ -113,15 +113,15 @@
     ((literal) (compile-pop (compile-literal (cadr expr))))
     ((reference) (compile-pop (compile-env-ref (cadr expr))))
     ((application) (compile-application (cadr expr) (caddr expr)))
-    ((if) (compile-let
-            '((saved_env env))
-            `((compile-push
-                (function
-                  () ((put env saved_env)
-                      (if/else (!== ,js-false result)
-                               ,(compile-fo (caddr expr))
-                               ,(compile-fo (cadddr expr))))))
-              . ,(compile-fo (cadr expr)))))
+    ((if) `(,(compile-let
+               '((saved_env env))
+               `(,(compile-push
+                    `(function
+                       () ((put env saved_env)
+                           (if/else (!== ,js-false result)
+                                    ,(compile-fo (caddr expr))
+                                    ,(compile-fo (cadddr expr))))))
+                  . ,(compile-fo (cadr expr))))))
     ((lambda)
      `((vars ((saved_env env)))
        . ,(compile-pop
