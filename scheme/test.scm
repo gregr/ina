@@ -108,7 +108,7 @@
 (test 'if-1
   (ev '(if (car '(#t . #f)) 'yes 'no))
   'yes)
-(test 'if-1
+(test 'if-2
   (ev '(if (cdr '(#t . #f)) 'yes 'no))
   'no)
 
