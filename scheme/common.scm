@@ -80,6 +80,7 @@
 ;; Required definitions:
 ;;   denote-reference
 ;;   denote-literal
+;;   denote-vector
 ;;   denote-pair
 ;;   denote-procedure
 ;;   denote-application
@@ -92,16 +93,24 @@
 (define (denote* expr* env) (map (lambda (e) (denote e env)) expr*))
 (define (denote-let pdbody param* arg* env)
   (denote-application (denote-procedure pdbody param* env) (denote* arg* env)))
+(define (denote-quoted form)
+  (cond
+    ((pair? form)
+     (denote-pair (denote-quoted (car form)) (denote-quoted (cdr form))))
+    ((vector? form) (denote-vector (map denote-quoted (vector->list form))))
+    ((or (boolean? form) (number? form) (symbol? form) (null? form))
+     (denote-literal form))
+    (else (error 'denote-quoted (format "invalid quoted form ~s" form)))))
 (define (denote expr env)
   (cond
-    ((or (boolean? expr) (number? expr)) (denote-literal expr))
+    ((or (boolean? expr) (number? expr) (vector? expr)) (denote-quoted expr))
     ((symbol? expr) (denote-reference env (env-address env expr) expr))
     ((pair? expr)
      (let ((head (car expr)))
        (if (or (not (symbol? head)) (bound? env head))
          (denote-application (denote head env) (denote* (cdr expr) env))
          (case head
-           ((quote) (denote-literal (car (syntax-pattern '(quote #f) expr))))
+           ((quote) (denote-quoted (car (syntax-pattern '(quote #f) expr))))
            ((lambda)
             (let* ((parts (syntax-pattern '(lambda #f #f) expr))
                    (params (car parts))
@@ -137,30 +146,34 @@
            ((quasiquote)
             (let loop ((level 0) (qq-expr (car (syntax-pattern
                                                  '(quasiquote #f) expr))))
-              (case-pattern
-                qq-expr
-                `(((,'unquote #f)
-                   ,(lambda (datum)
-                      (if (= 0 level)
-                        (denote datum env)
-                        (denote-list (list (denote-literal 'unquote)
-                                           (loop (- level 1) datum))))))
-                  ((quasiquote #f)
-                   ,(lambda (datum)
-                      (denote-list (list (denote-literal 'quasiquote)
-                                         (loop (+ level 1) datum)))))
-                  (,'unquote
-                    ,(lambda _ (error 'denote-quasiquote
-                                      (format "bad unquote ~s" expr))))
-                  ((,'unquote)
-                   ,(lambda _ (error 'denote-quasiquote
-                                     (format "bad unquote ~s" expr))))
-                  ((,'unquote #f #f . #f)
-                   ,(lambda _ (error 'denote-quasiquote
-                                     (format "bad unquote ~s" expr))))
-                  ((#f . #f)
-                   ,(lambda (a d) (denote-pair (loop level a) (loop level d))))
-                  (#f ,denote-literal)))))
+              (if (vector? qq-expr)
+                (denote-vector
+                  (map (lambda (element) (loop level element))
+                       (vector->list qq-expr)))
+                (case-pattern
+                  qq-expr
+                  `(((,'unquote #f)
+                     ,(lambda (datum)
+                        (if (= 0 level)
+                          (denote datum env)
+                          (denote-list (list (denote-literal 'unquote)
+                                             (loop (- level 1) datum))))))
+                    ((quasiquote #f)
+                     ,(lambda (datum)
+                        (denote-list (list (denote-literal 'quasiquote)
+                                           (loop (+ level 1) datum)))))
+                    (,'unquote
+                      ,(lambda _ (error 'denote-quasiquote
+                                        (format "bad unquote ~s" expr))))
+                    ((,'unquote)
+                     ,(lambda _ (error 'denote-quasiquote
+                                       (format "bad unquote ~s" expr))))
+                    ((,'unquote #f #f . #f)
+                     ,(lambda _ (error 'denote-quasiquote
+                                       (format "bad unquote ~s" expr))))
+                    ((#f . #f)
+                     ,(lambda (a d) (denote-pair (loop level a) (loop level d))))
+                    (#f ,denote-literal))))))
            (else (error 'denote (format "unbound variable ~s" head)))))))
     (else (error 'denote (format "invalid syntax ~s" expr)))))
 

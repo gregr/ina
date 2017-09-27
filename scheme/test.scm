@@ -40,6 +40,12 @@
             (vector? (lambda x x))
             (vector? apply)))
   '(#t #t #t #f #f #f #f))
+(test 'vector-5
+  (map ev '((vector-ref #(1 2 3) 0)
+            (vector-ref '#(4 5 6) 2)
+            (vector-ref `#(7 8 9) 1)
+            (vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0) 1))) 1)))
+  '(1 6 8 (8 . 9)))
 
 (test 'pair-1
   (ev '(pair? '(x x)))

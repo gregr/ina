@@ -22,6 +22,7 @@
 
 (define (denote-reference env addr name) (env-ref env addr))
 (define (denote-literal expr) expr)
+(define (denote-vector ds) (apply vector ds))
 (define (denote-pair da dd) `(,da . ,dd))
 (define (denote-procedure pdbody params env)
   (lambda args (pdbody (env-extend* env params args))))

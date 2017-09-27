@@ -35,6 +35,8 @@
 
 (define (denote-reference env addr name) `(reference ,addr ,name))
 (define (denote-literal value) `(literal ,value))
+(define (denote-vector ds)
+  `(application ,(denote-literal (primitive 'vector)) ,ds))
 (define (denote-pair da dd)
   `(application ,(denote-literal (primitive 'cons)) (,da ,dd)))
 (define (denote-procedure pdbody params env)

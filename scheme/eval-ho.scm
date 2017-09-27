@@ -7,6 +7,8 @@
 
 (define (denote-reference env addr name) (lambda (env) (env-ref env addr)))
 (define (denote-literal value) (lambda (env) value))
+(define (denote-vector ds)
+  (lambda (env) (apply vector (map (lambda (d) (d env)) ds))))
 (define (denote-pair da dd) (lambda (env) `(,(da env) . ,(dd env))))
 (define (denote-procedure pdbody params env)
   (let ((dbody (pdbody (env-extend-param* env params))))
