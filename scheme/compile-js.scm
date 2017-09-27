@@ -131,9 +131,10 @@
     (else (error 'compile-fo (format "invalid expression ~s" expr)))))
 
 (define (compile expr env)
-  (adjacent* (js-stmt*
-               `((vars ((ks (array (,js-false)))
-                        result
-                        (env ,(compile-literal (map cdr env)))
-                        (k (function () ,(compile-fo (denote expr env))))))
-                 (while (!== ,js-false k) ((put k (app k ()))))))))
+  (js-expr `(function
+              () ((vars ((ks (array (,js-false)))
+                         result
+                         (env ,(compile-literal (map cdr env)))
+                         (k (function () ,(compile-fo (denote expr env))))))
+                  (while (!== ,js-false k) ((put k (app k ()))))
+                  (return result)))))
