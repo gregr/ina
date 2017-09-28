@@ -124,11 +124,13 @@
                                       ,(compile-fo (cadddr expr))))))
                     . ,(compile-fo (cadr expr)))))))
     ((lambda)
-     `((vars ((saved_env env)))
-       . ,(compile-pop
-            `(function
-               () ((put env ,(js-cons 'result 'saved_env))
-                   . ,(compile-fo (caddr expr)))))))
+     `((return
+         ,(compile-let
+            '((saved_env env))
+            (compile-pop
+              `(function
+                 () ((put env ,(js-cons 'result 'saved_env))
+                     . ,(compile-fo (caddr expr)))))))))
     (else (error 'compile-fo (format "invalid expression ~s" expr)))))
 
 (define (compile expr env)
