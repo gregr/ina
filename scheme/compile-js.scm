@@ -61,7 +61,7 @@
     ((procedure?)
      `(function () ,(compile-pop (js-procedure? (js-car 'result)))))
     ((apply) `(function () ((vars ((f ,(js-car 'result))))
-                            (put result ,(js-cdr 'result))
+                            (put result ,(js-car (js-cdr 'result)))
                             (return f))))
     ((vector) `(function () ((vars ((arr (array ())) (xs result)))
                              (while (!== ,js-nil xs)
