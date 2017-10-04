@@ -78,12 +78,12 @@
     (else (error 'compile-primitive (format "invalid primitive ~s" name)))))
 
 (define (compile-env-ref address)
-  (define fsingle? (cddr address))
-  (let loop ((ref 'env) (ei (car address)))
+  (define fi (address-fi address))
+  (let loop ((ref 'env) (ei (address-eidx address)))
     (if (= 0 ei)
-      (let floop ((ref (js-car ref)) (fpos (cadr address)))
+      (let floop ((ref (js-car ref)) (fpos (frame-info-idx fi)))
         (if (= 0 fpos)
-          (if fsingle?  (js-car ref) ref)
+          (if (frame-info-single? fi) (js-car ref) ref)
           (floop (js-cdr ref) (- fpos 1))))
       (loop (js-cdr ref) (- ei 1)))))
 
