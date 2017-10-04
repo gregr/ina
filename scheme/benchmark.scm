@@ -14,7 +14,6 @@
   (ev `(let ((fix (lambda (f)
                     ((lambda (d) (d d))
                      (lambda (x) (f (lambda a (apply (x x) a)))))))
-             (null? (lambda (x) (equal? '() x)))
              (list (lambda xs xs)))
          (let ((append
                  (fix (lambda (append)
@@ -29,7 +28,6 @@
   (ev `(let ((fix (lambda (f)
                     ((lambda (d) (d d))
                      (lambda (x) (f (lambda a (apply (x x) a)))))))
-             (null? (lambda (x) (equal? '() x)))
              (list (lambda xs xs)))
          (let ((append
                  (fix (lambda (append)
