@@ -2,6 +2,11 @@
 (define (id* . v) v)
 (define (const k) (lambda _ k))
 
+(define (list-foldl f acc xs)
+  (if (null? xs) acc (list-foldl f (f (car xs) acc) (cdr xs))))
+(define (list-foldr f acc xs)
+  (if (null? xs) acc (f (car xs) (list-foldr f acc (cdr xs)))))
+
 (define (frame-info idx single?) (cons idx single?))
 (define (frame-info-idx fi) (car fi))
 (define (frame-info-single? fi) (cdr fi))
