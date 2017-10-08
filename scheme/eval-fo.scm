@@ -106,6 +106,7 @@
 (define k-return-pop '(k-return-pop))
 (define (k-return-push k return-k) `(k-return-push ,k ,return-k))
 (define (k-branch k-true k-false) `(k-branch ,k-true ,k-false))
+(define (k-join k) `(k-join ,k))
 (define k-halt '(k-halt))
 
 (define (direct->k k expr)
@@ -114,8 +115,8 @@
     ((literal reference) (k-value expr k))
     ((lambda)
      (k-value `(lambda ,(cadr expr) ,(direct->k k-return-pop (caddr expr))) k))
-    ((if) (direct->k (k-branch (direct->k k (caddr expr))
-                               (direct->k k (cadddr expr)))
+    ((if) (direct->k (k-branch (direct->k (k-join k) (caddr expr))
+                               (direct->k (k-join k) (cadddr expr)))
                      (cadr expr)))
     ((application)
      (define app-k
@@ -161,6 +162,7 @@
      (evaluate-k (car r) result (cadr r) (caddr r) (cadddr r) (cdr returns)))
     ((k-branch)
      (evaluate-k (if result (cadr k) (caddr k)) result proc args env returns))
+    ((k-join) (evaluate-k (cadr k) result proc args env returns))
     ((k-halt) result)
     (else (error 'evaluate-k (format "invalid expression ~s" expr)))))
 
