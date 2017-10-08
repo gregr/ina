@@ -147,9 +147,9 @@
          ((lambda) (procedure-fo `(closure ,env ,(cadr expr) ,(caddr expr))))))
      (evaluate-k (caddr k) result proc args env returns))
     ((k-return-push)
-     (evaluate-k (cadr k) result #f '() env
+     (evaluate-k (cadr k) result proc args env
                  (cons (list (caddr k) proc args env) returns)))
-    ((k-proc) (evaluate-k (cadr k) result result args env returns))
+    ((k-proc) (evaluate-k (cadr k) result result '() env returns))
     ((k-arg) (evaluate-k (cadr k) result proc (cons result args) env returns))
     ((k-apply) (apply-k proc args returns))
     ((k-return-pop)
