@@ -99,25 +99,26 @@
 
 
 (define (k-value expr k) `(k-value ,expr ,k))
-(define (k-proc k return-k) `(k-proc ,k ,return-k))
+(define (k-proc k) `(k-proc ,k))
 (define (k-arg k) `(k-arg ,k))
 (define k-apply '(k-apply))
-(define k-return '(k-return))
+(define k-return-pop '(k-return-pop))
+(define (k-return-push k return-k) `(k-return-push ,k ,return-k))
 (define (k-branch k-true k-false) `(k-branch ,k-true ,k-false))
 (define k-halt '(k-halt))
 
-;; TODO: recognize tail position
 (define (direct->k k expr)
   (define (direct->k-arg earg k) (direct->k (k-arg k) earg))
   (case (car expr)
     ((literal reference) (k-value expr k))
     ((lambda)
-     (k-value `(lambda ,(cadr expr) ,(direct->k k-return (caddr expr))) k))
+     (k-value `(lambda ,(cadr expr) ,(direct->k k-return-pop (caddr expr))) k))
     ((if) (direct->k (k-branch (direct->k k (caddr expr))
                                (direct->k k (cadddr expr)))
                      (cadr expr)))
     ((application)
-     (direct->k (k-proc (list-foldl direct->k-arg k-apply (caddr expr)) k)
+     (define app-k (k-proc (list-foldl direct->k-arg k-apply (caddr expr))))
+     (direct->k (if (eq? 'k-return-pop (car k)) app-k (k-return-push app-k k))
                 (cadr expr)))
     (else (error 'direct->k (format "invalid expression ~s" expr)))))
 
@@ -127,7 +128,8 @@
     (let ((proc (tagged-payload proc)))
       (cond
         ((symbol? proc)
-         (evaluate-k k-return (apply-primitive proc args) #f #f #f returns))
+         (evaluate-k
+           k-return-pop (apply-primitive proc args) #f #f #f returns))
         ((and (pair? proc) (eq? 'closure (car proc)))
          (define env (env-extend* (cadr proc) (caddr proc) args))
          (evaluate-k (cadddr proc) #f #f '() env returns))
@@ -144,11 +146,13 @@
          ((reference) (env-ref env (cadr expr)))
          ((lambda) (procedure-fo `(closure ,env ,(cadr expr) ,(caddr expr))))))
      (evaluate-k (caddr k) result proc args env returns))
-    ((k-proc) (evaluate-k (cadr k) result result '() env
-                          (cons (list (caddr k) proc args env) returns)))
+    ((k-return-push)
+     (evaluate-k (cadr k) result #f '() env
+                 (cons (list (caddr k) proc args env) returns)))
+    ((k-proc) (evaluate-k (cadr k) result result args env returns))
     ((k-arg) (evaluate-k (cadr k) result proc (cons result args) env returns))
     ((k-apply) (apply-k proc args returns))
-    ((k-return)
+    ((k-return-pop)
      (define r (car returns))
      (evaluate-k (car r) result (cadr r) (caddr r) (cadddr r) (cdr returns)))
     ((k-branch)
