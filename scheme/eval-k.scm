@@ -1,14 +1,12 @@
 (load "eval-fo.scm")
 
 ;; TODO:
-;; Evaluate proc after args and eliminate need for k-proc.
 ;; Add k-[PRIMITIVE-OP] for each primitive.
 ;;   eval-fo primitives need to be updated for this.
 ;;   Replace initial env primitives with lambdas that invoke the primitive ops.
 ;;     We'll need list->vector to implement vector in this way.
 
 (define (k-value expr k) `(k-value ,expr ,k))
-(define (k-proc k) `(k-proc ,k))
 (define (k-args-clear k) `(k-args-clear ,k))
 (define (k-args-push k) `(k-args-push ,k))
 (define k-apply '(k-apply))
@@ -20,7 +18,6 @@
 (define k-halt '(k-halt))
 
 (define (direct->k k expr)
-  (define (direct->k-arg earg k) (direct->k (k-args-push k) earg))
   (case (car expr)
     ((literal reference) (k-value expr k))
     ((lambda)
@@ -29,10 +26,11 @@
                                (direct->k (k-join k) (cadddr expr)))
                      (cadr expr)))
     ((application)
-     (let ((app-k (k-args-clear
-                    (k-proc (list-foldl direct->k-arg k-apply (caddr expr))))))
-       (direct->k (if (eq? 'k-return-pop (car k)) app-k (k-return-push app-k k))
-                  (cadr expr))))
+     (let* ((proc-k (direct->k k-apply (cadr expr)))
+            (app-k (k-args-clear
+                     (list-foldl (lambda (ea k) (direct->k (k-args-push k) ea))
+                                 proc-k (caddr expr)))))
+       (if (eq? 'k-return-pop (car k)) app-k (k-return-push app-k k))))
     (else (error 'direct->k (format "invalid expression ~s" expr)))))
 
 (define (apply-primitive-k pname args)
@@ -54,7 +52,7 @@
               (format "procedure? expects 1 argument ~s" args))))
     ((apply)
      (apply (lambda (proc args)
-              (apply-k proc args (list (list k-halt #f #f '())))) args))
+              (apply-k proc args (list (list k-halt #f '())))) args))
     ((vector) (vector-fo (apply vector args)))
     ((vector?) (apply vector-fo? args))
     ((vector-length) (apply vector-fo-length args))
@@ -68,14 +66,14 @@
       (cond
         ((symbol? proc)
          (evaluate-k
-           k-return-pop (apply-primitive-k proc args) #f #f #f returns))
+           k-return-pop (apply-primitive-k proc args) #f #f returns))
         ((and (pair? proc) (eq? 'closure (car proc)))
-         (evaluate-k (cadddr proc) #f #f '()
+         (evaluate-k (cadddr proc) #f '()
                      (env-extend* (cadr proc) (caddr proc) args) returns))
         (else (err))))
     (err)))
 
-(define (evaluate-k k result proc args env returns)
+(define (evaluate-k k result args env returns)
   (case (car k)
     ((k-value)
      (let* ((expr (cadr k))
@@ -85,23 +83,21 @@
                 ((reference) (env-ref env (cadr expr)))
                 ((lambda) (procedure-fo
                             `(closure ,env ,(cadr expr) ,(caddr expr)))))))
-       (evaluate-k (caddr k) result proc args env returns)))
+       (evaluate-k (caddr k) result args env returns)))
     ((k-return-push)
-     (evaluate-k (cadr k) result proc args env
-                 (cons (list (caddr k) proc args env) returns)))
-    ((k-proc) (evaluate-k (cadr k) result result args env returns))
-    ((k-args-clear) (evaluate-k (cadr k) result proc '() env returns))
-    ((k-args-push)
-     (evaluate-k (cadr k) result proc (cons result args) env returns))
-    ((k-apply) (apply-k proc args returns))
+     (evaluate-k (cadr k) result args env
+                 (cons (list (caddr k) args env) returns)))
+    ((k-args-clear) (evaluate-k (cadr k) result '() env returns))
+    ((k-args-push) (evaluate-k (cadr k) result (cons result args) env returns))
+    ((k-apply) (apply-k result args returns))
     ((k-return-pop)
      (let ((r (car returns)))
-       (evaluate-k (car r) result (cadr r) (caddr r) (cadddr r) (cdr returns))))
+       (evaluate-k (car r) result (cadr r) (caddr r) (cdr returns))))
     ((k-branch)
-     (evaluate-k (if result (cadr k) (caddr k)) result proc args env returns))
-    ((k-join) (evaluate-k (cadr k) result proc args env returns))
+     (evaluate-k (if result (cadr k) (caddr k)) result args env returns))
+    ((k-join) (evaluate-k (cadr k) result args env returns))
     ((k-halt) result)
     (else (error 'evaluate-k (format "invalid expression ~s" expr)))))
 
 (define (evaluate expr env)
-  (evaluate-k (direct->k k-halt (denote expr env)) #f #f '() env '()))
+  (evaluate-k (direct->k k-halt (denote expr env)) #f '() env '()))
