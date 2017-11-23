@@ -12,6 +12,7 @@
 (define (procedure-fo? datum) (tagged? procedure-tag datum))
 
 (define (closure env param* body) `(closure ,env ,param* ,body))
+(define (closure? datum) (and (pair? datum) (eq? 'closure (car datum))))
 
 (define (primitive name) (procedure-fo name))
 (define (primitive? datum)
@@ -116,7 +117,7 @@
         ((symbol? proc)
          (evaluate-k
            k-return-pop (apply-primitive-k proc args) #f #f returns))
-        ((and (pair? proc) (eq? 'closure (car proc)))
+        ((closure? proc)
          (evaluate-k (cadddr proc) #f '()
                      (env-extend* (cadr proc) (caddr proc) args) returns))
         (else (err))))
@@ -131,7 +132,7 @@
                 ((literal) (cadr expr))
                 ((reference) (env-ref env (cadr expr)))
                 ((lambda) (procedure-fo
-                            `(closure ,env ,(cadr expr) ,(caddr expr)))))))
+                            (closure env (cadr expr) (caddr expr)))))))
        (evaluate-k (caddr k) result args env returns)))
     ((k-return-push)
      (evaluate-k (cadr k) result args env

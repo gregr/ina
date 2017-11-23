@@ -11,6 +11,9 @@
 (define (procedure-fo proc) (tagged procedure-tag proc))
 (define (procedure-fo? datum) (tagged? procedure-tag datum))
 
+(define (closure env param* body) `(closure ,env ,param* ,body))
+(define (closure? datum) (and (pair? datum) (eq? 'closure (car datum))))
+
 (define (primitive name) (procedure-fo name))
 (define (primitive? datum)
   (and (procedure-fo? datum) (symbol? (tagged-payload datum))))
@@ -77,7 +80,7 @@
     (let ((proc (tagged-payload proc)))
       (cond
         ((symbol? proc) (apply-primitive proc args))
-        ((and (pair? proc) (eq? 'closure (car proc)))
+        ((closure? proc)
          (evaluate-fo (caddr (cdr proc))
                       (env-extend* (cadr proc) (caddr proc) args)))
         (else (err))))
@@ -95,7 +98,7 @@
      (if (evaluate-fo (cadr expr) env)
        (evaluate-fo (caddr expr) env)
        (evaluate-fo (cadddr expr) env)))
-    ((lambda) (procedure-fo `(closure ,env ,(cadr expr) ,(caddr expr))))
+    ((lambda) (procedure-fo (closure env (cadr expr) (caddr expr))))
     (else (error 'evaluate-fo (format "invalid expression ~s" expr)))))
 
 (define (evaluate expr env) (evaluate-fo (denote expr env) env))
