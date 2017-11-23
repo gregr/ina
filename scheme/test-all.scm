@@ -13,6 +13,11 @@
 (load "test-defs.scm")
 (load "test.scm")
 
+(printf "\nSimple compilation\n")
+(load "eval-k.scm")
+(load "test-defs.scm")
+(load "test.scm")
+
 (printf "\neval\n")
 (define (vector-reify v)
   (if (vector? v)
