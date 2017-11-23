@@ -21,10 +21,10 @@
                                (direct->k (k-join k) (cadddr expr)))
                      (cadr expr)))
     ((application)
-     (define app-k
-       (k-args-clear (k-proc (list-foldl direct->k-arg k-apply (caddr expr)))))
-     (direct->k (if (eq? 'k-return-pop (car k)) app-k (k-return-push app-k k))
-                (cadr expr)))
+     (let ((app-k (k-args-clear
+                    (k-proc (list-foldl direct->k-arg k-apply (caddr expr))))))
+       (direct->k (if (eq? 'k-return-pop (car k)) app-k (k-return-push app-k k))
+                  (cadr expr))))
     (else (error 'direct->k (format "invalid expression ~s" expr)))))
 
 (define (apply-primitive-k pname args)
@@ -62,21 +62,22 @@
          (evaluate-k
            k-return-pop (apply-primitive-k proc args) #f #f #f returns))
         ((and (pair? proc) (eq? 'closure (car proc)))
-         (define env (env-extend* (cadr proc) (caddr proc) args))
-         (evaluate-k (cadddr proc) #f #f '() env returns))
+         (evaluate-k (cadddr proc) #f #f '()
+                     (env-extend* (cadr proc) (caddr proc) args) returns))
         (else (err))))
     (err)))
 
 (define (evaluate-k k result proc args env returns)
   (case (car k)
     ((k-value)
-     (define expr (cadr k))
-     (define result
-       (case (car expr)
-         ((literal) (cadr expr))
-         ((reference) (env-ref env (cadr expr)))
-         ((lambda) (procedure-fo `(closure ,env ,(cadr expr) ,(caddr expr))))))
-     (evaluate-k (caddr k) result proc args env returns))
+     (let* ((expr (cadr k))
+            (result
+              (case (car expr)
+                ((literal) (cadr expr))
+                ((reference) (env-ref env (cadr expr)))
+                ((lambda) (procedure-fo
+                            `(closure ,env ,(cadr expr) ,(caddr expr)))))))
+       (evaluate-k (caddr k) result proc args env returns)))
     ((k-return-push)
      (evaluate-k (cadr k) result proc args env
                  (cons (list (caddr k) proc args env) returns)))
@@ -86,8 +87,8 @@
      (evaluate-k (cadr k) result proc (cons result args) env returns))
     ((k-apply) (apply-k proc args returns))
     ((k-return-pop)
-     (define r (car returns))
-     (evaluate-k (car r) result (cadr r) (caddr r) (cadddr r) (cdr returns)))
+     (let ((r (car returns)))
+       (evaluate-k (car r) result (cadr r) (caddr r) (cadddr r) (cdr returns))))
     ((k-branch)
      (evaluate-k (if result (cadr k) (caddr k)) result proc args env returns))
     ((k-join) (evaluate-k (cadr k) result proc args env returns))
