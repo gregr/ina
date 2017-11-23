@@ -1,4 +1,52 @@
-(load "eval-fo.scm")
+(load "common.scm")
+
+(define (tagged tag datum) (vector tag datum))
+(define (tagged? tag datum)
+  (and (vector? datum)
+       (= 2 (vector-length datum))
+       (eqv? tag (vector-ref datum 0))))
+(define (tagged-payload datum) (vector-ref datum 1))
+
+(define procedure-tag 'procedure)
+(define (procedure-fo proc) (tagged procedure-tag proc))
+(define (procedure-fo? datum) (tagged? procedure-tag datum))
+
+(define (closure env param* body) `(closure ,env ,param* ,body))
+
+(define (primitive name) (procedure-fo name))
+(define (primitive? datum)
+  (and (procedure-fo? datum) (symbol? (tagged-payload datum))))
+
+(define vector-tag 'vector)
+(define (vector-fo vec) (tagged vector-tag vec))
+(define (vector-fo? datum) (tagged? vector-tag datum))
+(define (vector-fo-length v)
+  (if (vector-fo? v)
+    (vector-length (tagged-payload v))
+    (error 'vector-fo-length
+           (format "expected a vector ~s" v))))
+(define (vector-fo-ref v i)
+  (if (vector-fo? v)
+    (vector-ref (tagged-payload v) i)
+    (error 'vector-fo-ref
+           (format "expected first argument to be a vector ~s" v))))
+(define (vector-reify vfo)
+  (if (vector-fo? vfo)
+    (tagged-payload vfo)
+    (error 'vector-reify (format "invalid vector ~s" vfo))))
+
+(define (denote-reference env addr name) `(reference ,addr ,name))
+(define (denote-literal value) `(literal ,value))
+(define (denote-vector ds)
+  `(application ,(denote-literal (primitive 'vector)) ,ds))
+(define (denote-pair da dd)
+  `(application ,(denote-literal (primitive 'cons)) (,da ,dd)))
+(define (denote-procedure pdbody params env)
+  (let ((dbody (pdbody (env-extend-param* env params))))
+    `(lambda ,params ,dbody)))
+(define (denote-application dproc dargs)
+  `(application ,dproc ,dargs))
+(define (denote-if dc tdt tdf) `(if ,dc ,(tdt) ,(tdf)))
 
 ;; TODO:
 ;; Add k-[PRIMITIVE-OP] for each primitive.
