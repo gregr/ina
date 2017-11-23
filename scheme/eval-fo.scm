@@ -64,6 +64,7 @@
        (error 'apply-procedure-fo?
               (format "procedure? expects 1 argument ~s" args))))
     ((apply) (apply apply-fo args))
+    ((list->vector) (vector-fo (apply list->vector args)))
     ((vector) (vector-fo (apply vector args)))
     ((vector?) (apply vector-fo? args))
     ((vector-length) (apply vector-fo-length args))
@@ -97,7 +98,9 @@
     ((lambda) (procedure-fo `(closure ,env ,(cadr expr) ,(caddr expr))))
     (else (error 'evaluate-fo (format "invalid expression ~s" expr)))))
 
-(define env-initial
+(define (evaluate expr env) (evaluate-fo (denote expr env) env))
+
+(define env-primitives
   (env-extend-bindings
     env-empty
     `((cons . ,(primitive 'cons))
@@ -112,9 +115,12 @@
       (number? . ,(primitive 'number?))
       (procedure? . ,(primitive 'procedure?))
       (vector? . ,(primitive 'vector?))
-      (vector . ,(primitive 'vector))
+      (list->vector . ,(primitive 'list->vector))
       (vector-length . ,(primitive 'vector-length))
       (vector-ref . ,(primitive 'vector-ref))
       (apply . ,(primitive 'apply)))))
 
-(define (evaluate expr env) (evaluate-fo (denote expr env) env))
+(define env-initial
+  (env-extend-bindings
+    env-primitives
+    `((vector . ,(evaluate '(lambda arg* (list->vector arg*)) env-primitives)))))

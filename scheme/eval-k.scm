@@ -53,6 +53,7 @@
     ((apply)
      (apply (lambda (proc args)
               (apply-k proc args (list (list k-halt #f '())))) args))
+    ((list->vector) (vector-fo (apply list->vector args)))
     ((vector) (vector-fo (apply vector args)))
     ((vector?) (apply vector-fo? args))
     ((vector-length) (apply vector-fo-length args))
@@ -102,7 +103,7 @@
 (define (evaluate expr env)
   (evaluate-k (direct->k k-halt (denote expr env)) #f '() env '()))
 
-(define env-initial
+(define env-primitives
   (env-extend-bindings
     env-empty
     `((cons . ,(primitive 'cons))
@@ -117,7 +118,12 @@
       (number? . ,(primitive 'number?))
       (procedure? . ,(primitive 'procedure?))
       (vector? . ,(primitive 'vector?))
-      (vector . ,(primitive 'vector))
+      (list->vector . ,(primitive 'list->vector))
       (vector-length . ,(primitive 'vector-length))
       (vector-ref . ,(primitive 'vector-ref))
       (apply . ,(primitive 'apply)))))
+
+(define env-initial
+  (env-extend-bindings
+    env-primitives
+    `((vector . ,(evaluate '(lambda arg* (list->vector arg*)) env-primitives)))))
