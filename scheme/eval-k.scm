@@ -1,5 +1,12 @@
 (load "eval-fo.scm")
 
+;; TODO:
+;; Evaluate proc after args and eliminate need for k-proc.
+;; Add k-[PRIMITIVE-OP] for each primitive.
+;;   eval-fo primitives need to be updated for this.
+;;   Replace initial env primitives with lambdas that invoke the primitive ops.
+;;     We'll need list->vector to implement vector in this way.
+
 (define (k-value expr k) `(k-value ,expr ,k))
 (define (k-proc k) `(k-proc ,k))
 (define (k-args-clear k) `(k-args-clear ,k))
@@ -7,6 +14,7 @@
 (define k-apply '(k-apply))
 (define k-return-pop '(k-return-pop))
 (define (k-return-push k return-k) `(k-return-push ,k ,return-k))
+;; TODO: generalize branching to handle 'case' efficiently.
 (define (k-branch k-true k-false) `(k-branch ,k-true ,k-false))
 (define (k-join k) `(k-join ,k))
 (define k-halt '(k-halt))
