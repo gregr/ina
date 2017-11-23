@@ -141,3 +141,23 @@
                          (k (function () ,(compile-fo (denote expr env))))))
                   (while (!== ,js-false k) ((put k (app k ()))))
                   (return result)))))
+
+(define env-initial
+  (env-extend-bindings
+    env-empty
+    `((cons . ,(primitive 'cons))
+      (car . ,(primitive 'car))
+      (cdr . ,(primitive 'cdr))
+      (= . ,(primitive '=))
+      (boolean=? . ,(primitive 'boolean=?))
+      (symbol=? . ,(primitive 'symbol=?))
+      (null? . ,(primitive 'null?))
+      (pair? . ,(primitive 'pair?))
+      (symbol? . ,(primitive 'symbol?))
+      (number? . ,(primitive 'number?))
+      (procedure? . ,(primitive 'procedure?))
+      (vector? . ,(primitive 'vector?))
+      (vector . ,(primitive 'vector))
+      (vector-length . ,(primitive 'vector-length))
+      (vector-ref . ,(primitive 'vector-ref))
+      (apply . ,(primitive 'apply)))))
