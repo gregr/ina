@@ -14,9 +14,12 @@
 (define (closure env param* body) `(closure ,env ,param* ,body))
 (define (closure? datum) (and (pair? datum) (eq? 'closure (car datum))))
 
-(define (primitive name) (procedure-fo name))
-(define (primitive? datum)
-  (and (procedure-fo? datum) (symbol? (tagged-payload datum))))
+(define (primitive name a*) `(primitive ,name ,a*))
+(define (primitive-closure name param* arg*)
+  (define penv (env-extend-param* env-empty param*))
+  (procedure-fo
+    (closure env-empty param*
+             (primitive name (map (lambda (a) (denote a penv)) arg*)))))
 
 (define vector-tag 'vector)
 (define (vector-fo vec) (tagged vector-tag vec))
@@ -38,10 +41,8 @@
 
 (define (denote-reference env addr name) `(reference ,addr ,name))
 (define (denote-literal value) `(literal ,value))
-(define (denote-vector ds)
-  `(application ,(denote-literal (primitive 'vector)) ,ds))
-(define (denote-pair da dd)
-  `(application ,(denote-literal (primitive 'cons)) (,da ,dd)))
+(define (denote-vector ds) `(primitive vector ,ds))
+(define (denote-pair da dd) `(primitive cons (,da ,dd)))
 (define (denote-procedure pdbody params env)
   (let ((dbody (pdbody (env-extend-param* env params))))
     `(lambda ,params ,dbody)))
@@ -49,7 +50,7 @@
   `(application ,dproc ,dargs))
 (define (denote-if dc tdt tdf) `(if ,dc ,(tdt) ,(tdf)))
 
-(define (apply-primitive pname args)
+(define (apply-primitive-fo pname args)
   (case pname
     ((cons) (apply cons args))
     ((car) (apply car args))
@@ -78,18 +79,19 @@
   (define (err) (error 'apply-fo (format "invalid procedure ~s" proc)))
   (if (procedure-fo? proc)
     (let ((proc (tagged-payload proc)))
-      (cond
-        ((symbol? proc) (apply-primitive proc args))
-        ((closure? proc)
-         (evaluate-fo (caddr (cdr proc))
-                      (env-extend* (cadr proc) (caddr proc) args)))
-        (else (err))))
+      (if (closure? proc)
+        (evaluate-fo (caddr (cdr proc))
+                     (env-extend* (cadr proc) (caddr proc) args))
+        (err)))
     (err)))
 
 (define (evaluate-fo expr env)
   (case (car expr)
     ((literal) (cadr expr))
     ((reference) (env-ref env (cadr expr)))
+    ((primitive)
+     (apply-primitive-fo
+       (cadr expr) (map (lambda (arg) (evaluate-fo arg env)) (caddr expr))))
     ((application)
      (apply-fo
        (evaluate-fo (cadr expr) env)
@@ -103,27 +105,23 @@
 
 (define (evaluate expr env) (evaluate-fo (denote expr env) env))
 
-(define env-primitives
-  (env-extend-bindings
-    env-empty
-    `((cons . ,(primitive 'cons))
-      (car . ,(primitive 'car))
-      (cdr . ,(primitive 'cdr))
-      (= . ,(primitive '=))
-      (boolean=? . ,(primitive 'boolean=?))
-      (symbol=? . ,(primitive 'symbol=?))
-      (null? . ,(primitive 'null?))
-      (pair? . ,(primitive 'pair?))
-      (symbol? . ,(primitive 'symbol?))
-      (number? . ,(primitive 'number?))
-      (procedure? . ,(primitive 'procedure?))
-      (vector? . ,(primitive 'vector?))
-      (list->vector . ,(primitive 'list->vector))
-      (vector-length . ,(primitive 'vector-length))
-      (vector-ref . ,(primitive 'vector-ref))
-      (apply . ,(primitive 'apply)))))
-
 (define env-initial
   (env-extend-bindings
-    env-primitives
-    `((vector . ,(evaluate '(lambda arg* (list->vector arg*)) env-primitives)))))
+    env-empty
+    `((cons . ,(primitive-closure 'cons '(a d) '(a d)))
+      (car . ,(primitive-closure 'car '(p) '(p)))
+      (cdr . ,(primitive-closure 'cdr '(p) '(p)))
+      (= . ,(primitive-closure '= '(x y) '(x y)))
+      (boolean=? . ,(primitive-closure 'boolean=? '(x y) '(x y)))
+      (symbol=? . ,(primitive-closure 'symbol=? '(x y) '(x y)))
+      (null? . ,(primitive-closure 'null? '(v) '(v)))
+      (pair? . ,(primitive-closure 'pair? '(v) '(v)))
+      (symbol? . ,(primitive-closure 'symbol? '(v) '(v)))
+      (number? . ,(primitive-closure 'number? '(v) '(v)))
+      (procedure? . ,(primitive-closure 'procedure? '(v) '(v)))
+      (vector? . ,(primitive-closure 'vector? '(v) '(v)))
+      (list->vector . ,(primitive-closure 'list->vector '(x*) '(x*)))
+      (vector . ,(primitive-closure 'list->vector 'x* '(x*)))
+      (vector-length . ,(primitive-closure 'vector-length '(v) '(v)))
+      (vector-ref . ,(primitive-closure 'vector-ref '(v i) '(v i)))
+      (apply . ,(primitive-closure 'apply '(p a*) '(p a*))))))
