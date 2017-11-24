@@ -14,9 +14,14 @@
 (define (closure env param* body) `(closure ,env ,param* ,body))
 (define (closure? datum) (and (pair? datum) (eq? 'closure (car datum))))
 
-(define (primitive name) (procedure-fo name))
-(define (primitive? datum)
-  (and (procedure-fo? datum) (symbol? (tagged-payload datum))))
+(define (primitive name a*) `(primitive ,name ,a*))
+(define (primitive-closure name param* arg*)
+  (define penv (env-extend-param* env-empty param*))
+  (procedure-fo
+    (closure env-empty param*
+             (direct->k k-return-pop
+                        (primitive name (map (lambda (a) (denote a penv))
+                                             arg*))))))
 
 (define vector-tag 'vector)
 (define (vector-fo vec) (tagged vector-tag vec))
@@ -38,10 +43,8 @@
 
 (define (denote-reference env addr name) `(reference ,addr ,name))
 (define (denote-literal value) `(literal ,value))
-(define (denote-vector ds)
-  `(application ,(denote-literal (primitive 'vector)) ,ds))
-(define (denote-pair da dd)
-  `(application ,(denote-literal (primitive 'cons)) (,da ,dd)))
+(define (denote-vector ds) (primitive 'vector ds))
+(define (denote-pair da dd) (primitive 'cons (list da dd)))
 (define (denote-procedure pdbody params env)
   (let ((dbody (pdbody (env-extend-param* env params))))
     `(lambda ,params ,dbody)))
@@ -49,13 +52,9 @@
   `(application ,dproc ,dargs))
 (define (denote-if dc tdt tdf) `(if ,dc ,(tdt) ,(tdf)))
 
-;; TODO:
-;; Add k-[PRIMITIVE-OP] for each primitive.
-;;   eval-fo primitives need to be updated for this.
-;;   Replace initial env primitives with lambdas that invoke the primitive ops.
-;;     We'll need list->vector to implement vector in this way.
-
-(define (k-value expr k) `(k-value ,expr ,k))
+(define (k-immediate iexpr k) `(k-immediate ,iexpr ,k))
+(define (k-registers-clear count k) `(k-registers-clear ,count ,k))
+(define (k-register-put i k) `(k-register-put ,i ,k))
 (define (k-args-clear k) `(k-args-clear ,k))
 (define (k-args-push k) `(k-args-push ,k))
 (define k-apply '(k-apply))
@@ -66,11 +65,43 @@
 (define (k-join k) `(k-join ,k))
 (define k-halt '(k-halt))
 
+(define (immediate expr)
+  (case (car expr)
+    ((literal reference) expr)
+    ((lambda) `(lambda ,(cadr expr) ,(direct->k k-return-pop (caddr expr))))
+    ((primitive) (primitive (cadr expr) (map immediate (caddr expr))))
+    ((if) (error 'immediate
+                 (format "if expressions are not valid immediate expression ~s"
+                         expr)))
+    ((application)
+     (error 'immediate
+            (format "applications are not valid immediate expressions ~s"
+                    expr)))
+    (else (error 'immediate (format "invalid immediate expression ~s" expr)))))
+
+(define (direct-primitive->k k e)
+  (define (lifted e)
+    (case (car e)
+      ((literal reference lambda) e)
+      ((primitive) (primitive (cadr e) (map lifted (caddr e))))
+      ((if application) (shift k (cons e k)))
+      (else (error 'lifted (format "invalid expression ~s" e)))))
+  (let loop ((count 0) (non-i* '()) (next (reset (cons #f (lifted e)))))
+    (cond ((car next) (loop (+ count 1) (cons (cons count (car next)) non-i*)
+                            ((cdr next) `(register ,count))))
+          ((null? non-i*) (k-immediate (cdr next) k))
+          (else (k-registers-clear
+                  count (list-foldl (lambda (ireg&e k)
+                                      (define ireg (car ireg&e))
+                                      (define e (cdr ireg&e))
+                                      (direct->k (k-register-put ireg k) e))
+                                    (k-immediate (cdr next) k)
+                                    non-i*))))))
+
 (define (direct->k k expr)
   (case (car expr)
-    ((literal reference) (k-value expr k))
-    ((lambda)
-     (k-value `(lambda ,(cadr expr) ,(direct->k k-return-pop (caddr expr))) k))
+    ((literal reference lambda) (k-immediate (immediate expr) k))
+    ((primitive) (direct-primitive->k k expr))
     ((if) (direct->k (k-branch (direct->k (k-join k) (caddr expr))
                                (direct->k (k-join k) (cadddr expr)))
                      (cadr expr)))
@@ -101,7 +132,7 @@
               (format "procedure? expects 1 argument ~s" args))))
     ((apply)
      (apply (lambda (proc args)
-              (apply-k proc args (list (list k-halt #f '())))) args))
+              (apply-k proc args (list (list k-halt #f '#() '())))) args))
     ((list->vector) (vector-fo (apply list->vector args)))
     ((vector) (vector-fo (apply vector args)))
     ((vector?) (apply vector-fo? args))
@@ -113,66 +144,74 @@
   (define (err) (error 'apply-k (format "invalid procedure ~s" proc)))
   (if (procedure-fo? proc)
     (let ((proc (tagged-payload proc)))
-      (cond
-        ((symbol? proc)
-         (evaluate-k
-           k-return-pop (apply-primitive-k proc args) #f #f returns))
-        ((closure? proc)
-         (evaluate-k (cadddr proc) #f '()
-                     (env-extend* (cadr proc) (caddr proc) args) returns))
-        (else (err))))
+      (if (closure? proc)
+        (evaluate-k/fresh
+          (cadddr proc) (env-extend* (cadr proc) (caddr proc) args) returns)
+        (err)))
     (err)))
 
-(define (evaluate-k k result args env returns)
+(define (evaluate-immediate expr regs env)
+  (define (self expr) (evaluate-immediate expr regs env))
+  (case (car expr)
+    ((literal) (cadr expr))
+    ((reference) (env-ref env (cadr expr)))
+    ((register) (vector-ref regs (cadr expr)))
+    ((lambda) (procedure-fo (closure env (cadr expr) (caddr expr))))
+    ((primitive) (apply-primitive-k (cadr expr) (map self (caddr expr))))
+    (else (error 'evaluate-immediate
+                 (format "invalid immediate exression ~s" expr)))))
+
+(define (evaluate-k k result regs args env returns)
   (case (car k)
-    ((k-value)
-     (let* ((expr (cadr k))
-            (result
-              (case (car expr)
-                ((literal) (cadr expr))
-                ((reference) (env-ref env (cadr expr)))
-                ((lambda) (procedure-fo
-                            (closure env (cadr expr) (caddr expr)))))))
-       (evaluate-k (caddr k) result args env returns)))
+    ((k-immediate)
+     (evaluate-k (caddr k) (evaluate-immediate (cadr k) regs env)
+                 regs args env returns))
+    ((k-register-put)
+     (vector-set! regs (cadr k) result)
+     (evaluate-k (caddr k) result regs args env returns))
+    ((k-registers-clear)
+     (evaluate-k (caddr k) result (make-vector (cadr k)) args env returns))
     ((k-return-push)
-     (evaluate-k (cadr k) result args env
-                 (cons (list (caddr k) args env) returns)))
-    ((k-args-clear) (evaluate-k (cadr k) result '() env returns))
-    ((k-args-push) (evaluate-k (cadr k) result (cons result args) env returns))
+     (evaluate-k (cadr k) result regs args env
+                 (cons (list (caddr k) regs args env) returns)))
+    ((k-args-clear) (evaluate-k (cadr k) result regs '() env returns))
+    ((k-args-push)
+     (evaluate-k (cadr k) result regs (cons result args) env returns))
     ((k-apply) (apply-k result args returns))
-    ((k-return-pop)
-     (let ((r (car returns)))
-       (evaluate-k (car r) result (cadr r) (caddr r) (cdr returns))))
+    ((k-return-pop) (let* ((r (car returns))
+                           (k (car r))
+                           (regs (cadr r))
+                           (args (caddr r))
+                           (env (cadddr r)))
+                      (evaluate-k k result regs args env (cdr returns))))
     ((k-branch)
-     (evaluate-k (if result (cadr k) (caddr k)) result args env returns))
-    ((k-join) (evaluate-k (cadr k) result args env returns))
+     (evaluate-k (if result (cadr k) (caddr k)) result regs args env returns))
+    ((k-join) (evaluate-k (cadr k) result regs args env returns))
     ((k-halt) result)
     (else (error 'evaluate-k (format "invalid expression ~s" expr)))))
 
-(define (evaluate expr env)
-  (evaluate-k (direct->k k-halt (denote expr env)) #f '() env '()))
+(define (evaluate-k/fresh k env rs) (evaluate-k k #f '#() '() env rs))
 
-(define env-primitives
-  (env-extend-bindings
-    env-empty
-    `((cons . ,(primitive 'cons))
-      (car . ,(primitive 'car))
-      (cdr . ,(primitive 'cdr))
-      (= . ,(primitive '=))
-      (boolean=? . ,(primitive 'boolean=?))
-      (symbol=? . ,(primitive 'symbol=?))
-      (null? . ,(primitive 'null?))
-      (pair? . ,(primitive 'pair?))
-      (symbol? . ,(primitive 'symbol?))
-      (number? . ,(primitive 'number?))
-      (procedure? . ,(primitive 'procedure?))
-      (vector? . ,(primitive 'vector?))
-      (list->vector . ,(primitive 'list->vector))
-      (vector-length . ,(primitive 'vector-length))
-      (vector-ref . ,(primitive 'vector-ref))
-      (apply . ,(primitive 'apply)))))
+(define (evaluate expr env)
+  (evaluate-k/fresh (direct->k k-halt (denote expr env)) env '()))
 
 (define env-initial
   (env-extend-bindings
-    env-primitives
-    `((vector . ,(evaluate '(lambda arg* (list->vector arg*)) env-primitives)))))
+    env-empty
+    `((cons . ,(primitive-closure 'cons '(a d) '(a d)))
+      (car . ,(primitive-closure 'car '(p) '(p)))
+      (cdr . ,(primitive-closure 'cdr '(p) '(p)))
+      (= . ,(primitive-closure '= '(x y) '(x y)))
+      (boolean=? . ,(primitive-closure 'boolean=? '(x y) '(x y)))
+      (symbol=? . ,(primitive-closure 'symbol=? '(x y) '(x y)))
+      (null? . ,(primitive-closure 'null? '(v) '(v)))
+      (pair? . ,(primitive-closure 'pair? '(v) '(v)))
+      (symbol? . ,(primitive-closure 'symbol? '(v) '(v)))
+      (number? . ,(primitive-closure 'number? '(v) '(v)))
+      (procedure? . ,(primitive-closure 'procedure? '(v) '(v)))
+      (vector? . ,(primitive-closure 'vector? '(v) '(v)))
+      (list->vector . ,(primitive-closure 'list->vector '(x*) '(x*)))
+      (vector . ,(primitive-closure 'list->vector 'x* '(x*)))
+      (vector-length . ,(primitive-closure 'vector-length '(v) '(v)))
+      (vector-ref . ,(primitive-closure 'vector-ref '(v i) '(v i)))
+      (apply . ,(primitive-closure 'apply '(p a*) '(p a*))))))
