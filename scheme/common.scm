@@ -115,7 +115,7 @@
     (else (error 'denote-quoted (format "invalid quoted form ~s" form)))))
 (define (denote expr env)
   (cond
-    ((or (boolean? expr) (number? expr) (vector? expr)) (denote-quoted expr))
+    ((or (boolean? expr) (number? expr)) (denote-quoted expr))
     ((symbol? expr) (denote-reference env (env-address env expr) expr))
     ((pair? expr)
      (let ((head (car expr)))
