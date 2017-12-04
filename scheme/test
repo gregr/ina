@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-racket -f test-all.scm
+racket -l racket -l racket/control -f test-all.scm
 for f in $(ls *.js); do printf "%s\n" "$f" && node "$f"; done;
 rm *.js || true
