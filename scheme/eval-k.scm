@@ -188,7 +188,7 @@
      (evaluate-k (if result (cadr k) (caddr k)) result regs args env returns))
     ((k-join) (evaluate-k (cadr k) result regs args env returns))
     ((k-halt) result)
-    (else (error 'evaluate-k (format "invalid expression ~s" expr)))))
+    (else (error 'evaluate-k (format "invalid k ~s" k)))))
 
 (define (evaluate-k/fresh k env rs) (evaluate-k k #f '#() '() env rs))
 
