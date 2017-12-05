@@ -16,8 +16,7 @@
 
 (define (hardcoded-closure param* arg* arg*->body)
   (define penv (env-extend-param* env-empty param*))
-  (define body (arg*->body (map (lambda (a) (denote a penv)) arg*)))
-  (evaluate-fo `(lambda ,param* ,body) env-empty))
+  `(lambda ,param* ,(arg*->body (map (lambda (a) (denote a penv)) arg*))))
 (define (primitive name a*) `(primitive ,name ,a*))
 (define (primitive-closure name param* arg*)
   (hardcoded-closure param* arg* (lambda (a*) (primitive name a*))))
@@ -106,7 +105,11 @@
 
 (define (evaluate expr env) (evaluate-fo (denote expr env) env))
 
-(define env-initial
+(define (build-env env)
+  (define (ve e) (evaluate-fo e env-empty))
+  (map (lambda (frame) (frame-new (frame-param* frame)
+                                  (map ve (frame-value* frame)))) env))
+(define env-initial-hardcoded
   (env-extend-bindings
     env-empty
     `((cons . ,(primitive-closure 'cons '(a d) '(a d)))
@@ -128,3 +131,4 @@
       (apply . ,(hardcoded-closure
                   '(p a*) '(p a*)
                   (lambda (pa*) `(application* ,(car pa*) ,(cadr pa*))))))))
+(define env-initial (build-env env-initial-hardcoded))
