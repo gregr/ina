@@ -36,7 +36,7 @@
     ((_ name expr expected-expr)
      (begin
        (define (assign vn rhs)
-         (string-append "var " vn " = JSON.stringify(" rhs "());"))
+         (string-append "var " vn " = JSON.stringify(" rhs ");"))
        (let* ((expected expected-expr) (actual expr))
          (with-output-to-file
            (string-append "generated-test-" (symbol->string name) ".js")
@@ -44,10 +44,10 @@
              (write-string
                (string-append
                  (assign "actual"
-                         (compile `(,'quasiquote ,actual) env-initial))
+                         (compile-js `(,'quasiquote ,actual) env-initial))
                  "\n"
                  (assign "expected"
-                         (compile `(quote ,expected) env-initial))
+                         (compile-js `(quote ,expected) env-initial))
                  "if(actual!==expected){console.log('FAIL','"
                  (symbol->string name)
                  "', '\\nACTUAL:',actual,'\\nEXPECTED:',expected);}")))))))))
