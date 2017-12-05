@@ -14,12 +14,13 @@
 (define (closure env param* body) `(closure ,env ,param* ,body))
 (define (closure? datum) (and (pair? datum) (eq? 'closure (car datum))))
 
+(define (hardcoded-closure param* arg* arg*->body)
+  (define penv (env-extend-param* env-empty param*))
+  (define body (arg*->body (map (lambda (a) (denote a penv)) arg*)))
+  (evaluate-fo `(lambda ,param* ,body) env-empty))
 (define (primitive name a*) `(primitive ,name ,a*))
 (define (primitive-closure name param* arg*)
-  (define penv (env-extend-param* env-empty param*))
-  (procedure-fo
-    (closure env-empty param*
-             (primitive name (map (lambda (a) (denote a penv)) arg*)))))
+  (hardcoded-closure param* arg* (lambda (a*) (primitive name a*))))
 
 (define vector-tag 'vector)
 (define (vector-fo vec) (tagged vector-tag vec))
@@ -67,7 +68,6 @@
        (procedure-fo? (car args))
        (error 'apply-procedure-fo?
               (format "procedure? expects 1 argument ~s" args))))
-    ((apply) (apply apply-fo args))
     ((list->vector) (vector-fo (apply list->vector args)))
     ((vector) (vector-fo (apply vector args)))
     ((vector?) (apply vector-fo? args))
@@ -93,9 +93,10 @@
      (apply-primitive-fo
        (cadr expr) (map (lambda (arg) (evaluate-fo arg env)) (caddr expr))))
     ((application)
-     (apply-fo
-       (evaluate-fo (cadr expr) env)
-       (map (lambda (arg) (evaluate-fo arg env)) (caddr expr))))
+     (apply-fo (evaluate-fo (cadr expr) env)
+               (map (lambda (arg) (evaluate-fo arg env)) (caddr expr))))
+    ((application*)
+     (apply-fo (evaluate-fo (cadr expr) env) (evaluate-fo (caddr expr) env)))
     ((if)
      (if (evaluate-fo (cadr expr) env)
        (evaluate-fo (caddr expr) env)
@@ -124,4 +125,6 @@
       (vector . ,(primitive-closure 'list->vector 'x* '(x*)))
       (vector-length . ,(primitive-closure 'vector-length '(v) '(v)))
       (vector-ref . ,(primitive-closure 'vector-ref '(v i) '(v i)))
-      (apply . ,(primitive-closure 'apply '(p a*) '(p a*))))))
+      (apply . ,(hardcoded-closure
+                  '(p a*) '(p a*)
+                  (lambda (pa*) `(application* ,(car pa*) ,(cadr pa*))))))))
