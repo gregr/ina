@@ -115,8 +115,7 @@
        (if (eq? 'k-return-pop (car k)) app-k (k-return-push app-k k))))
     ((application*)
      (let* ((proc-k (direct->k k-apply (cadr expr)))
-            (app-k (k-args-clear
-                     (direct->k (k-args-push* proc-k) (caddr expr)))))
+            (app-k (direct->k (k-args-push* proc-k) (caddr expr))))
        (if (eq? 'k-return-pop (car k)) app-k (k-return-push app-k k))))
     (else (error 'direct->k (format "invalid expression ~s" expr)))))
 
@@ -181,8 +180,7 @@
     ((k-args-clear) (evaluate-k (cadr k) result regs '() env returns))
     ((k-args-push)
      (evaluate-k (cadr k) result regs (cons result args) env returns))
-    ((k-args-push*)
-     (evaluate-k (cadr k) result regs (append result args) env returns))
+    ((k-args-push*) (evaluate-k (cadr k) result regs result env returns))
     ((k-apply) (apply-k result args returns))
     ((k-return-pop) (let* ((r (car returns))
                            (k (car r))
