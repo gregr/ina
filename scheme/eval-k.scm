@@ -14,14 +14,14 @@
 (define (closure env param* body) `(closure ,env ,param* ,body))
 (define (closure? datum) (and (pair? datum) (eq? 'closure (car datum))))
 
+(define (hardcoded-closure param* arg* arg*->body)
+  (define penv (env-extend-param* env-empty param*))
+  (define k (direct->k k-return-pop
+                       (arg*->body (map (lambda (a) (denote a penv)) arg*))))
+  (procedure-fo (closure env-empty param* k)))
 (define (primitive name a*) `(primitive ,name ,a*))
 (define (primitive-closure name param* arg*)
-  (define penv (env-extend-param* env-empty param*))
-  (procedure-fo
-    (closure env-empty param*
-             (direct->k k-return-pop
-                        (primitive name (map (lambda (a) (denote a penv))
-                                             arg*))))))
+  (hardcoded-closure param* arg* (lambda (a*) (primitive name a*))))
 
 (define vector-tag 'vector)
 (define (vector-fo vec) (tagged vector-tag vec))
@@ -48,8 +48,7 @@
 (define (denote-procedure pdbody params env)
   (let ((dbody (pdbody (env-extend-param* env params))))
     `(lambda ,params ,dbody)))
-(define (denote-application dproc dargs)
-  `(application ,dproc ,dargs))
+(define (denote-application dproc dargs) `(application ,dproc ,dargs))
 (define (denote-if dc tdt tdf) `(if ,dc ,(tdt) ,(tdf)))
 
 (define (k-immediate iexpr k) `(k-immediate ,iexpr ,k))
@@ -57,6 +56,7 @@
 (define (k-register-put i k) `(k-register-put ,i ,k))
 (define (k-args-clear k) `(k-args-clear ,k))
 (define (k-args-push k) `(k-args-push ,k))
+(define (k-args-push* k) `(k-args-push* ,k))
 (define k-apply '(k-apply))
 (define k-return-pop '(k-return-pop))
 (define (k-return-push k return-k) `(k-return-push ,k ,return-k))
@@ -112,6 +112,11 @@
                      (list-foldl (lambda (ea k) (direct->k (k-args-push k) ea))
                                  proc-k (caddr expr)))))
        (if (eq? 'k-return-pop (car k)) app-k (k-return-push app-k k))))
+    ((application*)
+     (let* ((proc-k (direct->k k-apply (cadr expr)))
+            (app-k (k-args-clear
+                     (direct->k (k-args-push* proc-k) (caddr expr)))))
+       (if (eq? 'k-return-pop (car k)) app-k (k-return-push app-k k))))
     (else (error 'direct->k (format "invalid expression ~s" expr)))))
 
 (define (apply-primitive-k pname args)
@@ -131,9 +136,6 @@
        (procedure-fo? (car args))
        (error 'apply-procedure-fo?
               (format "procedure? expects 1 argument ~s" args))))
-    ((apply)
-     (apply (lambda (proc args)
-              (apply-k proc args (list (list k-halt #f '#() '())))) args))
     ((list->vector) (vector-fo (apply list->vector args)))
     ((vector) (vector-fo (apply vector args)))
     ((vector?) (apply vector-fo? args))
@@ -178,6 +180,8 @@
     ((k-args-clear) (evaluate-k (cadr k) result regs '() env returns))
     ((k-args-push)
      (evaluate-k (cadr k) result regs (cons result args) env returns))
+    ((k-args-push*)
+     (evaluate-k (cadr k) result regs (append result args) env returns))
     ((k-apply) (apply-k result args returns))
     ((k-return-pop) (let* ((r (car returns))
                            (k (car r))
@@ -215,4 +219,6 @@
       (vector . ,(primitive-closure 'list->vector 'x* '(x*)))
       (vector-length . ,(primitive-closure 'vector-length '(v) '(v)))
       (vector-ref . ,(primitive-closure 'vector-ref '(v i) '(v i)))
-      (apply . ,(primitive-closure 'apply '(p a*) '(p a*))))))
+      (apply . ,(hardcoded-closure
+                  '(p a*) '(p a*)
+                  (lambda (pa*) `(application* ,(car pa*) ,(cadr pa*))))))))
