@@ -92,7 +92,6 @@
   (ev '(apply (lambda (a b c) b) '(1 2 3)))
   (apply (lambda (a b c) b) '(1 2 3)))
 
-
 (test 'if-1
   (ev '(if (car '(#t . #f)) 'yes 'no))
   'yes)
@@ -148,6 +147,21 @@
 (test 'qq-4
  (ev '`(1 `,(cons 2 3) ,(cons 4 5) `(,(cons 6 ,(cons 7 8))) 100))
  `(1 `,(cons 2 3) ,(cons 4 5) `(,(cons 6 ,(cons 7 8))) 100))
+
+(test 'fix-0
+  (ev '(let ((fix (lambda (f)
+                    ((lambda (d) (d d))
+                     (lambda (x) (f (lambda (a b) ((x x) a b))))))))
+         (let ((append
+                 (fix (lambda (append)
+                        (lambda (xs ys)
+                          (if (null? xs)
+                            ys
+                            (cons (car xs) (append (cdr xs) ys))))))))
+           `(,(append '() '())
+             ,(append '(foo) '(bar))
+             ,(append '(1 2) '(3 4))))))
+  '(() (foo bar) (1 2 3 4)))
 
 (test 'fix-1
   (ev '(let ((fix (lambda (f)
