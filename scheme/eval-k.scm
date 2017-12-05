@@ -14,11 +14,12 @@
 (define (closure env param* body) `(closure ,env ,param* ,body))
 (define (closure? datum) (and (pair? datum) (eq? 'closure (car datum))))
 
+(define (evaluate-hardcoded expr)
+  (evaluate-immediate (immediate expr) #f env-empty))
 (define (hardcoded-closure param* arg* arg*->body)
   (define penv (env-extend-param* env-empty param*))
-  (define k (direct->k k-return-pop
-                       (arg*->body (map (lambda (a) (denote a penv)) arg*))))
-  (procedure-fo (closure env-empty param* k)))
+  (evaluate-hardcoded
+    `(lambda ,param* ,(arg*->body (map (lambda (a) (denote a penv)) arg*)))))
 (define (primitive name a*) `(primitive ,name ,a*))
 (define (primitive-closure name param* arg*)
   (hardcoded-closure param* arg* (lambda (a*) (primitive name a*))))
