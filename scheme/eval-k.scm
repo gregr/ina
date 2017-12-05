@@ -61,7 +61,7 @@
 (define k-return-pop '(k-return-pop))
 (define (k-return-push k return-k) `(k-return-push ,k ,return-k))
 ;; TODO: generalize branching to handle 'case' efficiently.
-(define (k-branch k-true k-false) `(k-branch ,k-true ,k-false))
+(define (k-branch k-true k-false k-join) `(k-branch ,k-true ,k-false ,k-join))
 (define (k-join k) `(k-join ,k))
 (define k-halt '(k-halt))
 
@@ -103,7 +103,8 @@
     ((literal reference lambda) (k-immediate (immediate expr) k))
     ((primitive) (direct-primitive->k k expr))
     ((if) (direct->k (k-branch (direct->k (k-join k) (caddr expr))
-                               (direct->k (k-join k) (cadddr expr)))
+                               (direct->k (k-join k) (cadddr expr))
+                               k)
                      (cadr expr)))
     ((application)
      (let* ((proc-k (direct->k k-apply (cadr expr)))
