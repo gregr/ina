@@ -14,11 +14,17 @@
   s-let* s-let*? s-let*-binding* s-let*-body
   s-letrec s-letrec? s-letrec-binding* s-letrec-body
   s-letrec* s-letrec*? s-letrec*-binding* s-letrec*-body
+  s-do s-do? s-do-binding-step* s-do-test s-do-finally* s-do-normally*
 
+  s-begin s-begin? s-begin-body*
   s-match s-match? s-match-arg s-match-clause*
   s-case s-case? s-case-arg s-case-clause*
   s-cond s-cond? s-cond-clause*
-  s-begin s-begin? s-begin-body*
+  s-and s-and? s-and-body*
+  s-or s-or? s-or-body*
+  s-when s-when? s-when-body*
+  s-unless s-unless? s-unless-body*
+
   s-quasiquote s-quasiquote? s-quasiquote-body
   s-quote s-quote? s-quote-body
   s-unquote s-unquote? s-unquote-body
@@ -50,11 +56,17 @@
   (s-let* s-let*? s-let*-binding* s-let*-body)
   (s-letrec s-letrec? s-letrec-binding* s-letrec-body)
   (s-letrec* s-letrec*? s-letrec*-binding* s-letrec*-body)
+  (s-do s-do? s-do-binding-step* s-do-test s-do-finally* s-do-normally*)
 
+  (s-begin s-begin? s-begin-body*)
   (s-match s-match? s-match-arg s-match-clause*)
   (s-case s-case? s-case-arg s-case-clause*)
   (s-cond s-cond? s-cond-clause*)
-  (s-begin s-begin? s-begin-body*)
+  (s-and s-and? s-and-body*)
+  (s-or s-or? s-or-body*)
+  (s-when s-when? s-when-body*)
+  (s-unless s-unless? s-unless-body*)
+
   (s-quasiquote s-quasiquote? s-quasiquote-body)
   (s-quote s-quote? s-quote-body)
   (s-unquote s-unquote? s-unquote-body)
