@@ -52,7 +52,7 @@
   (s-lambda s-lambda? s-lambda-param* s-lambda-body)
 
   (s-define s-define? s-define-name s-define-body)
-  (s-let s-let? s-let-binding* s-let-body)
+  (s-let s-let? s-let-name s-let-binding* s-let-body)
   (s-let* s-let*? s-let*-binding* s-let*-body)
   (s-letrec s-letrec? s-letrec-binding* s-letrec-body)
   (s-letrec* s-letrec*? s-letrec*-binding* s-letrec*-body)
