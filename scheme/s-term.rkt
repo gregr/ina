@@ -15,8 +15,8 @@
   s-unsyntax-splicing s-unsyntax-splicing? s-unsyntax-splicing-body
 
   s-set! s-set!? s-set!-name s-set!-body
-  s-shift s-shift? s-shift-tag s-shift-body
-  s-reset s-reset? s-reset-tag s-reset-body
+  s-shift s-shift? s-shift-body
+  s-reset s-reset? s-reset-body
 
   name?
   name-bound name-bound? name-bound-address
@@ -40,8 +40,8 @@
   (s-unsyntax-splicing s-unsyntax-splicing? s-unsyntax-splicing-body)
 
   (s-set! s-set!? s-set!-name s-set!-body)
-  (s-shift s-shift? s-shift-tag s-shift-body)
-  (s-reset s-reset? s-reset-tag s-reset-body)
+  (s-shift s-shift? s-shift-body)
+  (s-reset s-reset? s-reset-body)
   )
 
 (define-record-variant
