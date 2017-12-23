@@ -1,7 +1,6 @@
 #lang racket/base
 (provide
   po?
-  po-list->vector po-list->vector? po-list->vector-l
   po-vector po-vector? po-vector-x*
   po-vector-length po-vector-length? po-vector-length-v
   po-vector-ref po-vector-ref? po-vector-ref-v
@@ -39,7 +38,6 @@
 
 (define-record-variant
   po?
-  (po-list->vector po-list->vector? po-list->vector-l)
   (po-vector po-vector? po-vector-x*)
   (po-vector-length po-vector-length? po-vector-length-v)
   (po-vector-ref po-vector-ref? po-vector-ref-v)
