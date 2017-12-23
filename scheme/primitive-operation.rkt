@@ -26,8 +26,6 @@
   po-+ po-+? po-+-a po-+-b
   po-* po-*? po-*-a po-*-b
 
-  po-set-car! po-set-car!? po-set-car!-c po-set-car!-x
-  po-set-cdr! po-set-cdr!? po-set-cdr!-c po-set-cdr!-x
   po-vector-set! po-vector-set!? po-vector-set!-v po-vector-set!-i po-vector-set!-x
   )
 (require "record.rkt")
@@ -59,7 +57,5 @@
   (po-+ po-+? po-+-a po-+-b)
   (po-* po-*? po-*-a po-*-b)
 
-  (po-set-car! po-set-car!? po-set-car!-c po-set-car!-x)
-  (po-set-cdr! po-set-cdr!? po-set-cdr!-c po-set-cdr!-x)
   (po-vector-set! po-vector-set!? po-vector-set!-v po-vector-set!-i po-vector-set!-x)
   )

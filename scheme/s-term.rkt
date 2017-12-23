@@ -14,7 +14,6 @@
   s-unsyntax s-unsyntax? s-unsyntax-body
   s-unsyntax-splicing s-unsyntax-splicing? s-unsyntax-splicing-body
 
-  s-set! s-set!? s-set!-name s-set!-body
   s-shift s-shift? s-shift-body
   s-reset s-reset? s-reset-body
 
@@ -39,7 +38,6 @@
   (s-unsyntax s-unsyntax? s-unsyntax-body)
   (s-unsyntax-splicing s-unsyntax-splicing? s-unsyntax-splicing-body)
 
-  (s-set! s-set!? s-set!-name s-set!-body)
   (s-shift s-shift? s-shift-body)
   (s-reset s-reset? s-reset-body)
   )
