@@ -11,6 +11,7 @@
   po-cdr po-cdr? po-cdr-c
 
   po-vectorp po-vectorp? po-vectorp-x
+  po-mvectorp po-mvectorp? po-mvectorp-x
   po-pairp po-pairp? po-pairp-x
   po-nullp po-nullp? po-nullp-x
   po-symbolp po-symbolp? po-symbolp-x
@@ -26,7 +27,13 @@
   po-+ po-+? po-+-a po-+-b
   po-* po-*? po-*-a po-*-b
 
-  po-vector-set! po-vector-set!? po-vector-set!-v po-vector-set!-i po-vector-set!-x
+  po-make-mvector po-make-mvector? po-make-mvector-n
+  po-mvector->vector po-mvector->vector? po-mvector->vector-v
+  po-mvector-length po-mvector-length? po-mvector-length-v
+  po-mvector-ref po-mvector-ref? po-mvector-ref-v
+
+  po-mvector-set! po-mvector-set!?
+  po-mvector-set!-v po-mvector-set!-i po-mvector-set!-x
   )
 (require "record.rkt")
 
@@ -42,6 +49,7 @@
   (po-cdr po-cdr? po-cdr-c)
 
   (po-vectorp po-vectorp? po-vectorp-x)
+  (po-mvectorp po-mvectorp? po-mvectorp-x)
   (po-pairp po-pairp? po-pairp-x)
   (po-nullp po-nullp? po-nullp-x)
   (po-symbolp po-symbolp? po-symbolp-x)
@@ -57,5 +65,10 @@
   (po-+ po-+? po-+-a po-+-b)
   (po-* po-*? po-*-a po-*-b)
 
-  (po-vector-set! po-vector-set!? po-vector-set!-v po-vector-set!-i po-vector-set!-x)
+  (po-make-mvector po-make-mvector? po-make-mvector-n)
+  (po-mvector->vector po-mvector->vector? po-mvector->vector-v)
+  (po-mvector-length po-mvector-length? po-mvector-length-v)
+  (po-mvector-ref po-mvector-ref? po-mvector-ref-v)
+  (po-mvector-set!
+    po-mvector-set!? po-mvector-set!-v po-mvector-set!-i po-mvector-set!-x)
   )
