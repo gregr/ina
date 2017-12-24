@@ -12,15 +12,14 @@
   po-vectorp po-vectorp? po-vectorp-x
   po-mvectorp po-mvectorp? po-mvectorp-x
   po-pairp po-pairp? po-pairp-x
-  po-nullp po-nullp? po-nullp-x
   po-symbolp po-symbolp? po-symbolp-x
   po-numberp po-numberp? po-numberp-x
   po-procedurep po-procedurep? po-procedurep-x
 
-  po-boolean= po-boolean=? po-boolean=-x
-  po-symbol= po-symbol=? po-symbol=-x
-  po-= po-=? po-=-x
+  po-eq po-eq? po-eq-x po-eq-y
+  po-eqv po-eqv? po-eqv-x po-eqv-y
 
+  po-= po-=? po-=-x
   po-<= po-<=? po-<=-a po-<=-b
   po-< po-<? po-<-a po-<-b
   po-+ po-+? po-+-a po-+-b
@@ -49,15 +48,14 @@
   (po-vectorp po-vectorp? po-vectorp-x)
   (po-mvectorp po-mvectorp? po-mvectorp-x)
   (po-pairp po-pairp? po-pairp-x)
-  (po-nullp po-nullp? po-nullp-x)
   (po-symbolp po-symbolp? po-symbolp-x)
   (po-numberp po-numberp? po-numberp-x)
   (po-procedurep po-procedurep? po-procedurep-x)
 
-  (po-boolean= po-boolean=? po-boolean=-x)
-  (po-symbol= po-symbol=? po-symbol=-x)
-  (po-= po-=? po-=-x)
+  (po-eq po-eq? po-eq-x po-eq-y)
+  (po-eqv po-eqv? po-eqv-x po-eqv-y)
 
+  (po-= po-=? po-=-x)
   (po-<= po-<=? po-<=-a po-<=-b)
   (po-< po-<? po-<-a po-<-b)
   (po-+ po-+? po-+-a po-+-b)
