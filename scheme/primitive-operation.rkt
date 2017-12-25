@@ -26,7 +26,6 @@
   po-numberp po-numberp? po-numberp-x
   po-procedurep po-procedurep? po-procedurep-x
 
-  po-eq po-eq? po-eq-x po-eq-y
   po-eqv po-eqv? po-eqv-x po-eqv-y
 
   po-= po-=? po-=-x
@@ -71,7 +70,6 @@
   (po-numberp po-numberp? po-numberp-x)
   (po-procedurep po-procedurep? po-procedurep-x)
 
-  (po-eq po-eq? po-eq-x po-eq-y)
   (po-eqv po-eqv? po-eqv-x po-eqv-y)
 
   (po-= po-=? po-=-x)
