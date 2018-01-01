@@ -3,11 +3,10 @@
   s-term?
   s-literal s-literal? s-literal-datum
   s-variable s-variable? s-variable-id
-  s-primitive-operation s-primitive-operation? s-primitive-operation-op
-  s-if s-if? s-if-c s-if-t s-if-f
-  s-apply s-apply? s-apply-proc s-apply-arg
   s-lambda s-lambda? s-lambda-id s-lambda-body
-  s-letfix s-letfix? s-letfix-binding* s-letfix-body
+  s-apply s-apply? s-apply-proc s-apply-arg
+  s-if s-if? s-if-c s-if-t s-if-f
+  s-primitive-operation s-primitive-operation? s-primitive-operation-op
 
   s-syntax s-syntax? s-syntax-body
   s-quasisyntax s-quasisyntax? s-quasisyntax-body
@@ -23,11 +22,10 @@
   s-term?
   (s-literal s-literal? s-literal-datum)
   (s-variable s-variable? s-variable-id)
-  (s-primitive-operation s-primitive-operation? s-primitive-operation-op)
-  (s-if s-if? s-if-c s-if-t s-if-f)
-  (s-apply s-apply? s-apply-proc s-apply-arg)
   (s-lambda s-lambda? s-lambda-id s-lambda-body)
-  (s-letfix s-letfix? s-letfix-binding* s-letfix-body)
+  (s-apply s-apply? s-apply-proc s-apply-arg)
+  (s-if s-if? s-if-c s-if-t s-if-f)
+  (s-primitive-operation s-primitive-operation? s-primitive-operation-op)
 
   (s-syntax s-syntax? s-syntax-body)
   (s-quasisyntax s-quasisyntax? s-quasisyntax-body)
