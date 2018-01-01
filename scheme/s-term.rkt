@@ -5,7 +5,7 @@
   s-variable s-variable? s-variable-id
   s-primitive-operation s-primitive-operation? s-primitive-operation-op
   s-if s-if? s-if-c s-if-t s-if-f
-  s-app s-app? s-app-proc s-app-arg*
+  s-apply s-apply? s-apply-proc s-apply-arg
   s-lambda s-lambda? s-lambda-id s-lambda-body
   s-letfix s-letfix? s-letfix-binding* s-letfix-body
 
@@ -25,7 +25,7 @@
   (s-variable s-variable? s-variable-id)
   (s-primitive-operation s-primitive-operation? s-primitive-operation-op)
   (s-if s-if? s-if-c s-if-t s-if-f)
-  (s-app s-app? s-app-proc s-app-arg*)
+  (s-apply s-apply? s-apply-proc s-apply-arg)
   (s-lambda s-lambda? s-lambda-id s-lambda-body)
   (s-letfix s-letfix? s-letfix-binding* s-letfix-body)
 
