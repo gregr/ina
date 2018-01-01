@@ -3,7 +3,7 @@
   po?
   po-vector po-vector? po-vector-x*
   po-vector-length po-vector-length? po-vector-length-v
-  po-vector-ref po-vector-ref? po-vector-ref-v
+  po-vector-ref po-vector-ref? po-vector-ref-v po-vector-ref-i
 
   po-cons po-cons? po-cons-a po-cons-d
   po-car po-car? po-car-c
@@ -44,7 +44,7 @@
   po?
   (po-vector po-vector? po-vector-x*)
   (po-vector-length po-vector-length? po-vector-length-v)
-  (po-vector-ref po-vector-ref? po-vector-ref-v)
+  (po-vector-ref po-vector-ref? po-vector-ref-v po-vector-ref-i)
 
   (po-cons po-cons? po-cons-a po-cons-d)
   (po-car po-car? po-car-c)
