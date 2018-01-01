@@ -28,11 +28,8 @@
 
   po-eqv po-eqv? po-eqv-x po-eqv-y
 
-  po-= po-=? po-=-x
-  po-<= po-<=? po-<=-a po-<=-b
-  po-< po-<? po-<-a po-<-b
-  po-+ po-+? po-+-a po-+-b
-  po-* po-*? po-*-a po-*-b
+  po-num1 po-num1? po-num1-op po-num1-x po-num1-y
+  po-num2 po-num2? po-num2-op po-num2-x po-num2-y
 
   po-make-mvector po-make-mvector? po-make-mvector-n
   po-mvector-length po-mvector-length? po-mvector-length-v
@@ -72,11 +69,10 @@
 
   (po-eqv po-eqv? po-eqv-x po-eqv-y)
 
-  (po-= po-=? po-=-x)
-  (po-<= po-<=? po-<=-a po-<=-b)
-  (po-< po-<? po-<-a po-<-b)
-  (po-+ po-+? po-+-a po-+-b)
-  (po-* po-*? po-*-a po-*-b)
+  ;; num1: bnot truncate/round
+  (po-num1 po-num1? po-num1-op po-num1-x po-num1-y)
+  ;; num2: = <= < + * band bor bxor ashift quotient remainder
+  (po-num2 po-num2? po-num2-op po-num2-x po-num2-y)
 
   (po-make-mvector po-make-mvector? po-make-mvector-n)
   (po-mvector-length po-mvector-length? po-mvector-length-v)
