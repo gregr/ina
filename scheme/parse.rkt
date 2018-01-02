@@ -11,6 +11,7 @@
   "primitive-operation.rkt"
   "record.rkt"
   "s-term.rkt"
+  racket/vector
   )
 
 (define fresh-name
@@ -65,9 +66,16 @@
         ((or (datum-atom? datum) (pair? datum)) (s-literal datum))
         (else (error 'build-literal (format "unhandled datum ~s" datum)))))
 (define build-null (build-literal '()))
-(define (build-pair ta td) (s-primitive-operation (po-cons ta td)))
+(define (build-pair ta td)
+  (if (and (s-literal? ta) (s-literal? td))
+    (build-literal (cons (s-literal-datum ta) (s-literal-datum td)))
+    (s-primitive-operation (po-cons ta td))))
 (define (build-list ts) (foldr build-pair build-null ts))
-(define (build-vector ts) (s-primitive-operation (po-vector ts)))
+(define (build-vector tv)
+  (define (not-literal? x) (not (s-literal? x)))
+  (if (= 0 (vector-length (vector-filter not-literal? tv)))
+    (build-literal (vector-map s-literal-datum tv))
+    (s-primitive-operation (po-vector tv))))
 (define (build-apply* tproc targ*)
   (s-apply tproc (s-primitive-operation (po-vector (list->vector targ*)))))
 
