@@ -69,7 +69,7 @@
 (define (build-list ts) (foldr build-pair build-null ts))
 (define (build-vector ts) (s-primitive-operation (po-vector ts)))
 (define (build-apply* tproc targ*)
-  (s-apply tproc (s-primitive-operation (po-vector targ*))))
+  (s-apply tproc (s-primitive-operation (po-vector (list->vector targ*)))))
 
 (define (preparse form) (lambda (env) (parse env form)))
 (define (parse* env form*) (map (lambda (e) (parse env e)) form*))
