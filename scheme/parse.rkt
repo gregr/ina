@@ -99,8 +99,10 @@
     (build-binder env param* (lambda (id env) (s-lambda id (env->body env)))))
   (define (build-let env param* targ* env->body)
     (build-apply* (build-lambda env param* env->body) targ*))
-  (define (build-letrec env param* env->arg* env->body)
-    (error 'build-letrec "TODO"))
+  (define (build-letrec env param* env->init* env->body)
+    (build-binder
+      env param* (lambda (id env)
+                   (s-letrec id (env->init* env) (env->body env)))))
   (cond
     ((datum-self-evaluating? form) (build-literal form))
     ((symbol? form) (senv-ref-variable env form))
@@ -114,6 +116,13 @@
                      (build-lambda env (cadr form) (preparse (caddr form))))
            ((if) (check (= 4 (length form)))
                  (apply s-if (parse* env (cdr form))))
+           ((letrec letrec*)
+            (check (= 3 (length form)))
+            (parse-binder/k
+              (cadr form) (caddr form)
+              (lambda (param* init* pbody)
+                (build-letrec
+                  env param* (lambda (env) (parse* env init*)) pbody))))
            ((let)
             (let* ((flen (length form))
                    (_ (check (or (= 3 flen) (= 4 flen))))
