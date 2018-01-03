@@ -40,9 +40,6 @@
   (define bindee (and (symbol? name) (senv-ref senv name)))
   (and (symbol? bindee) bindee))
 
-;; TODO: how should we represent primitive procedures and mvectors?
-(define-record r-vector r-vector? r-vector-datum)
-
 (define (datum-self-evaluating? datum)
   (or (boolean? datum) (number? datum) (char? datum) (string? datum)))
 (define (datum-atom? datum)
@@ -56,9 +53,7 @@
 (define (build-literal datum)
   (when (not (datum-valid-literal? datum))
     (error 'build-literal (format "invalid literal datum ~s" datum)))
-  (cond ((vector? datum) (s-literal (r-vector datum)))
-        ((or (datum-atom? datum) (pair? datum)) (s-literal datum))
-        (else (error 'build-literal (format "unhandled datum ~s" datum)))))
+  (s-literal datum))
 (define build-null (build-literal '()))
 (define (build-pair ta td)
   (if (and (s-literal? ta) (s-literal? td))
