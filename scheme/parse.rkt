@@ -70,8 +70,7 @@
   (if (= 0 (vector-length (vector-filter not-literal? tv)))
     (build-literal (vector-map s-literal-datum tv))
     (s-primitive-operation (po-vector tv))))
-(define (build-apply* tproc targ*)
-  (s-apply tproc (s-primitive-operation (po-vector (list->vector targ*)))))
+(define (build-apply tproc targ*) (s-apply tproc (list->vector targ*)))
 (define (build-list-append tx ty)
   (s-primitive-operation (po-list-append tx ty)))
 (define (build-list->vector tx) (s-primitive-operation (po-list->vector tx)))
@@ -104,7 +103,7 @@
   (define (build-lambda env param* env->body)
     (build-binder env param* (lambda (id env) (s-lambda id (env->body env)))))
   (define (build-let env param* targ* env->body)
-    (build-apply* (build-lambda env param* env->body) targ*))
+    (build-apply (build-lambda env param* env->body) targ*))
   (define (build-letrec env param* env->init* env->body)
     (build-binder
       env param* (lambda (id env)
@@ -133,7 +132,7 @@
           (build-letrec
             env (list name)
             (lambda (env) (list (build-lambda env param* pbody)))
-            (lambda (env) (build-apply* (parse env name) (parse* env arg*))))
+            (lambda (env) (build-apply (parse env name) (parse* env arg*))))
           (build-let env param* (parse* env arg*) pbody)))))
 
   (define (parse-let* form)
@@ -188,7 +187,7 @@
     ((pair? form)
      (let* ((head (car form)) (keyword (senv-ref-keyword env head)))
        (if (not keyword)
-         (build-apply* (parse env head) (parse* env (cdr form)))
+         (build-apply (parse env head) (parse* env (cdr form)))
          (case keyword
            ((quote)  (check (= 2 (length form))) (build-literal (cadr form)))
            ((lambda) (check (= 3 (length form)))
