@@ -77,6 +77,9 @@
     (s-primitive-operation (po-vector tv))))
 (define (build-apply* tproc targ*)
   (s-apply tproc (s-primitive-operation (po-vector (list->vector targ*)))))
+(define (build-list-append tx ty)
+  (s-primitive-operation (po-list-append tx ty)))
+(define (build-list->vector tx) (s-primitive-operation (po-list->vector tx)))
 
 (define (preparse form) (lambda (env) (parse env form)))
 (define (parse* env form*) (map (lambda (e) (parse env e)) form*))
@@ -161,8 +164,7 @@
                 ((eqv? 'unquote-splicing qqf) (bad-unquote-splicing))
                 ((datum-atom? qqf) (build-literal qqf))
                 ((vector? qqf)
-                 ;; TODO: (build-list->vector (loop level (vector->list qqf)))
-                 (build-vector (vector-map (lambda (x) (loop level x)) qqf)))
+                 (build-list->vector (loop level (vector->list qqf))))
                 ((not (pair? qqf)) (check #f))
                 ((eqv? 'unquote-splicing (car qqf)) (bad-unquote-splicing))
                 ((equal? '(unquote) qqf) (bad-unquote))
@@ -182,14 +184,12 @@
                       (null? (cddar qqf)))
                  (let ((td (loop level (cdr qqf))))
                    (if (= 0 level)
-                     ;; TODO: (build-append (parse env (cadar qqf)) td)
-                     (error 'parse (format "unquote-splicing not supported ~s"
-                                           form))
+                     (build-list-append (parse env (cadar qqf)) td)
                      (build-pair
                        (build-list (list (build-literal 'unquote-splicing)
                                          (loop (- level 1) (cadar qqf))))
                                  td))))
-                (else
-                  (build-pair (loop level (car qqf)) (loop level (cdr qqf)))))))
+                (else (build-pair (loop level (car qqf))
+                                  (loop level (cdr qqf)))))))
            (else (error 'parse (format "unbound identifier ~s" head)))))))
     (else (error 'parse (format "invalid syntax ~s" form)))))
