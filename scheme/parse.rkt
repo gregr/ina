@@ -106,8 +106,9 @@
     (build-apply (build-lambda env param* env->body) targ*))
   (define (build-letrec env param* env->init* env->body)
     (build-binder
-      env param* (lambda (id env)
-                   (s-letrec id (env->init* env) (env->body env)))))
+      env param*
+      (lambda (id env)
+        (s-letrec id (list->vector (env->init* env)) (env->body env)))))
 
   (define (parse-binder/k fbindings fbody k)
     (map check-binding fbindings)
