@@ -37,6 +37,9 @@
 
   po-mvector-set! po-mvector-set!?
   po-mvector-set!-v po-mvector-set!-i po-mvector-set!-x
+
+  po-list->vector po-list->vector? po-list->vector-x
+  po-list-append po-list-append? po-list-append-x po-list-append-y
   )
 (require "record.rkt")
 
@@ -79,4 +82,7 @@
   (po-mvector-ref po-mvector-ref? po-mvector-ref-v)
   (po-mvector-set!
     po-mvector-set!? po-mvector-set!-v po-mvector-set!-i po-mvector-set!-x)
+
+  (po-list->vector po-list->vector? po-list->vector-x)
+  (po-list-append po-list-append? po-list-append-x po-list-append-y)
   )
