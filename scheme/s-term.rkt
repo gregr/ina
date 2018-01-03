@@ -18,7 +18,7 @@
 
   s-set! s-set!? s-set!-id s-set!-body
 
-  s-shift s-shift? s-shift-body
+  s-shift s-shift? s-shift-id s-shift-body
   s-reset s-reset? s-reset-body
 
   s-id s-id? s-id-base s-id-offset
@@ -44,7 +44,7 @@
 
   (s-set! s-set!? s-set!-id s-set!-body)
 
-  (s-shift s-shift? s-shift-body)
+  (s-shift s-shift? s-shift-id s-shift-body)
   (s-reset s-reset? s-reset-body)
   )
 
