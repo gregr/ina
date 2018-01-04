@@ -86,6 +86,10 @@
     (if (not condition) (error 'parse (format "invalid syntax ~s" form))
       condition))
   (define (check-binding form) (check (and (list? form) (= 2 (length form)))))
+  (define (check-list= len form)
+    (check (and (list? form) (= len (length form)))))
+  (define (check-list<= len form)
+    (check (and (list? form) (<= len (length form)))))
 
   (define (build-binder env param* id&env->binder)
     (define p* (check (param-list? param*)))
@@ -105,21 +109,30 @@
       (lambda (id env)
         (s-letrec id (list->vector (env->init* env)) (env->body env)))))
 
+  (define (parse-quote form) (check-list= 2 form) (build-literal (cadr form)))
+
+  (define (parse-if form)
+    (check-list= 4 form) (apply s-if (parse* env (cdr form))))
+
+  (define (parse-lambda form)
+    (check-list<= 3 form)
+    (build-lambda env (cadr form) (preparse (caddr form))))
+
   (define (parse-binder/k fbindings fbody k)
     (map check-binding fbindings)
     (k (map car fbindings) (map cadr fbindings) (preparse fbody)))
 
   (define (parse-letrec form)
-    (check (= 3 (length form)))
+    (check-list<= 3 form)
     (parse-binder/k
       (cadr form) (caddr form)
       (lambda (param* init* pbody)
         (build-letrec env param* (lambda (env) (parse* env init*)) pbody))))
 
   (define (parse-let form)
-    (define flen (length form))
-    (define _ (check (or (= 3 flen) (= 4 flen))))
-    (define name (and (= 4 flen) (cadr form)))
+    (check-list<= 3 form)
+    (define name
+      (and (symbol? (cadr form)) (check (<= 4 (length form))) (cadr form)))
     (define parts (if name (cddr form) (cdr form)))
     (parse-binder/k
       (car parts) (cadr parts)
@@ -132,7 +145,7 @@
           (build-let env param* (parse* env arg*) pbody)))))
 
   (define (parse-let* form)
-    (check (= 3 (length form)))
+    (check-list<= 3 form)
     (parse-binder/k
       (cadr form) (caddr form)
       (lambda (param* arg* pbody)
@@ -145,7 +158,7 @@
 
   (define (parse-quasiquote form)
     (define (bad msg) (error 'parse (format "bad ~a ~s" msg form)))
-    (check (= 2 (length form)))
+    (check-list= 2 form)
     (let loop ((level 0) (qqf (cadr form)))
       (cond
         ((eqv? 'unquote qqf) (bad "unquote"))
@@ -185,11 +198,9 @@
        (if (not keyword)
          (build-apply (parse env head) (parse* env (cdr form)))
          (case keyword
-           ((quote)  (check (= 2 (length form))) (build-literal (cadr form)))
-           ((lambda) (check (= 3 (length form)))
-                     (build-lambda env (cadr form) (preparse (caddr form))))
-           ((if)     (check (= 4 (length form)))
-                     (apply s-if (parse* env (cdr form))))
+           ((quote)          (parse-quote form))
+           ((lambda)         (parse-lambda form))
+           ((if)             (parse-if form))
            ((letrec letrec*) (parse-letrec form))
            ((let)            (parse-let form))
            ((let*)           (parse-let* form))
