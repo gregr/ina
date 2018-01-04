@@ -9,6 +9,7 @@
   s-apply s-apply? s-apply-proc s-apply-arg*
   s-apply* s-apply*? s-apply*-proc s-apply*-arg
   s-if s-if? s-if-c s-if-t s-if-f
+  s-seq s-seq? s-seq-effect* s-seq-result
   s-primitive-operation s-primitive-operation? s-primitive-operation-op
 
   s-syntax s-syntax? s-syntax-body
@@ -35,6 +36,7 @@
   (s-apply s-apply? s-apply-proc s-apply-arg*)
   (s-apply* s-apply*? s-apply*-proc s-apply*-arg)
   (s-if s-if? s-if-c s-if-t s-if-f)
+  (s-seq s-seq? s-seq-effect* s-seq-result)
   (s-primitive-operation s-primitive-operation? s-primitive-operation-op)
 
   (s-syntax s-syntax? s-syntax-body)
