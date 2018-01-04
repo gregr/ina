@@ -231,6 +231,13 @@
                td))))
         (else (build-pair (loop level (car qqf)) (loop level (cdr qqf)))))))
 
+  (define (parse-begin form)
+    (check-list<= 1 form)
+    (define f* (reverse (cdr form)))
+    (define result (car f*))
+    (define effect* (reverse (cdr f*)))
+    (s-seq (list->vector (parse* env effect*)) (parse env result)))
+
   (cond
     ((datum-self-evaluating? form) (build-literal form))
     ((symbol? form)                (senv-ref-variable env form))
@@ -246,5 +253,6 @@
            ((let)            (parse-let form))
            ((let*)           (parse-let* form))
            ((quasiquote)     (parse-quasiquote form))
+           ((begin)          (parse-begin form))
            (else (error 'parse (format "unbound identifier ~s" head)))))))
     (else (error 'parse (format "invalid syntax ~s" form)))))
