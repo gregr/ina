@@ -109,6 +109,47 @@
       (lambda (id env)
         (s-letrec id (list->vector (env->init* env)) (env->body env)))))
 
+  (define (parse-define-binding form)
+    (check-list<= 3 form)
+    (define bound (cadr form))
+    (cond ((or (not bound) (symbol? bound))
+           (check (= 3 (length form))) (list bound (preparse (caddr form))))
+          (else (check-list<= 1 bound)
+                (list (car bound)
+                      (lambda (env)
+                        (build-lambda
+                          env (cdr bound) (preparse-body* (cddr form))))))))
+
+  (define (parse-body*-binding* env form*)
+    (let loop ((f* form*) (env env))
+      (define (continue)
+        (cons (list #f (preparse (car f*))) (loop (cdr f*) env)))
+      (cond ((null? f*) '())
+            ((pair? (car f*))
+             (define form (car f*))
+             (define keyword (senv-ref-keyword env (car form)))
+             (if (not keyword) (continue)
+               (case keyword
+                 ((begin) (check (list? (cdr form)))
+                          (loop (append (cdr form) (cdr f*)) env))
+                 ((define) (define binding (parse-define-binding form))
+                           (define senv (senv-set env (car binding) #f))
+                           (cons binding (loop (cdr f*) senv)))
+                 (else (continue)))))
+            (else (continue)))))
+
+  (define (parse-body* env form*)
+    (check-list<= 1 form*)
+    (define rb* (reverse (parse-body*-binding* env form*)))
+    (define body (and (check (not (caar rb*))) (cadar rb*)))
+    (define b* (reverse (cdr rb*)))
+    (if (null? b*) (body env)
+      (build-letrec env (map car b*)
+                    (lambda (env) (map (lambda (b) ((cadr b) env)) b*))
+                    body)))
+
+  (define (preparse-body* form*) (lambda (env) (parse-body* env form*)))
+
   (define (parse-quote form) (check-list= 2 form) (build-literal (cadr form)))
 
   (define (parse-if form)
@@ -116,16 +157,16 @@
 
   (define (parse-lambda form)
     (check-list<= 3 form)
-    (build-lambda env (cadr form) (preparse (caddr form))))
+    (build-lambda env (cadr form) (preparse-body* (cddr form))))
 
-  (define (parse-binder/k fbindings fbody k)
+  (define (parse-binder/k fbindings fbody* k)
     (map check-binding fbindings)
-    (k (map car fbindings) (map cadr fbindings) (preparse fbody)))
+    (k (map car fbindings) (map cadr fbindings) (preparse-body* fbody*)))
 
   (define (parse-letrec form)
     (check-list<= 3 form)
     (parse-binder/k
-      (cadr form) (caddr form)
+      (cadr form) (cddr form)
       (lambda (param* init* pbody)
         (build-letrec env param* (lambda (env) (parse* env init*)) pbody))))
 
@@ -135,7 +176,7 @@
       (and (symbol? (cadr form)) (check (<= 4 (length form))) (cadr form)))
     (define parts (if name (cddr form) (cdr form)))
     (parse-binder/k
-      (car parts) (cadr parts)
+      (car parts) (cdr parts)
       (lambda (param* arg* pbody)
         (if name
           (build-letrec
@@ -147,7 +188,7 @@
   (define (parse-let* form)
     (check-list<= 3 form)
     (parse-binder/k
-      (cadr form) (caddr form)
+      (cadr form) (cddr form)
       (lambda (param* arg* pbody)
         ((let loop ((p* param*) (a* arg*))
            (if (null? p*) pbody
