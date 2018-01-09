@@ -596,7 +596,11 @@
 
 (define prog1
   '(((False 0) (True 0) (Z 0) (S 1)
-     (quote 1) (+ 2) (* 2) (Even? 1) (Odd? 1) (lambda 1) (var 1) (app 2))
+     (quote 1) (+ 2) (* 2) (Even? 1) (Odd? 1) (lambda 1) (var 1) (app 2)
+     (Nil 0) (Cons 2))
+
+    (define (append (Nil) y) y)
+    (define (append (Cons a d) y) (Cons a (append d y)))
 
     (define (add (Z) y) y)
     (define (add (S x) y) (S (add x y)))
@@ -700,6 +704,22 @@
   (parse-transform-print
     prog1
     '(add W (add X Y))
+    '(W X Y)
+    40
+    1))
+
+(define append-assoc-t1
+  (parse-transform-print
+    prog1
+    '(append (append W X) Y)
+    '(W X Y)
+    40
+    1))
+
+(define append-assoc-t2
+  (parse-transform-print
+    prog1
+    '(append W (append X Y))
     '(W X Y)
     40
     1))
