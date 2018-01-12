@@ -605,6 +605,19 @@
     (define (mirror (Nil)) (Nil))
     (define (mirror (Cons a d)) (Cons (mirror d) (mirror a)))
 
+    (define (and? (False) y) (False))
+    (define (and? (True) y) y)
+
+    (define (ntree-equal? (Nil) y) (ntree-equal-nil? y))
+    (define (ntree-equal? (Cons a d) y) (ntree-equal-cons? y a d))
+
+    (define (ntree-equal-nil? (Nil)) (True))
+    (define (ntree-equal-nil? (Cons a d)) (False))
+
+    (define (ntree-equal-cons? (Nil) ya yd) (False))
+    (define (ntree-equal-cons? (Cons a d) ya yd)
+      (and? (ntree-equal? ya a) (ntree-equal? yd d)))
+
     (define (add (Z) y) y)
     (define (add (S x) y) (S (add x y)))
 
@@ -731,6 +744,18 @@
   (parse-transform-print
     prog1
     '(mirror (mirror X))
+    '(X)
+    40
+    1))
+
+;; This fails due to lack of tie-back of nested recurrences, e.g.:
+;; (ntree-equal? X X)
+;; =>
+;; (and? (ntree-equal? a12810 a12810) (ntree-equal? d12811 d12811))
+(define nt-eq-failure
+  (parse-transform-print
+    prog1
+    '(ntree-equal? X X)
     '(X)
     40
     1))
