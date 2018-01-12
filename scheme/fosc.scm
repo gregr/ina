@@ -602,6 +602,9 @@
     (define (append (Nil) y) y)
     (define (append (Cons a d) y) (Cons a (append d y)))
 
+    (define (mirror (Nil)) (Nil))
+    (define (mirror (Cons a d)) (Cons (mirror d) (mirror a)))
+
     (define (add (Z) y) y)
     (define (add (S x) y) (S (add x y)))
 
@@ -721,6 +724,14 @@
     prog1
     '(append W (append X Y))
     '(W X Y)
+    40
+    1))
+
+(define mirror-mirror-identity
+  (parse-transform-print
+    prog1
+    '(mirror (mirror X))
+    '(X)
     40
     1))
 
