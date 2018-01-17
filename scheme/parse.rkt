@@ -139,8 +139,8 @@
             (else (continue)))))
 
   (define (parse-body* env form*)
-    (check-list<= 1 form*)
     (define rb* (reverse (parse-body*-binding* env form*)))
+    (check-list<= 1 rb*)
     (define body (and (check (not (caar rb*))) (cadar rb*)))
     (define b* (reverse (cdr rb*)))
     (if (null? b*) (body env)
@@ -232,7 +232,7 @@
         (else (build-pair (loop level (car qqf)) (loop level (cdr qqf)))))))
 
   (define (parse-begin form)
-    (check-list<= 1 form)
+    (check-list<= 2 form)
     (define f* (reverse (cdr form)))
     (define result (car f*))
     (define effect* (reverse (cdr f*)))
