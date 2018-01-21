@@ -1,6 +1,14 @@
 #lang racket/base
 (provide
   parse
+  env-empty
+  env-alias
+  env-set-syntax
+  env-set-variable
+  env-ref-id
+  env-ref-syntax
+  env-ref-variable
+
   senv-empty
   senv-rename
   senv-set
@@ -16,10 +24,33 @@
 
 (define fresh-name
   (let ((scope 0))
-    (lambda (name)
-      (define sn (vector scope name))
+    (lambda (origin)
+      (define sn (vector scope origin))
       (set! scope (+ scope 1))
       sn)))
+
+(define-record-variant
+  binding?
+  (b-syntax b-syntax? b-syntax-transformer)
+  (b-variable b-variable?))
+
+(define env-empty (hash))
+(define (env-set env name id details)
+  (if name (hash-set env name (cons id details)) env))
+(define (env-set-variable senv name id) (env-set senv name id b-variable))
+(define (env-set-syntax senv name id trans)
+  (env-set senv name id (b-syntax trans)))
+(define (env-ref env name) (hash-ref env name (cons name #f)))
+(define (env-ref-id env name) (car (env-ref env name)))
+(define (env-ref-variable env name)
+  (define binding (env-ref env name))
+  (if (b-variable? (cdr binding)) (car binding)
+    (error 'env-ref-variable (format "unbound variable ~s" name))))
+(define (env-ref-syntax env name)
+  (define binding (env-ref env name))
+  (and (b-syntax? (cdr binding)) (b-syntax-transformer (cdr binding))))
+(define (env-alias env alias aliased)
+  (hash-set env alias (env-ref env aliased)))
 
 (define senv-empty (hash))
 (define (senv-set senv name syntax) (if name (hash-set senv name syntax) senv))
