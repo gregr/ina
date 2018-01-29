@@ -7,25 +7,25 @@
   quasisyntax
 
   syntax?
-  ;syntax->datum
-  ;datum->syntax
   syntax->list
+  syntax->datum
+  datum->syntax
 
-  ;identifier?
+  identifier?
   ;free-identifier=?
   ;bound-identifier=?
 
   syntax-pair?
-  ;syntax-vector?
+  syntax-vector?
   syntax-null?
-  ;syntax-boolean?
-  ;syntax-number?
-  ;syntax-string?
-  ;syntax-char?
+  syntax-boolean?
+  syntax-number?
+  syntax-string?
+  syntax-char?
 
-  ;syntax-car
-  ;syntax-cdr
-  ;syntax-vector-ref
+  syntax-car
+  syntax-cdr
+  syntax-vector-ref
 
   syntax-new
   syntax-datum
@@ -43,6 +43,7 @@
 
   (require
     (for-syntax racket/base)
+    racket/vector
     "record.rkt"
     )
 
@@ -66,7 +67,12 @@
     (or (type? stx)
         (and (syntax? stx) (syntax-type? type? (syntax-datum stx)))))
   (define (syntax-pair? stx) (syntax-type? pair? stx))
+  (define (syntax-vector? stx) (syntax-type? vector? stx))
   (define (syntax-null? stx) (syntax-type? null? stx))
+  (define (syntax-boolean? stx) (syntax-type? boolean? stx))
+  (define (syntax-number? stx) (syntax-type? number? stx))
+  (define (syntax-string? stx) (syntax-type? string? stx))
+  (define (syntax-char? stx) (syntax-type? char? stx))
 
   (define (syntax-pair-access access stx)
     (cond ((pair? stx) (access stx))
@@ -75,11 +81,28 @@
   (define (syntax-car stx) (syntax-pair-access car stx))
   (define (syntax-cdr stx) (syntax-pair-access cdr stx))
 
+  (define (syntax-vector-ref stx idx)
+    (cond ((vector? stx) (vector-ref stx idx))
+          ((syntax? stx) (syntax-vector-ref (syntax-datum stx) idx))
+          (else (error "datum is not a syntax vector:" stx))))
+
   (define (syntax->list stx)
     (cond ((syntax-null? stx) '())
           ((syntax-pair? stx)
            (cons (syntax-car stx) (syntax->list (syntax-cdr stx))))
           (else (error "datum is not a syntax list:" stx))))
+
+  (define (syntax->datum stx)
+    (cond ((syntax? stx) (syntax->datum (syntax-datum stx)))
+          ((pair? stx) (cons (syntax->datum (car stx))
+                             (syntax->datum (cdr stx))))
+          ((vector? stx) (vector-map syntax->datum stx))
+          (else stx)))
+
+  (define (datum->syntax stx datum)
+    (syntax-new datum (syntax-hygiene stx) #f #f))
+
+  (define (identifier? stx) (syntax-type? symbol? stx))
 
   (define-syntax racket-syntax (syntax-rules () ((_ s) #'s)))
   (define-syntax racket-quasisyntax (syntax-rules () ((_ s) #`s)))
