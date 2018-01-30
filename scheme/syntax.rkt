@@ -30,7 +30,6 @@
   syntax-new
   syntax-datum
   syntax-hygiene
-  syntax-cursor
   syntax-metadata
 
   ;syntax-flipmark
@@ -48,8 +47,7 @@
     )
 
   (define-record
-    syntax-new syntax?
-    syntax-datum syntax-hygiene syntax-cursor syntax-metadata)
+    syntax-new syntax? syntax-datum syntax-hygiene syntax-metadata)
 
   (define (racket-syntax-metadata stx)
     (vector 'racket-source-info
@@ -61,7 +59,7 @@
             (syntax-position stx)))
 
   (define (syntax-new/racket datum stx)
-    (syntax-new datum #f #f (racket-syntax-metadata stx)))
+    (syntax-new datum '() (racket-syntax-metadata stx)))
 
   (define (syntax-type? type? stx)
     (or (type? stx)
@@ -100,7 +98,7 @@
           (else stx)))
 
   (define (datum->syntax stx datum)
-    (syntax-new datum (syntax-hygiene stx) #f #f))
+    (syntax-new datum (syntax-hygiene stx) #f))
 
   (define (identifier? stx) (syntax-type? symbol? stx))
 
