@@ -11,9 +11,11 @@
   syntax->datum
   datum->syntax
 
+  label=?
+  identifier->label
   identifier?
-  ;free-identifier=?
-  ;bound-identifier=?
+  free-identifier=?
+  bound-identifier=?
 
   syntax-pair?
   syntax-vector?
@@ -53,6 +55,7 @@
 
   (define label-fresh
     (let ((label 0)) (lambda () (set! label (+ 1 label)) label)))
+  (define (label=? a b) (eqv? a b))
   (define (renaming-fresh symbol marks) (vector symbol marks (label-fresh)))
   (define (renaming? hd) (vector? hd))
   (define (renaming-symbol r) (vector-ref r 0))
@@ -66,6 +69,17 @@
   (define (hygiene-append h1 h2)
     (if (null? h1) h2
       (hygiene-cons (car h1) (hygiene-append (cdr h1) h2))))
+
+  (define (hygiene->mark* h*) (filter mark? h*))
+
+  (define (hygiene->label h* symbol)
+    (cond ((null? h*) symbol)
+          (else (define h (car h*))
+                (if (and (renaming? h)
+                         (eqv? (renaming-symbol h) symbol)
+                         (equal? (renaming-marks h) (hygiene->mark* (cdr h*))))
+                  (renaming-label h)
+                  (hygiene->label (cdr h*) symbol)))))
 
   (define-record
     syntax-new syntax?
@@ -134,6 +148,19 @@
 
   (define (syntax-mark stx mark) (syntax-hygiene-cons stx mark))
   (define (syntax-rename stx renaming) (syntax-hygiene-cons stx renaming))
+
+  (define (syntax->mark* stx) (hygiene->mark* (syntax-hygiene stx)))
+
+  (define (identifier->label i)
+    (hygiene->label (syntax-hygiene i) (syntax-datum i)))
+
+  (define (free-identifier=? a b)
+    (label=? (identifier->label a) (identifier->label b)))
+
+  (define (bound-identifier=? a b)
+    (and (identifier? a) (identifier? b)
+         (eqv? (syntax-datum a) (syntax-datum b))
+         (equal? (syntax->mark* a) (syntax->mark* b))))
 
   (define-syntax racket-syntax (syntax-rules () ((_ s) #'s)))
   (define-syntax racket-quasisyntax (syntax-rules () ((_ s) #`s)))
