@@ -27,9 +27,7 @@
   syntax-cdr
   syntax-vector-ref
 
-  syntax-new
-  syntax-datum
-  syntax-hygiene
+  syntax/metadata
   syntax-metadata
 
   syntax-mark
@@ -73,6 +71,8 @@
     syntax-new syntax?
     syntax-datum (syntax-hygiene syntax-hygiene-set) syntax-metadata)
 
+  (define (syntax/metadata datum metadata) (syntax-new datum '() metadata))
+
   (define (racket-syntax-metadata stx)
     (vector 'racket-source-info
             (syntax-source-module stx)
@@ -83,7 +83,7 @@
             (syntax-position stx)))
 
   (define (syntax-new/racket datum stx)
-    (syntax-new datum '() (racket-syntax-metadata stx)))
+    (syntax/metadata datum (racket-syntax-metadata stx)))
 
   (define (syntax-type? type? stx)
     (and (syntax? stx) (type? (syntax-datum stx))))
