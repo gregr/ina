@@ -32,8 +32,11 @@
   syntax-hygiene
   syntax-metadata
 
-  ;syntax-flipmark
-  ;syntax-rename
+  syntax-mark
+  syntax-rename
+
+  mark-fresh
+  renaming-fresh
   )
 
 (module
@@ -46,8 +49,29 @@
     "record.rkt"
     )
 
+  (define mark-fresh
+    (let ((mark 0)) (lambda () (set! mark (+ 1 mark)) mark)))
+  (define (mark? hdatum) (number? hdatum))
+
+  (define label-fresh
+    (let ((label 0)) (lambda () (set! label (+ 1 label)) label)))
+  (define (renaming-fresh symbol marks) (vector symbol marks (label-fresh)))
+  (define (renaming? hd) (vector? hd))
+  (define (renaming-symbol r) (vector-ref r 0))
+  (define (renaming-marks r) (vector-ref r 1))
+  (define (renaming-label r) (vector-ref r 2))
+
+  (define (hygiene-cons h h*)
+    (cond ((null? h*) (list h))
+          ((and (mark? h) (eqv? h (car h*))) (cdr h*))
+          (else (cons h h*))))
+  (define (hygiene-append h1 h2)
+    (if (null? h1) h2
+      (hygiene-cons (car h1) (hygiene-append (cdr h1) h2))))
+
   (define-record
-    syntax-new syntax? syntax-datum syntax-hygiene syntax-metadata)
+    syntax-new syntax?
+    syntax-datum (syntax-hygiene syntax-hygiene-set) syntax-metadata)
 
   (define (racket-syntax-metadata stx)
     (vector 'racket-source-info
@@ -98,9 +122,21 @@
           (else stx)))
 
   (define (datum->syntax stx datum)
-    (syntax-new datum (syntax-hygiene stx) #f))
+    (syntax-hygiene-append datum (syntax-hygiene stx)))
+
+  (define (syntax-hygiene-append datum hygiene)
+    (if (syntax? datum)
+      (syntax-hygiene-set
+        datum (hygiene-append hygiene (syntax-hygiene datum)))
+      (syntax-new datum hygiene #f)))
 
   (define (identifier? stx) (syntax-type? symbol? stx))
+
+  (define (syntax-hygiene-cons stx h)
+    (syntax-hygiene-set stx (hygiene-cons h (syntax-hygiene stx))))
+
+  (define (syntax-mark stx mark) (syntax-hygiene-cons stx mark))
+  (define (syntax-rename stx renaming) (syntax-hygiene-cons stx renaming))
 
   (define-syntax racket-syntax (syntax-rules () ((_ s) #'s)))
   (define-syntax racket-quasisyntax (syntax-rules () ((_ s) #`s)))
