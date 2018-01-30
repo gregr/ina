@@ -205,10 +205,8 @@
              (list->vector (syntax->list (new-quasisyntax (s ...))))
              #'sdatum)))
 
-      ((_ s) #'(new-syntax s))))
-  )
+      ((_ s) #'(new-syntax s)))))
 
-(require (for-syntax racket/base))
 (require 'utilities)
 
 (define-syntax syntax (syntax-rules () ((_ s) (new-syntax s))))
