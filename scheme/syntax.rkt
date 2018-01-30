@@ -99,6 +99,19 @@
   (define (syntax-new/racket datum stx)
     (syntax/metadata datum (racket-syntax-metadata stx)))
 
+  (define (syntax-hygiene-append datum hygiene)
+    (if (syntax? datum)
+      (syntax-hygiene-set
+        datum (hygiene-append hygiene (syntax-hygiene datum)))
+      (syntax-new datum hygiene #f)))
+
+  (define (syntax-hygiene-cons stx h)
+    (syntax-hygiene-set stx (hygiene-cons h (syntax-hygiene stx))))
+  (define (syntax->mark* stx) (hygiene->mark* (syntax-hygiene stx)))
+
+  (define (syntax-mark stx mark) (syntax-hygiene-cons stx mark))
+  (define (syntax-rename stx renaming) (syntax-hygiene-cons stx renaming))
+
   (define (syntax-type? type? stx)
     (and (syntax? stx) (type? (syntax-datum stx))))
   (define (syntax-pair? stx) (syntax-type? pair? stx))
@@ -109,14 +122,16 @@
   (define (syntax-string? stx) (syntax-type? string? stx))
   (define (syntax-char? stx) (syntax-type? char? stx))
 
-  ;; TODO: propagate hygiene.
   (define (syntax-pair-access access stx)
-    (if (syntax-pair? stx) (access (syntax-datum stx))
+    (if (syntax-pair? stx)
+      (syntax-hygiene-append (access (syntax-datum stx)) (syntax-hygiene stx))
       (error "datum is not a syntax pair:" stx)))
   (define (syntax-car stx) (syntax-pair-access car stx))
   (define (syntax-cdr stx) (syntax-pair-access cdr stx))
   (define (syntax-vector-ref stx idx)
-    (if (syntax-vector? stx) (vector-ref (syntax-datum stx) idx)
+    (if (syntax-vector? stx)
+      (syntax-hygiene-append (vector-ref (syntax-datum stx) idx)
+                             (syntax-hygiene stx))
       (error "datum is not a syntax vector:" stx)))
 
   (define (syntax->list stx)
@@ -135,21 +150,7 @@
   (define (datum->syntax stx datum)
     (syntax-hygiene-append datum (syntax-hygiene stx)))
 
-  (define (syntax-hygiene-append datum hygiene)
-    (if (syntax? datum)
-      (syntax-hygiene-set
-        datum (hygiene-append hygiene (syntax-hygiene datum)))
-      (syntax-new datum hygiene #f)))
-
   (define (identifier? stx) (syntax-type? symbol? stx))
-
-  (define (syntax-hygiene-cons stx h)
-    (syntax-hygiene-set stx (hygiene-cons h (syntax-hygiene stx))))
-
-  (define (syntax-mark stx mark) (syntax-hygiene-cons stx mark))
-  (define (syntax-rename stx renaming) (syntax-hygiene-cons stx renaming))
-
-  (define (syntax->mark* stx) (hygiene->mark* (syntax-hygiene stx)))
 
   (define (identifier->label i)
     (hygiene->label (syntax-hygiene i) (syntax-datum i)))
