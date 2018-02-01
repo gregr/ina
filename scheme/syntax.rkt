@@ -7,7 +7,9 @@
   quasisyntax
 
   syntax?
+  syntax->pair
   syntax->list
+  syntax->vector
   syntax->datum
   datum->syntax
 
@@ -134,11 +136,24 @@
                              (syntax-hygiene stx))
       (error "datum is not a syntax vector:" stx)))
 
+  (define (syntax->pair stx)
+    (define datum (syntax-datum stx))
+    (define h (syntax-hygiene stx))
+    (when (not (pair? datum)) (error "datum is not a syntax pair:" stx))
+    (cons (syntax-hygiene-append (car datum) h)
+          (syntax-hygiene-append (cdr datum) h)))
+
   (define (syntax->list stx)
     (cond ((syntax-null? stx) '())
           ((syntax-pair? stx) (cons (syntax-car stx)
                                     (syntax->list (syntax-cdr stx))))
           (else (error "datum is not a syntax list:" stx))))
+
+  (define (syntax->vector stx)
+    (define datum (syntax-datum stx))
+    (define h (syntax-hygiene stx))
+    (when (not (pair? datum)) (error "datum is not a syntax vector:" stx))
+    (vector-map (lambda (s) (syntax-hygiene-append s h)) stx))
 
   (define (syntax->datum stx)
     (define datum (syntax-datum stx))
