@@ -18,11 +18,14 @@
   identifier?
   free-identifier=?
   bound-identifier=?
+  identifier->fresh-renaming
 
   syntax-pair?
   syntax-vector?
   syntax-null?
   syntax-boolean?
+  syntax-true?
+  syntax-false?
   syntax-number?
   syntax-string?
   syntax-char?
@@ -36,9 +39,10 @@
 
   syntax-mark
   syntax-rename
+  syntax-rename*
 
-  mark-fresh
-  renaming-fresh
+  renaming?
+  renaming-label
   )
 
 (module
@@ -63,6 +67,9 @@
   (define (renaming-symbol r) (vector-ref r 0))
   (define (renaming-marks r) (vector-ref r 1))
   (define (renaming-label r) (vector-ref r 2))
+  (define (identifier->fresh-renaming i)
+    (when (not (identifier? i)) (error "cannot rename non-identifier:" i))
+    (renaming-fresh (syntax->datum i) (syntax->mark* i)))
 
   (define (hygiene-cons h h*)
     (cond ((null? h*) (list h))
@@ -113,6 +120,8 @@
 
   (define (syntax-mark stx mark) (syntax-hygiene-cons stx mark))
   (define (syntax-rename stx renaming) (syntax-hygiene-cons stx renaming))
+  (define (syntax-rename* stx renaming*)
+    (foldl (lambda (r stx) (syntax-rename stx r)) stx renaming*))
 
   (define (syntax-type? type? stx)
     (and (syntax? stx) (type? (syntax-datum stx))))
@@ -120,6 +129,8 @@
   (define (syntax-vector? stx) (syntax-type? vector? stx))
   (define (syntax-null? stx) (syntax-type? null? stx))
   (define (syntax-boolean? stx) (syntax-type? boolean? stx))
+  (define (syntax-true? stx) (syntax-type? (lambda (d) (eqv? #t d)) stx))
+  (define (syntax-false? stx) (syntax-type? not stx))
   (define (syntax-number? stx) (syntax-type? number? stx))
   (define (syntax-string? stx) (syntax-type? string? stx))
   (define (syntax-char? stx) (syntax-type? char? stx))
