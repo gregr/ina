@@ -179,12 +179,16 @@
   (define (identifier? stx) (syntax-type? symbol? stx))
 
   (define (identifier->label i)
+    (when (not (identifier? i))
+      (error "cannot compute label of non-identifier:" i))
     (hygiene->label (syntax-hygiene i) (syntax-datum i)))
 
   (define (free-identifier=? a b)
     (label=? (identifier->label a) (identifier->label b)))
 
   (define (bound-identifier=? a b)
+    (when (not (and (identifier? a) (identifier? b)))
+      (error "cannot compare non-identifiers:" a b))
     (and (identifier? a) (identifier? b)
          (eqv? (syntax-datum a) (syntax-datum b))
          (equal? (syntax->mark* a) (syntax->mark* b))))
