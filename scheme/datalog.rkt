@@ -135,10 +135,9 @@
               (if (null? neg*) (list st)
                 (let ((name (predicate-name (car neg*)))
                       (t* (predicate-param* (car neg*))))
-                  (for/fold ((st* '()))
-                            ((b* (in-set (hash-ref db name set-empty))))
-                            (append (if (unify* st t* b*) '()
-                                      (nloop st (cdr neg*))) st*)))))
+                  (if (ormap (lambda (b*) (unify* st t* b*))
+                             (set->list (hash-ref db name set-empty))) '()
+                    (nloop st (cdr neg*))))))
             (let ((name (predicate-name (car pos*)))
                   (t* (predicate-param* (car pos*))))
               (for/fold ((st* '()))
@@ -154,34 +153,36 @@
     (if (hash-empty? db-new) db
       (fixed-point-eval (db-union db-new db) r*)))
 
-  (define (stratified-eval db n*-finished n*-later r*-later r*)
+  (define (stratified-eval db n*-pending n*-later r*-later r*)
     (define (should-wait? r)
       (or (ormap
-            (lambda (p) (not (set-member? n*-finished (predicate-name p))))
+            (lambda (p) (set-member? n*-pending (predicate-name p)))
             (rule-negative r)) (set-member? n*-later (rule-name r))
           (ormap (lambda (p) (set-member? n*-later (predicate-name p)))
                  (rule-positive r))))
     (define r*-wait (filter should-wait? r*))
     (define n*-wait (list->set (map rule-name r*-wait)))
     (define r*-continue (filter (lambda (r) (not (should-wait? r))) r*))
-    (cond ((pair? r*-wait)
-           (stratified-eval db n*-finished (set-union n*-wait n*-later)
+    (cond ((and (null? r*-later) (null? r*)) db)
+          ((pair? r*-wait)
+           (stratified-eval db n*-pending (set-union n*-wait n*-later)
                             (append r*-wait r*-later) r*-continue))
-          ((pair? r*-later) (error "unstratifiable:" n*-later))
-          ((null? r*) db)
+          ((null? r*-continue) (error "unstratifiable:" n*-later))
           (else (stratified-eval
                   (fixed-point-eval db r*)
-                  (set-union (list->set (map rule-name r*)) n*-finished)
+                  (list->set (map rule-name r*-later))
                   set-empty '() r*-later))))
 
-  (stratified-eval db set-empty set-empty '() r*))
+  (stratified-eval db (list->set (map rule-name r*)) set-empty '() r*))
 
 
 (define example-rules
   (datalog-rules
     '(
       ((path X Y) (edge X Y))
-      ((path X Z) (path X Y) (path Y Z))
+      ((path X Z) (path X Y) (path Y Z) (#f (obstacle Y))
+
+                  )
       ;; alternatively, one of these:
       ;; ((path X Z) (edge X Y) (path Y Z))
       ;; ((path X Z) (path X Y) (edge Y Z))
@@ -194,6 +195,8 @@
 (define example-facts
   (datalog-facts
     '(
+      ;(obstacle #f)
+      ;(obstacle 'c)
       (edge 'a 'b)
       (edge 'b 'c)
       (edge 'c 'd)
