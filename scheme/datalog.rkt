@@ -191,5 +191,42 @@
       ;(edge 'd 'a)
       )))
 
+(define (pair<? a b)
+  (or (any<? (car a) (car b))
+      (and (not (any<? (car b) (car a)))
+           (any<? (cdr a) (cdr b)))))
+(define (vector<? a b)
+  (or (< (vector-length a) (vector-length b))
+      (let loop ((i 0))
+        (and (< i (vector-length a))
+             (or (any<? (vector-ref a i) (vector-ref b i))
+                 (and (not (any<? (vector-ref b i) (vector-ref a i)))
+                      (loop (+ i 1))))))))
 
-;; TODO: total-sort db for readability
+(define comparators
+  `((,null? . ,(lambda _ #f))
+    (,boolean? . ,(lambda (a b) (not a)))
+    (,number? . ,<)
+    (,symbol? . ,symbol<?)
+    (,char? . ,char<?)
+    (,string? . ,string<?)
+    (,pair? . ,pair<?)
+    (,vector? . ,vector<?)))
+
+(define (any<? a b)
+  (define (find-comparator x)
+    (let loop ((i 0) (c* comparators))
+      (if (or (null? c*) ((caar c*) x)) (cons i (cdar c*))
+        (loop (+ i 1) (cdr c*)))))
+  (match-define (cons ia c<) (find-comparator a))
+  (match-define (cons ib _) (find-comparator b))
+  (or (< ia ib) (and (= ia ib) (c< a b))))
+
+(define (sorted-db db)
+  (define (sorted-set x*) (sort (set->list x*) any<?))
+  (sort (map (lambda (kv) (cons (car kv) (sorted-set (cdr kv))))
+             (hash->list db))
+        (lambda (n m) (symbol<? (car n) (car m)))))
+
+;; testing
+;; (sorted-db (datalog-eval (datalog-rules-link example-rules example-facts)))
