@@ -84,13 +84,13 @@
   (predicate-arity-union* hash-empty (map rule->predicate-arity r*))
   r*)
 
-(define (datalog-rules-link* r**)
+(define (datalog-link* r**)
   ;; raises error on failure
   (foldl (lambda (r* a*) (predicate-arity-union*
                            a* (map rule->predicate-arity r*)))
          hash-empty r**)
   (append* r**))
-(define (datalog-rules-link . r**) (datalog-rules-link* r**))
+(define (datalog-link . r**) (datalog-link* r**))
 
 (define (datalog-facts facts) (datalog-rules (map list facts)))
 
