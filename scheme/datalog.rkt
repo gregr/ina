@@ -1,4 +1,12 @@
 #lang racket/base
+(provide
+  datalog-rules
+  datalog-facts
+  datalog-link
+  datalog-eval
+  sorted-db
+  )
+
 (require
   racket/list
   racket/match
@@ -229,4 +237,5 @@
         (lambda (n m) (symbol<? (car n) (car m)))))
 
 ;; testing
-;; (sorted-db (datalog-eval (datalog-rules-link example-rules example-facts)))
+(define (test)
+  (sorted-db (datalog-eval (datalog-link example-rules example-facts))))
