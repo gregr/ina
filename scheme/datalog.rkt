@@ -1,11 +1,12 @@
 #lang racket/base
 (provide
   db-empty
+  db-prune
+  db-sorted
   datalog-rules
   datalog-facts
   datalog-link
   datalog-eval
-  sorted-db
   )
 
 (require
@@ -235,13 +236,20 @@
   (match-define (cons ib _) (find-comparator b))
   (or (< ia ib) (and (= ia ib) (c< a b))))
 
-(define (sorted-db db)
+(define (db-sorted db)
   (define (sorted-set x*) (sort (set->list x*) any<?))
   (sort (map (lambda (kv) (cons (car kv) (sorted-set (cdr kv))))
              (hash->list db))
         (lambda (n m) (symbol<? (car n) (car m)))))
 
+(define (db-prune keep? db)
+  (for/fold ((result hash-empty))
+            (((name t**) (in-hash db)))
+            (define kept (list->set (filter keep? (set->list t**))))
+            (if (set-empty? kept) result
+              (hash-set result name kept))))
+
 ;; testing
 (define (test)
-  (sorted-db
+  (db-sorted
     (datalog-eval db-empty (datalog-link example-rules example-facts))))
