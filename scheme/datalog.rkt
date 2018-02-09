@@ -165,3 +165,31 @@
                   set-empty '() r*-later))))
 
   (stratified-eval hash-empty set-empty set-empty '() r*))
+
+
+(define example-rules
+  (datalog-rules
+    '(
+      ((path X Y) (edge X Y))
+      ((path X Z) (path X Y) (path Y Z))
+      ;; alternatively, one of these:
+      ;; ((path X Z) (edge X Y) (path Y Z))
+      ;; ((path X Z) (path X Y) (edge Y Z))
+
+      ;; optional reflexivity
+      ;((path X X) (edge X Y))
+      ;((path X X) (edge Y X))
+      )))
+
+(define example-facts
+  (datalog-facts
+    '(
+      (edge 'a 'b)
+      (edge 'b 'c)
+      (edge 'c 'd)
+      ;; optional cycle
+      ;(edge 'd 'a)
+      )))
+
+
+;; TODO: total-sort db for readability
