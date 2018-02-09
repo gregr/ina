@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  db-empty
   datalog-rules
   datalog-facts
   datalog-link
@@ -15,6 +16,7 @@
 
 (define set-empty (set))
 (define hash-empty (hash))
+(define db-empty hash-empty)
 
 ;; TODO: aggregates in head; other rule body constraints
 
@@ -123,7 +125,7 @@
       (hash-remove result name)
       (hash-set result name new))))
 
-(define (datalog-eval r*)
+(define (datalog-eval db r*)
   (define (fixed-point-eval db r*)
     (define (rule-eval r)
       (define st*
@@ -172,7 +174,7 @@
                   (set-union (list->set (map rule-name r*)) n*-finished)
                   set-empty '() r*-later))))
 
-  (stratified-eval hash-empty set-empty set-empty '() r*))
+  (stratified-eval db set-empty set-empty '() r*))
 
 
 (define example-rules
@@ -238,4 +240,5 @@
 
 ;; testing
 (define (test)
-  (sorted-db (datalog-eval (datalog-link example-rules example-facts))))
+  (sorted-db
+    (datalog-eval db-empty (datalog-link example-rules example-facts))))
