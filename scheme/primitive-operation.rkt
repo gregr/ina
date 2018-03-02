@@ -41,9 +41,9 @@
   po-list->vector po-list->vector? po-list->vector-x
   po-list-append po-list-append? po-list-append-x po-list-append-y
   )
-(require "record.rkt")
+(require "type.rkt")
 
-(define-record-variant
+(define-variant-type
   po?
   (po-vector po-vector? po-vector-x*)
   (po-vector-length po-vector-length? po-vector-length-v)

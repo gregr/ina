@@ -24,9 +24,9 @@
 
   s-id s-id? s-id-base s-id-offset
   )
-(require "record.rkt")
+(require "type.rkt")
 
-(define-record-variant
+(define-variant-type
   s-term?
   (s-literal s-literal? s-literal-datum)
   (s-variable s-variable? s-variable-id)
@@ -50,4 +50,4 @@
   (s-reset s-reset? s-reset-body)
   )
 
-(define-record s-id s-id? s-id-base s-id-offset)
+(define-type s-id s-id? s-id-base s-id-offset)

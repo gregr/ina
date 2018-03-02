@@ -52,7 +52,7 @@
   (require
     (for-syntax racket/base)
     racket/vector
-    "record.rkt"
+    "type.rkt"
     )
 
   (define mark-fresh
@@ -90,7 +90,7 @@
                   (renaming-label h)
                   (hygiene->label (cdr h*) symbol)))))
 
-  (define-record
+  (define-type
     syntax-new syntax?
     syntax-datum (syntax-hygiene syntax-hygiene-set) syntax-metadata)
 

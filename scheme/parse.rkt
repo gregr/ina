@@ -17,7 +17,7 @@
 
 (require
   "primitive-operation.rkt"
-  "record.rkt"
+  "type.rkt"
   "s-term.rkt"
   racket/vector
   )
@@ -29,7 +29,7 @@
       (set! scope (+ scope 1))
       sn)))
 
-(define-record-variant
+(define-variant-type
   binding?
   (b-syntax b-syntax? b-syntax-transformer)
   (b-variable b-variable?))

@@ -9,12 +9,12 @@
   datum-fold
   )
 (require
-  "record.rkt"
+  "type.rkt"
   racket/vector
   )
 
-(define-record datum/provenance datum/provenance?
-               datum/provenance-provenance datum/provenance-datum)
+(define-type datum/provenance datum/provenance?
+  datum/provenance-provenance datum/provenance-datum)
 
 (define (datum-fold pf vf af x->datum x)
   (define datum (x->datum x))

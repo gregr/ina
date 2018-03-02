@@ -8,9 +8,9 @@
   env-ref
   list->frame
   )
-(require "record.rkt")
+(require "type.rkt")
 
-(define-record e-address e-address? e-address-ei e-address-fi)
+(define-type e-address e-address? e-address-ei e-address-fi)
 (define (list->frame x*) (list->vector x*))
 (define env-empty '())
 (define (env-extend env f) (cons f env))
