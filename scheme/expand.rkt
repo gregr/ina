@@ -93,7 +93,7 @@
   ;; TODO: just use labels as addresses for now, but this may change.
   (define trv* (map (lambda (r) (define l (renaming-label r))
                       `(variable . (,r . ,l))) r*))
-  `#(lambda ,variadic? ,label?* ,(trv*->body trv*)))
+  `#(lambda ,variadic? ,(list->vector label?*) ,(trv*->body trv*)))
 
 (define (trv*->expanded-body env form)
   (lambda (trv*)
