@@ -19,6 +19,7 @@
   )
 
 (require
+  "syntax.rkt"
   "type.rkt"
   racket/vector
   )
@@ -88,10 +89,11 @@
   (state-bs-set st (cons (cons vr val) (state-bs st))))
 
 (define (walk st tm)
-  (if (var? tm)
-    (let ((tn (state-ref st tm)))
-      (if (and (var? tn) (var=? tm tn)) tm (walk st tn)))
-    tm))
+  (cond ((var? tm) (let ((tn (state-ref st tm)))
+                     (if (and (var? tn) (var=? tm tn)) tm (walk st tn))))
+        ((and (syntax? tm) (var? (syntax->outer-datum tm)))
+         (walk st (syntax->outer-datum tm)))
+        (else tm)))
 (define (walk* st t)
   (define tm (walk st t))
   (cond ((pair? tm) (cons (walk* st (car tm)) (walk* st (cdr tm))))
@@ -105,7 +107,6 @@
 (define (assign st vr val)
   (and (not (occurs? st vr val)) (state-set st vr val)))
 
-;; TODO: support syntax.rkt
 (define (unify st a b)
   (define ta (walk st a))
   (define tb (walk st b))
@@ -121,6 +122,8 @@
         ((and (vector? ta) (vector? tb))
          (and (= (vector-length ta) (vector-length tb))
               (unify st (vector->list ta) (vector->list tb))))
+        ((and (syntax? ta) (syntax? tb))
+         (unify st (syntax->outer-datum ta) (syntax->outer-datum tb)))
         (else #f)))
 
 (define (fail . reason)
