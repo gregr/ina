@@ -7,11 +7,10 @@
   quasisyntax
 
   syntax?
-  syntax->pair
   syntax->list
-  syntax->vector
   syntax->datum
   datum->syntax
+  syntax->outer-datum
 
   label=?
   identifier->label
@@ -19,20 +18,6 @@
   free-identifier=?
   bound-identifier=?
   identifier->fresh-renaming
-
-  syntax-pair?
-  syntax-vector?
-  syntax-null?
-  syntax-boolean?
-  syntax-true?
-  syntax-false?
-  syntax-number?
-  syntax-string?
-  syntax-char?
-
-  syntax-car
-  syntax-cdr
-  syntax-vector-ref
 
   syntax/metadata
   syntax-metadata
@@ -123,48 +108,20 @@
   (define (syntax-rename* stx renaming*)
     (foldl (lambda (r stx) (syntax-rename stx r)) stx renaming*))
 
-  (define (syntax-type? type? stx)
-    (and (syntax? stx) (type? (syntax-datum stx))))
-  (define (syntax-pair? stx) (syntax-type? pair? stx))
-  (define (syntax-vector? stx) (syntax-type? vector? stx))
-  (define (syntax-null? stx) (syntax-type? null? stx))
-  (define (syntax-boolean? stx) (syntax-type? boolean? stx))
-  (define (syntax-true? stx) (syntax-type? (lambda (d) (eqv? #t d)) stx))
-  (define (syntax-false? stx) (syntax-type? not stx))
-  (define (syntax-number? stx) (syntax-type? number? stx))
-  (define (syntax-string? stx) (syntax-type? string? stx))
-  (define (syntax-char? stx) (syntax-type? char? stx))
-
-  (define (syntax-pair-access access stx)
-    (if (syntax-pair? stx)
-      (syntax-hygiene-append (access (syntax-datum stx)) (syntax-hygiene stx))
-      (error "datum is not a syntax pair:" stx)))
-  (define (syntax-car stx) (syntax-pair-access car stx))
-  (define (syntax-cdr stx) (syntax-pair-access cdr stx))
-  (define (syntax-vector-ref stx idx)
-    (if (syntax-vector? stx)
-      (syntax-hygiene-append (vector-ref (syntax-datum stx) idx)
-                             (syntax-hygiene stx))
-      (error "datum is not a syntax vector:" stx)))
-
-  (define (syntax->pair stx)
+  (define (syntax->outer-datum stx)
     (define datum (syntax-datum stx))
     (define h (syntax-hygiene stx))
-    (when (not (pair? datum)) (error "datum is not a syntax pair:" stx))
-    (cons (syntax-hygiene-append (car datum) h)
-          (syntax-hygiene-append (cdr datum) h)))
+    (cond ((pair? datum) (cons (syntax-hygiene-append (car datum) h)
+                               (syntax-hygiene-append (cdr datum) h)))
+          ((vector? datum)
+           (vector-map (lambda (s) (syntax-hygiene-append s h)) datum))
+          (else datum)))
 
   (define (syntax->list stx)
-    (cond ((syntax-null? stx) '())
-          ((syntax-pair? stx) (cons (syntax-car stx)
-                                    (syntax->list (syntax-cdr stx))))
+    (define d (syntax->outer-datum stx))
+    (cond ((null? d) '())
+          ((pair? d) (cons (car d) (syntax->list (cdr d))))
           (else (error "datum is not a syntax list:" stx))))
-
-  (define (syntax->vector stx)
-    (define datum (syntax-datum stx))
-    (define h (syntax-hygiene stx))
-    (when (not (pair? datum)) (error "datum is not a syntax vector:" stx))
-    (vector-map (lambda (s) (syntax-hygiene-append s h)) stx))
 
   (define (syntax->datum stx)
     (define datum (syntax-datum stx))
@@ -176,7 +133,7 @@
   (define (datum->syntax stx datum)
     (syntax-hygiene-append datum (syntax-hygiene stx)))
 
-  (define (identifier? stx) (syntax-type? symbol? stx))
+  (define (identifier? stx) (and (syntax? stx) (symbol? (syntax-datum stx))))
 
   (define (identifier->label i)
     (when (not (identifier? i))
