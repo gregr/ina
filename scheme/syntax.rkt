@@ -76,7 +76,7 @@
                   (hygiene->label (cdr h*) symbol)))))
 
   (define-type
-    syntax-new syntax?
+    (syntax syntax-new) syntax?
     syntax-datum (syntax-hygiene syntax-hygiene-set) syntax-metadata)
 
   (define (syntax/metadata datum metadata) (syntax-new datum '() metadata))
