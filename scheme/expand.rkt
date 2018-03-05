@@ -2,6 +2,7 @@
 (require
   "mk.rkt"
   "syntax.rkt"
+  (except-in racket/match ==)
   )
 
 ;; TODO:
@@ -125,13 +126,19 @@
 (define (procedure->hygienic-syntax-transformer proc)
   (lambda (env stx) (expand env (syntax-mark (proc (syntax-mark stx))))))
 
+(define-syntax match-define/syntax1
+  (syntax-rules ()
+    ((_ form (qvs ...) (evs ...) pattern)
+     (begin
+       (define result* (run* (qvs ...) (fresh (evs ...) (== pattern form))))
+       (when (not (pair? result*)) (error "invalid syntax:" form))
+       (match-define (list qvs ...) (car result*))))))
+
 (define (expand-quote env form)
   ;; TODO: something more like this:
   ;; (match form (#`(,_ ,literal) (build-literal (syntax->datum literal))))
-  (define qliteral (run* (literal)
-                     (fresh (q) (== #`(#,q #,literal) form))))
-  (when (not (pair? qliteral)) (error "invalid quote:" form))
-  (build-literal (syntax->datum (caar qliteral))))
+  (match-define/syntax1 form (literal) (q) #`(#,q #,literal))
+  (build-literal (syntax->datum literal)))
 
 (define (expand-lambda env form)
   (define d (syntax->outer-datum (cdr (syntax->outer-datum form))))
