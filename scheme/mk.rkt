@@ -123,7 +123,9 @@
          (and (= (vector-length ta) (vector-length tb))
               (unify st (vector->list ta) (vector->list tb))))
         ((and (syntax? ta) (syntax? tb))
-         (unify st (syntax->outer-datum ta) (syntax->outer-datum tb)))
+         (if (and (identifier? ta) (identifier? tb))
+           (and (free-identifier=? ta tb) st)
+           (unify st (syntax->outer-datum ta) (syntax->outer-datum tb))))
         (else #f)))
 
 (define (fail . reason)
