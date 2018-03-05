@@ -4,6 +4,10 @@
   var=?
   failure?
   failure-reasons
+  failures-none!
+  failures-all!
+  failures-deepest!
+  set-failure-merge!
   fail
   goal/context
   ==
@@ -25,42 +29,59 @@
   )
 
 (define-type failure failure? failure-depth failure-reasons)
-(define mzero (failure 0 '()))
-(define (failure-combine fa fb)
+(define failure-merge #f)
+(define (set-failure-merge! merge) (set! failure-merge merge))
+
+(define (failure-append depth fa fb)
+  (failure depth (append (failure-reasons fa) (failure-reasons fb))))
+(define (failure-merge/keep-all fa fb) (failure-append 0 fa fb))
+(define (failure-merge/keep-deepest fa fb)
   (define da (failure-depth fa))
   (define db (failure-depth fb))
   (cond ((> da db) fa)
         ((< da db) fb)
-        (else (failure da (append (failure-reasons fa)
-                                  (failure-reasons fb))))))
+        (else (failure-append da fa fb))))
+
+(define (failures-none!) (set-failure-merge! #f))
+(define (failures-deepest!) (set-failure-merge! failure-merge/keep-deepest))
+(define (failures-all!) (set-failure-merge! failure-merge/keep-all))
+
 (define (failure/ignore ss)
-  (cond ((failure? ss) mzero)
+  (cond ((null? ss) '())
+        ((failure? ss) '())
         ((procedure? ss) (lambda () (failure/ignore (ss))))
         (else (cons (car ss) (failure/ignore (cdr ss))))))
 (define (failure/context ctx ss)
-  (cond ((failure? ss)
-         (failure (+ 1 (failure-depth ss))
-                  (list (list ctx (failure-reasons ss)))))
-        ((procedure? ss) (lambda () (failure/context ctx (ss))))
-        (else (cons (car ss) (failure/ignore (cdr ss))))))
+  (if failure-merge
+    (cond ((null? ss) '())
+          ((failure? ss)
+           (failure (+ 1 (failure-depth ss))
+                    (list (list ctx (failure-reasons ss)))))
+          ((procedure? ss) (lambda () (failure/context ctx (ss))))
+          (else (cons (car ss) (failure/ignore (cdr ss)))))
+    (failure/ignore ss)))
 (define (failure/best-reason current ss)
-  (cond ((failure? ss) (failure-combine current ss))
+  (cond ((null? ss) current)
+        ((failure? ss) (failure-merge current ss))
         ((procedure? ss) (lambda () (failure/best-reason current (ss))))
         (else ss)))
 
-(define (unit st) (cons st mzero))
+(define (unit st) (list st))
 (define (mplus sa sb)
-  (cond ((failure? sa) (failure/best-reason sa sb))
+  (cond ((null? sa) sb)
+        ((failure? sa) (if failure-merge (failure/best-reason sa sb) sb))
         ((procedure? sa) (lambda () (mplus (if (procedure? sb) (sb) sb) sa)))
         (else (cons (car sa) (mplus sb (cdr sa))))))
 (define (bind ss c)
-  (cond ((failure? ss) ss)
+  (cond ((null? ss) '())
+        ((failure? ss) ss)
         ((procedure? ss) (lambda () (bind (ss) c)))
         (else (mplus (c (car ss)) (lambda () (bind (cdr ss) c))))))
 
 (define (ss-map f ss)
   (define (loop succeeded? ss)
-    (cond ((failure? ss) (if succeeded? '() ss))
+    (cond ((null? ss) '())
+          ((failure? ss) (if succeeded? '() ss))
           ((procedure? ss) (lambda () (loop succeeded? (ss))))
           ((pair? ss) (cons (f (car ss)) (loop #t (cdr ss))))))
   (loop #f ss))
@@ -68,6 +89,7 @@
 (define (ss-take n ss)
   (define (loop succeeded? n ss)
     (cond ((eqv? n 0) '())
+          ((null? ss) '())
           ((failure? ss) (if succeeded? '() ss))
           ((procedure? ss) (loop succeeded? n (ss)))
           ((pair? ss) (cons (car ss) (loop #t (and n (- n 1)) (cdr ss))))
@@ -129,7 +151,10 @@
         (else #f)))
 
 (define (fail . reason)
-  (lambda (st) (failure 1 (list (list (list->vector (walk* st reason)))))))
+  (lambda (st)
+    (if failure-merge
+      (failure 1 (list (list (list->vector (walk* st reason)))))
+      '())))
 
 (define (== ta tb)
   (lambda (st)
