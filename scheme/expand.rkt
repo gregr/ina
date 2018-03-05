@@ -1,5 +1,6 @@
 #lang racket/base
 (require
+  "mk.rkt"
   "syntax.rkt"
   )
 
@@ -127,10 +128,10 @@
 (define (expand-quote env form)
   ;; TODO: something more like this:
   ;; (match form (#`(,_ ,literal) (build-literal (syntax->datum literal))))
-  (define sd (cdr (syntax->outer-datum form)))
-  (when (not (null? (syntax->outer-datum (cdr (syntax->outer-datum sd)))))
-    (error "invalid quote:" form))
-  (build-literal (syntax->datum (car (syntax->outer-datum sd)))))
+  (define qliteral (run* (literal)
+                     (fresh (q) (== #`(#,q #,literal) form))))
+  (when (not (pair? qliteral)) (error "invalid quote:" form))
+  (build-literal (syntax->datum (caar qliteral))))
 
 (define (expand-lambda env form)
   (define d (syntax->outer-datum (cdr (syntax->outer-datum form))))
