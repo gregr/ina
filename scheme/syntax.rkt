@@ -35,9 +35,9 @@
   (provide (all-defined-out))
 
   (require
+    "type.rkt"
     (for-syntax racket/base)
     racket/vector
-    "type.rkt"
     )
 
   (define mark-fresh
@@ -76,7 +76,7 @@
                   (hygiene->label (cdr h*) symbol)))))
 
   (define-type
-    (syntax syntax-new) syntax?
+    (syntax syntax-new (lambda (s) (list (syntax-datum s)))) syntax?
     syntax-datum (syntax-hygiene syntax-hygiene-set) syntax-metadata)
 
   (define (syntax/metadata datum metadata) (syntax-new datum '() metadata))
