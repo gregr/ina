@@ -126,19 +126,24 @@
 (define (procedure->hygienic-syntax-transformer proc)
   (lambda (env stx) (expand env (syntax-mark (proc (syntax-mark stx))))))
 
-(define-syntax match-define/syntax1
+(define-syntax match-syntax-lambda
   (syntax-rules ()
-    ((_ form (qvs ...) (evs ...) pattern)
-     (begin
-       (define result* (run* (qvs ...) (fresh (evs ...) (== pattern form))))
-       (when (not (pair? result*)) (error "invalid syntax:" form))
-       (match-define (list qvs ...) (car result*))))))
+    ((_ ((qvs ...) pattern (body ...)) k)
+     (lambda (form)
+       (define result* (run* (qvs ...) (== pattern form)))
+       (if (not (pair? result*)) (k form)
+         (apply (lambda (qvs ...) (body ...)) (car result*)))))))
+(define-syntax match-syntax-lambda*
+  (syntax-rules ()
+    ((_) (lambda (form) (error "invalid syntax:" form)))
+    ((_ clause c* ...)
+     (match-syntax-lambda clause (match-syntax-lambda* c* ...)))))
+(define-syntax match-syntax
+  (syntax-rules () ((_ form c* ...) ((match-syntax-lambda* c* ...) form))))
 
 (define (expand-quote env form)
-  ;; TODO: something more like this:
-  ;; (match form (#`(,_ ,literal) (build-literal (syntax->datum literal))))
-  (match-define/syntax1 form (literal) (q) #`(#,q #,literal))
-  (build-literal (syntax->datum literal)))
+  (match-syntax form
+    ((literal _) #`(#,_ #,literal) (build-literal (syntax->datum literal)))))
 
 (define (expand-lambda env form)
   (define d (syntax->outer-datum (cdr (syntax->outer-datum form))))
