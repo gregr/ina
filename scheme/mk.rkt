@@ -187,14 +187,14 @@
      (define (signature ...) (lambda (st) (lambda () body ... (goal st)))))))
 (define-syntax query
   (syntax-rules ()
-    ((_ (vname vnames ...) gs ...)
+    ((_ (vnames ...) gs ...)
      (state-fresh
        state-empty
        (lambda (vinitial)
          (lambda (st)
            (ss-map
              (lambda (st) (walk* st vinitial))
-             ((fresh (vname vnames ...) (== vinitial (list vname vnames ...))
+             ((fresh (vnames ...) (== vinitial (list vnames ...))
                 gs ...) st))))))))
 (define-syntax run
   (syntax-rules () ((_ n body ...) (ss-take n (query body ...)))))
