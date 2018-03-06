@@ -2,6 +2,7 @@
 (require
   "mk.rkt"
   "syntax.rkt"
+  "type.rkt"
   )
 
 ;; TODO:
@@ -112,20 +113,29 @@
     (define tb* (map (lambda (t l v) `(,t . (,l . ,v))) t* l* v*))
       (expand (env-extend* env tb*) renamed-form)))
 
+(define-type (term term (lambda (d) (list (term-datum d))))
+  term? (term-source term-source-set) term-datum)
+(define (term-source-prepend tm form)
+  (term-source-set tm (cons form (term-source tm))))
+
 (define (expand env form)
   (define dform (syntax->outer-datum form))
-  (cond ((syntax-self-evaluating? form) (build-literal (syntax->datum form)))
-        ((identifier? form)
-         (define b (env-ref-identifier env form))
-         (cond ((b-variable? b) (build-variable (b-variable-address b)))
-               ((b-keyword? b) ((b-keyword-transformer b) env form))
-               (else (error "unknown binding:" b))))
-        ((pair? dform)
-         (define head (car dform))
-         (define transformer (form->transformer env head))
-         (if transformer (transformer env form)
-           (build-apply (expand env head) (expand* env (cdr dform)))))
-        (else (error "invalid syntax:" form))))
+  (define expanded
+    (cond ((syntax-self-evaluating? form) (build-literal (syntax->datum form)))
+          ((identifier? form)
+           (define b (env-ref-identifier env form))
+           (cond ((b-variable? b) (build-variable (b-variable-address b)))
+                 ((b-keyword? b) ((b-keyword-transformer b) env form))
+                 (else (error "unknown binding:" b))))
+          ((pair? dform)
+           (define head (car dform))
+           (define transformer (form->transformer env head))
+           (if transformer (transformer env form)
+             (build-apply (expand env head) (expand* env (cdr dform)))))
+          (else (error "invalid syntax:" form))))
+  (cond ((vector? expanded) (term (list form) expanded))
+        ((term? expanded) (term-source-prepend expanded form))
+        (else (error "invalid expansion:" expanded))))
 (define (expand* env form*)
   (map (lambda (form) (expand env form)) (syntax->list form*)))
 (define (procedure->hygienic-syntax-transformer proc)
