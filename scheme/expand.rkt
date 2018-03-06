@@ -126,38 +126,29 @@
 (define (procedure->hygienic-syntax-transformer proc)
   (lambda (env stx) (expand env (syntax-mark (proc (syntax-mark stx))))))
 
-(define-syntax match-syntax-lambda
+(define-syntax match/mk
   (syntax-rules ()
-    ((_ ((qvs ...) pattern (body ...)) k)
-     (lambda (form)
-       (define result* (run* (qvs ...) (== pattern form)))
-       (if (not (pair? result*)) (k form)
-         (apply (lambda (qvs ...) (body ...)) (car result*)))))))
-(define-syntax match-syntax-lambda*
-  (syntax-rules ()
-    ((_) (lambda (form) (error "invalid syntax:" form)))
-    ((_ clause c* ...)
-     (match-syntax-lambda clause (match-syntax-lambda* c* ...)))))
-(define-syntax match-syntax
-  (syntax-rules () ((_ form c* ...) ((match-syntax-lambda* c* ...) form))))
+    ((_) (error "match/mk all clauses failed"))
+    ((_ (((qvs ...) g ...) body ...) c* ...)
+     (begin (define result* (run* (qvs ...) g ...))
+            (if (not (pair? result*)) (let () (match/mk c* ...))
+              (apply (lambda (qvs ...) body ...) (car result*)))))))
 
 (define (expand-quote env form)
-  (match-syntax form
-    ((literal _) #`(#,_ #,literal) (build-literal (syntax->datum literal)))))
+  (match/mk (((literal _) (== #`(#,_ #,literal) form))
+             (build-literal (syntax->datum literal)))
+            ((() succeed) (error "invalid quote:" (syntax->datum form) form))))
 
 (define (expand-lambda env form)
-  (define d (syntax->outer-datum (cdr (syntax->outer-datum form))))
-  (define sdd (cdr d))
-  (define dd (syntax->outer-datum sdd))
-  (define sad (car d))
-  (define param* (formal-param* sad))
-  (define variadic? (variadic-formal-param*? sad))
-  ;; TODO: support body sequence.
-  ;(define body (syntax->list sdd))
-  (define body (car dd))
-  (when (not (null? (syntax->outer-datum (cdr dd))))
-    (error "only one body expression is currently supported:" sdd))
-  (build-lambda env variadic? param* (trv*->expanded-body env body)))
+  (match/mk
+    (((p* body _) (== #`(#,_ #,p* #,body) form))
+     (define param* (formal-param* p*))
+     (define variadic? (variadic-formal-param*? p*))
+     ;; TODO: support body sequence.
+     ;(== #`(#,_ #,p* . #,body) form)
+     ;(define body (syntax->list sdd))
+     (build-lambda env variadic? param* (trv*->expanded-body env body)))
+    ((() succeed) (error "invalid lambda:" (syntax->datum form) form))))
 
 (define env-initial
   (env-extend-keyword*
