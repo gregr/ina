@@ -10,6 +10,7 @@
   set-failure-merge!
   fail
   goal/context
+  succeed
   ==
   fresh
   conde
@@ -66,7 +67,7 @@
         ((procedure? ss) (lambda () (failure/best-reason current (ss))))
         (else ss)))
 
-(define (unit st) (list st))
+(define (succeed st) (list st))
 (define (mplus sa sb)
   (cond ((null? sa) sb)
         ((failure? sa) (if failure-merge (failure/best-reason sa sb) sb))
@@ -160,7 +161,7 @@
   (lambda (st)
     (define st1 (unify st ta tb))
     (if st1
-      (unit st1)
+      (succeed st1)
       ((fail "not equal:" ta tb) st))))
 (define (conj2 ca cb) (lambda (st) (bind (ca st) cb)))
 (define (disj2 ca cb) (lambda (st) (mplus (ca st) (lambda () (cb st)))))
