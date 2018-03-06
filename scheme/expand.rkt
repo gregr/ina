@@ -2,7 +2,6 @@
 (require
   "mk.rkt"
   "syntax.rkt"
-  (except-in racket/match ==)
   )
 
 ;; TODO:
