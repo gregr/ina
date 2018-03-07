@@ -1,4 +1,20 @@
 #lang racket/base
+(provide
+  term
+  term?
+  term-source
+  term-datum
+  expand
+  expand*
+  procedure->hygienic-syntax-transformer
+  ;; TODO: provide a better env interface.
+  env-empty
+  env-extend-keyword*
+  env-extend-variable*
+  env-alias
+  env-initial
+  )
+
 (require
   "mk.rkt"
   "syntax.rkt"
