@@ -107,7 +107,7 @@
   (when (not (datum-valid-literal? datum))
     (error "invalid literal datum:" datum))
   `#(quote ,datum))
-(define (build-variable address) `#(var ,address))
+(define (build-variable identifier address) `#(var ,identifier ,address))
 (define (build-apply proc arg*) `#(apply ,proc ,(list->vector arg*)))
 
 (define (build-lambda env variadic? param* trv*->body)
@@ -117,7 +117,8 @@
   ;; TODO: just use labels as addresses for now, but this may change.
   (define trv* (map (lambda (r) (define l (renaming-label r))
                       `(variable . (,r . ,l))) r*))
-  `#(lambda ,variadic? ,(list->vector label?*) ,(trv*->body trv*)))
+  `#(lambda ,variadic? ,(list->vector (map cons param* label?*))
+      ,(trv*->body trv*)))
 
 (define (trv*->expanded-body env form)
   (lambda (trv*)
@@ -140,7 +141,7 @@
     (cond ((syntax-self-evaluating? form) (build-literal (syntax->datum form)))
           ((identifier? form)
            (define b (env-ref-identifier env form))
-           (cond ((b-variable? b) (build-variable (b-variable-address b)))
+           (cond ((b-variable? b) (build-variable form (b-variable-address b)))
                  ((b-keyword? b) ((b-keyword-transformer b) env form))
                  (else (error "unknown binding:" b))))
           ((pair? dform)
