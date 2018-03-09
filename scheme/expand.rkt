@@ -103,10 +103,11 @@
                (identifier->fresh-renaming (car p*)))
           (formal-param*->maybe-renaming* (cdr p*)))))
 
-(define (build-literal datum)
+(define (build-literal form)
+  (define datum (if (syntax? form) (syntax->datum form) form))
   (when (not (datum-valid-literal? datum))
     (error "invalid literal datum:" datum))
-  `#(quote ,datum))
+  `#(quote ,form))
 (define (build-variable identifier address) `#(var ,identifier ,address))
 (define (build-apply proc arg*) `#(apply ,proc ,(list->vector arg*)))
 
@@ -138,7 +139,7 @@
 (define (expand env form)
   (define dform (syntax->outer-datum form))
   (define expanded
-    (cond ((syntax-self-evaluating? form) (build-literal (syntax->datum form)))
+    (cond ((syntax-self-evaluating? form) (build-literal form))
           ((identifier? form)
            (define b (env-ref-identifier env form))
            (cond ((b-variable? b) (build-variable form (b-variable-address b)))
@@ -167,8 +168,7 @@
               (apply (lambda (qvs ...) body ...) (car result*)))))))
 
 (define (expand-quote env form)
-  (match/mk (((literal _) (== #`(#,_ #,literal) form))
-             (build-literal (syntax->datum literal)))
+  (match/mk (((literal _) (== #`(#,_ #,literal) form)) (build-literal literal))
             ((() succeed) (error "invalid quote:" (syntax->datum form) form))))
 
 (define (expand-lambda env form)
