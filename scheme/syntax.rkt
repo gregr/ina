@@ -153,21 +153,21 @@
   (define-syntax racket-syntax (syntax-rules () ((_ s) #'s)))
   (define-syntax racket-quasisyntax (syntax-rules () ((_ s) #`s)))
 
-
   (define-syntax (new-syntax stx)
     (syntax-case stx ()
       ((_ (a . d))
        (with-syntax
          (((_ sdatum) stx))
-         #'(syntax-new/racket `(,(new-syntax a) . ,(new-syntax d)) #'sdatum)))
+         #'(syntax-new/racket `(,(new-syntax a) . ,(new-syntax d))
+                              (quote-syntax sdatum))))
 
       ((_ #(s ...))
        (with-syntax
          (((_ sdatum) stx))
-         #'(syntax-new/racket (vector (new-syntax s) ...) #'sdatum)))
+         #'(syntax-new/racket (vector (new-syntax s) ...)
+                              (quote-syntax sdatum))))
 
-      ((_ rstx) #'(syntax-new/racket (syntax-e #'rstx) #'rstx))))
-
+      ((_ rstx) #'(syntax-new/racket 'rstx (quote-syntax rstx)))))
 
   (define-syntax (new-quasisyntax stx)
     (syntax-case stx (unsyntax unsyntax-splicing)
@@ -177,20 +177,20 @@
        (with-syntax
          (((_ sdatum) stx))
          #'(syntax-new/racket (append (syntax->list e) (new-quasisyntax d))
-                              #'sdatum)))
+                              (quote-syntax sdatum))))
 
       ((_ (a . d))
        (with-syntax
          (((_ sdatum) stx))
          #'(syntax-new/racket `(,(new-quasisyntax a) . ,(new-quasisyntax d))
-                              #'sdatum)))
+                              (quote-syntax sdatum))))
 
       ((_ #(s ...))
        (with-syntax
          (((_ sdatum) stx))
          #'(syntax-new/racket
              (list->vector (syntax->list (new-quasisyntax (s ...))))
-             #'sdatum)))
+             (quote-syntax sdatum))))
 
       ((_ s) #'(new-syntax s)))))
 
