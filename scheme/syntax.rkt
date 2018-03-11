@@ -126,11 +126,12 @@
           (else (error "datum is not a syntax list:" stx))))
 
   (define (syntax->datum stx)
-    (define datum (syntax-datum stx))
-    (cond ((pair? datum) (cons (syntax->datum (car datum))
-                               (syntax->datum (cdr datum))))
-          ((vector? datum) (vector-map syntax->datum datum))
-          (else datum)))
+    (define (strip datum)
+      (cond ((syntax? datum) (strip (syntax-datum datum)))
+            ((pair? datum) (cons (strip (car datum)) (strip (cdr datum))))
+            ((vector? datum) (vector-map strip datum))
+            (else datum)))
+    (strip (syntax-datum stx)))
 
   (define (datum->syntax stx datum)
     (if stx
