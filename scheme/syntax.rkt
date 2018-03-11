@@ -56,6 +56,7 @@
     (when (not (identifier? i)) (error "cannot rename non-identifier:" i))
     (renaming-fresh (syntax->datum i) (syntax->mark* i)))
 
+  (define hygiene-empty '())
   (define (hygiene-cons h h*)
     (cond ((null? h*) (list h))
           ((and (mark? h) (eqv? h (car h*))) (cdr h*))
@@ -79,7 +80,8 @@
     (syntax syntax-new (lambda (s) (list (syntax-datum s)))) syntax?
     syntax-datum (syntax-hygiene syntax-hygiene-set) syntax-metadata)
 
-  (define (syntax/metadata datum metadata) (syntax-new datum '() metadata))
+  (define (syntax/metadata datum metadata)
+    (syntax-new datum hygiene-empty metadata))
 
   (define (racket-syntax-metadata stx)
     (vector 'racket-source-info
@@ -131,7 +133,9 @@
           (else datum)))
 
   (define (datum->syntax stx datum)
-    (syntax-hygiene-append datum (syntax-hygiene stx)))
+    (if stx
+      (syntax-hygiene-append datum (syntax-hygiene stx))
+      (syntax/metadata datum #f)))
 
   (define (identifier? stx) (and (syntax? stx) (symbol? (syntax-datum stx))))
 
