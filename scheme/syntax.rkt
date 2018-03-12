@@ -7,10 +7,10 @@
   quasisyntax
 
   syntax?
+  syntax-unwrap
   syntax->list
   syntax->datum
   datum->syntax
-  syntax->outer-datum
 
   label=?
   identifier->label
@@ -110,7 +110,7 @@
   (define (syntax-rename* stx renaming*)
     (foldl (lambda (r stx) (syntax-rename stx r)) stx renaming*))
 
-  (define (syntax->outer-datum stx)
+  (define (syntax-unwrap stx)
     (define datum (syntax-datum stx))
     (define h (syntax-hygiene stx))
     (cond ((pair? datum) (cons (syntax-hygiene-append (car datum) h)
@@ -120,7 +120,7 @@
           (else datum)))
 
   (define (syntax->list stx)
-    (define d (syntax->outer-datum stx))
+    (define d (syntax-unwrap stx))
     (cond ((null? d) '())
           ((pair? d) (cons (car d) (syntax->list (cdr d))))
           (else (error "datum is not a syntax list:" stx))))
