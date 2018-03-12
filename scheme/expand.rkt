@@ -131,7 +131,9 @@
     (define tb* (map (lambda (t l v) `(,t . (,l . ,v))) t* l* v*))
       (expand (env-extend* env tb*) renamed-form)))
 
-(define-type (term term (lambda (d) (list (term-datum d))))
+(define-type
+  (term term (lambda (d)
+               (list (syntax->datum (datum->syntax #f (term-datum d))))))
   term? (term-source term-source-set) term-datum)
 (define (term-source-prepend tm form)
   (term-source-set tm (cons form (term-source tm))))
