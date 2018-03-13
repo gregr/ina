@@ -104,7 +104,7 @@
           (formal-param*->maybe-renaming* (cdr p*)))))
 
 (define (build-literal form)
-  (define datum (if (syntax? form) (syntax->datum form) form))
+  (define datum (syntax->datum form))
   (when (not (datum-valid-literal? datum))
     (error "invalid literal datum:" datum))
   `#(quote ,form))
