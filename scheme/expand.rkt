@@ -25,9 +25,9 @@
 ;; syntax-error for more convenient source-info reporting.
 ;; match-syntax for more convenient parsing and validation.
 
-(define (b-keyword? b) (eqv? 'keyword (car b)))
+(define (b-keyword? b) (and (pair? b) (eqv? 'keyword (car b))))
 (define (b-keyword-transformer bv) (cdr bv))
-(define (b-variable? b) (eqv? 'variable (car b)))
+(define (b-variable? b) (and (pair? b) (eqv? 'variable (car b))))
 (define (b-variable-address bv) (cdr bv))
 
 (define env-empty (hash))
