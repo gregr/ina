@@ -47,11 +47,10 @@
   (define label-fresh
     (let ((label 0)) (lambda () (set! label (+ 1 label)) label)))
   (define (label=? a b) (eqv? a b))
-  (define (renaming-fresh symbol marks) (vector symbol marks (label-fresh)))
-  (define (renaming? hd) (vector? hd))
-  (define (renaming-symbol r) (vector-ref r 0))
-  (define (renaming-marks r) (vector-ref r 1))
-  (define (renaming-label r) (vector-ref r 2))
+
+  (define-type renaming renaming?
+    renaming-symbol renaming-marks renaming-label)
+  (define (renaming-fresh symbol marks) (renaming symbol marks (label-fresh)))
   (define (identifier->fresh-renaming i)
     (when (not (identifier? i)) (error "cannot rename non-identifier:" i))
     (renaming-fresh (syntax->datum i) (syntax->mark* i)))
