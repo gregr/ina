@@ -79,6 +79,11 @@
 
 (define (syntax-self-evaluating? stx)
   (datum-self-evaluating? (syntax->datum stx)))
+(define (syntax->~list stx)
+  (define d (syntax-unwrap stx))
+  (cond ((null? d) '())
+        ((pair? d) (cons (car d) (syntax->~list (cdr d))))
+        (else (list stx))))
 
 (define (bound-identifier-unique? i i*)
   (or (null? i*) (and (or (not (identifier? (car i*)))
@@ -98,14 +103,7 @@
       (cons (if (or (not (syntax-unwrap p)) (identifier? p)) p
               (exception 'invalid-parameter p))
             (param-identifier* (cdr p*))))))
-(define (syntax->~list stx)
-  (define d (syntax-unwrap stx))
-  (cond ((null? d) '())
-        ((pair? d) (cons (car d) (syntax->~list (cdr d))))
-        (else (list stx))))
-(define (formal-param* stx)
-  (define s* (syntax->~list stx))
-  (bound-identifier-unique* (param-identifier* s*)))
+(define (formal-param* s*) (bound-identifier-unique* (param-identifier* s*)))
 (define (variadic-formal-param*? stx)
   (define d (syntax-unwrap stx))
   (or (and (pair? d) (variadic-formal-param*? (cdr d)))
@@ -123,7 +121,8 @@
 (define (build-variable identifier address) `#(var ,identifier ,address))
 (define (build-apply proc arg*) `#(apply ,proc ,(list->vector arg*)))
 
-(define (build-lambda env variadic? param* trv*->body)
+(define (build-lambda env variadic? p* trv*->body)
+  (define param* (formal-param* p*))
   (define r?* (formal-param*->maybe-renaming* param*))
   (define r* (filter renaming? r?*))
   (define label?* (map (lambda (r) (if (renaming? r) (renaming-label r) r))
@@ -181,8 +180,8 @@
 (define (expand-lambda env form)
   (match/mk
     (((p* body _) (== #`(#,_ #,p* #,body) form))
-     (define param* (formal-param* p*))
      (define variadic? (variadic-formal-param*? p*))
+     (define param* (syntax->~list p*))
      ;; TODO: support body sequence.
      ;(== #`(#,_ #,p* . #,body) form)
      ;(define body (syntax->list sdd))
