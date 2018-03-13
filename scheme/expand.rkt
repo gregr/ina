@@ -52,6 +52,16 @@
 (define (env-extend-variable* env b*) (env-extend*/type env 'variable b*))
 (define (env-extend-keyword* env b*) (env-extend*/type env 'keyword b*))
 
+(define (strip-syntax d) (syntax->datum (datum->syntax #f d)))
+(define-type
+  (exception exception (lambda (e) (list (exception-description e)
+                                         (strip-syntax (exception-datum e)))))
+  exception? exception-description exception-datum)
+(define-type (term term (lambda (d) (list (strip-syntax (term-datum d)))))
+  term? (term-source term-source-set) term-datum)
+(define (term-source-prepend tm form)
+  (term-source-set tm (cons form (term-source tm))))
+
 (define (form->transformer env form)
   (and (identifier? form)
        (let ((b (env-ref-identifier env form)))
@@ -130,13 +140,6 @@
     (define renamed-form (syntax-rename* form r*))
     (define tb* (map (lambda (t l v) `(,t . (,l . ,v))) t* l* v*))
       (expand (env-extend* env tb*) renamed-form)))
-
-(define-type
-  (term term (lambda (d)
-               (list (syntax->datum (datum->syntax #f (term-datum d))))))
-  term? (term-source term-source-set) term-datum)
-(define (term-source-prepend tm form)
-  (term-source-set tm (cons form (term-source tm))))
 
 (define (expand env form)
   (define dform (syntax-unwrap form))
