@@ -103,7 +103,8 @@
       (cons (if (or (not (syntax-unwrap p)) (identifier? p)) p
               (exception 'invalid-parameter p))
             (param-identifier* (cdr p*))))))
-(define (formal-param* s*) (bound-identifier-unique* (param-identifier* s*)))
+(define (formal-param* s*)
+  (reverse (bound-identifier-unique* (param-identifier* (reverse s*)))))
 (define (variadic-formal-param*? stx)
   (define d (syntax-unwrap stx))
   (or (and (pair? d) (variadic-formal-param*? (cdr d)))
@@ -130,7 +131,7 @@
   ;; TODO: just use labels as addresses for now, but this may change.
   (define trv* (map (lambda (r) (define l (renaming-label r))
                       `(variable . (,r . ,l))) r*))
-  `#(lambda ,variadic? ,(list->vector (map cons param* label?*))
+  `#(lambda ,variadic? ,(list->vector (map cons p* label?*))
       ,(trv*->body trv*)))
 
 (define (trv*->expanded-body env form)
