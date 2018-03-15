@@ -13,12 +13,14 @@
   env-extend-variable*
   env-alias
   env-initial
+  evaluate
   )
 
 (require
   "mk.rkt"
   "syntax.rkt"
   "type.rkt"
+  racket/vector
   )
 
 ;; TODO:
@@ -58,7 +60,7 @@
                                          (strip-syntax (exception-datum e)))))
   exception? exception-description exception-datum)
 (define-type (term term (lambda (d) (list (strip-syntax (term-datum d)))))
-  term? (term-source term-source-set) term-datum)
+  term? (term-source term-source-set) (term-datum term-datum-set))
 (define (term-source-prepend tm form)
   (term-source-set tm (cons form (term-source tm))))
 
@@ -219,3 +221,58 @@
       ;(letrec*-syntax+values . ,expand-letrec*-syntax+values)
       ;splicing variants...
       )))
+
+
+(define-type closure closure?
+  closure-variadic? closure-param* closure-body closure-env)
+
+;; TODO: track irrelevant exceptions?  Currently, exceptions can get lost when
+;; they aren't considered by the active computation.
+(define (evaluate env tm)
+  (define e (term-datum tm))
+  (match/mk
+    (((id address) (== `#(var ,id ,address) e))
+     (define b (env-ref env address))
+     (if b (cdr b) (exception 'unbound-variable tm)))
+
+    (((dform) (== `#(quote ,dform) e)) (syntax->datum dform))
+
+    (((variadic? p* body) (== `#(lambda ,variadic? ,p* ,body) e))
+     (closure variadic? p* body env))
+
+    (((tproc targ*) (== `#(apply ,tproc ,targ*) e))
+     (define proc (evaluate env tproc))
+     (define arg* (vector-map (lambda (ta) (evaluate env ta)) targ*))
+     (define (evaluate-apply a*)
+       (define b?*
+         (vector-map (lambda (p a) (and (cdr p) (cons (cdr p) a)))
+                     (closure-param* proc) a*))
+       (define b* (vector-filter (lambda (x) x) b?*))
+       (define env^ (foldl (lambda (b env) (env-set env (car b) #t (cdr b)))
+                           (closure-env proc) (vector->list b*)))
+       (evaluate env^ (closure-body proc)))
+
+     (cond ((not (closure? proc))
+            (exception 'inapplicable-procedure
+                       (term-datum-set tm `#(apply ,proc ,arg*))))
+           (else
+             (define p* (closure-param* proc))
+             (cond ((and (closure-variadic? proc)
+                         (<= (- (vector-length p*) 1) (vector-length arg*)))
+                    (define a0* (vector-take arg* (- (vector-length p*) 1)))
+                    (define a1* (vector-drop arg* (- (vector-length p*) 1)))
+                    (evaluate-apply
+                      (vector-append a0* (vector (vector->list a1*)))))
+                   ((= (vector-length p*) (vector-length arg*))
+                    (evaluate-apply arg*))
+                   (else (exception 'argument-count-mismatch
+                                    (term-datum-set
+                                      tm `#(apply ,proc ,arg*))))))))
+
+    ((() succeed) (exception 'unhandled-term tm))))
+
+;; test example
+;; (evaluate env-empty (expand
+;;                       env-initial
+;;                       #`((lambda (w #f x #f y . z) (x y z '(a ... z)))
+;;                          1 2 3 4 5 6 7)))
