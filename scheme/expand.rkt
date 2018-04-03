@@ -129,6 +129,10 @@
     (exception #f tm)
     tm))
 
+(define (build-if c t f)
+  (define tm `#(if ,c ,t ,f))
+  (if (ormap term-exception? (list c t f)) (exception #f tm) tm))
+
 (define (build-lambda env variadic? p* trv*->body)
   (define param* (formal-param* p*))
   (define r?* (formal-param*->maybe-renaming* param*))
@@ -197,13 +201,19 @@
      (build-lambda env variadic? param* (trv*->expanded-body env body)))
     ((() succeed) (exception 'lambda form))))
 
+(define (expand-if env form)
+  (match/mk
+    (((c t f _) (== #`(#,_ #,c #,t #,f) form))
+     (build-if (expand env c) (expand env t) (expand env f)))
+    ((() succeed) (exception 'if form))))
+
 (define env-initial
   (env-extend-keyword*
     env-empty
     `((quote . ,expand-quote)
       (lambda . ,expand-lambda)
+      (if . ,expand-if)
       ;; TODO: (Some of these expanders can be implemented as transformers.)
-      ;(if . ,expand-if)
       ;(letrec . ,expand-letrec)
       ;(letrec* . ,expand-letrec)
       ;(let . ,expand-let)
@@ -245,6 +255,13 @@
       (((variadic? p* body) (== `#(lambda ,variadic? ,p* ,body) e))
        (closure variadic? p* body env))
 
+      (((tc tt tf) (== `#(if ,tc ,tt ,tf) e))
+       (define c (evaluate depth env tc))
+       (cond ((exception? c)
+              (exception #f (term-datum-set tm `#(if ,c ,tt ,tf))))
+             (c (evaluate depth env tt))
+             (else (evaluate depth env tf))))
+
       (((tproc targ*) (== `#(apply ,tproc ,targ*) e))
        (define proc (evaluate depth env tproc))
        (define arg* (vector-map (lambda (ta) (evaluate depth env ta)) targ*))
@@ -283,7 +300,13 @@
              (else (exception 'unhandled-term tm)))))))
 
 ;; test example
-;; (evaluate env-empty (expand
-;;                       env-initial
-;;                       #`((lambda (w #f x #f y . z) (x y z '(a ... z)))
-;;                          1 2 3 4 5 6 7)))
+;(evaluate
+  ;2 env-empty
+  ;(expand
+    ;env-initial
+    ;#`((lambda (w #f x #f y . z)
+         ;(if (x y z '(a ... z))
+           ;'true
+           ;'false))
+       ;1 2 3 4 5 6 7))
+  ;)
