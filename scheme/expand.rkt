@@ -232,54 +232,55 @@
 (define-type closure closure?
   closure-variadic? closure-param* closure-body closure-env)
 
-(define (evaluate env tm)
+(define (evaluate depth env tm)
   (define e (term-datum tm))
-  (match/mk
-    (((id address) (== `#(var ,id ,address) e))
-     (define b (env-ref env address))
-     (if b (cdr b) (exception 'unbound-variable tm)))
+  (if (and depth (<= depth 0)) (exception 'out-of-depth `(,tm ,env))
+    (match/mk
+      (((id address) (== `#(var ,id ,address) e))
+       (define b (env-ref env address))
+       (if b (cdr b) (exception 'unbound-variable tm)))
 
-    (((dform) (== `#(quote ,dform) e)) (syntax->datum dform))
+      (((dform) (== `#(quote ,dform) e)) (syntax->datum dform))
 
-    (((variadic? p* body) (== `#(lambda ,variadic? ,p* ,body) e))
-     (closure variadic? p* body env))
+      (((variadic? p* body) (== `#(lambda ,variadic? ,p* ,body) e))
+       (closure variadic? p* body env))
 
-    (((tproc targ*) (== `#(apply ,tproc ,targ*) e))
-     (define proc (evaluate env tproc))
-     (define arg* (vector-map (lambda (ta) (evaluate env ta)) targ*))
-     (define (evaluate-apply a*)
-       (define b?*
-         (vector-map (lambda (p a) (and (cdr p) (cons (cdr p) a)))
-                     (closure-param* proc) a*))
-       (define b* (vector-filter (lambda (x) x) b?*))
-       (define env^ (foldl (lambda (b env) (env-set env (car b) #t (cdr b)))
-                           (closure-env proc) (vector->list b*)))
-       (evaluate env^ (closure-body proc)))
+      (((tproc targ*) (== `#(apply ,tproc ,targ*) e))
+       (define proc (evaluate depth env tproc))
+       (define arg* (vector-map (lambda (ta) (evaluate depth env ta)) targ*))
+       (define (evaluate-apply a*)
+         (define b?*
+           (vector-map (lambda (p a) (and (cdr p) (cons (cdr p) a)))
+                       (closure-param* proc) a*))
+         (define b* (vector-filter (lambda (x) x) b?*))
+         (define env^ (foldl (lambda (b env) (env-set env (car b) #t (cdr b)))
+                             (closure-env proc) (vector->list b*)))
+         (evaluate (and depth (- depth 1)) env^ (closure-body proc)))
 
-     (cond ((not (closure? proc))
-            (exception 'inapplicable-procedure
-                       (term-datum-set tm `#(apply ,proc ,arg*))))
-           ((ormap exception? (vector->list arg*))
-            (exception #f (term-datum-set tm `#(apply ,proc ,arg*))))
-           (else
-             (define p* (closure-param* proc))
-             (cond ((and (closure-variadic? proc)
-                         (<= (- (vector-length p*) 1) (vector-length arg*)))
-                    (define a0* (vector-take arg* (- (vector-length p*) 1)))
-                    (define a1* (vector-drop arg* (- (vector-length p*) 1)))
-                    (evaluate-apply
-                      (vector-append a0* (vector (vector->list a1*)))))
-                   ((= (vector-length p*) (vector-length arg*))
-                    (evaluate-apply arg*))
-                   (else (exception 'argument-count-mismatch
-                                    (term-datum-set
-                                      tm `#(apply ,proc ,arg*))))))))
+       (cond ((not (closure? proc))
+              (exception 'inapplicable-procedure
+                         (term-datum-set tm `#(apply ,proc ,arg*))))
+             ((ormap exception? (vector->list arg*))
+              (exception #f (term-datum-set tm `#(apply ,proc ,arg*))))
+             (else
+               (define p* (closure-param* proc))
+               (cond ((and (closure-variadic? proc)
+                           (<= (- (vector-length p*) 1) (vector-length arg*)))
+                      (define a0* (vector-take arg* (- (vector-length p*) 1)))
+                      (define a1* (vector-drop arg* (- (vector-length p*) 1)))
+                      (evaluate-apply
+                        (vector-append a0* (vector (vector->list a1*)))))
+                     ((= (vector-length p*) (vector-length arg*))
+                      (evaluate-apply arg*))
+                     (else (exception 'argument-count-mismatch
+                                      (term-datum-set
+                                        tm `#(apply ,proc ,arg*))))))))
 
-    ((() succeed)
-     (cond ((and (exception? e) (not (exception-description e)))
-            (evaluate env (term-datum-set tm (exception-datum e))))
-           ((exception? e) e)
-           (else (exception 'unhandled-term tm))))))
+      ((() succeed)
+       (cond ((and (exception? e) (not (exception-description e)))
+              (evaluate depth env (term-datum-set tm (exception-datum e))))
+             ((exception? e) e)
+             (else (exception 'unhandled-term tm)))))))
 
 ;; test example
 ;; (evaluate env-empty (expand
