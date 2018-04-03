@@ -275,7 +275,11 @@
                                     (term-datum-set
                                       tm `#(apply ,proc ,arg*))))))))
 
-    ((() succeed) (if (exception? e) e (exception 'unhandled-term tm)))))
+    ((() succeed)
+     (cond ((and (exception? e) (not (exception-description e)))
+            (evaluate env (term-datum-set tm (exception-datum e))))
+           ((exception? e) e)
+           (else (exception 'unhandled-term tm))))))
 
 ;; test example
 ;; (evaluate env-empty (expand
