@@ -149,7 +149,7 @@
          (if (and (identifier? ta) (identifier? tb))
            (and (free-identifier=? ta tb) st)
            (unify st (syntax-unwrap ta) (syntax-unwrap tb))))
-        (else #f)))
+        (else (and (equal? ta tb) st))))
 
 (define (fail . reason)
   (lambda (st)
