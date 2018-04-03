@@ -178,9 +178,9 @@
   (syntax-rules ()
     ((_) (error "match/mk all clauses failed"))
     ((_ (((qvs ...) g ...) body ...) c* ...)
-     (begin (define result* (run* (qvs ...) g ...))
-            (if (not (pair? result*)) (let () (match/mk c* ...))
-              (apply (lambda (qvs ...) body ...) (car result*)))))))
+     (let () (begin (define result* (run* (qvs ...) g ...))
+                    (if (not (pair? result*)) (match/mk c* ...)
+                      (apply (lambda (qvs ...) body ...) (car result*))))))))
 
 (define (expand-quote env form)
   (match/mk (((literal _) (== #`(#,_ #,literal) form)) (build-literal literal))
