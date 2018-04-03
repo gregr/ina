@@ -117,12 +117,17 @@
       (cons (if (identifier? p) (identifier->fresh-renaming p) p)
             (formal-param*->maybe-renaming* (cdr p*))))))
 
+(define (term-exception? t) (exception? (term-datum t)))
 (define (build-literal form)
   (if (not (datum-valid-literal? (syntax->datum form)))
     (exception 'quote form)
     `#(quote ,form)))
 (define (build-variable identifier address) `#(var ,identifier ,address))
-(define (build-apply proc arg*) `#(apply ,proc ,(list->vector arg*)))
+(define (build-apply proc arg*)
+  (define tm `#(apply ,proc ,(list->vector arg*)))
+  (if (or (term-exception? proc) (ormap term-exception? arg*))
+    (exception #f tm)
+    tm))
 
 (define (build-lambda env variadic? p* trv*->body)
   (define param* (formal-param* p*))
@@ -133,8 +138,9 @@
   ;; TODO: just use labels as addresses for now, but this may change.
   (define trv* (map (lambda (r) (define l (renaming-label r))
                       `(variable . (,r . ,l))) r*))
-  `#(lambda ,variadic? ,(list->vector (map cons p* label?*))
-      ,(trv*->body trv*)))
+  (define body (trv*->body trv*))
+  (define tm `#(lambda ,variadic? ,(list->vector (map cons p* label?*)) ,body))
+  (if (term-exception? body) (exception #f tm) tm))
 
 (define (trv*->expanded-body env form)
   (lambda (trv*)
