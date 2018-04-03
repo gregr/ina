@@ -226,8 +226,6 @@
 (define-type closure closure?
   closure-variadic? closure-param* closure-body closure-env)
 
-;; TODO: track irrelevant exceptions?  Currently, exceptions can get lost when
-;; they aren't considered by the active computation.
 (define (evaluate env tm)
   (define e (term-datum tm))
   (match/mk
@@ -255,6 +253,8 @@
      (cond ((not (closure? proc))
             (exception 'inapplicable-procedure
                        (term-datum-set tm `#(apply ,proc ,arg*))))
+           ((ormap exception? (vector->list arg*))
+            (exception #f (term-datum-set tm `#(apply ,proc ,arg*))))
            (else
              (define p* (closure-param* proc))
              (cond ((and (closure-variadic? proc)
@@ -269,7 +269,7 @@
                                     (term-datum-set
                                       tm `#(apply ,proc ,arg*))))))))
 
-    ((() succeed) (exception 'unhandled-term tm))))
+    ((() succeed) (if (exception? e) e (exception 'unhandled-term tm)))))
 
 ;; test example
 ;; (evaluate env-empty (expand
