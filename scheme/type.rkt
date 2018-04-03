@@ -17,6 +17,7 @@
 (define (tag->details tag) (hash-ref tag=>details tag))
 
 (struct record (tag payload)
+        #:transparent
         #:methods gen:custom-write
         ((define write-proc
            (make-constructor-style-printer
