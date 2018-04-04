@@ -175,7 +175,9 @@
 (define (procedure->hygienic-syntax-transformer proc)
   (lambda (k env stx)
     (define mark (mark-fresh))
-    (k env (syntax-mark (proc (syntax-mark stx mark)) mark))))
+    (define result (proc (syntax-mark stx mark)))
+    (if (exception? result) result
+      (k env (syntax-mark result mark)))))
 
 (define-syntax match/mk
   (syntax-rules ()
