@@ -210,6 +210,23 @@
      (build-if (expand env c) (expand env t) (expand env f)))
     ((() succeed) (exception 'if form))))
 
+(define expand-let
+  (procedure->hygienic-syntax-transformer
+    (lambda (form)
+      (match/mk
+        ;; TODO: symbolo
+        ;(((_ name b* body) (== #`(#,_ #,name #,b* #,body) form) (symbolo name))
+         ;)
+        (((_ b* body) (== #`(#,_ #,b* . #,body) form))
+         (let loop ((b* b*) (p* '()) (a* '()))
+           (match/mk
+             (((p a b*-rest) (== #`((#,p #,a) . #,b*-rest) b*))
+              (loop b*-rest (cons p p*) (cons a a*)))
+             ((() (== #'() b*))
+              #`((lambda #,(reverse p*) . #,body) . #,(reverse a*)))
+             ((() succeed) (exception 'let form)))))
+        ((() succeed) (exception 'let form))))))
+
 (define env-initial
   (env-extend-keyword*
     env-empty
@@ -219,7 +236,7 @@
       ;; TODO: (Some of these expanders can be implemented as transformers.)
       ;(letrec . ,expand-letrec)
       ;(letrec* . ,expand-letrec)
-      ;(let . ,expand-let)
+      (let . ,expand-let)
       ;(let* . ,expand-let*)
       ;(quasiquote . ,expand-quasiquote)
       ;(syntax . ,expand-syntax)
