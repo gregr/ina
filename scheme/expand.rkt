@@ -5,7 +5,6 @@
   term-source
   term-datum
   expand
-  expand*
   procedure->hygienic-syntax-transformer
   ;; TODO: provide a better env interface.
   env-empty
@@ -168,14 +167,11 @@
           ((pair? dform)
            (define head (car dform))
            (define transformer (form->transformer env head))
-           (if transformer (transformer k env form)
-             (build-apply (expand env head) (expand* env (cdr dform)))))
+           (if transformer (transformer k env form) (expand-apply env form)))
           (else (exception 'unknown form))))
   (if (term? expanded) (term-source-prepend expanded form)
     (term (list form) expanded)))
 (define (expand env form) (expand/k expand env form))
-(define (expand* env form*)
-  (map (lambda (form) (expand env form)) (syntax->list form*)))
 (define (procedure->hygienic-syntax-transformer proc)
   (lambda (k env stx)
     (define mark (mark-fresh))
@@ -188,6 +184,17 @@
      (let () (begin (define result* (run* (qvs ...) g ...))
                     (if (not (pair? result*)) (match/mk c* ...)
                       (apply (lambda (qvs ...) body ...) (car result*))))))))
+
+(define (expand-apply env form)
+  (define dform (syntax-unwrap form))
+  (define args
+    (let loop ((fa* (cdr dform)) (a* '()))
+      (match/mk
+        ((() (== #'() fa*)) a*)
+        (((a d) (== #`(#,a . #,d) fa*)) (loop d (cons (expand env a) a*)))
+        ((() succeed) (exception 'apply-args fa*)))))
+  (if (exception? args) (exception 'apply form)
+    (build-apply (expand env (car dform)) args)))
 
 (define (expand-quote _ env form)
   (match/mk (((literal _) (== #`(#,_ #,literal) form)) (build-literal literal))
