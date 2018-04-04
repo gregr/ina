@@ -22,6 +22,8 @@
   syntax/metadata
   syntax-metadata
 
+  mark-fresh
+
   syntax-mark
   syntax-rename
   syntax-rename*
