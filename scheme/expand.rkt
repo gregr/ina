@@ -162,7 +162,7 @@
           ((identifier? form)
            (define b (env-ref-identifier env form))
            (cond ((b-variable? b) (build-variable form (b-variable-address b)))
-                 ((b-keyword? b) ((b-keyword-transformer b) env form))
+                 ((b-keyword? b) ((b-keyword-transformer b) k env form))
                  (else (exception 'unbound-variable form))))
           ((pair? dform)
            (define head (car dform))
