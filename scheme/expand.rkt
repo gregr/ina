@@ -145,16 +145,6 @@
   (define tm `#(lambda ,variadic? ,(list->vector (map cons p* label?*)) ,body))
   (if (term-exception? body) (exception #f tm) tm))
 
-(define (trv*->expanded-body env form)
-  (lambda (trv*)
-    (define t* (map (lambda (trv) (car trv)) trv*))
-    (define r* (map (lambda (trv) (cadr trv)) trv*))
-    (define v* (map (lambda (trv) (cddr trv)) trv*))
-    (define l* (map renaming-label r*))
-    (define renamed-form (syntax-rename* form r*))
-    (define tb* (map (lambda (t l v) `(,t . (,l . ,v))) t* l* v*))
-      (expand (env-extend* env tb*) renamed-form)))
-
 (define (expand/k k env form)
   (define dform (syntax-unwrap form))
   (define expanded
@@ -187,6 +177,81 @@
                     (if (not (pair? result*)) (match/mk c* ...)
                       (apply (lambda (qvs ...) body ...) (car result*))))))))
 
+(define (expand-top env original-form rest*)
+  (let loop ((env env) (form original-form))
+    (match/mk
+      (((f*) (== #`(begin . #,f*) form)) (expand-top* env f* rest*))
+
+      (((name p* body+) (== #`(define (#,name . #,p*) . #,body+) form))
+       (expand-top env #`(define #,name (lambda #,p* . #,body+)) rest*))
+
+      (((name body) (== #`(define #,name #,body) form))
+       (define r?* (formal-param*->maybe-renaming* (list name)))
+       (define r* (filter renaming? r?*))
+       ;; TODO: this assumes addresses are labels.
+       (define tb* (map (lambda (r) (define l (renaming-label r))
+                          `(variable . (,l . ,l))) r*))
+       (define env-rest (env-extend* env tb*))
+       (define renamed-rest* (map (lambda (f) (syntax-rename* f r*)) rest*))
+       (cons (cons name body) (expand-top* env-rest #'() renamed-rest*)))
+
+      ((() succeed)
+       (define expanded-form
+         (let ((dform (syntax-unwrap form)))
+           (cond ((identifier? form)
+                  (define b (env-ref-identifier env form))
+                  (and (b-keyword? b)
+                       ((b-keyword-transformer b) loop env form)))
+                 ((pair? dform)
+                  (define head (car dform))
+                  (define transformer (form->transformer env head))
+                  (and transformer (transformer loop env form)))
+                 (else #f))))
+       (if (syntax? expanded-form)
+         (loop env expanded-form)
+         (cons (cons #f original-form) (expand-top* env #'() rest*)))))))
+
+(define (expand-top* env form* rest*)
+  (match/mk
+    ((() (== #'() form*) (== '() rest*)) '())
+
+    (((f* f**) (== #'() form*) (== `(,f* . ,f**) rest*))
+     (expand-top* env f* f**))
+
+    (((a d) (== #`(#,a . #,d) form*)) (expand-top env a (cons d rest*)))
+
+    ((() succeed)
+     (cons (exception 'top-nonlist form*) (expand-top* env #'() rest*)))))
+
+(define (trv*->expanded-body old-env body+)
+  (lambda (trv*)
+    (define t* (map (lambda (trv) (car trv)) trv*))
+    (define r* (map (lambda (trv) (cadr trv)) trv*))
+    (define v* (map (lambda (trv) (cddr trv)) trv*))
+    (define l* (map renaming-label r*))
+    (define renamed-form (syntax-rename* body+ r*))
+    (define tb* (map (lambda (t l v) `(,t . (,l . ,v))) t* l* v*))
+    (define env (env-extend* old-env tb*))
+    (define definitions (expand-top* env renamed-form '()))
+    (cond ((null? definitions) (exception 'body-empty body+))
+          (else (define rdefs (reverse definitions))
+                (define b* (map (lambda (ba) (list (car ba) (cdr ba)))
+                                (reverse (cdr rdefs))))
+                (define body-b (car rdefs))
+                (define body (cdr body-b))
+                (cond ((car body-b) (exception 'body-no-expressions body+))
+                      ((null? b*) (expand env body))
+                      ;; TODO: use letrec* instead.
+                      (else (expand env #`(let #,b* #,body))))))))
+
+(define (expand-lambda _ env form)
+  (match/mk
+    (((p* body+ _) (== #`(#,_ #,p* . #,body+) form))
+     (define variadic? (variadic-formal-param*? p*))
+     (define param* (syntax->~list p*))
+     (build-lambda env variadic? param* (trv*->expanded-body env body+)))
+    ((() succeed) (exception 'lambda form))))
+
 (define (expand-apply env form)
   (define dform (syntax-unwrap form))
   (define rargs
@@ -201,17 +266,6 @@
 (define (expand-quote _ env form)
   (match/mk (((literal _) (== #`(#,_ #,literal) form)) (build-literal literal))
             ((() succeed) (exception 'quote form))))
-
-(define (expand-lambda _ env form)
-  (match/mk
-    (((p* body _) (== #`(#,_ #,p* #,body) form))
-     (define variadic? (variadic-formal-param*? p*))
-     (define param* (syntax->~list p*))
-     ;; TODO: support body sequence.
-     ;(== #`(#,_ #,p* . #,body) form)
-     ;(define body (syntax->list sdd))
-     (build-lambda env variadic? param* (trv*->expanded-body env body)))
-    ((() succeed) (exception 'lambda form))))
 
 (define (expand-if _ env form)
   (match/mk
