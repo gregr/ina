@@ -242,7 +242,7 @@
                 (cond ((car body-b) (exception 'body-no-expressions body+))
                       ((null? b*) (expand env body))
                       ;; TODO: use letrec* instead.
-                      (else (expand env #`(let #,b* #,body))))))))
+                      (else (expand env #`(let* #,b* #,body))))))))
 
 (define (expand-lambda _ env form)
   (match/mk
@@ -290,17 +290,29 @@
              ((() succeed) (exception 'let form)))))
         ((() succeed) (exception 'let form))))))
 
+(define expand-let*
+  (procedure->hygienic-syntax-transformer
+    (lambda (form)
+      (match/mk
+        (((_ body) (== #`(#,_ () . #,body) form))
+         #`(let () . #,body))
+
+        (((_ p a b* body) (== #`(#,_ ((#,p #,a) . #,b*) . #,body) form))
+         #`(let ((#,p #,a)) (let* #,b* . #,body)))
+
+        ((() succeed) (exception 'let* form))))))
+
 (define env-initial
   (env-extend-keyword*
     env-empty
     `((quote . ,expand-quote)
       (lambda . ,expand-lambda)
       (if . ,expand-if)
-      ;; TODO: (Some of these expanders can be implemented as transformers.)
       ;(letrec . ,expand-letrec)
       ;(letrec* . ,expand-letrec)
       (let . ,expand-let)
-      ;(let* . ,expand-let*)
+      (let* . ,expand-let*)
+      ;; TODO: (Some of these expanders can be implemented as transformers.)
       ;(quasiquote . ,expand-quasiquote)
       ;(syntax . ,expand-syntax)
       ;(quasisyntax . ,expand-quasisyntax)
