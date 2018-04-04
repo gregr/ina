@@ -177,7 +177,9 @@
 (define (expand* env form*)
   (map (lambda (form) (expand env form)) (syntax->list form*)))
 (define (procedure->hygienic-syntax-transformer proc)
-  (lambda (k env stx) (k env (syntax-mark (proc (syntax-mark stx))))))
+  (lambda (k env stx)
+    (define mark (mark-fresh))
+    (k env (syntax-mark (proc (syntax-mark stx mark)) mark))))
 
 (define-syntax match/mk
   (syntax-rules ()
