@@ -156,7 +156,7 @@
     (define tb* (map (lambda (t l v) `(,t . (,l . ,v))) t* l* v*))
       (expand (env-extend* env tb*) renamed-form)))
 
-(define (expand env form)
+(define (expand/k k env form)
   (define dform (syntax-unwrap form))
   (define expanded
     (cond ((syntax-self-evaluating? form) (build-literal form))
@@ -168,15 +168,16 @@
           ((pair? dform)
            (define head (car dform))
            (define transformer (form->transformer env head))
-           (if transformer (transformer env form)
+           (if transformer (transformer k env form)
              (build-apply (expand env head) (expand* env (cdr dform)))))
           (else (exception 'unknown form))))
   (if (term? expanded) (term-source-prepend expanded form)
     (term (list form) expanded)))
+(define (expand env form) (expand/k expand env form))
 (define (expand* env form*)
   (map (lambda (form) (expand env form)) (syntax->list form*)))
 (define (procedure->hygienic-syntax-transformer proc)
-  (lambda (env stx) (expand env (syntax-mark (proc (syntax-mark stx))))))
+  (lambda (k env stx) (k env (syntax-mark (proc (syntax-mark stx))))))
 
 (define-syntax match/mk
   (syntax-rules ()
@@ -186,11 +187,11 @@
                     (if (not (pair? result*)) (match/mk c* ...)
                       (apply (lambda (qvs ...) body ...) (car result*))))))))
 
-(define (expand-quote env form)
+(define (expand-quote _ env form)
   (match/mk (((literal _) (== #`(#,_ #,literal) form)) (build-literal literal))
             ((() succeed) (exception 'quote form))))
 
-(define (expand-lambda env form)
+(define (expand-lambda _ env form)
   (match/mk
     (((p* body _) (== #`(#,_ #,p* #,body) form))
      (define variadic? (variadic-formal-param*? p*))
@@ -201,7 +202,7 @@
      (build-lambda env variadic? param* (trv*->expanded-body env body)))
     ((() succeed) (exception 'lambda form))))
 
-(define (expand-if env form)
+(define (expand-if _ env form)
   (match/mk
     (((c t f _) (== #`(#,_ #,c #,t #,f) form))
      (build-if (expand env c) (expand env t) (expand env f)))
