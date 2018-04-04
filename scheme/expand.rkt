@@ -189,14 +189,14 @@
 
 (define (expand-apply env form)
   (define dform (syntax-unwrap form))
-  (define args
+  (define rargs
     (let loop ((fa* (cdr dform)) (a* '()))
       (match/mk
         ((() (== #'() fa*)) a*)
         (((a d) (== #`(#,a . #,d) fa*)) (loop d (cons (expand env a) a*)))
         ((() succeed) (exception 'apply-args fa*)))))
-  (if (exception? args) (exception 'apply form)
-    (build-apply (expand env (car dform)) args)))
+  (if (exception? rargs) (exception 'apply form)
+    (build-apply (expand env (car dform)) (reverse rargs))))
 
 (define (expand-quote _ env form)
   (match/mk (((literal _) (== #`(#,_ #,literal) form)) (build-literal literal))
