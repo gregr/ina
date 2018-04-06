@@ -8,9 +8,10 @@
   procedure->hygienic-syntax-transformer
   ;; TODO: provide a better env interface.
   env-empty
-  env-extend-keyword*
-  env-extend-variable*
   env-alias
+  env-extend*
+  variable-binding*
+  keyword-binding*
   env-initial
   evaluate
   )
@@ -26,32 +27,29 @@
 ;; syntax-error for more convenient source-info reporting.
 ;; match-syntax for more convenient parsing and validation.
 
-(define (b-keyword? b) (and (pair? b) (eqv? 'keyword (car b))))
-(define (b-keyword-transformer bv) (cdr bv))
-(define (b-variable? b) (and (pair? b) (eqv? 'variable (car b))))
-(define (b-variable-address bv) (cdr bv))
+(define-variant-type
+  b-entry?
+  (b-keyword b-keyword? b-keyword-transformer)
+  (b-variable b-variable? b-variable-address))
 
 (define env-empty (hash))
-(define (env-set env label type value)
-  (if label (hash-set env label (cons type value)) env))
-(define (env-set-variable env label address)
-  (env-set env label 'variable address))
-(define (env-set-keyword env label trans) (env-set env label 'keyword trans))
-(define (env-ref env label) (hash-ref env label #f))
-(define (env-ref-bound env label)
-  (define binding (env-ref env label))
-  ;; TODO: provide better information than just label.
-  (when (not binding) (error "unbound variable:" label))
-  binding)
-(define (env-ref-identifier env id) (env-ref env (identifier->label id)))
-(define (env-alias env alias-label aliased-label)
-  (hash-set env alias-label (env-ref-bound env aliased-label)))
-(define (env-extend* env tb*)
-  (foldl (lambda (tb env) (env-set env (cadr tb) (car tb) (cadr tb))) env tb*))
-(define (env-extend*/type env type b*)
-  (foldl (lambda (b env) (env-set env (car b) type (cdr b))) env b*))
-(define (env-extend-variable* env b*) (env-extend*/type env 'variable b*))
-(define (env-extend-keyword* env b*) (env-extend*/type env 'keyword b*))
+(define (env-set env i value) (hash-set env (identifier->label i) value))
+(define (env-ref/default env i default)
+  (hash-ref env (identifier->label i) default))
+(define (env-ref env i) (env-ref/default env i #f))
+(define (env-alias env alias aliased)
+  (define value (env-ref env aliased))
+  (when (not value) (error "cannot alias unbound identifier:" aliased alias))
+  (env-set env alias value))
+(define (env-extend* env b*)
+  (foldl (lambda (b env) (env-set env (car b) (cdr b))) env b*))
+
+(define (variable-binding* i*) (map (lambda (i) (cons i (b-variable i))) i*))
+(define (keyword-binding* b*)
+  (map (lambda (b)
+         (define name (car b))
+         (define i (if (identifier? name) name (datum->syntax #f name)))
+         (cons i (b-keyword (cdr b)))) b*))
 
 (define (strip-syntax d) (syntax->datum (datum->syntax #f d)))
 (define-type
@@ -65,7 +63,7 @@
 
 (define (form->transformer env form)
   (and (identifier? form)
-       (let ((b (env-ref-identifier env form)))
+       (let ((b (env-ref env form)))
          (and (b-keyword? b) (b-keyword-transformer b)))))
 
 (define (datum-self-evaluating? datum)
@@ -132,11 +130,11 @@
   (define tm `#(if ,c ,t ,f))
   (if (ormap term-exception? (list c t f)) (exception #f tm) tm))
 
-(define (build-lambda env variadic? p* ti*->body)
+(define (build-lambda env variadic? p* i*->body)
   (define param* (formal-param* p*))
   (define i?* (renamed-formal-param* param*))
   (define i* (filter identifier? i?*))
-  (define body (ti*->body (map (lambda (i) `(variable . ,i)) i*)))
+  (define body (i*->body i*))
   (define tm `#(lambda ,variadic? ,(list->vector i?*) ,body))
   (if (term-exception? body) (exception #f tm) tm))
 
@@ -145,7 +143,7 @@
   (define expanded
     (cond ((syntax-self-evaluating? form) (build-literal form))
           ((identifier? form)
-           (define b (env-ref-identifier env form))
+           (define b (env-ref env form))
            (cond ((b-variable? b) (build-variable form (b-variable-address b)))
                  ((b-keyword? b) ((b-keyword-transformer b) k env form))
                  (else (exception 'unbound-variable form))))
@@ -181,11 +179,8 @@
        (expand-top env #`(define #,name (lambda #,p* . #,body+)) rest*))
 
       (((name body) (== #`(define #,name #,body) form))
-       (define i?* (renamed-formal-param* (list name)))
-       (define i* (filter identifier? i?*))
-       (define tb* (map (lambda (i) (define l (identifier->label i))
-                          `(variable . (,l . ,l))) i*))
-       (define env-rest (env-extend* env tb*))
+       (define i* (filter identifier? (renamed-formal-param* (list name))))
+       (define env-rest (env-extend* env (variable-binding* i*)))
        (define (rename f) (syntax-rename/identifier* f i*))
        (define renamed-rest* (map rename rest*))
        (cons (cons name body) (expand-top* env-rest #'() renamed-rest*)))
@@ -194,7 +189,7 @@
        (define expanded-form
          (let ((dform (syntax-unwrap form)))
            (cond ((identifier? form)
-                  (define b (env-ref-identifier env form))
+                  (define b (env-ref env form))
                   (and (b-keyword? b)
                        ((b-keyword-transformer b) loop env form)))
                  ((pair? dform)
@@ -218,15 +213,10 @@
     ((() succeed)
      (cons (exception 'top-nonlist form*) (expand-top* env #'() rest*)))))
 
-(define (ti*->expanded-body old-env body+)
-  (lambda (ti*)
-    (define t* (map (lambda (ti) (car ti)) ti*))
-    (define i* (map (lambda (ti) (cdr ti)) ti*))
-    (define l* (map identifier->label i*))
-    (define v* l*)
+(define (i*->expanded-body old-env body+)
+  (lambda (i*)
     (define renamed-form (syntax-rename/identifier* body+ i*))
-    (define tb* (map (lambda (t l v) `(,t . (,l . ,v))) t* l* v*))
-    (define env (env-extend* old-env tb*))
+    (define env (env-extend* old-env (variable-binding* i*)))
     (define definitions (expand-top* env renamed-form '()))
     (cond ((null? definitions) (exception 'body-empty body+))
           (else (define rdefs (reverse definitions))
@@ -244,7 +234,7 @@
     (((p* body+ _) (== #`(#,_ #,p* . #,body+) form))
      (define variadic? (variadic-formal-param*? p*))
      (define param* (syntax->~list p*))
-     (build-lambda env variadic? param* (ti*->expanded-body env body+)))
+     (build-lambda env variadic? param* (i*->expanded-body env body+)))
     ((() succeed) (exception 'lambda form))))
 
 (define (expand-apply env form)
@@ -298,35 +288,36 @@
         ((() succeed) (exception 'let* form))))))
 
 (define env-initial
-  (env-extend-keyword*
+  (env-extend*
     env-empty
-    `((quote . ,expand-quote)
-      (lambda . ,expand-lambda)
-      (if . ,expand-if)
-      ;(letrec . ,expand-letrec)
-      ;(letrec* . ,expand-letrec)
-      (let . ,expand-let)
-      (let* . ,expand-let*)
-      ;; TODO: (Some of these expanders can be implemented as transformers.)
-      ;(quasiquote . ,expand-quasiquote)
-      ;(syntax . ,expand-syntax)
-      ;(quasisyntax . ,expand-quasisyntax)
-      ;(begin . ,expand-begin)
-      ;(cond . ,expand-cond)
-      ;(case . ,expand-case)
-      ;(match . ,expand-match)
-      ;(and . ,expand-and)
-      ;(or . ,expand-or)
-      ;(when . ,expand-when)
-      ;(unless . ,expand-unless)
-      ;(set! . ,expand-set!)
-      ;(reset . ,expand-reset)
-      ;(shift . ,expand-shift)
-      ;(let-syntax . ,expand-let-syntax)
-      ;(letrec-syntax . ,expand-letrec-syntax)
-      ;(letrec*-syntax+values . ,expand-letrec*-syntax+values)
-      ;splicing variants...
-      )))
+    (keyword-binding*
+      `((quote . ,expand-quote)
+        (lambda . ,expand-lambda)
+        (if . ,expand-if)
+        ;(letrec . ,expand-letrec)
+        ;(letrec* . ,expand-letrec)
+        (let . ,expand-let)
+        (let* . ,expand-let*)
+        ;; TODO: (Some of these expanders can be implemented as transformers.)
+        ;(quasiquote . ,expand-quasiquote)
+        ;(syntax . ,expand-syntax)
+        ;(quasisyntax . ,expand-quasisyntax)
+        ;(begin . ,expand-begin)
+        ;(cond . ,expand-cond)
+        ;(case . ,expand-case)
+        ;(match . ,expand-match)
+        ;(and . ,expand-and)
+        ;(or . ,expand-or)
+        ;(when . ,expand-when)
+        ;(unless . ,expand-unless)
+        ;(set! . ,expand-set!)
+        ;(reset . ,expand-reset)
+        ;(shift . ,expand-shift)
+        ;(let-syntax . ,expand-let-syntax)
+        ;(letrec-syntax . ,expand-letrec-syntax)
+        ;(letrec*-syntax+values . ,expand-letrec*-syntax+values)
+        ;splicing variants...
+        ))))
 
 
 (define-type closure closure?
@@ -337,8 +328,7 @@
   (if (and depth (<= depth 0)) (exception 'out-of-depth `(,tm ,env))
     (match/mk
       (((id address) (== `#(var ,id ,address) e))
-       (define b (env-ref env address))
-       (if b (cdr b) (exception 'unbound-variable tm)))
+       (env-ref/default env address (exception 'unbound-variable tm)))
 
       (((dform) (== `#(quote ,dform) e)) (syntax->datum dform))
 
@@ -361,8 +351,7 @@
                        (closure-param* proc) a*))
          (define b* (vector-filter (lambda (x) x) b?*))
          (define env^
-           (foldl (lambda (b env)
-                    (env-set env (identifier->label (car b)) #t (cdr b)))
+           (foldl (lambda (b env) (env-set env (car b) (cdr b)))
                   (closure-env proc) (vector->list b*)))
          (evaluate (and depth (- depth 1)) env^ (closure-body proc)))
 
