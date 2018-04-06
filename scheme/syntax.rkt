@@ -19,6 +19,8 @@
   bound-identifier=?
   identifier->fresh-renaming
 
+  identifier-rename
+
   syntax/metadata
   syntax-metadata
 
@@ -27,6 +29,9 @@
   syntax-mark
   syntax-rename
   syntax-rename*
+
+  syntax-rename/identifier
+  syntax-rename/identifier*
 
   renaming?
   renaming-label
@@ -56,6 +61,15 @@
   (define (identifier->fresh-renaming i)
     (when (not (identifier? i)) (error "cannot rename non-identifier:" i))
     (renaming-fresh (syntax->datum i) (syntax->mark* i)))
+
+  (define (identifier-rename i)
+    (when (not (identifier? i)) (error "cannot rename non-identifier:" i))
+    (syntax-hygiene-cons
+      i (renaming-fresh (syntax->datum i) (syntax->mark* i))))
+  (define (identifier->renaming i)
+    (when (not (identifier? i))
+      (error "cannot retrieve renaming of non-identifier:" i))
+    (renaming (syntax->datum i) (syntax->mark* i) (identifier->label i)))
 
   (define hygiene-empty '())
   (define (hygiene-cons h h*)
@@ -110,6 +124,11 @@
   (define (syntax-rename stx renaming) (syntax-hygiene-cons stx renaming))
   (define (syntax-rename* stx renaming*)
     (foldl (lambda (r stx) (syntax-rename stx r)) stx renaming*))
+
+  (define (syntax-rename/identifier stx i)
+    (syntax-hygiene-cons stx (identifier->renaming i)))
+  (define (syntax-rename/identifier* stx i*)
+    (foldl (lambda (i stx) (syntax-rename/identifier stx i)) stx i*))
 
   (define (syntax-unwrap stx)
     (define datum (syntax-datum stx))
