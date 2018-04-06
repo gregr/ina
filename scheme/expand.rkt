@@ -393,15 +393,3 @@
               (evaluate depth env (term-datum-set tm (exception-datum e))))
              ((exception? e) e)
              (else (exception 'unhandled-term tm)))))))
-
-;; test example
-;(evaluate
-  ;2 env-empty
-  ;(expand
-    ;env-initial
-    ;#`((lambda (w #f x #f y . z)
-         ;(if (x y z '(a ... z))
-           ;'true
-           ;'false))
-       ;1 2 3 4 5 6 7))
-  ;)
