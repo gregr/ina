@@ -4,9 +4,12 @@
   term?
   term-source
   term-datum
+  exception
+  exception?
+  exception-description
+  exception-datum
   expand
   procedure->hygienic-syntax-transformer
-  ;; TODO: provide a better env interface.
   env-empty
   env-alias
   env-extend*
