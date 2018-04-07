@@ -12,29 +12,20 @@
   syntax->datum
   datum->syntax
 
-  label=?
   identifier->label
   identifier?
   free-identifier=?
   bound-identifier=?
-  identifier->fresh-renaming
-
   identifier-rename
 
   syntax/metadata
   syntax-metadata
 
   mark-fresh
-
   syntax-mark
-  syntax-rename
-  syntax-rename*
 
   syntax-rename/identifier
   syntax-rename/identifier*
-
-  renaming?
-  renaming-label
   )
 
 (module
@@ -58,9 +49,6 @@
   (define-type renaming renaming?
     renaming-symbol renaming-marks renaming-label)
   (define (renaming-fresh symbol marks) (renaming symbol marks (label-fresh)))
-  (define (identifier->fresh-renaming i)
-    (when (not (identifier? i)) (error "cannot rename non-identifier:" i))
-    (renaming-fresh (syntax->datum i) (syntax->mark* i)))
 
   (define (identifier-rename i)
     (when (not (identifier? i)) (error "cannot rename non-identifier:" i))
@@ -121,9 +109,6 @@
   (define (syntax->mark* stx) (hygiene->mark* (syntax-hygiene stx)))
 
   (define (syntax-mark stx mark) (syntax-hygiene-cons stx mark))
-  (define (syntax-rename stx renaming) (syntax-hygiene-cons stx renaming))
-  (define (syntax-rename* stx renaming*)
-    (foldl (lambda (r stx) (syntax-rename stx r)) stx renaming*))
 
   (define (syntax-rename/identifier stx i)
     (syntax-hygiene-cons stx (identifier->renaming i)))
