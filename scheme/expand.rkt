@@ -8,8 +8,8 @@
   exception?
   exception-description
   exception-datum
+  syntax-transformer
   expand
-  procedure->hygienic-syntax-transformer
   env-empty
   env-alias
   env-extend*
@@ -158,12 +158,10 @@
   (if (term? expanded) (term-source-prepend expanded form)
     (term (list form) expanded)))
 (define (expand env form) (expand/k expand env form))
-(define (procedure->hygienic-syntax-transformer proc)
+(define (syntax-transformer proc)
   (lambda (k env stx)
-    (define mark (mark-fresh))
-    (define result (proc (syntax-mark stx mark)))
-    (if (exception? result) result
-      (k env (syntax-mark result mark)))))
+    (define result ((procedure->hygienic-syntax-transformer proc) stx))
+    (if (exception? result) result (k env result))))
 
 (define-syntax match/mk
   (syntax-rules ()
@@ -262,7 +260,7 @@
     ((() succeed) (exception 'if form))))
 
 (define expand-let
-  (procedure->hygienic-syntax-transformer
+  (syntax-transformer
     (lambda (form)
       (match/mk
         ;; TODO: symbolo
@@ -279,7 +277,7 @@
         ((() succeed) (exception 'let form))))))
 
 (define expand-let*
-  (procedure->hygienic-syntax-transformer
+  (syntax-transformer
     (lambda (form)
       (match/mk
         (((_ body) (== #`(#,_ () . #,body) form))

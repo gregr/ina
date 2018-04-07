@@ -8,7 +8,6 @@
 
   syntax?
   syntax-unwrap
-  syntax->list
   syntax->datum
   datum->syntax
 
@@ -21,11 +20,10 @@
   syntax/metadata
   syntax-metadata
 
-  mark-fresh
-  syntax-mark
-
   syntax-rename/identifier
   syntax-rename/identifier*
+
+  procedure->hygienic-syntax-transformer
   )
 
 (module
@@ -109,6 +107,12 @@
   (define (syntax->mark* stx) (hygiene->mark* (syntax-hygiene stx)))
 
   (define (syntax-mark stx mark) (syntax-hygiene-cons stx mark))
+
+  (define (procedure->hygienic-syntax-transformer proc)
+    (lambda (stx)
+      (define mark (mark-fresh))
+      (define result (proc (syntax-mark stx mark)))
+      (if (syntax? result) (syntax-mark result mark) result)))
 
   (define (syntax-rename/identifier stx i)
     (syntax-hygiene-cons stx (identifier->renaming i)))
