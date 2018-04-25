@@ -3,6 +3,7 @@
   ;; TODO:
   )
 (require
+  "syntax-new.rkt"
   "type.rkt"
   racket/match
   racket/set
@@ -75,7 +76,9 @@
     ((pat-syntax? pat)
      (define vlp (simplify-pat (pat-syntax-vlp pat)))
      (if (pat-literal? vlp)
-       (pat-literal (datum->syntax #f (pat-literal-datum vlp)))
+       (let ((datum (pat-literal-datum vlp)))
+         (pat-literal
+           (if (syntax-new? datum) datum (datum->syntax-new #f datum))))
        (pat-syntax vlp)))
     ((pat-app? pat)
      (pat-app (pat-app-transformer pat) (simplify-pat (pat-app-p pat))))
@@ -173,7 +176,7 @@
     ((quasiquote qq) (qq-syntax->pat #'qq))
     ((quasisyntax qs) (pat-syntax (qs-syntax->pat #'qs)))
 
-    ((syntax datum) (pat-literal #'datum))
+    ((syntax datum) (pat-literal (racket-syntax->syntax-new #'datum)))
     ((quote datum) (pat-literal (syntax->datum #'datum)))
     (atom (non-null-atom? (syntax->datum #'atom))
           (pat-literal (syntax->datum #'atom)))))
