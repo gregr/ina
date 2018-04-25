@@ -90,31 +90,14 @@
            (datum (syntax->pat #'(qu datum))))))))
 
   (define-quasi->pat
+    qq-syntax->pat quasiquote quote unquote unquote-splicing)
+  (define-quasi->pat
     qs-syntax->pat quasisyntax syntax unsyntax unsyntax-splicing)
-
-  (define (qq-syntax->pat stx)
-    (syntax-case stx (list quote unquote unquote-splicing)
-      ((unquote p) (syntax->pat #'p))
-      (((unquote-splicing (list p ...)) . qq)
-       (syntax->pat #'(list* p ... (quasiquote qq))))
-      (((unquote-splicing (quote (d ...))) . qq)
-       (syntax->pat #'((unquote-splicing (list (quote d) ...)) . qq)))
-      (((unquote-splicing p) . qq)
-       (identifier? #'p)
-       (syntax->pat #'(list* p ___ (quasiquote qq))))
-      ((a . d)
-       (not (and (identifier? #'a)
-                 (or (free-identifier=? #'unquote #'a)
-                     (free-identifier=? #'unquote-splicing #'a))))
-       (syntax->pat #'(list* (quasiquote a) (quasiquote d))))
-      (#(p ...) (pat-vector (qq-syntax->pat #'(p ...))))
-      (datum (syntax->pat #'(quote datum)))))
 
   (syntax-case stx (var exist ___
                         and or not ? app
                         cons list list* vector
-                        quote quasiquote unquote unquote-splicing
-                        syntax quasisyntax unsyntax unsyntax-splicing)
+                        quote quasiquote syntax quasisyntax)
     (_ (and (identifier? stx) (free-identifier=? #'_ stx)) pat-any)
     (id (identifier? #'id) (pat-var #'id))
     ((var id) (identifier? #'id) (pat-var #'id))
