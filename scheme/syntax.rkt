@@ -128,11 +128,13 @@
            (vector-map (lambda (s) (syntax-hygiene-append s h)) datum))
           (else datum)))
 
-  (define (syntax->list stx)
-    (define d (syntax-unwrap stx))
-    (cond ((null? d) '())
-          ((pair? d) (cons (car d) (syntax->list (cdr d))))
-          (else (error "datum is not a syntax list:" stx))))
+  (define (syntax-append ls r)
+    (define d (if (syntax? ls) (syntax-unwrap ls) ls))
+    (cond ((null? d) r)
+          ((pair? d) (cons (car d) (syntax-append (cdr d) r)))
+          (else (error "datum is not a syntax list:" ls))))
+
+  (define (syntax->list stx) (syntax-append stx '()))
 
   (define (syntax->datum stx)
     (define (strip datum)
