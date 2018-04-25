@@ -4,6 +4,7 @@
   )
 (require
   "type.rkt"
+  racket/set
   )
 
 (define-variant-type
@@ -26,3 +27,23 @@
   (pat-? pat-?? pat-?-predicate)
   (pat-app pat-app? pat-app-transformer pat-app-p)
   )
+
+(define set-empty (set))
+
+(define (bound-pattern-ids pat)
+  (cond
+    ((pat-exist? pat)
+     (set-subtract (bound-pattern-ids (pat-exist-p pat)) (pat-exist-ids pat)))
+    ((pat-var? pat) (set (pat-var-id pat)))
+    ((pat-and? pat)     (set-union (bound-pattern-ids (pat-and-c1 pat))
+                                   (bound-pattern-ids (pat-and-c2 pat))))
+    ((pat-or? pat)      (set-union (bound-pattern-ids (pat-or-d1 pat))
+                                   (bound-pattern-ids (pat-or-d2 pat))))
+    ((pat-cons? pat)    (set-union (bound-pattern-ids (pat-cons-car pat))
+                                   (bound-pattern-ids (pat-cons-cdr pat))))
+    ((pat-segment? pat) (set-union (bound-pattern-ids (pat-segment-p pat))
+                                   (bound-pattern-ids (pat-segment-cdr pat))))
+    ((pat-vector? pat)  (bound-pattern-ids (pat-vector-lp pat)))
+    ((pat-syntax? pat)  (bound-pattern-ids (pat-syntax-vlp pat)))
+    ((pat-app? pat)     (bound-pattern-ids (pat-app-p pat)))
+    (else set-empty)))
