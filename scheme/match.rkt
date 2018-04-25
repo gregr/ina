@@ -49,6 +49,38 @@
     ((pat-app? pat)     (bound-pattern-ids (pat-app-p pat)))
     (else set-empty)))
 
+(define (simplify-pat pat)
+  (cond
+    ((pat-exist? pat)
+     (pat-exist (pat-exist-ids pat) (simplify-pat (pat-exist-p pat))))
+    ((pat-and? pat)
+     (pat-and (simplify-pat (pat-and-c1 pat)) (simplify-pat (pat-and-c2 pat))))
+    ((pat-or? pat)
+     (pat-or (simplify-pat (pat-or-d1 pat)) (simplify-pat (pat-or-d2 pat))))
+    ((pat-not? pat) (pat-not (simplify-pat (pat-not-p pat))))
+    ((pat-cons? pat)
+     (define pcar (simplify-pat (pat-cons-car pat)))
+     (define pcdr (simplify-pat (pat-cons-cdr pat)))
+     (if (and (pat-literal? pcar) (pat-literal? pcdr))
+       (pat-literal (cons (pat-literal-datum pcar) (pat-literal-datum pcdr)))
+       (pat-cons pcar pcdr)))
+    ((pat-segment? pat) (pat-segment (pat-segment-min-length pat)
+                                     (simplify-pat (pat-segment-p pat))
+                                     (simplify-pat (pat-segment-cdr pat))))
+    ((pat-vector? pat)
+     (define lp (simplify-pat (pat-vector-lp pat)))
+     (if (pat-literal? lp)
+       (pat-literal (list->vector (pat-literal-datum lp)))
+       (pat-vector lp)))
+    ((pat-syntax? pat)
+     (define vlp (simplify-pat (pat-syntax-vlp pat)))
+     (if (pat-literal? vlp)
+       (pat-literal (datum->syntax #f (pat-literal-datum vlp)))
+       (pat-syntax vlp)))
+    ((pat-app? pat)
+     (pat-app (pat-app-transformer pat) (simplify-pat (pat-app-p pat))))
+    (else pat)))
+
 (define (syntax->pat stx)
   (define (non-null-atom? datum)
     (or (eq? #t datum)
@@ -145,7 +177,5 @@
     ((quote datum) (pat-literal (syntax->datum #'datum)))
     (atom (non-null-atom? (syntax->datum #'atom))
           (pat-literal (syntax->datum #'atom)))))
-
-;; TODO: simplify patterns
 
 ;; TODO: named match for simple catamorphisms
