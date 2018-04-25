@@ -187,12 +187,14 @@
 
   (define-syntax (new-quasisyntax stx)
     (syntax-case stx (unsyntax unsyntax-splicing)
-      ((_ (unsyntax e)) #'e)
+      ((_ (unsyntax e))
+       #'(let ((datum e))
+           (if (syntax? datum) datum (datum->syntax (new-syntax e) datum))))
 
       ((_ ((unsyntax-splicing e) . d))
        (with-syntax
          (((_ sdatum) stx))
-         #'(syntax-new/racket (append (syntax->list e) (new-quasisyntax d))
+         #'(syntax-new/racket (syntax-append e (new-quasisyntax d))
                               (quote-syntax sdatum))))
 
       ((_ (a . d))
