@@ -6,7 +6,6 @@
   "syntax-new.rkt"
   "type.rkt"
   racket/match
-  racket/set
   )
 
 (define-variant-type
@@ -30,7 +29,17 @@
   (pat-app pat-app? pat-app-transformer pat-app-p)
   )
 
-(define set-empty (set))
+(define set-empty '())
+(define (set x) (list x))
+(define (set-empty? s) (null? s))
+(define (set-member? ys x) (ormap (lambda (y) (free-identifier=? x y)) ys))
+(define (set-union a b)
+  (define (set-add x ys) (if (set-member? ys x) ys (cons x ys)))
+  (foldl set-add b a))
+(define (set-subtract a b)
+  (define (set-add x ys) (if (set-member? b x) ys (cons x ys)))
+  (foldl set-add '() a))
+(define (list->set xs) (set-union xs '()))
 
 (define (bound-pattern-ids pat)
   (cond
