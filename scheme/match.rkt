@@ -173,7 +173,6 @@
     (when (not (id-set-empty? leaky))
       (error "pattern doesn't always bind variables:" leaky)))
   (not-leaky pat)
-  (define bound (bound-pattern-ids pat))
   ;; TODO: does this need to be inlined?
   (define (equiv-data? a b)
     (or (eqv? a b)
@@ -214,6 +213,7 @@
           ((pat-or? pat)
            (loop (pat-or-d1 pat) k-succeed
                  (loop (pat-or-d2 pat) k-succeed k-fail)))
+          ;; TODO: propagate negations for not-yet-bound variables?
           ((pat-not? pat) (loop (pat-not-p pat) k-fail k-succeed))
 
           ((pat-cons? pat)
@@ -312,6 +312,25 @@
                ((if (#,(pat-?-predicate pat) value) #,k-succeed #,k-fail)
                 env value)))
           (else (error "invalid pattern:" pat)))))
+
+(define (compile-match-lambda alts)
+  #`(lambda (value)
+      (#,(for/fold
+           ((k-fail #'(lambda (_ v) (error "no matching clause for:" v))))
+           ((alt (reverse alts)))
+           (syntax-case alt ()
+             ;; TODO: support #:when and (=> fail).
+             ((pattern body ...)
+              (let ((pat (scopify-pat (simplify-pat (syntax->pat #'pattern)))))
+                (define bound (bound-pattern-ids pat))
+                (define k-succeed
+                  #`(lambda (env _)
+                      (let #,(map (lambda (b)
+                                    #`(#,b (cdr (ida-assoc env #'#,b)))) bound)
+                        body ...)))
+                #`(lambda (env value)
+                    (#,(compile-pat pat k-succeed k-fail) ida-empty value))))))
+       ida-empty value)))
 
 (define (syntax->pat stx)
   (define (non-null-atom? datum)
