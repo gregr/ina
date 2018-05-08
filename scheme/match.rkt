@@ -195,12 +195,15 @@
                  k-fail))
           ((pat-any? pat) k-succeed)
           ((pat-var? pat)
-           #`(lambda (env value)
-               (define binding (ida-assoc env #'#,(pat-var-id pat)))
-               (if binding
-                 ((if (equiv-data? (cdr binding) value)
-                    #,k-succeed #,k-fail) env value)
-                 (#,k-succeed (ida-set env #,(pat-var-id pat) value)))))
+           (with-syntax
+             (((k-s) (generate-temporaries #'(k-s))))
+             #`(lambda (env value)
+                 (define k-s #,k-succeed)
+                 (define binding (ida-assoc env #'#,(pat-var-id pat)))
+                 (if binding
+                   ((if (equiv-data? (cdr binding) value)
+                      k-s #,k-fail) env value)
+                   (k-s (ida-set env #'#,(pat-var-id pat) value) value)))))
           ((pat-literal? pat)
            #`(lambda (env value)
                ((if (equiv-data? '#,(pat-literal-datum pat) value)
