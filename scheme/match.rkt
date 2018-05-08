@@ -167,6 +167,8 @@
         ((id-set-member? ids (caar ida)) (ida-forget (cdr ida) ids))
         (else (cons (car ida) (ida-forget (cdr ida) ids)))))
 
+(define (id-list id*) (map (lambda (i) #`#'#,i) id*))
+
 (define (equiv-data? a b)
   (or (eqv? a b)
       (and (pair? a) (pair? b)
@@ -190,7 +192,8 @@
     (cond ((pat-exist? pat)
            (loop (pat-exist-p pat)
                  #`(lambda (env value)
-                     (#,k-succeed (ida-forget env #'#,(pat-exist-ids pat))
+                     (#,k-succeed
+                      (ida-forget env (list #,@(id-list (pat-exist-ids pat))))
                       value))
                  k-fail))
           ((pat-any? pat) k-succeed)
@@ -255,11 +258,11 @@
           ((pat-segment? pat)
            (define subpat (pat-segment-p pat))
            (not-leaky subpat)
-           (define bound subpat)
            (define min-len (pat-segment-min-length pat))
            (with-syntax
              (((k-s k-f) (generate-temporaries #'(k-s k-f))))
              #`(lambda (env value)
+                 (define bound (list #,@(id-list (bound-pattern-ids subpat))))
                  (define (k-s env) (#,k-succeed env value))
                  (define (k-f env _) (#,k-fail env value))
                  (define try-seg
