@@ -466,3 +466,32 @@
         scrutinee))))
 
 ;; TODO: named match for simple catamorphisms
+
+(module+
+  test (require rackunit)
+
+  (define (test input)
+    (match-new input
+      (4 'four)
+      (5 'five)
+      (`(,a ,b) `(list-2-rev ,b ,a))
+      ((list fst `(,k ,v) ___ almost k lst)
+       `(segment: ,k ,v ,fst ,lst ,almost))
+      ((list 1 repeat ___  5 repeat ___ remaining ___)
+       `(repeat1: ,repeat remaining: ,remaining))
+      ((list 1 repeat ___  5 `(,repeat) ___ remaining ___)
+       `(repeat2: ,repeat remaining: ,remaining))
+      (_ 'anything)))
+
+  (check-equal? (test 4) 'four)
+  (check-equal? (test 5) 'five)
+  (check-equal? (test '(1 2)) '(list-2-rev 2 1))
+  (check-equal? (test '(1 (2 3) (4 5) (6 7) 8 (2 4 6) 9))
+                '(segment: (2 4 6) (3 5 7) 1 9 8))
+  (check-equal? (test '(1 2 3 4 5 2 3 4 9 10))
+                '(repeat1: (2 3 4) remaining: (9 10)))
+  (check-equal? (test '(1 2 3 4 5 (2) (3) (4) 9 10))
+                '(repeat2: (2 3 4) remaining: (9 10)))
+  (check-equal? (test '(1 2 3 4 5 (2) (3) (5) 9 10))
+                'anything)
+  )
