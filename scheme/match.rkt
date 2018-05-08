@@ -273,7 +273,7 @@
                  (let seg-loop ((value value) (seg* '()) (env* '()))
                    (cond
                      ;; greedily extend segment as far as possible
-                     ((and (pair? value) (try-seg id-set-empty (car value)))
+                     ((and (pair? value) (try-seg ida-empty (car value)))
                       => (lambda (env) (seg-loop (cdr value)
                                                  (cons (car value) seg*)
                                                  (cons env env*))))
@@ -288,21 +288,22 @@
                            ((> #,min-len (length seg*)) (k-f env value))
                            ((foldl
                               ;; zip sub envs and check consistency w/ main env
-                              (lambda (env bv*)
+                              (lambda (bv* env)
                                 (define b (car bv*))
-                                (define binding (and env (id-assoc env b)))
+                                (define binding (and env (ida-assoc env b)))
                                 (and env
                                      (if binding
                                        (and (equiv-data? (cdr binding)
                                                          (cdr bv*)) env)
                                        (ida-set env b (cdr bv*)))))
                               env
-                              (apply map (lambda (b . v*) (cons b v*))
+                              (apply map (lambda bv* bv*)
                                      (cons bound
                                            (map (lambda (e)
                                                   (map (lambda (b)
                                                          (cdr (ida-assoc e b)))
-                                                       bound)) env*))))
+                                                       bound))
+                                                (reverse env*)))))
                             => (lambda (env)
                                  (cond ((try-cdr env value) => k-s)
                                        (else (retry)))))
