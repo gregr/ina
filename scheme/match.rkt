@@ -167,6 +167,71 @@
         ((id-set-member? ids (caar ida)) (ida-forget (cdr ida) ids))
         (else (cons (car ida) (ida-forget (cdr ida) ids)))))
 
+;; TODO: when/guard, captured k-fail
+;(define (interpret-pat pat)
+  ;(define leaky (leaky-pattern-ids pat))
+  ;(define bound (bound-pattern-ids pat))
+  ;(when (not (id-set-empty? leaky))
+    ;(error "pattern doesn't always bind variables:" leaky))
+  ;(define (equiv-data? a b)
+    ;(or (eqv? a b)
+        ;(and (pair? a) (pair? b)
+             ;(equiv-data? (car a) (car b))
+             ;(equiv-data? (cdr a) (cdr b)))
+        ;(and (vector? a) (vector? b)
+             ;(equiv-data? (vector->list a) (vector->list b)))
+        ;(and (identifier-new? a) (identifier-new? b)
+             ;(free-identifier-new=? a b))
+        ;(and (syntax-new? a) (syntax-new? b)
+             ;(equiv-data? (syntax-unwrap a) (syntax-unwrap b)))))
+  ;(define (interpret env pat value k-t k-f)
+    ;(cond ((pat-exist? pat)
+           ;(define env1 (interpret (cons #f env) pat value))
+           ;(ida-forget env1 (pat-exist-ids)))
+          ;((pat-any? pat) env)
+          ;((pat-var? pat)
+           ;(define binding (ida-assoc env (pat-var-id pat)))
+           ;(if binding
+             ;(and (equiv-data? (cdr binding) value) env)
+             ;(ida-set env (pat-var-id pat) value)))
+          ;((pat-literal? pat)
+           ;(and (equiv-data? (pat-literal-datum pat) value) env))
+          ;((pat-and? pat)
+           ;(define env1 (interpret env (pat-and-c1 pat) value))
+           ;(interpret env1 (pat-and-c2 pat) value))
+
+          ;;; TODO: pre-divide or?
+          ;((pat-or? pat)
+           ;)
+
+          ;((pat-not? pat) (and (not (interpret env pat value)) env))
+          ;((pat-cons? pat)
+           ;(and (pair? value)
+                ;(let ((env1 (interpret env (pat-cons-car pat) (car value))))
+                  ;(interpret env1 (pat-cons-cdr pat) (cdr value)))))
+
+          ;;; TODO: this is also a little like or...
+          ;((pat-segment? pat)
+
+           ;)
+
+          ;((pat-vector? pat)
+           ;(and (vector? value)
+                ;(interpret env (pat-vector-lp pat) (vector->list value))))
+          ;((pat-syntax? pat)
+           ;(and (syntax-new? value)
+                ;(interpret env (pat-syntax-vlp pat) (syntax-unwrap value))))
+
+          ;;; TODO: have to eval/generate function in ? and app
+          ;((pat-app? pat)
+           ;(interpret env (pat-app-p pat) ((pat-app-transformer pat) value)))
+          ;((pat-?? pat) (and ((pat-?-predicate pat) value) env))
+
+          ;(else (error "invalid pattern:" pat))))
+
+  ;(interpret '() pat )
+  ;)
+
 (define (syntax->pat stx)
   (define (non-null-atom? datum)
     (or (eq? #t datum)
