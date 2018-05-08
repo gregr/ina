@@ -39,7 +39,7 @@
     ((_ name singleton-name repr name?)
      (begin (define tag (tag-fresh! 'name repr))
             (define singleton-name (record tag '#()))
-            (define (name? datum) (eq? tag datum))))))
+            (define (name? datum) (eq? singleton-name datum))))))
 (define-syntax define-type/multi-field
   (syntax-rules ()
     ((_ name construct repr name? f* ...)
