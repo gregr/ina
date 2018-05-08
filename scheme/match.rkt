@@ -221,16 +221,15 @@
 
           ((pat-cons? pat)
            (with-syntax
-             (((k-s k-f) (generate-temporaries #'(k-s k-f))))
+             (((k-s k-f k-cdr) (generate-temporaries #'(k-s k-f k-cdr))))
              #`(lambda (env value)
                  (define (k-s env _) (#,k-succeed env value))
                  (define (k-f env _) (#,k-fail env value))
-                 (#,(loop (pat-cons-car pat)
-                          #`(lambda (env _)
-                              (#,(loop (pat-cons-cdr pat) #'k-s #'k-f)
-                               env (cdr value)))
-                          #'k-f)
-                  env (car value)))))
+                 (define (k-cdr env _) (#,(loop (pat-cons-cdr pat) #'k-s #'k-f)
+                                        env (cdr value)))
+                 (if (pair? value)
+                   (#,(loop (pat-cons-car pat) #'k-cdr #'k-f) env (car value))
+                   (k-f env value)))))
           ((pat-vector? pat)
            (with-syntax
              (((k-s k-f) (generate-temporaries #'(k-s k-f))))
