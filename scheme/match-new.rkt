@@ -499,7 +499,9 @@
 ;; TODO: named match for simple catamorphisms
 
 (module+
-  test (require rackunit)
+  test (require rackunit
+                "syntax.rkt"
+                )
 
   (define (test input)
     (match-new input
@@ -525,4 +527,34 @@
                 '(repeat2: (2 3 4) remaining: (9 10)))
   (check-equal? (test '(1 2 3 4 5 (2) (3) (5) 9 10))
                 'anything)
+
+  (define (test2 input)
+    (match-new input
+      (#'ok 1)
+      (#'(a ok b) 2)
+      (#`(b #,#'ok a) 3)
+      ;(#`(c #,(and x #'ok) #,x d) 4)
+      (#`(c #,(and x #'ok) #,x d) 4)
+      (#`(d #,x #,(and x #'ok) c) 5)
+      (#`(c #,x #,x d) 6)
+      (_ 'final)))
+
+  (define id1 #'ok)
+  (define id2 (identifier-rename id1))
+
+  (check-equal? (test2 'ok) 'final)
+  (check-equal? (test2 id1) 1)
+  (check-equal? (test2 id2) 'final)
+  (check-equal? (test2 #`(a #,id1 b)) 2)
+  (check-equal? (test2 #`(a #,id2 b)) 'final)
+  (check-equal? (test2 #`(b #,id1 a)) 3)
+  (check-equal? (test2 #`(a #,id2 a)) 'final)
+  (check-equal? (test2 #`(c #,id1 #,id1 d)) 4)
+  (check-equal? (test2 #`(d #,id1 #,id1 c)) 5)
+  (check-equal? (test2 #`(c #,id1 ok d)) 4)
+  (check-equal? (test2 #`(d ok #,id1 c)) 5)
+  (check-equal? (test2 #`(c #,id2 #,id2 d)) 6)
+  (check-equal? (test2 #`(c #,id2 ok d)) 'final)
+  (check-equal? (test2 #`(c ok #,id2 d)) 'final)
+  (check-equal? (test2 #`(d #,id2 #,id2 c)) 'final)
   )
