@@ -145,7 +145,9 @@
         ((pat-cons? pat)
          (define pcar (simplify-pat (pat-cons-car pat)))
          (define pcdr (simplify-pat (pat-cons-cdr pat)))
-         (if (and (pat-literal? pcar) (pat-literal? pcdr))
+         (if (and (pat-literal? pcar) (pat-literal? pcdr)
+                  (not (syntax? (pat-literal-datum pcar)))
+                  (not (syntax? (pat-literal-datum pcdr))))
            (pat-literal (cons (pat-literal-datum pcar) (pat-literal-datum pcdr)))
            (pat-cons pcar pcdr)))
         ((pat-segment? pat) (pat-segment (pat-segment-min-length pat)
@@ -289,8 +291,8 @@
         ((new-quasisyntax qs) (pat-syntax (qs-syntax->pat #'qs)))
         ((quasisyntax2 qs) (pat-syntax (qs-syntax->pat #'qs)))
 
-        ((new-syntax datum) (pat-literal (racket-syntax->syntax-new #'datum)))
-        ((syntax2 datum) (pat-literal (racket-syntax->syntax-new #'datum)))
+        ((new-syntax datum) (pat-literal #'(new-syntax datum)))
+        ((syntax2 datum) (pat-literal #'(new-syntax datum)))
 
         ((quote datum) (pat-literal (syntax->datum #'datum)))
         (atom (non-null-atom? (syntax->datum #'atom))
@@ -334,8 +336,10 @@
                         k-s #,k-fail) env value)
                      (k-s (ida-set env #'#,(pat-var-id pat) value) value)))))
             ((pat-literal? pat)
+             (define datum (pat-literal-datum pat))
+             (define lit-expr (if (syntax? datum) datum #`(quote #,datum)))
              #`(lambda (env value)
-                 ((if (equiv-data? '#,(pat-literal-datum pat) value)
+                 ((if (equiv-data? #,lit-expr value)
                     #,k-succeed #,k-fail) env value)))
 
             ((pat-and? pat)
