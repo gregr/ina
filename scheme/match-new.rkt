@@ -175,7 +175,7 @@
     (define (ida-set ida id value) (cons (cons id value) ida))
     (define (ida-forget ida ids)
       (cond ((ida-empty? ida) ida-empty)
-            ((not (car (ida))) (cdr ida))
+            ((not (car ida)) (cdr ida))
             ((id-set-member? ids (caar ida)) (ida-forget (cdr ida) ids))
             (else (cons (car ida) (ida-forget (cdr ida) ids)))))
 
@@ -302,12 +302,14 @@
     ;; TODO: pass env and value exprs to reduce administrative redexes?
     (let loop ((pat pat) (k-succeed k-succeed) (k-fail k-fail))
       (cond ((pat-exist? pat)
-             (loop (pat-exist-p pat)
-                   #`(lambda (env value)
-                       (#,k-succeed
-                        (ida-forget env (list #,@(id-list (pat-exist-ids pat))))
-                        value))
-                   k-fail))
+             #`(lambda (env value)
+                 (#,(loop (pat-exist-p pat)
+                          #`(lambda (env value)
+                              (#,k-succeed
+                               (ida-forget env (list #,@(id-list (pat-exist-ids pat))))
+                               value))
+                          k-fail)
+                  (cons #f env) value)))
             ((pat-any? pat) k-succeed)
             ((pat-var? pat)
              (with-syntax
