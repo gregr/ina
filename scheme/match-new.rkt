@@ -5,16 +5,17 @@
 
 (module
   util2 racket/base
-  (provide
-    compile-match-lambda
-    compile-pat
-    )
+  (provide (all-defined-out))
 
   (module
     util1 racket/base
     (provide (all-defined-out))
     (require
+      (for-template (rename-in (only-in "syntax.rkt" syntax quasisyntax)
+                               (syntax syntax2)
+                               (quasisyntax quasisyntax2)))
       "syntax-new.rkt"
+      (for-template "syntax-new.rkt")
       "type.rkt"
       racket/match
       (for-template racket/base)
@@ -214,13 +215,15 @@
 
       (define-syntax define-quasi->pat
         (syntax-rules ()
-          ((_ qq-syntax->pat quasiqu qu unqu unqu-splicing)
+          ((_ qq-syntax->pat quasiqu qu qu2 unqu unqu-splicing)
            (define (qq-syntax->pat stx)
-             (syntax-case stx (list qu unqu unqu-splicing)
+             (syntax-case stx (list qu qu2 unqu unqu-splicing)
                ((unqu p) (syntax->pat #'p))
                (((unqu-splicing (list p (... ...))) . qq)
                 (syntax->pat #'(list* p (... ...) (quasiqu qq))))
                (((unqu-splicing (qu (d (... ...)))) . qq)
+                (syntax->pat #'((unqu-splicing (list (qu d) (... ...))) . qq)))
+               (((unqu-splicing (qu2 (d (... ...)))) . qq)
                 (syntax->pat #'((unqu-splicing (list (qu d) (... ...))) . qq)))
                (((unqu-splicing p) . qq)
                 (identifier? #'p)
@@ -234,14 +237,18 @@
                (datum (syntax->pat #'(qu datum))))))))
 
       (define-quasi->pat
-        qq-syntax->pat quasiquote quote unquote unquote-splicing)
+        qq-syntax->pat quasiquote quote quote unquote unquote-splicing)
       (define-quasi->pat
-        qs-syntax->pat quasisyntax syntax unsyntax unsyntax-splicing)
+        qs-syntax->pat
+        new-quasisyntax new-syntax syntax2 unsyntax unsyntax-splicing)
 
       (syntax-case stx (var exist ___
                             and or not ? app
                             cons list list* vector
-                            quote quasiquote syntax quasisyntax)
+                            quote quasiquote
+                            syntax2 quasisyntax2
+                            new-syntax new-quasisyntax
+                            )
         (_ (and (identifier? stx) (free-identifier=? #'_ stx)) pat-any)
         (id (identifier? #'id) (pat-var #'id))
         ((var id) (identifier? #'id) (pat-var #'id))
@@ -279,15 +286,20 @@
          (pat-app #'transformer (syntax->pat #'(and p ...))))
 
         ((quasiquote qq) (qq-syntax->pat #'qq))
-        ((quasisyntax qs) (pat-syntax (qs-syntax->pat #'qs)))
+        ((new-quasisyntax qs) (pat-syntax (qs-syntax->pat #'qs)))
+        ((quasisyntax2 qs) (pat-syntax (qs-syntax->pat #'qs)))
 
-        ((syntax datum) (pat-literal (racket-syntax->syntax-new #'datum)))
+        ((new-syntax datum) (pat-literal (racket-syntax->syntax-new #'datum)))
+        ((syntax2 datum) (pat-literal (racket-syntax->syntax-new #'datum)))
+
         ((quote datum) (pat-literal (syntax->datum #'datum)))
         (atom (non-null-atom? (syntax->datum #'atom))
               (pat-literal (syntax->datum #'atom)))))
     )
 
   (require
+    "syntax-new.rkt"
+    (for-template "syntax-new.rkt")
     'util1
     (for-template 'util1)
     (for-template racket/base)
@@ -455,6 +467,7 @@
 
 (require
   ;; Require these for debugging.
+  ;"syntax-new.rkt"
   ;(submod 'util2 util1)
   ;'util2 ;;(submod "." util2)  ;; This form seems to be the same as 'util2.
   (for-syntax 'util2)
