@@ -32,7 +32,7 @@
       (pat-segment
         pat-segment? pat-segment-min-length pat-segment-p pat-segment-cdr)
       (pat-vector pat-vector? pat-vector-lp)
-      (pat-syntax pat-syntax? pat-syntax-vlp)
+      (_pat-syntax pat-syntax? pat-syntax-vlp)
 
       (pat-and pat-and? pat-and-c1 pat-and-c2)
       (pat-or pat-or? pat-or-d1 pat-or-d2)
@@ -41,6 +41,24 @@
       (pat-? pat-?? pat-?-predicate)
       (pat-app pat-app? pat-app-transformer pat-app-p)
       )
+
+    (define (pat-syntax vlp)
+      (cond
+        ((pat-and? vlp) (pat-and (pat-syntax (pat-and-c1 vlp))
+                                 (pat-syntax (pat-and-c2 vlp))))
+        ((pat-or? vlp) (pat-or (pat-syntax (pat-or-d1 vlp))
+                               (pat-syntax (pat-or-d2 vlp))))
+        ((pat-not? vlp) (pat-not (pat-syntax (pat-not-p vlp))))
+        ((pat-exist? vlp)
+         (pat-exist (pat-exist-ids vlp) (pat-syntax (pat-exist-p vlp))))
+        ((pat-app? vlp) (pat-app (pat-app-transformer vlp)
+                                 (pat-syntax (pat-app-p vlp))))
+        ((pat-literal? vlp)
+         (let ((datum (pat-literal-datum vlp)))
+           (pat-literal
+             (if (syntax? datum) datum (datum->syntax-new #f datum)))))
+        ((or (pat-any? vlp) (pat-var? vlp) (pat-?? vlp) (pat-syntax? vlp)) vlp)
+        (else (_pat-syntax vlp))))
 
     (define id-set-empty '())
     (define (set x) (list x))
@@ -158,13 +176,7 @@
          (if (pat-literal? lp)
            (pat-literal (list->vector (pat-literal-datum lp)))
            (pat-vector lp)))
-        ((pat-syntax? pat)
-         (define vlp (simplify-pat (pat-syntax-vlp pat)))
-         (if (pat-literal? vlp)
-           (let ((datum (pat-literal-datum vlp)))
-             (pat-literal
-               (if (syntax-new? datum) datum (datum->syntax-new #f datum))))
-           (pat-syntax vlp)))
+        ((pat-syntax? pat) (pat-syntax (simplify-pat (pat-syntax-vlp pat))))
         ((pat-app? pat)
          (pat-app (pat-app-transformer pat) (simplify-pat (pat-app-p pat))))
         (else pat)))
