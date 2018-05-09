@@ -13,10 +13,11 @@
   syntax->datum
   datum->syntax
 
-  identifier->label
   identifier?
   free-identifier=?
   bound-identifier=?
+  identifier->free
+  identifier->bound
   identifier-rename
 
   syntax/metadata

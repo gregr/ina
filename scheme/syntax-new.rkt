@@ -13,10 +13,11 @@
   syntax-new->datum
   datum->syntax-new
 
-  identifier->label
   identifier-new?
   free-identifier-new=?
   bound-identifier-new=?
+  identifier->free
+  identifier->bound
   identifier-rename
 
   syntax/metadata
@@ -40,7 +41,6 @@
 
 (define label-fresh
   (let ((label 0)) (lambda () (set! label (+ 1 label)) label)))
-(define (label=? a b) (eqv? a b))
 
 (define-type renaming renaming?
   renaming-symbol renaming-marks renaming-label)
@@ -53,7 +53,7 @@
 (define (identifier->renaming i)
   (when (not (identifier-new? i))
     (error "cannot retrieve renaming of non-identifier:" i))
-  (renaming (syntax-new->datum i) (syntax->mark* i) (identifier->label i)))
+  (renaming (syntax-new->datum i) (syntax->mark* i) (identifier->free i)))
 
 (define hygiene-empty '())
 (define (hygiene-cons h h*)
@@ -153,20 +153,25 @@
 (define (identifier-new? stx)
   (and (syntax-new? stx) (symbol? (syntax-datum stx))))
 
-(define (identifier->label i)
+(define (identifier->free i)
   (when (not (identifier-new? i))
-    (error "cannot compute label of non-identifier:" i))
+    (error "cannot compute free label of non-identifier:" i))
   (hygiene->label (syntax-hygiene i) (syntax-datum i)))
 
+(define (identifier->bound i)
+  (when (not (identifier-new? i))
+    (error "cannot compute bound label of non-identifier:" i))
+  (cons (syntax-datum i) (syntax->mark* i)))
+
 (define (free-identifier-new=? a b)
-  (label=? (identifier->label a) (identifier->label b)))
+  (when (not (and (identifier-new? a) (identifier-new? b)))
+    (error "cannot compare non-identifiers:" a b))
+  (equal? (identifier->free a) (identifier->free b)))
 
 (define (bound-identifier-new=? a b)
   (when (not (and (identifier-new? a) (identifier-new? b)))
     (error "cannot compare non-identifiers:" a b))
-  (and (identifier-new? a) (identifier-new? b)
-       (eqv? (syntax-datum a) (syntax-datum b))
-       (equal? (syntax->mark* a) (syntax->mark* b))))
+  (equal? (identifier->bound a) (identifier->bound b)))
 
 (define-syntax racket-syntax (syntax-rules () ((_ s) #'s)))
 (define-syntax racket-quasisyntax (syntax-rules () ((_ s) #`s)))

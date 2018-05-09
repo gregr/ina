@@ -36,9 +36,9 @@
   (b-variable b-variable? b-variable-address))
 
 (define env-empty (hash))
-(define (env-set env i value) (hash-set env (identifier->label i) value))
+(define (env-set env i value) (hash-set env (identifier->free i) value))
 (define (env-ref/default env i default)
-  (hash-ref env (identifier->label i) default))
+  (hash-ref env (identifier->free i) default))
 (define (env-ref env i) (env-ref/default env i #f))
 (define (env-alias env alias aliased)
   (define value (env-ref env aliased))
