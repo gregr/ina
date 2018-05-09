@@ -20,15 +20,11 @@
   )
 
 (require
-  "mk.rkt"
+  "match.rkt"
   "syntax.rkt"
   "type.rkt"
   racket/vector
   )
-
-;; TODO:
-;; syntax-error for more convenient source-info reporting.
-;; match-syntax for more convenient parsing and validation.
 
 (define-variant-type
   b-entry?
@@ -163,56 +159,42 @@
     (define result ((procedure->hygienic-syntax-transformer proc) stx))
     (if (exception? result) result (k env result))))
 
-(define-syntax match/mk
-  (syntax-rules ()
-    ((_) (error "match/mk all clauses failed"))
-    ((_ (((qvs ...) g ...) body ...) c* ...)
-     (let () (begin (define result* (run* (qvs ...) g ...))
-                    (if (not (pair? result*)) (match/mk c* ...)
-                      (apply (lambda (qvs ...) body ...) (car result*))))))))
-
 (define (expand-top env original-form rest*)
   (let loop ((env env) (form original-form))
-    (match/mk
-      (((f*) (== #`(begin . #,f*) form)) (expand-top* env f* rest*))
+    (match form
+      (#`(begin . #,f*) (expand-top* env f* rest*))
 
-      (((name p* body+) (== #`(define (#,name . #,p*) . #,body+) form))
+      (#`(define (#,name . #,p*) . #,body+)
        (expand-top env #`(define #,name (lambda #,p* . #,body+)) rest*))
 
-      (((name body) (== #`(define #,name #,body) form))
+      (#`(define #,name #,body)
        (define i* (filter identifier? (renamed-formal-param* (list name))))
        (define env-rest (env-extend* env (variable-binding* i*)))
        (define (rename f) (syntax-rename/identifier* f i*))
        (define renamed-rest* (map rename rest*))
        (cons (cons name body) (expand-top* env-rest #'() renamed-rest*)))
 
-      ((() succeed)
-       (define expanded-form
-         (let ((dform (syntax-unwrap form)))
-           (cond ((identifier? form)
-                  (define b (env-ref env form))
-                  (and (b-keyword? b)
-                       ((b-keyword-transformer b) loop env form)))
-                 ((pair? dform)
-                  (define head (car dform))
-                  (define transformer (form->transformer env head))
-                  (and transformer (transformer loop env form)))
-                 (else #f))))
-       (if (syntax? expanded-form)
-         (loop env expanded-form)
-         (cons (cons #f original-form) (expand-top* env #'() rest*)))))))
+      (_ (define expanded-form
+           (let ((dform (syntax-unwrap form)))
+             (cond ((identifier? form)
+                    (define b (env-ref env form))
+                    (and (b-keyword? b)
+                         ((b-keyword-transformer b) loop env form)))
+                   ((pair? dform)
+                    (define head (car dform))
+                    (define transformer (form->transformer env head))
+                    (and transformer (transformer loop env form)))
+                   (else #f))))
+         (if (syntax? expanded-form)
+           (loop env expanded-form)
+           (cons (cons #f original-form) (expand-top* env #'() rest*)))))))
 
 (define (expand-top* env form* rest*)
-  (match/mk
-    ((() (== #'() form*) (== '() rest*)) '())
-
-    (((f* f**) (== #'() form*) (== `(,f* . ,f**) rest*))
-     (expand-top* env f* f**))
-
-    (((a d) (== #`(#,a . #,d) form*)) (expand-top env a (cons d rest*)))
-
-    ((() succeed)
-     (cons (exception 'top-nonlist form*) (expand-top* env #'() rest*)))))
+  (match (cons form* rest*)
+    ((cons #'() '()) '())
+    ((cons #'() `(,f* . ,f**)) (expand-top* env f* f**))
+    ((cons #`(#,a . #,d) _) (expand-top env a (cons d rest*)))
+    (_ (cons (exception 'top-nonlist form*) (expand-top* env #'() rest*)))))
 
 (define (i*->expanded-body old-env body+)
   (lambda (i*)
@@ -231,62 +213,61 @@
                       (else (expand env #`(let* #,b* #,body))))))))
 
 (define (expand-lambda _ env form)
-  (match/mk
-    (((p* body+ _) (== #`(#,_ #,p* . #,body+) form))
+  (match form
+    (#`(#,_ #,p* . #,body+)
      (define variadic? (variadic-formal-param*? p*))
      (define param* (syntax->~list p*))
      (build-lambda env variadic? param* (i*->expanded-body env body+)))
-    ((() succeed) (exception 'lambda form))))
+    (_ (exception 'lambda form))))
 
 (define (expand-apply env form)
   (define dform (syntax-unwrap form))
   (define rargs
     (let loop ((fa* (cdr dform)) (a* '()))
-      (match/mk
-        ((() (== #'() fa*)) a*)
-        (((a d) (== #`(#,a . #,d) fa*)) (loop d (cons (expand env a) a*)))
-        ((() succeed) (exception 'apply-args fa*)))))
+      (match fa*
+        (#'() a*)
+        (#`(#,a . #,d) (loop d (cons (expand env a) a*)))
+        (_ (exception 'apply-args fa*)))))
   (if (exception? rargs) (exception 'apply form)
     (build-apply (expand env (car dform)) (reverse rargs))))
 
 (define (expand-quote _ env form)
-  (match/mk (((literal _) (== #`(#,_ #,literal) form)) (build-literal literal))
-            ((() succeed) (exception 'quote form))))
+  (match form
+    (#`(#,_ #,literal) (build-literal literal))
+    (_ (exception 'quote form))))
 
 (define (expand-if _ env form)
-  (match/mk
-    (((c t f _) (== #`(#,_ #,c #,t #,f) form))
+  (match form
+    (#`(#,_ #,c #,t #,f)
      (build-if (expand env c) (expand env t) (expand env f)))
-    ((() succeed) (exception 'if form))))
+    (_ (exception 'if form))))
 
 (define expand-let
   (syntax-transformer
     (lambda (form)
-      (match/mk
+      (match form
         ;; TODO: symbolo
         ;(((_ name b* body) (== #`(#,_ #,name #,b* #,body) form) (symbolo name))
          ;)
-        (((_ b* body) (== #`(#,_ #,b* . #,body) form))
+        (#`(#,_ #,b* . #,body)
          (let loop ((b* b*) (p* '()) (a* '()))
-           (match/mk
-             (((p a b*-rest) (== #`((#,p #,a) . #,b*-rest) b*))
+           (match b*
+             (#`((#,p #,a) . #,b*-rest)
               (loop b*-rest (cons p p*) (cons a a*)))
-             ((() (== #'() b*))
-              #`((lambda #,(reverse p*) . #,body) . #,(reverse a*)))
-             ((() succeed) (exception 'let form)))))
-        ((() succeed) (exception 'let form))))))
+             (#'() #`((lambda #,(reverse p*) . #,body) . #,(reverse a*)))
+             (_ (exception 'let form)))))
+        (_ (exception 'let form))))))
 
 (define expand-let*
   (syntax-transformer
     (lambda (form)
-      (match/mk
-        (((_ body) (== #`(#,_ () . #,body) form))
-         #`(let () . #,body))
+      (match form
+        (#`(#,_ () . #,body) #`(let () . #,body))
 
-        (((_ p a b* body) (== #`(#,_ ((#,p #,a) . #,b*) . #,body) form))
+        (#`(#,_ ((#,p #,a) . #,b*) . #,body)
          #`(let ((#,p #,a)) (let* #,b* . #,body)))
 
-        ((() succeed) (exception 'let* form))))))
+        (_ (exception 'let* form))))))
 
 (define env-initial
   (env-extend*
@@ -327,23 +308,22 @@
 (define (evaluate depth env tm)
   (define e (term-datum tm))
   (if (and depth (<= depth 0)) (exception 'out-of-depth `(,tm ,env))
-    (match/mk
-      (((id address) (== `#(var ,id ,address) e))
+    (match e
+      (`#(var ,id ,address)
        (env-ref/default env address (exception 'unbound-variable tm)))
 
-      (((dform) (== `#(quote ,dform) e)) (syntax->datum dform))
+      (`#(quote ,dform) (syntax->datum dform))
 
-      (((variadic? p* body) (== `#(lambda ,variadic? ,p* ,body) e))
-       (closure variadic? p* body env))
+      (`#(lambda ,variadic? ,p* ,body) (closure variadic? p* body env))
 
-      (((tc tt tf) (== `#(if ,tc ,tt ,tf) e))
+      (`#(if ,tc ,tt ,tf)
        (define c (evaluate depth env tc))
        (cond ((exception? c)
               (exception #f (term-datum-set tm `#(if ,c ,tt ,tf))))
              (c (evaluate depth env tt))
              (else (evaluate depth env tf))))
 
-      (((tproc targ*) (== `#(apply ,tproc ,targ*) e))
+      (`#(apply ,tproc ,targ*)
        (define proc (evaluate depth env tproc))
        (define arg* (vector-map (lambda (ta) (evaluate depth env ta)) targ*))
        (define (evaluate-apply a*)
@@ -375,8 +355,7 @@
                                       (term-datum-set
                                         tm `#(apply ,proc ,arg*))))))))
 
-      ((() succeed)
-       (cond ((and (exception? e) (not (exception-description e)))
-              (evaluate depth env (term-datum-set tm (exception-datum e))))
-             ((exception? e) e)
-             (else (exception 'unhandled-term tm)))))))
+      (_ (cond ((and (exception? e) (not (exception-description e)))
+                (evaluate depth env (term-datum-set tm (exception-datum e))))
+               ((exception? e) e)
+               (else (exception 'unhandled-term tm)))))))
