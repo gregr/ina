@@ -138,30 +138,30 @@
   (define tm `#(lambda ,variadic? ,(list->vector i?*) ,body))
   (if (term-exception? body) (exception #f tm) tm))
 
-(define (expand/k k env form)
+(define (expand env form)
+  (define (k result) (if (syntax? result) (expand env result) result))
   (define dform (syntax-unwrap form))
   (define expanded
     (cond ((syntax-self-evaluating? form) (build-literal form))
           ((identifier? form)
            (define b (env-ref env form))
            (cond ((b-variable? b) (build-variable form (b-variable-address b)))
-                 ((b-keyword? b) ((b-keyword-transformer b) k env form))
+                 ((b-keyword? b) (k ((b-keyword-transformer b) env form)))
                  (else (exception 'unbound-variable form))))
           ((pair? dform)
            (define head (car dform))
            (define transformer (form->transformer env head))
-           (if transformer (transformer k env form) (expand-apply env form)))
+           (if transformer (k (transformer env form)) (expand-apply env form)))
           (else (exception 'unknown form))))
   (if (term? expanded) (term-source-prepend expanded form)
     (term (list form) expanded)))
-(define (expand env form) (expand/k expand env form))
 (define (syntax-transformer proc)
-  (lambda (k env stx)
-    (define result ((procedure->hygienic-syntax-transformer proc) stx))
-    (if (exception? result) result (k env result))))
+  (define transform (procedure->hygienic-syntax-transformer proc))
+  (lambda (env stx) (transform stx)))
 
 (define (expand-top env original-form rest*)
   (let loop ((env env) (form original-form))
+    (define (k result) (if (syntax? result) (loop env result) result))
     (match form
       (#`(begin . #,(and f* (list _ ...))) (expand-top* env f* rest*))
 
@@ -184,11 +184,11 @@
              (cond ((identifier? form)
                     (define b (env-ref env form))
                     (and (b-keyword? b)
-                         ((b-keyword-transformer b) loop env form)))
+                         (k ((b-keyword-transformer b) env form))))
                    ((pair? dform)
                     (define head (car dform))
                     (define transformer (form->transformer env head))
-                    (and transformer (transformer loop env form)))
+                    (and transformer (k (transformer env form))))
                    (else #f))))
          (if (syntax? expanded-form)
            (loop env expanded-form)
@@ -217,7 +217,7 @@
                       ;; TODO: use letrec* instead.
                       (else (expand env #`(let* #,b* #,body))))))))
 
-(define (expand-lambda __ env form)
+(define (expand-lambda env form)
   (match form
     (#`(#,_ #,p* . #,(and body (list _ ..1)))
      (define variadic? (variadic-formal-param*? p*))
@@ -233,12 +233,12 @@
   (if (exception? args) (exception 'apply form)
     (build-apply (expand env (car dform)) args)))
 
-(define (expand-quote __ env form)
+(define (expand-quote env form)
   (match form
     (#`(#,_ #,literal) (build-literal literal))
     (_ (exception 'quote form))))
 
-(define (expand-if __ env form)
+(define (expand-if env form)
   (match form
     (#`(#,_ #,c #,t #,f)
      (build-if (expand env c) (expand env t) (expand env f)))
