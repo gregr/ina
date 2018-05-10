@@ -29,8 +29,8 @@
       (pat-literal pat-literal? pat-literal-datum)
 
       (pat-cons pat-cons? pat-cons-car pat-cons-cdr)
-      (pat-segment
-        pat-segment? pat-segment-min-length pat-segment-p pat-segment-cdr)
+      (pat-segment pat-segment? pat-segment-syntactic?
+                   pat-segment-min-length pat-segment-p pat-segment-cdr)
       (pat-vector pat-vector? pat-vector-lp)
       (_pat-syntax pat-syntax? pat-syntax-vlp)
 
@@ -143,7 +143,8 @@
                                       (scopify (pat-or-d2 pat) bound)))
           ((pat-cons? pat)    (pat-cons (scopify (pat-cons-car pat) bound)
                                         (scopify (pat-cons-cdr pat) bound)))
-          ((pat-segment? pat) (pat-segment (pat-segment-min-length pat)
+          ((pat-segment? pat) (pat-segment (pat-segment-syntactic? pat)
+                                           (pat-segment-min-length pat)
                                            (scopify (pat-segment-p pat) bound)
                                            (scopify (pat-segment-cdr pat) bound)))
           ((pat-vector? pat) (pat-vector (scopify (pat-vector-lp pat) bound)))
@@ -170,7 +171,8 @@
                   (not (syntax? (pat-literal-datum pcdr))))
            (pat-literal (cons (pat-literal-datum pcar) (pat-literal-datum pcdr)))
            (pat-cons pcar pcdr)))
-        ((pat-segment? pat) (pat-segment (pat-segment-min-length pat)
+        ((pat-segment? pat) (pat-segment (pat-segment-syntactic? pat)
+                                         (pat-segment-min-length pat)
                                          (simplify-pat (pat-segment-p pat))
                                          (simplify-pat (pat-segment-cdr pat))))
         ((pat-vector? pat)
@@ -277,10 +279,10 @@
         ((list* p0 ooo p ...)
          (and (identifier? #'ooo) (or (free-identifier=? #'ooo #'___)
                                       (free-identifier=? #'ooo #'(... ...))))
-         (pat-segment 0 (syntax->pat #'p0) (syntax->pat #'(list* p ...))))
+         (pat-segment #f 0 (syntax->pat #'p0) (syntax->pat #'(list* p ...))))
         ((list* p0 __k p ...)
          (k-or-more? #'__k)
-         (pat-segment (k-or-more? #'__k) (syntax->pat #'p0)
+         (pat-segment #f (k-or-more? #'__k) (syntax->pat #'p0)
                       (syntax->pat #'(list* p ...))))
         ((list* p0 p ...) (pat-cons (syntax->pat #'p0) (syntax->pat #'(list* p ...))))
 
