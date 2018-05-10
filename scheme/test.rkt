@@ -73,6 +73,16 @@
           w))
   88)
 
+(test 'if-1
+  (ev #'(if #t 'yes 'no))
+  'yes)
+(test 'if-2
+  (ev #'(if #f 'yes 'no))
+  'no)
+(test 'if-3
+  (ev #'(if 0 'yes 'no))
+  'yes)
+
 (test 'misc-1
   (ev #'((lambda (w #f x #f y . z)
            (if (x y z '(a ... z))
