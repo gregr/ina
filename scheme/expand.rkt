@@ -163,17 +163,21 @@
 (define (expand-top env original-form rest*)
   (let loop ((env env) (form original-form))
     (match form
-      (#`(begin . #,f*) (expand-top* env f* rest*))
+      (#`(begin . #,(and f* (list _ ...))) (expand-top* env f* rest*))
 
-      (#`(define (#,name . #,p*) . #,body+)
-       (expand-top env #`(define #,name (lambda #,p* . #,body+)) rest*))
+      (#`(define (#,(? identifier? name) . #,p*) . #,(list body ..1))
+       (expand-top env #`(define #,name (lambda #,p* . #,body)) rest*))
 
-      (#`(define #,name #,body)
+      (#`(define #,(? identifier? name) #,body)
        (define i* (filter identifier? (renamed-formal-param* (list name))))
        (define env-rest (env-extend* env (variable-binding* i*)))
        (define (rename f) (syntax-rename/identifier* f i*))
        (define renamed-rest* (map rename rest*))
        (cons (cons name body) (expand-top* env-rest #'() renamed-rest*)))
+
+      ;; TODO: respond robustly to these exceptions.
+      ;(#`(begin . #,_) (exception 'top-begin form))
+      ;(#`(define . #,_) (exception 'top-define form))
 
       (_ (define expanded-form
            (let ((dform (syntax-unwrap form)))
@@ -213,31 +217,28 @@
                       ;; TODO: use letrec* instead.
                       (else (expand env #`(let* #,b* #,body))))))))
 
-(define (expand-lambda _ env form)
+(define (expand-lambda __ env form)
   (match form
-    (#`(#,_ #,p* . #,body+)
+    (#`(#,_ #,p* . #,(and body (list _ ..1)))
      (define variadic? (variadic-formal-param*? p*))
      (define param* (syntax->~list p*))
-     (build-lambda env variadic? param* (i*->expanded-body env body+)))
+     (build-lambda env variadic? param* (i*->expanded-body env body)))
     (_ (exception 'lambda form))))
 
 (define (expand-apply env form)
   (define dform (syntax-unwrap form))
-  (define rargs
-    (let loop ((fa* (cdr dform)) (a* '()))
-      (match fa*
-        (#'() a*)
-        (#`(#,a . #,d) (loop d (cons (expand env a) a*)))
-        (_ (exception 'apply-args fa*)))))
-  (if (exception? rargs) (exception 'apply form)
-    (build-apply (expand env (car dform)) (reverse rargs))))
+  (define args (match (cdr dform)
+                 (#`(#,@a*) (map (lambda (a) (expand env a)) a*))
+                 (_ (exception 'apply-args (cdr dform)))))
+  (if (exception? args) (exception 'apply form)
+    (build-apply (expand env (car dform)) args)))
 
-(define (expand-quote _ env form)
+(define (expand-quote __ env form)
   (match form
     (#`(#,_ #,literal) (build-literal literal))
     (_ (exception 'quote form))))
 
-(define (expand-if _ env form)
+(define (expand-if __ env form)
   (match form
     (#`(#,_ #,c #,t #,f)
      (build-if (expand env c) (expand env t) (expand env f)))
@@ -250,22 +251,17 @@
         ;; TODO: symbolo
         ;(((_ name b* body) (== #`(#,_ #,name #,b* #,body) form) (symbolo name))
          ;)
-        (#`(#,_ #,b* . #,body)
-         (let loop ((b* b*) (p* '()) (a* '()))
-           (match b*
-             (#`((#,p #,a) . #,b*-rest)
-              (loop b*-rest (cons p p*) (cons a a*)))
-             (#'() #`((lambda #,(reverse p*) . #,body) . #,(reverse a*)))
-             (_ (exception 'let form)))))
+        (#`(#,_ #,(list `(,(? param? p) ,a) ...) . #,(list body ..1))
+         #`((lambda #,p . #,body) . #,a))
         (_ (exception 'let form))))))
 
 (define expand-let*
   (syntax-transformer
     (lambda (form)
       (match form
-        (#`(#,_ () . #,body) #`(let () . #,body))
+        (#`(#,_ () . #,(list body ..1)) #`(let () . #,body))
 
-        (#`(#,_ ((#,p #,a) . #,b*) . #,body)
+        (#`(#,_ ((#,(? param? p) #,a) . #,b*) . #,body)
          #`(let ((#,p #,a)) (let* #,b* . #,body)))
 
         (_ (exception 'let* form))))))
