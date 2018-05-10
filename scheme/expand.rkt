@@ -267,6 +267,18 @@
 
         (_ (exception 'let* form))))))
 
+(define expand-and
+  (syntax-transformer
+    (lambda (form)
+      (match form
+        (#`(#,_) #'#t)
+
+        (#`(#,_ #,single) single)
+
+        (#`(#,_ #,first . #,rest) #`(if #,first (and . #,rest) #f))
+
+        (_ (exception 'and form))))))
+
 (define env-initial
   (env-extend*
     env-empty
@@ -286,7 +298,7 @@
         ;(cond . ,expand-cond)
         ;(case . ,expand-case)
         ;(match . ,expand-match)
-        ;(and . ,expand-and)
+        (and . ,expand-and)
         ;(or . ,expand-or)
         ;(when . ,expand-when)
         ;(unless . ,expand-unless)

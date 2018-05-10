@@ -83,6 +83,25 @@
   (ev #'(if 0 'yes 'no))
   'yes)
 
+(test 'and-1
+  (ev #'(and))
+  #t)
+(test 'and-2
+  (ev #'(and 1))
+  1)
+(test 'and-3
+  (ev #'(and #f 2))
+  #f)
+(test 'and-4
+  (ev #'(and 2 3))
+  3)
+(test 'and-5
+  (ev #'(and 2 3 4))
+  4)
+(test 'and-6
+  (ev #'(and 2 #f 4))
+  #f)
+
 (test 'misc-1
   (ev #'((lambda (w #f x #f y . z)
            (if (x y z '(a ... z))
