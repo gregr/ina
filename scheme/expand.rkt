@@ -161,7 +161,6 @@
 
 (define (expand-top env original-form rest*)
   (let loop ((env env) (form original-form))
-    (define (k result) (if (syntax? result) (loop env result) result))
     (match form
       (#`(begin . #,(and f* (list _ ...))) (expand-top* env f* rest*))
 
@@ -184,11 +183,11 @@
              (cond ((identifier? form)
                     (define b (env-ref env form))
                     (and (b-keyword? b)
-                         (k ((b-keyword-transformer b) env form))))
+                         ((b-keyword-transformer b) env form)))
                    ((pair? dform)
                     (define head (car dform))
                     (define transformer (form->transformer env head))
-                    (and transformer (k (transformer env form))))
+                    (and transformer (transformer env form)))
                    (else #f))))
          (if (syntax? expanded-form)
            (loop env expanded-form)
