@@ -576,4 +576,25 @@
   (check-equal? (test2 #`(c #,id2 ok d)) 'final)
   (check-equal? (test2 #`(c ok #,id2 d)) 'final)
   (check-equal? (test2 #`(d #,id2 #,id2 c)) 'final)
+
+  (check-equal?
+    (map syntax->datum (match-new #'(5 6)
+                                  (#`#,(list x y) (list y x))
+                                  (_ (list #'fail))))
+    '(6 5))
+  (check-equal?
+    (map syntax->datum (match-new #'(5 6)
+                                  (#`#,(list x* ...) x*)
+                                  (_ (list #'fail))))
+    '(5 6))
+  (check-equal?
+    (map syntax->datum (match-new #'(5 6)
+                                  (#`(#,@(list x* ...)) x*)
+                                  (_ (list #'fail))))
+    '(5 6))
+  (check-equal?
+    (map syntax->datum (match-new #'(5 6)
+                                  (#`(#,@x*) x*)
+                                  (_ (list #'fail))))
+    '(5 6))
   )
