@@ -44,6 +44,15 @@
 
     (define (pat-syntax vlp)
       (cond
+        ((pat-cons? vlp)
+         (_pat-syntax (pat-cons (pat-syntax (pat-cons-car vlp))
+                                (pat-syntax (pat-cons-cdr vlp)))))
+        ((pat-segment? vlp) (pat-segment #t (pat-segment-min-length vlp)
+                                         (pat-syntax (pat-segment-p vlp))
+                                         (pat-syntax (pat-segment-cdr vlp))))
+        ((pat-vector? vlp)
+         (_pat-syntax (pat-vector (pat-syntax (pat-vector-lp vlp)))))
+
         ((pat-and? vlp) (pat-and (pat-syntax (pat-and-c1 vlp))
                                  (pat-syntax (pat-and-c2 vlp))))
         ((pat-or? vlp) (pat-or (pat-syntax (pat-or-d1 vlp))
@@ -60,7 +69,7 @@
                datum
                #`(new-syntax #,(datum->syntax #f datum))))))
         ((or (pat-any? vlp) (pat-var? vlp) (pat-?? vlp) (pat-syntax? vlp)) vlp)
-        (else (_pat-syntax vlp))))
+        (else (error "invalid pattern:" vlp))))
 
     (define id-set-empty '())
     (define (set x) (list x))
