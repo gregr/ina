@@ -56,7 +56,9 @@
         ((pat-literal? vlp)
          (let ((datum (pat-literal-datum vlp)))
            (pat-literal
-             (if (syntax? datum) datum (datum->syntax-new #f datum)))))
+             (if (syntax? datum)
+               datum
+               #`(new-syntax #,(datum->syntax #f datum))))))
         ((or (pat-any? vlp) (pat-var? vlp) (pat-?? vlp) (pat-syntax? vlp)) vlp)
         (else (_pat-syntax vlp))))
 
