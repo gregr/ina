@@ -174,9 +174,10 @@
        (define renamed-rest* (map rename rest*))
        (cons (cons name body) (expand-top* env-rest #'() renamed-rest*)))
 
-      ;; TODO: respond robustly to these exceptions.
-      ;(#`(begin . #,_) (exception 'top-begin form))
-      ;(#`(define . #,_) (exception 'top-define form))
+      (#`(begin . #,_) (cons (cons #f (exception 'top-begin form))
+                             (expand-top* env #'() rest*)))
+      (#`(define . #,_) (cons (cons #f (exception 'top-define form))
+                              (expand-top* env #'() rest*)))
 
       (_ (define expanded-form
            (let ((dform (syntax-unwrap form)))
@@ -198,7 +199,8 @@
     ((cons #'() '()) '())
     ((cons #'() `(,f* . ,f**)) (expand-top* env f* f**))
     ((cons #`(#,a . #,d) _) (expand-top env a (cons d rest*)))
-    (_ (cons (exception 'top-nonlist form*) (expand-top* env #'() rest*)))))
+    (_ (cons (cons #f (exception 'top-nonlist form*))
+             (expand-top* env #'() rest*)))))
 
 (define (i*->expanded-body old-env body+)
   (lambda (i*)
