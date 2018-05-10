@@ -64,6 +64,14 @@
           (begin (define a 5) (define w 4))
           a))
   5)
+(test 'internal-defs-4
+  (ev #'(let ((x 1) (y 7) (z 33))
+          (define y 88)
+          (define (z x) x)
+          6
+          (begin (define a 5) (define w (z y)))
+          w))
+  88)
 
 (test 'misc-1
   (ev #'((lambda (w #f x #f y . z)
