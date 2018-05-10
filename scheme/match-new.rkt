@@ -407,6 +407,10 @@
              (define min-len (pat-segment-min-length pat))
              (with-syntax
                (((k-s k-f) (generate-temporaries #'(k-s k-f))))
+               (define v->value  ;; transform v into value
+                 (if (pat-segment-syntactic? pat)
+                   #'(if (syntax-new? v) (syntax-unwrap v) (k-f env v))
+                   #'v))
                #`(lambda (env value)
                    (define bound (list #,@(id-list (bound-pattern-ids subpat))))
                    (define (k-s env) (#,k-succeed env value))
@@ -416,20 +420,21 @@
                    (define try-cdr
                      #,(loop (pat-segment-cdr pat)
                              #'(lambda (env _) env) #'(lambda _ #f)))
-                   (let seg-loop ((value value) (seg* '()) (env* '()))
+                   (let seg-loop ((v value) (seg* '()) (env* '()))
+                     (define value #,v->value)
                      (cond
                        ;; greedily extend segment as far as possible
                        ((and (pair? value) (try-seg ida-empty (car value)))
                         => (lambda (env) (seg-loop (cdr value)
-                                                   (cons (car value) seg*)
+                                                   (cons v seg*)
                                                    (cons env env*))))
                        (else
-                         (let cdr-loop ((value value) (seg* seg*) (env* env*))
+                         (let cdr-loop ((value v) (seg* seg*) (env* env*))
                            ;; each retry will be less greedy by one element
-                           (define (retry) (if (pair? seg*)
-                                             (cdr-loop (cons (car seg*) value)
-                                                       (cdr seg*) (cdr env*))
-                                             (k-f env value)))
+                           (define (retry)
+                             (if (pair? seg*)
+                               (cdr-loop (car seg*) (cdr seg*) (cdr env*))
+                               (k-f env value)))
                            (cond
                              ((> #,min-len (length seg*)) (k-f env value))
                              ((foldl
