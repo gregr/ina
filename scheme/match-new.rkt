@@ -483,9 +483,10 @@
 
 (require
   ;; Require these for debugging.
-  ;"syntax-new.rkt"
-  ;(submod 'util2 util1)
-  ;'util2 ;;(submod "." util2)  ;; This form seems to be the same as 'util2.
+  racket/pretty
+  "syntax-new.rkt"
+  (submod 'util2 util1)
+  'util2 ;;(submod "." util2)  ;; This form seems to be the same as 'util2.
   (for-syntax 'util2)
   (for-syntax racket/base)
   )
