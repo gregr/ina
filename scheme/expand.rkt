@@ -322,6 +322,7 @@
 
 (define env-initial-evaluate env-empty)
 
+(define-type undefined undefined?)
 (define-type closure closure?
   closure-variadic? closure-param* closure-body closure-env)
 
@@ -330,8 +331,9 @@
   (if (and depth (<= depth 0)) (exception 'out-of-depth `(,tm ,env))
     (match e
       (`#(var ,id ,address)
-        (env-ref/default
-          env address (lambda () (exception 'unbound-variable tm))))
+        (define (exc) (box (exception 'unbound-variable tm)))
+        (define v (unbox (env-ref/default env address exc)))
+        (if (undefined? v) (exception 'uninitialized-variable tm) v))
 
       (`#(quote ,dform) (syntax->datum dform))
 
@@ -349,7 +351,7 @@
         (define arg* (vector-map (lambda (ta) (evaluate depth env ta)) targ*))
         (define (evaluate-apply a*)
           (define b?*
-            (vector-map (lambda (p a) (and (identifier? p) (cons p a)))
+            (vector-map (lambda (p a) (and (identifier? p) (cons p (box a))))
                         (closure-param* proc) a*))
           (define b* (vector-filter (lambda (x) x) b?*))
           (define env^ (env-extend* (closure-env proc) (vector->list b*)))
