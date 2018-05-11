@@ -320,7 +320,8 @@
   (if (and depth (<= depth 0)) (exception 'out-of-depth `(,tm ,env))
     (match e
       (`#(var ,id ,address)
-       (env-ref/default env address (exception 'unbound-variable tm)))
+        (env-ref/default
+          env address (lambda () (exception 'unbound-variable tm))))
 
       (`#(quote ,dform) (syntax->datum dform))
 
