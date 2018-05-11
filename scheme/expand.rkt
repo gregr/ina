@@ -69,8 +69,12 @@
   (term-source-set tm (cons form (term-source tm))))
 (define (raise-exception e)
   (define datum (exception-datum e))
-  (define md (and (syntax? datum) (syntax-metadata datum)))
-  (define details (cons (strip-syntax datum) (if md (list md) '())))
+  (define details
+    (let loop ((datum datum))
+      (cond ((syntax? datum) `(,(strip-syntax datum) ,(syntax-metadata datum)))
+            ((term? datum)
+             `(term: ,(term-datum datum) . ,(map loop (term-source datum))))
+            (else (list datum)))))
   (apply error "exception:" (exception-description e) details))
 ;; Swap commenting to choose between best-effort and immediate failure.
 ;(define (exception . details) (apply _exception details))
