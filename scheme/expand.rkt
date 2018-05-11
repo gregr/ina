@@ -131,6 +131,7 @@
             (renamed-formal-param* (cdr p*))))))
 
 (define (term-exception? t) (exception? (term-datum t)))
+(define build-undefined '#(undefined))
 (define (build-literal form)
   (if (not (datum-valid-literal? (syntax->datum form)))
     (exception 'quote form)
@@ -174,6 +175,9 @@
 (define (syntax-transformer proc)
   (define transform (procedure->hygienic-syntax-transformer proc))
   (lambda (env stx) (transform stx)))
+(define (generate-identifier i)
+  (identifier-rename
+    ((procedure->hygienic-syntax-transformer (lambda (form) i)) i)))
 
 (define (expand-top env original-form rest*)
   (let loop ((env env) (form original-form))
@@ -249,6 +253,14 @@
                  (#`(#,@a*) (map (lambda (a) (expand env a)) a*))
                  (_ (exception 'apply-args (cdr dform)))))
   (if (exception? args) (exception 'apply form) (build-apply proc args)))
+
+(define-type undefined undefined?)
+(define i-undefined (generate-identifier #'undefined))
+
+(define (expand-undefined env form)
+  (match form
+    (#`(#,_) build-undefined)
+    (_ (exception 'malformed-undefined form))))
 
 (define (expand-quote env form)
   (match form
@@ -339,7 +351,6 @@
           ))
       (variable-binding* (map car env-initial-evaluate-bindings)))))
 
-(define-type undefined undefined?)
 (define-type closure closure?
   closure-variadic? closure-param* closure-body closure-env)
 
@@ -392,6 +403,8 @@
                       (else (exception 'argument-count-mismatch
                                        (term-datum-set
                                          tm `#(apply ,proc ,arg*))))))))
+
+      (`#(undefined) undefined)
 
       (_ (cond ((and (exception? e) (not (exception-description e)))
                 (evaluate depth env (term-datum-set tm (exception-datum e))))
