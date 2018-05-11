@@ -141,6 +141,7 @@
     (exception 'quote form)
     `#(quote ,form)))
 (define (build-variable identifier address) `#(var ,identifier ,address))
+(define (build-set! var value) `#(set! ,var ,value))
 (define (build-apply proc arg*)
   (define tm `#(apply ,proc ,(list->vector arg*)))
   (if (or (term-exception? proc) (ormap term-exception? arg*))
@@ -277,6 +278,17 @@
      (build-if (expand env c) (expand env t) (expand env f)))
     (_ (exception 'if form))))
 
+(define (expand-set! env form)
+  (match form
+    (#`(#,_ #,(? identifier? name) #,value)
+     (define b (env-ref env name))
+     (cond ((b-variable? b)
+            (build-set! (build-variable form (b-variable-address b))
+                        (expand env value)))
+           ((b-keyword? b) (exception 'cannot-set!-keyword name))
+           (else (exception 'unbound-variable name))))
+    (_ (exception 'set! form))))
+
 (define expand-let
   (syntax-transformer
     (lambda (form)
@@ -329,6 +341,7 @@
           (quote . ,expand-quote)
           (lambda . ,expand-lambda)
           (if . ,expand-if)
+          (set! . ,expand-set!)
           ;(letrec . ,expand-letrec)
           ;(letrec* . ,expand-letrec)
           (let . ,expand-let)
@@ -345,7 +358,6 @@
           ;(or . ,expand-or)
           ;(when . ,expand-when)
           ;(unless . ,expand-unless)
-          ;(set! . ,expand-set!)
           ;(reset . ,expand-reset)
           ;(shift . ,expand-shift)
           ;(let-syntax . ,expand-let-syntax)
@@ -407,6 +419,13 @@
                       (else (exception 'argument-count-mismatch
                                        (term-datum-set
                                          tm `#(apply ,proc ,arg*))))))))
+
+      (`#(set! #(var ,id ,address) ,tvalue)
+        (define (exc) (exception 'unbound-variable tm))
+        (define v (env-ref/default env address exc))
+        (cond ((box? v) (set-box! v (evaluate depth env tvalue)) #t)
+              ((exception? v) v)
+              (else (exception `(set!-failed: ,v) tm))))
 
       (`#(undefined) undefined)
 
