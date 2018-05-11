@@ -289,6 +289,29 @@
            (else (exception 'unbound-variable name))))
     (_ (exception 'set! form))))
 
+(define expand-letrec*
+  (syntax-transformer
+    (lambda (form)
+      (match form
+        (#`(#,_ #,(list `(,p ,a) ...) . #,(list body ..1))
+         #`(let #,(map (lambda (x) #`(#,x (#,i-undefined))) p)
+             #,@(map (lambda (x e) #`(set! #,x #,e)) p a)
+             . #,body))
+        (_ (exception 'letrec* form))))))
+
+;; NOTE: letrec is harder to implement than letrec*, and is less expressive.
+(define expand-letrec
+  (syntax-transformer
+    (lambda (form)
+      (match form
+        (#`(#,_ #,(list `(,p ,a) ...) . #,(list body ..1))
+         (define t* (map (lambda (x) (generate-identifier x)) p))
+         #`(let #,(map (lambda (x) #`(#,x (#,i-undefined))) p)
+             (let #,(map (lambda (t e) #`(#,t #,e)) t* a)
+               #,@(map (lambda (x t) #`(set! #,x #,t)) p t*)
+               . #,body)))
+        (_ (exception 'letrec* form))))))
+
 (define expand-let
   (syntax-transformer
     (lambda (form)
@@ -342,8 +365,8 @@
           (lambda . ,expand-lambda)
           (if . ,expand-if)
           (set! . ,expand-set!)
-          ;(letrec . ,expand-letrec)
-          ;(letrec* . ,expand-letrec)
+          (letrec . ,expand-letrec)
+          (letrec* . ,expand-letrec*)
           (let . ,expand-let)
           (let* . ,expand-let*)
           ;; TODO: (Some of these expanders can be implemented as transformers.)

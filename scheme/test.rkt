@@ -81,6 +81,19 @@
   (ev #'(let ((x 0)) (define y x) (set! x 2) y))
   0)
 
+(test 'letrec-1
+  (ev #'(letrec ((w (lambda () (y)))
+                 (x 32)
+                 (y (lambda () x)))
+          (w)))
+  32)
+(test 'letrec*-1
+  (ev #'(letrec* ((w (lambda () y))
+                  (x 33)
+                  (y x))
+                 (w)))
+  33)
+
 (test 'if-1
   (ev #'(if #t 'yes 'no))
   'yes)
