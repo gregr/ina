@@ -15,7 +15,8 @@
   env-extend*
   variable-binding*
   keyword-binding*
-  env-initial
+  env-initial-expand
+  env-initial-evaluate
   evaluate
   )
 
@@ -287,7 +288,7 @@
 
         (_ (exception 'and form))))))
 
-(define env-initial
+(define env-initial-expand
   (env-extend*
     env-empty
     (keyword-binding*
@@ -319,6 +320,7 @@
         ;splicing variants...
         ))))
 
+(define env-initial-evaluate env-empty)
 
 (define-type closure closure?
   closure-variadic? closure-param* closure-body closure-env)
