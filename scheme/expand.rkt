@@ -328,43 +328,43 @@
       (`#(lambda ,variadic? ,p* ,body) (closure variadic? p* body env))
 
       (`#(if ,tc ,tt ,tf)
-       (define c (evaluate depth env tc))
-       (cond ((exception? c)
-              (exception #f (term-datum-set tm `#(if ,c ,tt ,tf))))
-             (c (evaluate depth env tt))
-             (else (evaluate depth env tf))))
+        (define c (evaluate depth env tc))
+        (cond ((exception? c)
+               (exception #f (term-datum-set tm `#(if ,c ,tt ,tf))))
+              (c (evaluate depth env tt))
+              (else (evaluate depth env tf))))
 
       (`#(apply ,tproc ,targ*)
-       (define proc (evaluate depth env tproc))
-       (define arg* (vector-map (lambda (ta) (evaluate depth env ta)) targ*))
-       (define (evaluate-apply a*)
-         (define b?*
-           (vector-map (lambda (p a) (and (identifier? p) (cons p a)))
-                       (closure-param* proc) a*))
-         (define b* (vector-filter (lambda (x) x) b?*))
-         (define env^
-           (foldl (lambda (b env) (env-set env (car b) (cdr b)))
-                  (closure-env proc) (vector->list b*)))
-         (evaluate (and depth (- depth 1)) env^ (closure-body proc)))
+        (define proc (evaluate depth env tproc))
+        (define arg* (vector-map (lambda (ta) (evaluate depth env ta)) targ*))
+        (define (evaluate-apply a*)
+          (define b?*
+            (vector-map (lambda (p a) (and (identifier? p) (cons p a)))
+                        (closure-param* proc) a*))
+          (define b* (vector-filter (lambda (x) x) b?*))
+          (define env^
+            (foldl (lambda (b env) (env-set env (car b) (cdr b)))
+                   (closure-env proc) (vector->list b*)))
+          (evaluate (and depth (- depth 1)) env^ (closure-body proc)))
 
-       (cond ((not (closure? proc))
-              (exception 'inapplicable-procedure
-                         (term-datum-set tm `#(apply ,proc ,arg*))))
-             ((ormap exception? (vector->list arg*))
-              (exception #f (term-datum-set tm `#(apply ,proc ,arg*))))
-             (else
-               (define p* (closure-param* proc))
-               (cond ((and (closure-variadic? proc)
-                           (<= (- (vector-length p*) 1) (vector-length arg*)))
-                      (define a0* (vector-take arg* (- (vector-length p*) 1)))
-                      (define a1* (vector-drop arg* (- (vector-length p*) 1)))
-                      (evaluate-apply
-                        (vector-append a0* (vector (vector->list a1*)))))
-                     ((= (vector-length p*) (vector-length arg*))
-                      (evaluate-apply arg*))
-                     (else (exception 'argument-count-mismatch
-                                      (term-datum-set
-                                        tm `#(apply ,proc ,arg*))))))))
+        (cond ((not (closure? proc))
+               (exception 'inapplicable-procedure
+                          (term-datum-set tm `#(apply ,proc ,arg*))))
+              ((ormap exception? (vector->list arg*))
+               (exception #f (term-datum-set tm `#(apply ,proc ,arg*))))
+              (else
+                (define p* (closure-param* proc))
+                (cond ((and (closure-variadic? proc)
+                            (<= (- (vector-length p*) 1) (vector-length arg*)))
+                       (define a0* (vector-take arg* (- (vector-length p*) 1)))
+                       (define a1* (vector-drop arg* (- (vector-length p*) 1)))
+                       (evaluate-apply
+                         (vector-append a0* (vector (vector->list a1*)))))
+                      ((= (vector-length p*) (vector-length arg*))
+                       (evaluate-apply arg*))
+                      (else (exception 'argument-count-mismatch
+                                       (term-datum-set
+                                         tm `#(apply ,proc ,arg*))))))))
 
       (_ (cond ((and (exception? e) (not (exception-description e)))
                 (evaluate depth env (term-datum-set tm (exception-datum e))))
