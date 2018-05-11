@@ -74,6 +74,13 @@
           w))
   88)
 
+(test 'set-1
+  (ev #'(let ((x 0)) (set! x 2) x))
+  2)
+(test 'set-2
+  (ev #'(let ((x 0)) (define y x) (set! x 2) y))
+  0)
+
 (test 'if-1
   (ev #'(if #t 'yes 'no))
   'yes)
