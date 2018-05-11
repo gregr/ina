@@ -240,8 +240,9 @@
                 (define body (cdr body-b))
                 (cond ((car body-b) (exception 'body-no-expressions body+))
                       ((null? b*) (expand env body))
-                      ;; TODO: use letrec* instead.
-                      (else (expand env #`(let* #,b* #,body))))))))
+                      ((null? (filter (lambda (x) x) (map car b*)))
+                       (expand env #`(let* #,b* #,body)))
+                      (else (expand env #`(letrec* #,b* #,body))))))))
 
 (define (expand-lambda env form)
   (match form
