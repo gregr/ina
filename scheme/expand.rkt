@@ -52,13 +52,21 @@
 
 (define (strip-syntax d) (syntax->datum (datum->syntax #f d)))
 (define-type
-  (exception exception (lambda (e) (list (exception-description e)
-                                         (strip-syntax (exception-datum e)))))
+  (exception _exception (lambda (e) (list (exception-description e)
+                                          (strip-syntax (exception-datum e)))))
   exception? exception-description exception-datum)
 (define-type (term term (lambda (d) (list (strip-syntax (term-datum d)))))
   term? (term-source term-source-set) (term-datum term-datum-set))
 (define (term-source-prepend tm form)
   (term-source-set tm (cons form (term-source tm))))
+(define (raise-exception e)
+  (define datum (exception-datum e))
+  (define md (and (syntax? datum) (syntax-metadata datum)))
+  (define details (cons (strip-syntax datum) (if md (list md) '())))
+  (apply error "exception:" (exception-description e) details))
+;; Swap commenting to choose between best-effort and immediate failure.
+;(define (exception . details) (apply _exception details))
+(define (exception . details) (raise-exception (apply _exception details)))
 
 (define (form->transformer env form)
   (and (identifier? form)
