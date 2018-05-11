@@ -339,6 +339,13 @@
 
         (_ (exception 'let* form))))))
 
+(define expand-begin
+  (syntax-transformer
+    (lambda (form)
+      (match form
+        (#`(#,_ . #,(list body ..1)) #`(let () . #,body))
+        (_ (exception 'begin form))))))
+
 (define expand-and
   (syntax-transformer
     (lambda (form)
@@ -374,11 +381,11 @@
           (letrec* . ,expand-letrec*)
           (let . ,expand-let)
           (let* . ,expand-let*)
+          (begin . ,expand-begin)
           ;; TODO: (Some of these expanders can be implemented as transformers.)
           ;(quasiquote . ,expand-quasiquote)
           ;(syntax . ,expand-syntax)
           ;(quasisyntax . ,expand-quasisyntax)
-          ;(begin . ,expand-begin)
           ;(cond . ,expand-cond)
           ;(case . ,expand-case)
           ;(match . ,expand-match)

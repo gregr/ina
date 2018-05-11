@@ -94,6 +94,18 @@
                  (w)))
   33)
 
+(test 'begin-1
+  (ev #'(begin 1))
+  1)
+(test 'begin-2
+  (ev #'(begin 1 2))
+  2)
+(test 'begin-3
+  (ev #'(let ((x 1))
+          (let ((y (begin (set! x 6) x)))
+            y)))
+  6)
+
 (test 'if-1
   (ev #'(if #t 'yes 'no))
   'yes)
