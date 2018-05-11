@@ -350,9 +350,7 @@
             (vector-map (lambda (p a) (and (identifier? p) (cons p a)))
                         (closure-param* proc) a*))
           (define b* (vector-filter (lambda (x) x) b?*))
-          (define env^
-            (foldl (lambda (b env) (env-set env (car b) (cdr b)))
-                   (closure-env proc) (vector->list b*)))
+          (define env^ (env-extend* (closure-env proc) (vector->list b*)))
           (evaluate (and depth (- depth 1)) env^ (closure-body proc)))
 
         (cond ((not (closure? proc))
