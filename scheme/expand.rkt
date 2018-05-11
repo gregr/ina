@@ -13,6 +13,7 @@
   env-empty
   env-alias
   env-extend*
+  variable-binding-value*
   variable-binding*
   keyword-binding*
   env-initial-expand
@@ -44,6 +45,12 @@
 (define (env-extend* env b*)
   (foldl (lambda (b env) (env-set env (car b) (cdr b))) env b*))
 
+(define (env-rib p a) (cons p (box a)))
+(define (variable-binding-value* b*)
+  (map (lambda (b)
+         (define name (car b))
+         (define i (if (identifier? name) name (datum->syntax #f name)))
+         (env-rib i (cdr b))) b*))
 (define (variable-binding* i*) (map (lambda (i) (cons i (b-variable i))) i*))
 (define (keyword-binding* b*)
   (map (lambda (b)
@@ -288,39 +295,49 @@
 
         (_ (exception 'and form))))))
 
+
+(define env-initial-evaluate-bindings
+  (variable-binding-value*
+    `(
+      )))
+
+(define env-initial-evaluate
+  (env-extend* env-empty env-initial-evaluate-bindings))
+
 (define env-initial-expand
   (env-extend*
     env-empty
-    (keyword-binding*
-      `((quote . ,expand-quote)
-        (lambda . ,expand-lambda)
-        (if . ,expand-if)
-        ;(letrec . ,expand-letrec)
-        ;(letrec* . ,expand-letrec)
-        (let . ,expand-let)
-        (let* . ,expand-let*)
-        ;; TODO: (Some of these expanders can be implemented as transformers.)
-        ;(quasiquote . ,expand-quasiquote)
-        ;(syntax . ,expand-syntax)
-        ;(quasisyntax . ,expand-quasisyntax)
-        ;(begin . ,expand-begin)
-        ;(cond . ,expand-cond)
-        ;(case . ,expand-case)
-        ;(match . ,expand-match)
-        (and . ,expand-and)
-        ;(or . ,expand-or)
-        ;(when . ,expand-when)
-        ;(unless . ,expand-unless)
-        ;(set! . ,expand-set!)
-        ;(reset . ,expand-reset)
-        ;(shift . ,expand-shift)
-        ;(let-syntax . ,expand-let-syntax)
-        ;(letrec-syntax . ,expand-letrec-syntax)
-        ;(letrec*-syntax+values . ,expand-letrec*-syntax+values)
-        ;splicing variants...
-        ))))
-
-(define env-initial-evaluate env-empty)
+    (append
+      (keyword-binding*
+        `((,i-undefined . ,expand-undefined)
+          (quote . ,expand-quote)
+          (lambda . ,expand-lambda)
+          (if . ,expand-if)
+          ;(letrec . ,expand-letrec)
+          ;(letrec* . ,expand-letrec)
+          (let . ,expand-let)
+          (let* . ,expand-let*)
+          ;; TODO: (Some of these expanders can be implemented as transformers.)
+          ;(quasiquote . ,expand-quasiquote)
+          ;(syntax . ,expand-syntax)
+          ;(quasisyntax . ,expand-quasisyntax)
+          ;(begin . ,expand-begin)
+          ;(cond . ,expand-cond)
+          ;(case . ,expand-case)
+          ;(match . ,expand-match)
+          (and . ,expand-and)
+          ;(or . ,expand-or)
+          ;(when . ,expand-when)
+          ;(unless . ,expand-unless)
+          ;(set! . ,expand-set!)
+          ;(reset . ,expand-reset)
+          ;(shift . ,expand-shift)
+          ;(let-syntax . ,expand-let-syntax)
+          ;(letrec-syntax . ,expand-letrec-syntax)
+          ;(letrec*-syntax+values . ,expand-letrec*-syntax+values)
+          ;splicing variants...
+          ))
+      (variable-binding* (map car env-initial-evaluate-bindings)))))
 
 (define-type undefined undefined?)
 (define-type closure closure?
@@ -351,7 +368,7 @@
         (define arg* (vector-map (lambda (ta) (evaluate depth env ta)) targ*))
         (define (evaluate-apply a*)
           (define b?*
-            (vector-map (lambda (p a) (and (identifier? p) (cons p (box a))))
+            (vector-map (lambda (p a) (and (identifier? p) (env-rib p a)))
                         (closure-param* proc) a*))
           (define b* (vector-filter (lambda (x) x) b?*))
           (define env^ (env-extend* (closure-env proc) (vector->list b*)))
