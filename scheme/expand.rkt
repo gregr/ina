@@ -236,11 +236,11 @@
 
 (define (expand-apply env form)
   (define dform (syntax-unwrap form))
+  (define proc (expand env (car dform)))
   (define args (match (cdr dform)
                  (#`(#,@a*) (map (lambda (a) (expand env a)) a*))
                  (_ (exception 'apply-args (cdr dform)))))
-  (if (exception? args) (exception 'apply form)
-    (build-apply (expand env (car dform)) args)))
+  (if (exception? args) (exception 'apply form) (build-apply proc args)))
 
 (define (expand-quote env form)
   (match form
@@ -260,7 +260,7 @@
         ;; TODO: symbolo
         ;(((_ name b* body) (== #`(#,_ #,name #,b* #,body) form) (symbolo name))
          ;)
-        (#`(#,_ #,(list `(,(? param? p) ,a) ...) . #,(list body ..1))
+        (#`(#,_ #,(list `(,p ,a) ...) . #,(list body ..1))
          #`((lambda #,p . #,body) . #,a))
         (_ (exception 'let form))))))
 
@@ -270,7 +270,7 @@
       (match form
         (#`(#,_ () . #,(list body ..1)) #`(let () . #,body))
 
-        (#`(#,_ ((#,(? param? p) #,a) . #,b*) . #,body)
+        (#`(#,_ ((#,p #,a) . #,b*) . #,(list body ..1))
          #`(let ((#,p #,a)) (let* #,b* . #,body)))
 
         (_ (exception 'let* form))))))
@@ -283,7 +283,7 @@
 
         (#`(#,_ #,single) single)
 
-        (#`(#,_ #,first . #,rest) #`(if #,first (and . #,rest) #f))
+        (#`(#,_ #,first . #,(list rest ...)) #`(if #,first (and . #,rest) #f))
 
         (_ (exception 'and form))))))
 
