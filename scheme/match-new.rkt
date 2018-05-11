@@ -21,7 +21,7 @@
       (for-template racket/base)
       )
 
-    (define-variant-type
+    (define-type*
       pat?
       (pat-exist pat-exist? pat-exist-ids pat-exist-p)
       (pat-any pat-any?)

@@ -43,7 +43,7 @@
   )
 (require "type.rkt")
 
-(define-variant-type
+(define-type*
   po?
   (po-vector po-vector? po-vector-x*)
   (po-vector-length po-vector-length? po-vector-length-v)

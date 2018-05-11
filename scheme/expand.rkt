@@ -26,7 +26,7 @@
   racket/vector
   )
 
-(define-variant-type
+(define-type*
   b-entry?
   (b-keyword b-keyword? b-keyword-transformer)
   (b-variable b-variable? b-variable-address))

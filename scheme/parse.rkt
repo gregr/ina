@@ -29,7 +29,7 @@
       (set! scope (+ scope 1))
       sn)))
 
-(define-variant-type
+(define-type*
   binding?
   (b-syntax b-syntax? b-syntax-transformer)
   (b-variable b-variable?))

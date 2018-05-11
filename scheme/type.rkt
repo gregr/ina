@@ -1,7 +1,7 @@
 #lang racket/base
 (provide
   define-type
-  define-variant-type
+  define-type*
   )
 (require
   racket/struct
@@ -61,13 +61,13 @@
      (begin (define-type-etc tag construct (+ 1 index) (f* ...) (field* ... get))
             (define (get datum) (vector-ref (record-payload datum) index))))))
 
-(define-syntax define-variant-type
+(define-syntax define-type*
   (syntax-rules ()
-    ((_ vp? v* ...) (define-variant-type-etc vp? (v* ...) ()))))
-(define-syntax define-variant-type-etc
+    ((_ vp? v* ...) (define-type*-etc vp? (v* ...) ()))))
+(define-syntax define-type*-etc
   (syntax-rules ()
     ((_ vp? () (p?* ...))
      (define (vp? d) (ormap (lambda (p?) (p? d)) (list p?* ...))))
     ((_ vp? ((vname v? field* ...) v* ...) (p?* ...))
      (begin (define-type vname v? field* ...)
-            (define-variant-type-etc vp? (v* ...) (p?* ... v?))))))
+            (define-type*-etc vp? (v* ...) (p?* ... v?))))))

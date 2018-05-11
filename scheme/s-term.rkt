@@ -26,7 +26,7 @@
   )
 (require "type.rkt")
 
-(define-variant-type
+(define-type*
   s-term?
   (s-literal s-literal? s-literal-datum)
   (s-variable s-variable? s-variable-id)
