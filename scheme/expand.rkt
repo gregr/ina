@@ -278,6 +278,9 @@
      (build-if (expand env c) (expand env t) (expand env f)))
     (_ (exception 'if form))))
 
+(define expand-ignore
+  (syntax-transformer (lambda (form) #`(let ((#f #,form)) #t))))
+
 (define (expand-set! env form)
   (match form
     (#`(#,_ #,(? identifier? name) #,value)
@@ -287,6 +290,7 @@
                         (expand env value)))
            ((b-keyword? b) (exception 'cannot-set!-keyword name))
            (else (exception 'unbound-variable name))))
+    (#`(#,_ #f #,value) (expand-ignore env value))
     (_ (exception 'set! form))))
 
 (define expand-letrec*
