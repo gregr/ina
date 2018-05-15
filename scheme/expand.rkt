@@ -81,8 +81,10 @@
 (define (exception . details) (raise-exception (apply _exception details)))
 
 (define (form->transformer env form)
-  (and (identifier? form)
-       (let ((b (env-ref env form)))
+  (define dform (syntax-unwrap form))
+  (define i (if (pair? dform) (car dform) form))
+  (and (identifier? i)
+       (let ((b (env-ref env i)))
          (and (b-keyword? b) (b-keyword-transformer b)))))
 
 (define (datum-self-evaluating? datum)
@@ -162,18 +164,15 @@
 
 (define (expand env form)
   (define (k result) (if (syntax? result) (expand env result) result))
-  (define dform (syntax-unwrap form))
+  (define transformer (form->transformer env form))
   (define expanded
-    (cond ((syntax-self-evaluating? form) (build-literal form))
+    (cond (transformer (k (transformer env form)))
+          ((syntax-self-evaluating? form) (build-literal form))
           ((identifier? form)
            (define b (env-ref env form))
            (cond ((b-variable? b) (build-variable form (b-variable-address b)))
-                 ((b-keyword? b) (k ((b-keyword-transformer b) env form)))
                  (else (exception 'unbound-variable form))))
-          ((pair? dform)
-           (define head (car dform))
-           (define transformer (form->transformer env head))
-           (if transformer (k (transformer env form)) (expand-apply env form)))
+          ((pair? (syntax-unwrap form)) (expand-apply env form))
           (else (exception 'unknown form))))
   (if (term? expanded) (term-source-prepend expanded form)
     (term (list form) expanded)))
@@ -205,9 +204,7 @@
                               (expand-top* env #'() rest*)))
 
       (_ (define expanded-form
-           (let ((dform (syntax-unwrap form)))
-             (define transformer
-               (form->transformer env (if (pair? dform) (car dform) form)))
+           (let ((transformer (form->transformer env form)))
              (and transformer (transformer env form))))
          (if (syntax? expanded-form)
            (loop env expanded-form)
