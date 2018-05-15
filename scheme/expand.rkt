@@ -206,15 +206,9 @@
 
       (_ (define expanded-form
            (let ((dform (syntax-unwrap form)))
-             (cond ((identifier? form)
-                    (define b (env-ref env form))
-                    (and (b-keyword? b)
-                         ((b-keyword-transformer b) env form)))
-                   ((pair? dform)
-                    (define head (car dform))
-                    (define transformer (form->transformer env head))
-                    (and transformer (transformer env form)))
-                   (else #f))))
+             (define transformer
+               (form->transformer env (if (pair? dform) (car dform) form)))
+             (and transformer (transformer env form))))
          (if (syntax? expanded-form)
            (loop env expanded-form)
            (cons (cons #f original-form) (expand-top* env #'() rest*)))))))
