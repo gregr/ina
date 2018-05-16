@@ -10,6 +10,7 @@
   exception-datum
   syntax-transformer
   expand
+  expand-once
   env-empty
   env-alias
   env-extend*
@@ -162,20 +163,20 @@
   (define tm `#(lambda ,variadic? ,(list->vector i?*) ,body))
   (if (term-exception? body) (exception #f tm) tm))
 
+(define (expand-once env form)
+  (cond ((form->transformer env form) => (lambda (t) (t env form)))
+        ((syntax-self-evaluating? form) (build-literal form))
+        ((identifier? form)
+         (define b (env-ref env form))
+         (cond ((b-variable? b) (build-variable form (b-variable-address b)))
+               (else (exception 'unbound-variable form))))
+        ((pair? (syntax-unwrap form)) (expand-apply env form))
+        (else (exception 'unknown form))))
 (define (expand env form)
-  (define (k result) (if (syntax? result) (expand env result) result))
-  (define transformer (form->transformer env form))
-  (define expanded
-    (cond (transformer (k (transformer env form)))
-          ((syntax-self-evaluating? form) (build-literal form))
-          ((identifier? form)
-           (define b (env-ref env form))
-           (cond ((b-variable? b) (build-variable form (b-variable-address b)))
-                 (else (exception 'unbound-variable form))))
-          ((pair? (syntax-unwrap form)) (expand-apply env form))
-          (else (exception 'unknown form))))
-  (if (term? expanded) (term-source-prepend expanded form)
-    (term (list form) expanded)))
+  (let loop ((expanded (expand-once env form)))
+    (cond ((syntax? expanded) (loop (expand-once env expanded)))
+          ((term? expanded) (term-source-prepend expanded form))
+          (else (term (list form) expanded)))))
 (define (syntax-transformer proc)
   (define transform (procedure->hygienic-syntax-transformer proc))
   (lambda (env stx) (transform stx)))
