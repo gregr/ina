@@ -204,9 +204,7 @@
       (#`(define . #,_) (cons (cons #f (exception 'top-define form))
                               (expand-top* env #'() rest*)))
 
-      (_ (define expanded-form
-           (let ((transformer (form->transformer env form)))
-             (and transformer (transformer env form))))
+      (_ (define expanded-form (expand-once env form))
          (if (syntax? expanded-form)
            (loop env expanded-form)
            (cons (cons #f original-form) (expand-top* env #'() rest*)))))))
