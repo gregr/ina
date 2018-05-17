@@ -255,7 +255,7 @@
 
 (define (expand-undefined env form)
   (match form
-    (#`(#,_) build-undefined)
+    ((? identifier?) build-undefined)
     (_ (exception 'malformed-undefined form))))
 
 (define (expand-quote env form)
@@ -289,7 +289,7 @@
     (lambda (form)
       (match form
         (#`(#,_ #,(list `(,p ,a) ...) . #,(list body ..1))
-         #`(let #,(map (lambda (x) #`(#,x (#,i-undefined))) p)
+         #`(let #,(map (lambda (x) #`(#,x #,i-undefined)) p)
              #,@(map (lambda (x e) #`(set! #,x #,e)) p a)
              . #,body))
         (_ (exception 'letrec* form))))))
@@ -301,7 +301,7 @@
       (match form
         (#`(#,_ #,(list `(,p ,a) ...) . #,(list body ..1))
          (define t* (map (lambda (x) (generate-identifier x)) p))
-         #`(let #,(map (lambda (x) #`(#,x (#,i-undefined))) p)
+         #`(let #,(map (lambda (x) #`(#,x #,i-undefined)) p)
              (let #,(map (lambda (t e) #`(#,t #,e)) t* a)
                #,@(map (lambda (x t) #`(set! #,x #,t)) p t*)
                . #,body)))
