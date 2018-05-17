@@ -311,9 +311,6 @@
   (syntax-transformer
     (lambda (form)
       (match form
-        ;; TODO: symbolo
-        ;(((_ name b* body) (== #`(#,_ #,name #,b* #,body) form) (symbolo name))
-         ;)
         (#`(#,_ #,(list `(,p ,a) ...) . #,(list body ..1))
          #`((lambda #,p . #,body) . #,a))
         (_ (exception 'let form))))))
