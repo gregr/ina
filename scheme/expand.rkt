@@ -346,6 +346,104 @@
         (_ (exception 'and form))))))
 
 
+;; TODO:
+(define primitive-ops
+  '((eqv? 2)
+
+    ;mutable-vector?
+    (vector? 1)
+    (pair? 1)
+    (null? 1)
+    (string? 1)
+    (char? 1)
+    (number? 1)
+    (integer? 1)
+    (symbol? 1)
+    (boolean? 1)
+    (not 1)
+
+    (char->integer 1)
+    (integer->char 1)
+    (string->vector 1)
+    (vector->string 1)
+    (string->symbol 1)
+    (symbol->string 1)
+
+    (cons 2)
+    (car 1)
+    (cdr 1)
+
+    (vector-ref 2)
+    (vector-length 1)
+
+    ;make-mutable-vector
+    ;mutable-vector->vector
+    ;mutable-vector-set!
+
+    (= 2)
+    (<= 2)
+    (< 2)
+    (+ 2)
+    (* 2)
+
+    ;bitwise-and
+    ;bitwise-ior
+    ;bitwise-xor
+    ;bitwise-not
+    ;bitwise-bit-set?
+    ;bitwise-bit-field
+    ;arithmetic-shift
+    ;integer-length
+
+    ;round
+    ;quotient
+    ;remainder
+    ))
+
+;'apply' should not be a normal op
+
+(define derived-ops
+  '(
+    ;(- 2)
+    ;(/ 2)
+
+    ;mutable-vector-length
+    ;mutable-vector-ref
+
+    ;vector
+    ;vector-set
+    ;vector-append
+    ;vector-reverse
+    ;vector-map
+    ;vector-filter
+    ;vector-foldl
+    ;vector-foldr
+
+    ;list
+    ;list*
+    ;list?
+
+    ;list-ref
+    ;list-tail
+    ;list-set
+
+    ;list->vector
+    ;vector->list
+    ;list->string
+    ;string->list
+
+    ;foldl
+    ;foldr
+    ;append
+    ;reverse-append
+    ;reverse
+    ;map
+    ;filter
+
+    ;assoc
+    ;member
+    ))
+
 (define env-initial-evaluate-bindings
   (variable-binding-value*
     `(
