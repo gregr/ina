@@ -18,6 +18,10 @@
   (map ev (list #'(quote ()) #'#t #'4))
   '(() #t 4))
 
+(test 'lambda-shadowing-1
+  (ev #'((lambda lambda lambda) 'ok))
+  '(ok))
+
 (test 'lambda-app-1
   (ev #'((lambda (x y) x) 5 6))
   5)
