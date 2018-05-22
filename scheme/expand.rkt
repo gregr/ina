@@ -468,6 +468,14 @@
 (define env-initial-evaluate
   (env-extend* env-empty env-initial-evaluate-bindings))
 
+(define primitive-op-expanders
+  (keyword-binding*
+    (map (lambda (po-desc)
+           (define name (car po-desc))
+           (define arity (length (cadr po-desc)))
+           (cons name (expand-primitive-op name arity)))
+         primitive-ops)))
+
 (define env-initial-expand
   (env-extend*
     env-empty
@@ -501,6 +509,7 @@
           ;(letrec*-syntax+values . ,expand-letrec*-syntax+values)
           ;splicing variants...
           ))
+      primitive-op-expanders
       (variable-binding* (map car env-initial-evaluate-bindings)))))
 
 
