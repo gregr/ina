@@ -512,6 +512,20 @@
       primitive-op-expanders
       (variable-binding* (map car env-initial-evaluate-bindings)))))
 
+(define primitive-op-evaluators
+  (make-immutable-hash
+    (map (lambda (po-desc)
+           (define name (car po-desc))
+           (define arg-sig (cadr po-desc))
+           (define op (caddr po-desc))
+           (define (validate a*)
+             (andmap (lambda (ty? a) (or (not ty?) (ty? a))) arg-sig a*))
+           (define (full-op blame a*)
+             (if (validate a*)
+               (apply op a*)
+               (exception `(primitive-op-type-error ,arg-sig ,a*) blame)))
+           (cons name full-op)) primitive-ops)))
+
 
 (define (evaluate depth env tm)
   (define e (term-datum tm))
@@ -562,6 +576,12 @@
                       (else (exception 'argument-count-mismatch
                                        (term-datum-set
                                          tm `#(apply ,proc ,arg*))))))))
+
+      (`#(primitive-op ,name ,targ*)
+        (define op (hash-ref primitive-op-evaluators name))
+        (define (ev ta) (evaluate depth env ta))
+        (define a* (vector->list (vector-map ev targ*)))
+        (op tm a*))
 
       (`#(set! #(var ,id ,address) ,tvalue)
         (define (exc) (exception 'unbound-variable tm))
