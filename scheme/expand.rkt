@@ -163,6 +163,9 @@
   (define tm `#(lambda ,variadic? ,(list->vector i?*) ,body))
   (if (term-exception? body) (exception #f tm) tm))
 
+(define (build-primitive-op name a*)
+  `#(primitive-op ,name ,(list->vector a*)))
+
 (define (expand-once env form)
   (cond ((form->transformer env form) => (lambda (t) (t env form)))
         ((syntax-self-evaluating? form) (build-literal form))
@@ -345,11 +348,20 @@
 
         (_ (exception 'and form))))))
 
+(define (expand-primitive-op name arity)
+  (lambda (env form)
+    (match form
+      (#`(#,_ . #,(list a* ...))
+       (if (= arity (length a*))
+         (build-primitive-op name (map (lambda (a) (expand env a)) a*))
+         (exception `(bad primitive op: ,name ,arity) form)))
+      (_ (exception `(bad primitive op: ,name ,arity) form)))))
+
 
 (define-type closure closure?
   closure-variadic? closure-param* closure-body closure-env)
 
-;; TODO:
+;; TODO: type list instead of arity, and include operator
 (define primitive-ops
   `((eqv? (#f #f) ,eqv?)  ;; TODO: this should fail on procedures.
 
