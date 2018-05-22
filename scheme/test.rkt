@@ -60,6 +60,12 @@
 (test 'lambda-app-2
   (ev #'((lambda (x y) y) 5 6))
   6)
+(test 'lambda-app-3
+  (ev #'((lambda (x y) (cons y x)) 5 6))
+  '(6 . 5))
+(test 'lambda-app-4
+  (ev #'((lambda (x) (cons (cdr x) (car x))) (cons #t #f)))
+  '(#f . #t))
 
 (test 'let-1
   (ev #'(let ((x 8)) x))
@@ -76,6 +82,19 @@
 (test 'let-5
   (ev #'(let ((x 10) (y 4)) (let ((x 11) (y x)) y)))
   (let ((x 10) (y 4)) (let ((x 11) (y x)) y)))
+(test 'let-6
+  (ev #'(let ((op (lambda (x) (car x))) (datum '(#t . #f)) (ta 'yes) (fa 'no))
+         (if (op datum) ta fa)))
+  'yes)
+(test 'let-7
+  (ev #'(let ((op (lambda (x) (cdr x))) (datum '(#t . #f)) (ta 'yes) (fa 'no))
+         (if (op datum) ta fa)))
+  'no)
+(test 'let-8
+  (ev #'(let ((op (lambda (x) (cdr x))) (datum '(#t . #f)) (ta 'yes) (fa 'no))
+         (if (op datum) ta fa)))
+  (let ((op (lambda (x) (cdr x))) (datum '(#t . #f)) (ta 'yes) (fa 'no))
+    (if (op datum) ta fa)))
 
 (test 'internal-defs-1
   (ev #'(let ((x 1) (y 7) (z 33))
@@ -151,6 +170,12 @@
 (test 'if-3
   (ev #'(if 0 'yes 'no))
   'yes)
+(test 'if-4
+  (ev #'(if (car '(#t . #f)) 'yes 'no))
+  'yes)
+(test 'if-5
+  (ev #'(if (cdr '(#t . #f)) 'yes 'no))
+  'no)
 
 (test 'and-1
   (ev #'(and))
