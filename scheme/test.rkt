@@ -18,6 +18,38 @@
   (map ev (list #'(quote ()) #'#t #'4))
   '(() #t 4))
 
+(test 'pair-1
+  (ev #'(pair? '(x x)))
+  #t)
+(test 'pair-2
+  (ev #'(pair? #t))
+  #f)
+(test 'pair-3
+  (ev #'(pair? (lambda x x)))
+  #f)
+;(test 'pair-4
+  ;(ev #'(pair? apply))
+  ;#f)
+;(test 'pair-5
+  ;(ev #'(pair? (vector 3 1 2)))
+  ;#f)
+
+(test 'procedure-1
+  (ev #'(procedure? '(x x)))
+  #f)
+(test 'procedure-2
+  (ev #'(procedure? '#t))
+  #f)
+(test 'procedure-3
+  (ev #'(procedure? (lambda x x)))
+  #t)
+;(test 'procedure-4
+  ;(ev #'(procedure? apply))
+  ;#t)
+;(test 'procedure-5
+  ;(ev #'(procedure? (vector 3 1 2)))
+  ;#f)
+
 (test 'lambda-shadowing-1
   (ev #'((lambda lambda lambda) 'ok))
   '(ok))
