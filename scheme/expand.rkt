@@ -346,45 +346,49 @@
         (_ (exception 'and form))))))
 
 
+(define-type closure closure?
+  closure-variadic? closure-param* closure-body closure-env)
+
 ;; TODO:
 (define primitive-ops
-  '((eqv? 2)
+  `((eqv? (#f #f) ,eqv?)  ;; TODO: this should fail on procedures.
 
+    (procedure? (#f) ,closure?)
     ;mutable-vector?
-    (vector? 1)
-    (pair? 1)
-    (null? 1)
-    (string? 1)
-    (char? 1)
-    (number? 1)
-    (integer? 1)
-    (symbol? 1)
-    (boolean? 1)
-    (not 1)
+    (vector?  (#f) ,vector?)
+    (pair?    (#f) ,pair?)
+    (null?    (#f) ,null?)
+    (string?  (#f) ,string?)
+    (char?    (#f) ,char?)
+    (number?  (#f) ,number?)
+    (integer? (#f) ,integer?)
+    (symbol?  (#f) ,symbol?)
+    (boolean? (#f) ,boolean?)
+    (not      (#f) ,not)
 
-    (char->integer 1)
-    (integer->char 1)
-    (string->vector 1)
-    (vector->string 1)
-    (string->symbol 1)
-    (symbol->string 1)
+    (char->integer  (,char?)    ,char->integer)
+    (integer->char  (,integer?) ,integer->char)
+    (string->vector (,string?)  ,(lambda (s) (list->vector (string->list s))))
+    (vector->string (,vector?)  ,(lambda (v) (list->string (vector->list v))))
+    (string->symbol (,string?)  ,string->symbol)
+    (symbol->string (,symbol?)  ,symbol->string)
 
-    (cons 2)
-    (car 1)
-    (cdr 1)
+    (cons (#f #f)  ,cons)
+    (car  (,pair?) ,car)
+    (cdr  (,pair?) ,cdr)
 
-    (vector-ref 2)
-    (vector-length 1)
+    (vector-ref    (,vector? ,integer?) ,vector-ref)
+    (vector-length (,vector?)           ,vector-length)
 
     ;make-mutable-vector
     ;mutable-vector->vector
     ;mutable-vector-set!
 
-    (= 2)
-    (<= 2)
-    (< 2)
-    (+ 2)
-    (* 2)
+    (=  (,number? ,number?) ,=)
+    (<= (,number? ,number?) ,<=)
+    (<  (,number? ,number?) ,<)
+    (+  (,number? ,number?) ,+)
+    (*  (,number? ,number?) ,*)
 
     ;bitwise-and
     ;bitwise-ior
@@ -403,9 +407,9 @@
 ;'apply' should not be a normal op
 
 (define derived-ops
-  '(
-    ;(- 2)
-    ;(/ 2)
+  `(
+    ;(- (,number? ,number?) ,-)
+    ;(/ (,number? ,number?) ,/)
 
     ;mutable-vector-length
     ;mutable-vector-ref
@@ -487,8 +491,6 @@
           ))
       (variable-binding* (map car env-initial-evaluate-bindings)))))
 
-(define-type closure closure?
-  closure-variadic? closure-param* closure-body closure-env)
 
 (define (evaluate depth env tm)
   (define e (term-datum tm))
