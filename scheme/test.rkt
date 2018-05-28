@@ -222,6 +222,13 @@
   (ev #'(when #f 3))
   #t)
 
+(test 'unless-1
+  (ev #'(unless 1 2))
+  #t)
+(test 'unless-2
+  (ev #'(unless #f 3))
+  3)
+
 (test 'misc-1
   (ev #'((lambda (w #f x #f y . z)
            (if (x y z '(a ... z))

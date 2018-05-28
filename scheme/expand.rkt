@@ -368,6 +368,13 @@
         (#`(#,_ #,c #,t) #`(if #,c #,t #t))
         (_ (exception 'when form))))))
 
+(define expand-unless
+  (syntax-transformer
+    (lambda (form)
+      (match form
+        (#`(#,_ #,c #,f) #`(if #,c #t #,f))
+        (_ (exception 'unless form))))))
+
 (define expand-quasiquote
   (syntax-transformer
     (lambda (form)
@@ -552,7 +559,7 @@
           (and . ,expand-and)
           (or . ,expand-or)
           (when . ,expand-when)
-          ;(unless . ,expand-unless)
+          (unless . ,expand-unless)
           ;(reset . ,expand-reset)
           ;(shift . ,expand-shift)
           ;(let-syntax . ,expand-let-syntax)
