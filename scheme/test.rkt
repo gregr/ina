@@ -229,6 +229,25 @@
   (ev #'(unless #f 3))
   3)
 
+(test 'cond-1
+  (ev #'(cond (1 2)))
+  2)
+(test 'cond-2
+  (ev #'(cond (#f 3)
+              (4 5)))
+  5)
+(test 'cond-3
+  (ev #'(cond (#f 3)
+              ((car '(#f 4)) 5)
+              (else 6)))
+  6)
+(test 'cond-4
+  (ev #'(cond (#f 3)
+              ((car '(#f 4)) 5)
+              ('the => (lambda (v) (cons v 'answer)))
+              (else 6)))
+  '(the . answer))
+
 (test 'misc-1
   (ev #'((lambda (w #f x #f y . z)
            (if (x y z '(a ... z))

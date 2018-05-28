@@ -375,6 +375,18 @@
         (#`(#,_ #,c #,f) #`(if #,c #t #,f))
         (_ (exception 'unless form))))))
 
+(define expand-cond
+  (syntax-transformer
+    (lambda (form)
+      (match form
+        (#`(cond) #`('error:cond:no-matching-clause))
+        (#`(cond (else #,e)) e)
+        (#`(cond (#,c => #,p) . #,cs)
+         #`(let ((v #,c)) (if v (#,p v) (cond . #,cs))))
+        (#`(cond (#,c . #,body) . #,cs)
+         #`(if #,c (let () . #,body) (cond . #,cs)))
+        (_ (exception 'cond form))))))
+
 (define expand-quasiquote
   (syntax-transformer
     (lambda (form)
@@ -553,7 +565,7 @@
           ;; TODO: (Some of these expanders can be implemented as transformers.)
           ;(syntax . ,expand-syntax)
           ;(quasisyntax . ,expand-quasisyntax)
-          ;(cond . ,expand-cond)
+          (cond . ,expand-cond)
           ;(case . ,expand-case)
           ;(match . ,expand-match)
           (and . ,expand-and)
