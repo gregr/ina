@@ -348,6 +348,37 @@
 
         (_ (exception 'and form))))))
 
+(define expand-quasiquote
+  (syntax-transformer
+    (lambda (form)
+      (define (bad msg) (exception `(,'quasiquote ,msg) form))
+      (define (build-pair a d) #`(cons #,a #,d))
+      (define (build-l->v xs) (exception 'TODO:list->vector form))
+      (define (build-append xs ys) (exception 'TODO:append form))
+      (define (tag t e) (build-pair #`(quote #,t) (build-pair e #'(quote ()))))
+      (match form
+        (#`(#,_ #,qqf)
+         (let loop ((level 0) (qqf qqf))
+           (match qqf
+             (#`(quasiquote #,qq) (tag 'quasiquote (loop (+ level 1) qq)))
+             (#`(unquote #,uq)
+              (if (= 0 level) uq (tag 'unquote (loop (- level 1) uq))))
+             (#`((unquote-splicing #,uqs) . #,qq)
+              (define qqd (loop level qq))
+              (if (= 0 level) (build-append uqs qqd)
+                #`(#,(tag 'unquote-splicing (loop (- level 1) uqs)) . #,qqd)))
+
+             (#`(quasiquote . #,x)       (bad 'quasiquote))
+             (#'unquote                  (bad 'unquote))
+             (#`(unquote . #,_)          (bad 'unquote))
+             (#'unquote-splicing         (bad 'unquote-splicing))
+             (#`(unquote-splicing . #,_) (bad 'unquote-splicing))
+
+             (#`#(#,@vqq)       (build-l->v (loop level vqq)))
+             (#`(#,qqa . #,qqd) (build-pair (loop level qqa) (loop level qqd)))
+             (literal            #`(quote #,literal)))))
+        (_ (bad 'quasiquote))))))
+
 (define (expand-primitive-op name arity)
   (lambda (env form)
     (match form
@@ -483,6 +514,7 @@
       (keyword-binding*
         `((,i-undefined . ,expand-undefined)
           (quote . ,expand-quote)
+          (,'quasiquote . ,expand-quasiquote)
           (lambda . ,expand-lambda)
           (if . ,expand-if)
           (set! . ,expand-set!)
@@ -492,7 +524,6 @@
           (let* . ,expand-let*)
           (begin . ,expand-begin)
           ;; TODO: (Some of these expanders can be implemented as transformers.)
-          ;(quasiquote . ,expand-quasiquote)
           ;(syntax . ,expand-syntax)
           ;(quasisyntax . ,expand-quasisyntax)
           ;(cond . ,expand-cond)
