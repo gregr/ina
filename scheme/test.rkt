@@ -215,6 +215,13 @@
   (ev #'(or 2 #f 4))
   2)
 
+(test 'when-1
+  (ev #'(when 1 2))
+  2)
+(test 'when-2
+  (ev #'(when #f 3))
+  #t)
+
 (test 'misc-1
   (ev #'((lambda (w #f x #f y . z)
            (if (x y z '(a ... z))

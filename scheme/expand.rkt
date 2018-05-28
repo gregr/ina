@@ -361,6 +361,13 @@
 
         (_ (exception 'or form))))))
 
+(define expand-when
+  (syntax-transformer
+    (lambda (form)
+      (match form
+        (#`(#,_ #,c #,t) #`(if #,c #,t #t))
+        (_ (exception 'when form))))))
+
 (define expand-quasiquote
   (syntax-transformer
     (lambda (form)
@@ -544,7 +551,7 @@
           ;(match . ,expand-match)
           (and . ,expand-and)
           (or . ,expand-or)
-          ;(when . ,expand-when)
+          (when . ,expand-when)
           ;(unless . ,expand-unless)
           ;(reset . ,expand-reset)
           ;(shift . ,expand-shift)
