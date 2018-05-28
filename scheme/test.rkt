@@ -196,6 +196,25 @@
   (ev #'(and 2 #f 4))
   #f)
 
+(test 'or-1
+  (ev #'(or))
+  #f)
+(test 'or-2
+  (ev #'(or 1))
+  1)
+(test 'or-3
+  (ev #'(or #f 2))
+  2)
+(test 'or-4
+  (ev #'(or 2 3))
+  2)
+(test 'or-5
+  (ev #'(or #f #f 4))
+  4)
+(test 'or-6
+  (ev #'(or 2 #f 4))
+  2)
+
 (test 'misc-1
   (ev #'((lambda (w #f x #f y . z)
            (if (x y z '(a ... z))

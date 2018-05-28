@@ -348,6 +348,19 @@
 
         (_ (exception 'and form))))))
 
+(define expand-or
+  (syntax-transformer
+    (lambda (form)
+      (match form
+        (#`(#,_) #'#f)
+
+        (#`(#,_ #,single) single)
+
+        (#`(#,_ #,first . #,(list rest ...))
+         #`(let ((fst #,first)) (if fst fst (or . #,rest))))
+
+        (_ (exception 'or form))))))
+
 (define expand-quasiquote
   (syntax-transformer
     (lambda (form)
@@ -530,7 +543,7 @@
           ;(case . ,expand-case)
           ;(match . ,expand-match)
           (and . ,expand-and)
-          ;(or . ,expand-or)
+          (or . ,expand-or)
           ;(when . ,expand-when)
           ;(unless . ,expand-unless)
           ;(reset . ,expand-reset)
