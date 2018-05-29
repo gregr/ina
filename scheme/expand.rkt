@@ -393,7 +393,7 @@
       (define (bad msg) (exception `(,'quasiquote ,msg) form))
       (define (build-pair a d) #`(cons #,a #,d))
       (define (build-l->v xs) (exception 'TODO:list->vector form))
-      (define (build-append xs ys) (exception 'TODO:append form))
+      (define (build-append xs ys) #`(#,code-append #,xs #,ys))
       (define (tag t e) (build-pair #`(quote #,t) (build-pair e #'(quote ()))))
       (match form
         (#`(#,_ #,qqf)
@@ -485,6 +485,14 @@
     ;quotient
     ;remainder
     ))
+
+(define code-append
+  #'(letrec ((append
+               (lambda (xs ys)
+                 (if (null? xs)
+                   ys
+                   (cons (car xs) (append (cdr xs) ys))))))
+      append))
 
 ;'apply' should not be a normal op
 
