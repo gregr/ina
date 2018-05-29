@@ -433,7 +433,7 @@
 
 ;; TODO: type list instead of arity, and include operator
 (define primitive-ops
-  `((eqv? (#f #f) ,eqv?)  ;; TODO: this should fail on procedures.
+  `((eqv? (,datum-atom? ,datum-atom?) ,eqv?)
 
     (procedure? (#f) ,closure?)
     ;mutable-vector?
