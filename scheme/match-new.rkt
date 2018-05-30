@@ -51,7 +51,19 @@
                                          (pat-syntax (pat-segment-p vlp))
                                          (pat-syntax (pat-segment-cdr vlp))))
         ((pat-vector? vlp)
-         (_pat-syntax (pat-vector (pat-syntax (pat-vector-lp vlp)))))
+         (_pat-syntax
+           (pat-vector
+             (let loop ((lp (pat-vector-lp vlp)))
+               (cond ((pat-cons? lp)
+                      (pat-cons (pat-syntax (pat-cons-car lp))
+                                               (loop (pat-cons-cdr lp))))
+                     ((pat-segment? lp)
+                      (pat-segment #f (pat-segment-min-length lp)
+                                   (pat-syntax (pat-segment-p lp))
+                                   (loop (pat-segment-cdr lp))))
+                     ((and (pat-literal? lp) (null? (pat-literal-datum lp)))
+                      lp)
+                     (else (error "invalid vector pattern:" lp)))))))
 
         ((pat-and? vlp) (pat-and (pat-syntax (pat-and-c1 vlp))
                                  (pat-syntax (pat-and-c2 vlp))))
@@ -261,20 +273,20 @@
                               (free-identifier=? #'unqu-splicing #'a))))
                 (syntax->pat #'(list* (quasiqu a) (quasiqu d))))
                (#(p (... ...)) (pat-vector (qq-syntax->pat #'(p (... ...)))))
-               (datum (syntax->pat #'(qu datum))))))))
+               (datum (syntax->pat #'(quote datum))))))))
 
       (define-quasi->pat
         qq-syntax->pat quasiquote quote quote unquote unquote-splicing)
       (define-quasi->pat
         qs-syntax->pat
-        new-quasisyntax new-syntax syntax2 unsyntax unsyntax-splicing)
+        inner-quasisyntax new-syntax syntax2 unsyntax unsyntax-splicing)
 
       (syntax-case stx (var exist ___
                             and or not ? app
                             cons list list* vector
                             quote quasiquote
                             syntax2 quasisyntax2
-                            new-syntax new-quasisyntax
+                            new-syntax new-quasisyntax inner-quasisyntax
                             )
         (_ (and (identifier? stx) (free-identifier=? #'_ stx)) pat-any)
         (id (identifier? #'id) (pat-var #'id))
@@ -313,6 +325,7 @@
          (pat-app #'transformer (syntax->pat #'(and p ...))))
 
         ((quasiquote qq) (qq-syntax->pat #'qq))
+        ((inner-quasisyntax qs) (qs-syntax->pat #'qs))
         ((new-quasisyntax qs) (pat-syntax (qs-syntax->pat #'qs)))
         ((quasisyntax2 qs) (pat-syntax (qs-syntax->pat #'qs)))
 
@@ -597,4 +610,14 @@
                                   (#`(#,@x*) x*)
                                   (_ (list #'fail))))
     '(5 6))
+  (check-equal?
+    (map syntax->datum (match-new #'#(8 9 10)
+                                  (#`#(#,x 9 #,y) (list x y))
+                                  (_ (list #'fail))))
+    '(8 10))
+  (check-equal?
+    (map syntax->datum (match-new #'#(8 9 10)
+                                  (#`#(#,@x 10) x)
+                                  (_ (list #'fail))))
+    '(8 9))
   )
