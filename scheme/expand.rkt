@@ -393,8 +393,8 @@
     (lambda (form)
       (define (bad msg) (exception `(,'quasiquote ,msg) form))
       (define (build-pair a d) #`(cons #,a #,d))
-      (define (build-l->v xs) #`(#,code-list->vector #,xs))
-      (define (build-append xs ys) #`(#,code-append #,xs #,ys))
+      (define (build-l->v xs) #`(list->vector #,xs))
+      (define (build-append xs ys) #`(append #,xs #,ys))
       (define (tag t e) (build-pair #`(quote #,t) (build-pair e #'(quote ()))))
       (match form
         (#`(#,_ #,qqf)
@@ -477,9 +477,6 @@
     (<  (,number? ,number?) ,<)
     (+  (,number? ,number?) ,+)
     (*  (,number? ,number?) ,*)
-    ;; These could be derived instead.
-    (-  (,number? ,number?) ,-)
-    (/  (,number? ,number?) ,/)
 
     ;bitwise-and
     ;bitwise-ior
@@ -493,29 +490,36 @@
     ;round
     ;quotient
     ;remainder
+
+    ;; These could be derived instead.
+    (-  (,number? ,number?) ,-)
+    (/  (,number? ,number?) ,/)
+
+    (append (,list? #f) ,append)
+    (list->vector (,list?) ,list->vector)
     ))
 
-(define code-append
-  #'(letrec ((append
-               (lambda (xs ys)
-                 (if (null? xs)
-                   ys
-                   (cons (car xs) (append (cdr xs) ys))))))
-      append))
+;(define code-append
+  ;#'(letrec ((append
+               ;(lambda (xs ys)
+                 ;(if (null? xs)
+                   ;ys
+                   ;(cons (car xs) (append (cdr xs) ys))))))
+      ;append))
 
-(define code-list->vector
-  #'(letrec ((length (lambda (xs) (if (null? xs) 0 (+ 1 (length (cdr xs))))))
-             (loop (lambda (mv i xs)
-                     (unless (null? xs)
-                       (mutable-vector-set! mv i (car xs))
-                       (loop mv (+ 1 i) (cdr xs)))))
-             (list->vector
-               (lambda (xs)
-                 (define size (length xs))
-                 (define mv (make-mutable-vector size #t))
-                 (loop mv 0 xs)
-                 (mutable-vector->vector mv))))
-      list->vector))
+;(define code-list->vector
+  ;#'(letrec ((length (lambda (xs) (if (null? xs) 0 (+ 1 (length (cdr xs))))))
+             ;(loop (lambda (mv i xs)
+                     ;(unless (null? xs)
+                       ;(mutable-vector-set! mv i (car xs))
+                       ;(loop mv (+ 1 i) (cdr xs)))))
+             ;(list->vector
+               ;(lambda (xs)
+                 ;(define size (length xs))
+                 ;(define mv (make-mutable-vector size #t))
+                 ;(loop mv 0 xs)
+                 ;(mutable-vector->vector mv))))
+      ;list->vector))
 
 ;'apply' should not be a normal op
 
@@ -525,7 +529,7 @@
      (mutable-vector-ref
        (lambda (mv i) (vector-ref (mutable-vector->vector mv) i)))
 
-     (vector (lambda xs (#,code-list->vector xs)))
+     (vector (lambda xs (list->vector xs)))
      ;vector-set
      ;vector-append
      ;vector-reverse
@@ -542,7 +546,7 @@
      ;list-tail
      ;list-set
 
-     (list->vector #,code-list->vector)
+     ;(list->vector #,code-list->vector)
      ;vector->list
      ;list->string
      ;string->list
@@ -550,7 +554,7 @@
      ;length
      ;foldl
      ;foldr
-     (append #,code-append)
+     ;(append #,code-append)
      ;reverse-append
      ;reverse
      ;map

@@ -27,12 +27,6 @@
 (test 'pair-3
   (ev #'(pair? (lambda x x)))
   #f)
-;(test 'pair-4
-  ;(ev #'(pair? apply))
-  ;#f)
-;(test 'pair-5
-  ;(ev #'(pair? (vector 3 1 2)))
-  ;#f)
 
 (test 'procedure-1
   (ev #'(procedure? '(x x)))
@@ -43,12 +37,6 @@
 (test 'procedure-3
   (ev #'(procedure? (lambda x x)))
   #t)
-;(test 'procedure-4
-  ;(ev #'(procedure? apply))
-  ;#t)
-;(test 'procedure-5
-  ;(ev #'(procedure? (vector 3 1 2)))
-  ;#f)
 
 (test 'lambda-shadowing-1
   (ev #'((lambda lambda lambda) 'ok))
@@ -473,13 +461,13 @@
              (vector? '(x x))
              (vector? (lambda x x))))
   '(#t #t #f #f))
-;(test 'vector-5
-  ;(map evs '((vector-ref '#(1 2 3) 0)
-             ;(vector-ref '#(4 5 6) 2)
-             ;(vector-ref `#(7 8 9) 1)
-             ;(vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0) 1))) 1)
-             ;(vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0 ,(car '(10 . #f))) 1))) 3)))
-  ;'(1 6 8 (8 . 9) 10))
+(test 'vector-5
+  (map evs '((vector-ref '#(1 2 3) 0)
+             (vector-ref '#(4 5 6) 2)
+             (vector-ref `#(7 8 9) 1)
+             (vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0) 1))) 1)
+             (vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0 ,(car '(10 . #f))) 1))) 3)))
+  '(1 6 8 (8 . 9) 10))
 
 (test 'list-1
   (map evs '((list)
@@ -490,3 +478,10 @@
              (list? (list 6 7))
              (list? '(6 . 7))))
   '(#t #t #f))
+
+(test 'pair-4
+  (evs #'(pair? (vector 3 1 2)))
+  #f)
+(test 'procedure-5
+  (evs #'(procedure? (vector 3 1 2)))
+  #f)
