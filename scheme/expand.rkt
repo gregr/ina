@@ -634,6 +634,31 @@
 
 
 (define (evaluate depth env tm)
+  (define (evaluate-apply proc arg*)
+    (define (continue a*)
+      (define b?*
+        (vector-map (lambda (p a) (and (identifier? p) (env-rib p a)))
+                    (closure-param* proc) a*))
+      (define b* (vector-filter (lambda (x) x) b?*))
+      (define env^ (env-extend* (closure-env proc) (vector->list b*)))
+      (evaluate (and depth (- depth 1)) env^ (closure-body proc)))
+
+    (cond ((not (closure? proc))
+           (exception 'inapplicable-procedure
+                      (term-datum-set tm `#(apply ,proc ,arg*))))
+          ((ormap exception? (vector->list arg*))
+           (exception #f (term-datum-set tm `#(apply ,proc ,arg*))))
+          (else
+            (define p* (closure-param* proc))
+            (cond ((and (closure-variadic? proc)
+                        (<= (- (vector-length p*) 1) (vector-length arg*)))
+                   (define a0* (vector-take arg* (- (vector-length p*) 1)))
+                   (define a1* (vector-drop arg* (- (vector-length p*) 1)))
+                   (continue (vector-append a0* (vector (vector->list a1*)))))
+                  ((= (vector-length p*) (vector-length arg*)) (continue arg*))
+                  (else (exception 'argument-count-mismatch
+                                   (term-datum-set
+                                     tm `#(apply ,proc ,arg*))))))))
   (define e (term-datum tm))
   (if (and depth (<= depth 0)) (exception 'out-of-depth `(,tm ,env))
     (match e
@@ -656,32 +681,7 @@
       (`#(apply ,tproc ,targ*)
         (define proc (evaluate depth env tproc))
         (define arg* (vector-map (lambda (ta) (evaluate depth env ta)) targ*))
-        (define (evaluate-apply a*)
-          (define b?*
-            (vector-map (lambda (p a) (and (identifier? p) (env-rib p a)))
-                        (closure-param* proc) a*))
-          (define b* (vector-filter (lambda (x) x) b?*))
-          (define env^ (env-extend* (closure-env proc) (vector->list b*)))
-          (evaluate (and depth (- depth 1)) env^ (closure-body proc)))
-
-        (cond ((not (closure? proc))
-               (exception 'inapplicable-procedure
-                          (term-datum-set tm `#(apply ,proc ,arg*))))
-              ((ormap exception? (vector->list arg*))
-               (exception #f (term-datum-set tm `#(apply ,proc ,arg*))))
-              (else
-                (define p* (closure-param* proc))
-                (cond ((and (closure-variadic? proc)
-                            (<= (- (vector-length p*) 1) (vector-length arg*)))
-                       (define a0* (vector-take arg* (- (vector-length p*) 1)))
-                       (define a1* (vector-drop arg* (- (vector-length p*) 1)))
-                       (evaluate-apply
-                         (vector-append a0* (vector (vector->list a1*)))))
-                      ((= (vector-length p*) (vector-length arg*))
-                       (evaluate-apply arg*))
-                      (else (exception 'argument-count-mismatch
-                                       (term-datum-set
-                                         tm `#(apply ,proc ,arg*))))))))
+        (evaluate-apply proc arg*))
 
       (`#(primitive-op ,name ,targ*)
         (define op (hash-ref primitive-op-evaluators name))
