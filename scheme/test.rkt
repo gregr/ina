@@ -12,6 +12,7 @@
             (check-equal? actual expected)))))
 
 (define (ev stx) (evaluate #f env-empty (expand env-initial stx)))
+(define (evs stx) (evaluate #f env-empty (expand env-initial (stdlib stx))))
 
 (test 'literals
   (map ev (list #'(quote ()) #'#t #'4))
@@ -452,3 +453,40 @@
             ;(list (even? '())    (odd? '())
                   ;(even? '(s))   (odd? '(s))
                   ;(even? '(s s)) (odd? '(s s)))))))))
+
+(test 'vector-1
+  (map evs '((vector)
+             (vector 3 1)))
+  '(#() #(3 1)))
+(test 'vector-2
+  (map evs '((vector-length (vector))
+             (vector-length (vector 3 1))))
+  '(0 2))
+(test 'vector-3
+  (map evs '((vector-ref (vector 5) 0)
+             (vector-ref (vector 3 1 2) 0)
+             (vector-ref (vector 3 1 2) 1)))
+  '(5 3 1))
+(test 'vector-4
+  (map evs '((vector? (vector))
+             (vector? (vector 3 1))
+             (vector? '(x x))
+             (vector? (lambda x x))))
+  '(#t #t #f #f))
+;(test 'vector-5
+  ;(map evs '((vector-ref '#(1 2 3) 0)
+             ;(vector-ref '#(4 5 6) 2)
+             ;(vector-ref `#(7 8 9) 1)
+             ;(vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0) 1))) 1)
+             ;(vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0 ,(car '(10 . #f))) 1))) 3)))
+  ;'(1 6 8 (8 . 9) 10))
+
+(test 'list-1
+  (map evs '((list)
+             (list 6 7)))
+  '(() (6 7)))
+(test 'list-2
+  (map evs '((list? (list))
+             (list? (list 6 7))
+             (list? '(6 . 7))))
+  '(#t #t #f))
