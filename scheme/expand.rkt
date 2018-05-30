@@ -26,6 +26,7 @@
   "match.rkt"
   "syntax.rkt"
   "type.rkt"
+  racket/list
   racket/vector
   )
 
@@ -519,44 +520,56 @@
 ;'apply' should not be a normal op
 
 (define derived-ops
-  `(
+  #`((mutable-vector-length
+       (lambda (mv) (vector-length (mutable-vector->vector mv))))
+     (mutable-vector-ref
+       (lambda (mv i) (vector-ref (mutable-vector->vector mv) i)))
 
-    ;mutable-vector-length
-    ;mutable-vector-ref
+     (vector (lambda xs (#,code-list->vector xs)))
+     ;vector-set
+     ;vector-append
+     ;vector-reverse
+     ;vector-map
+     ;vector-filter
+     ;vector-foldl
+     ;vector-foldr
 
-    ;vector
-    ;vector-set
-    ;vector-append
-    ;vector-reverse
-    ;vector-map
-    ;vector-filter
-    ;vector-foldl
-    ;vector-foldr
+     (list? (lambda (v) (or (and (pair? v) (list? (cdr v))) (null? v))))
+     (list (lambda xs xs))
+     ;(list* (lambda (x . xs) (if (null? xs) x (cons x (apply list* xs)))))
 
-    ;list
-    ;list*
-    ;list?
+     ;list-ref
+     ;list-tail
+     ;list-set
 
-    ;list-ref
-    ;list-tail
-    ;list-set
+     (list->vector #,code-list->vector)
+     ;vector->list
+     ;list->string
+     ;string->list
 
-    ;list->vector
-    ;vector->list
-    ;list->string
-    ;string->list
+     ;length
+     ;foldl
+     ;foldr
+     (append #,code-append)
+     ;reverse-append
+     ;reverse
+     ;map
+     ;filter
 
-    ;foldl
-    ;foldr
-    ;append
-    ;reverse-append
-    ;reverse
-    ;map
-    ;filter
+     ;assoc
+     ;member
+     ))
 
-    ;assoc
-    ;member
-    ))
+(define (stdlib program)
+  (define (po->def po)
+    (define name (car po))
+    (define p*
+      (map (lambda (i) (string->symbol (string-append "x" (number->string i))))
+           (range (length (cadr po)))))
+    `(,name (lambda ,p* (,name . ,p*))))
+
+  #`(let #,(map po->def primitive-ops)
+      (letrec #,derived-ops #,program)))
 
 (define env-initial-evaluate-bindings
   (variable-binding-value*
