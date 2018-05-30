@@ -437,7 +437,6 @@
 (define (mvector-set! mv i v) (vector-set! (mvector-v mv) i v))
 (define (mvector->vector mv) (vector-copy (mvector-v mv)))
 
-;; TODO: type list instead of arity, and include operator
 (define primitive-ops
   `((eqv? (,datum-atom? ,datum-atom?) ,eqv?)
 
@@ -477,6 +476,9 @@
     (<  (,number? ,number?) ,<)
     (+  (,number? ,number?) ,+)
     (*  (,number? ,number?) ,*)
+    ;; These could be derived instead.
+    (-  (,number? ,number?) ,-)
+    (/  (,number? ,number?) ,/)
 
     ;bitwise-and
     ;bitwise-ior
@@ -518,8 +520,6 @@
 
 (define derived-ops
   `(
-    ;(- (,number? ,number?) ,-)
-    ;(/ (,number? ,number?) ,/)
 
     ;mutable-vector-length
     ;mutable-vector-ref
