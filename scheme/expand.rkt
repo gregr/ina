@@ -326,6 +326,8 @@
   (syntax-transformer
     (lambda (form)
       (match form
+        (#`(#,_ #,(? identifier? name) #,(list `(,p ,a) ...) . #,(list body ..1))
+         #`(letrec* ((#,name (lambda #,p . #,body))) (#,name . #,a)))
         (#`(#,_ #,(list `(,p ,a) ...) . #,(list body ..1))
          #`((lambda #,p . #,body) . #,a))
         (_ (exception 'let form))))))

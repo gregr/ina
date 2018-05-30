@@ -85,6 +85,11 @@
          (if (op datum) ta fa)))
   (let ((op (lambda (x) (cdr x))) (datum '(#t . #f)) (ta 'yes) (fa 'no))
     (if (op datum) ta fa)))
+(test 'let-9
+  (ev #'(let loop ((xs '(a b c)) (acc '()))
+          (if (null? xs) acc
+            (loop (cdr xs) (cons (car xs) acc)))))
+  '(c b a))
 
 (test 'internal-defs-1
   (ev #'(let ((x 1) (y 7) (z 33))
