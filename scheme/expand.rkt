@@ -501,18 +501,18 @@
       append))
 
 (define code-list->vector
-  '(letrec ((length (lambda (xs) (if (null? xs) 0 (+ 1 (length (cdr xs))))))
-            (loop (lambda (mv i xs)
-                    (unless (null? xs)
-                      (mutable-vector-set! mv i (car xs))
-                      (loop mv (+ 1 i) (cdr xs)))))
-            (list->vector
-              (lambda (xs)
-                (define size (length xs))
-                (define mv (make-mutable-vector size #t))
-                (loop mv 0 xs)
-                (mutable-vector->vector mv))))
-     list->vector))
+  #'(letrec ((length (lambda (xs) (if (null? xs) 0 (+ 1 (length (cdr xs))))))
+             (loop (lambda (mv i xs)
+                     (unless (null? xs)
+                       (mutable-vector-set! mv i (car xs))
+                       (loop mv (+ 1 i) (cdr xs)))))
+             (list->vector
+               (lambda (xs)
+                 (define size (length xs))
+                 (define mv (make-mutable-vector size #t))
+                 (loop mv 0 xs)
+                 (mutable-vector->vector mv))))
+      list->vector))
 
 ;'apply' should not be a normal op
 
