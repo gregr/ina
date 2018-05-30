@@ -321,128 +321,128 @@
                   (append '(1 2) '(3 4))))))
   '(() (foo bar) (1 2 3 4)))
 
-;(test 'fix-2
-  ;(ev #'(let ((list (lambda xs xs))
-              ;(fix (lambda (f)
-                     ;((lambda (d) (d d))
-                      ;(lambda (x) (f (lambda a (apply (x x) a))))))))
-          ;(let ((append
-                  ;(fix (lambda (append)
-                         ;(lambda (xs ys)
-                           ;(if (null? xs)
-                             ;ys
-                             ;(cons (car xs) (append (cdr xs) ys))))))))
-            ;(list (append '() '())
-                  ;(append '(foo) '(bar))
-                  ;(append '(1 2) '(3 4))))))
-  ;(let ((list (lambda xs xs))
-        ;(fix (lambda (f)
-               ;((lambda (d) (d d))
-                ;(lambda (x) (f (lambda a (apply (x x) a))))))))
-    ;(let ((append
-            ;(fix (lambda (append)
-                   ;(lambda (xs ys)
-                     ;(if (null? xs)
-                       ;ys
-                       ;(cons (car xs) (append (cdr xs) ys))))))))
-      ;(list (append '() '())
-            ;(append '(foo) '(bar))
-            ;(append '(1 2) '(3 4))))))
+(test 'fix-2
+  (ev #'(let ((list (lambda xs xs))
+              (fix (lambda (f)
+                     ((lambda (d) (d d))
+                      (lambda (x) (f (lambda a (apply (x x) a))))))))
+          (let ((append
+                  (fix (lambda (append)
+                         (lambda (xs ys)
+                           (if (null? xs)
+                             ys
+                             (cons (car xs) (append (cdr xs) ys))))))))
+            (list (append '() '())
+                  (append '(foo) '(bar))
+                  (append '(1 2) '(3 4))))))
+  (let ((list (lambda xs xs))
+        (fix (lambda (f)
+               ((lambda (d) (d d))
+                (lambda (x) (f (lambda a (apply (x x) a))))))))
+    (let ((append
+            (fix (lambda (append)
+                   (lambda (xs ys)
+                     (if (null? xs)
+                       ys
+                       (cons (car xs) (append (cdr xs) ys))))))))
+      (list (append '() '())
+            (append '(foo) '(bar))
+            (append '(1 2) '(3 4))))))
 
-;(test 'fix*-1
-  ;(ev #'(let ((list (lambda xs xs))
-              ;(fix (lambda (f)
-                     ;((lambda (d) (d d))
-                      ;(lambda (x) (f (lambda a (apply (x x) a))))))))
-          ;(let ((map (fix (lambda (map)
-                            ;(lambda (f xs)
-                              ;(if (null? xs)
-                                ;'()
-                                ;(cons (f (car xs)) (map f (cdr xs)))))))))
-            ;(let ((fix*
-                    ;(fix (lambda (fix*)
-                           ;(lambda fs
-                             ;(map (lambda (fi)
-                                    ;(lambda a
-                                      ;(apply (apply fi (apply fix* fs)) a)))
-                                  ;fs))))))
-              ;(let ((even&odd
-                      ;(fix* (lambda (even? odd?)
-                              ;(lambda (n) (if (null? n)
-                                            ;#t
-                                            ;(odd? (cdr n)))))
-                            ;(lambda (even? odd?)
-                              ;(lambda (n)
-                                ;(if (null? n)
-                                  ;#f
-                                  ;(even? (cdr n))))))))
-                ;(let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
-                  ;(list (even? '())    (odd? '())
-                        ;(even? '(s))   (odd? '(s))
-                        ;(even? '(s s)) (odd? '(s s)))))))))
-  ;'(#t #f #f #t #t #f))
+(test 'fix*-1
+  (ev #'(let ((list (lambda xs xs))
+              (fix (lambda (f)
+                     ((lambda (d) (d d))
+                      (lambda (x) (f (lambda a (apply (x x) a))))))))
+          (let ((map (fix (lambda (map)
+                            (lambda (f xs)
+                              (if (null? xs)
+                                '()
+                                (cons (f (car xs)) (map f (cdr xs)))))))))
+            (let ((fix*
+                    (fix (lambda (fix*)
+                           (lambda fs
+                             (map (lambda (fi)
+                                    (lambda a
+                                      (apply (apply fi (apply fix* fs)) a)))
+                                  fs))))))
+              (let ((even&odd
+                      (fix* (lambda (even? odd?)
+                              (lambda (n) (if (null? n)
+                                            #t
+                                            (odd? (cdr n)))))
+                            (lambda (even? odd?)
+                              (lambda (n)
+                                (if (null? n)
+                                  #f
+                                  (even? (cdr n))))))))
+                (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
+                  (list (even? '())    (odd? '())
+                        (even? '(s))   (odd? '(s))
+                        (even? '(s s)) (odd? '(s s)))))))))
+  '(#t #f #f #t #t #f))
 
-;(test 'fix*-2
-  ;(ev #'(let ((list (lambda xs xs))
-              ;(fix (lambda (f)
-                     ;((lambda (d) (d d))
-                      ;(lambda (x) (f (lambda a (apply (x x) a))))))))
-          ;(let ((map (fix (lambda (map)
-                            ;(lambda (f xs)
-                              ;(if (null? xs)
-                                ;'()
-                                ;(cons (f (car xs)) (map f (cdr xs)))))))))
-            ;(let ((fix*
-                    ;(fix (lambda (fix*)
-                           ;(lambda fs
-                             ;(map (lambda (fi)
-                                    ;(lambda a
-                                      ;(apply (apply fi (apply fix* fs)) a)))
-                                  ;fs))))))
-              ;(let ((even&odd
-                      ;(fix* (lambda (even? odd?)
-                              ;(lambda (n) (if (null? n)
-                                            ;#t
-                                            ;(odd? (cdr n)))))
-                            ;(lambda (even? odd?)
-                              ;(lambda (n)
-                                ;(if (null? n)
-                                  ;#f
-                                  ;(even? (cdr n))))))))
-                ;(let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
-                  ;(list (even? '())    (odd? '())
-                        ;(even? '(s))   (odd? '(s))
-                        ;(even? '(s s)) (odd? '(s s)))))))))
-  ;(let ((list (lambda xs xs))
-        ;(fix (lambda (f)
-               ;((lambda (d) (d d))
-                ;(lambda (x) (f (lambda a (apply (x x) a))))))))
-    ;(let ((map (fix (lambda (map)
-                      ;(lambda (f xs)
-                        ;(if (null? xs)
-                          ;'()
-                          ;(cons (f (car xs)) (map f (cdr xs)))))))))
-      ;(let ((fix*
-              ;(fix (lambda (fix*)
-                     ;(lambda fs
-                       ;(map (lambda (fi)
-                              ;(lambda a
-                                ;(apply (apply fi (apply fix* fs)) a)))
-                            ;fs))))))
-        ;(let ((even&odd
-                ;(fix* (lambda (even? odd?)
-                        ;(lambda (n) (if (null? n)
-                                      ;#t
-                                      ;(odd? (cdr n)))))
-                      ;(lambda (even? odd?)
-                        ;(lambda (n)
-                          ;(if (null? n)
-                            ;#f
-                            ;(even? (cdr n))))))))
-          ;(let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
-            ;(list (even? '())    (odd? '())
-                  ;(even? '(s))   (odd? '(s))
-                  ;(even? '(s s)) (odd? '(s s)))))))))
+(test 'fix*-2
+  (ev #'(let ((list (lambda xs xs))
+              (fix (lambda (f)
+                     ((lambda (d) (d d))
+                      (lambda (x) (f (lambda a (apply (x x) a))))))))
+          (let ((map (fix (lambda (map)
+                            (lambda (f xs)
+                              (if (null? xs)
+                                '()
+                                (cons (f (car xs)) (map f (cdr xs)))))))))
+            (let ((fix*
+                    (fix (lambda (fix*)
+                           (lambda fs
+                             (map (lambda (fi)
+                                    (lambda a
+                                      (apply (apply fi (apply fix* fs)) a)))
+                                  fs))))))
+              (let ((even&odd
+                      (fix* (lambda (even? odd?)
+                              (lambda (n) (if (null? n)
+                                            #t
+                                            (odd? (cdr n)))))
+                            (lambda (even? odd?)
+                              (lambda (n)
+                                (if (null? n)
+                                  #f
+                                  (even? (cdr n))))))))
+                (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
+                  (list (even? '())    (odd? '())
+                        (even? '(s))   (odd? '(s))
+                        (even? '(s s)) (odd? '(s s)))))))))
+  (let ((list (lambda xs xs))
+        (fix (lambda (f)
+               ((lambda (d) (d d))
+                (lambda (x) (f (lambda a (apply (x x) a))))))))
+    (let ((map (fix (lambda (map)
+                      (lambda (f xs)
+                        (if (null? xs)
+                          '()
+                          (cons (f (car xs)) (map f (cdr xs)))))))))
+      (let ((fix*
+              (fix (lambda (fix*)
+                     (lambda fs
+                       (map (lambda (fi)
+                              (lambda a
+                                (apply (apply fi (apply fix* fs)) a)))
+                            fs))))))
+        (let ((even&odd
+                (fix* (lambda (even? odd?)
+                        (lambda (n) (if (null? n)
+                                      #t
+                                      (odd? (cdr n)))))
+                      (lambda (even? odd?)
+                        (lambda (n)
+                          (if (null? n)
+                            #f
+                            (even? (cdr n))))))))
+          (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
+            (list (even? '())    (odd? '())
+                  (even? '(s))   (odd? '(s))
+                  (even? '(s s)) (odd? '(s s)))))))))
 
 (test 'vector-1
   (map evs '((vector)

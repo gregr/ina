@@ -551,7 +551,11 @@
 
      (list? (lambda (v) (or (and (pair? v) (list? (cdr v))) (null? v))))
      (list (lambda xs xs))
-     ;(list* (lambda (x . xs) (if (null? xs) x (cons x (apply list* xs)))))
+
+     (cons* (lambda (x xs) (if (pair? xs)
+                             (cons x (cons* (car xs) (cdr xs)))
+                             x)))
+     (list* (lambda (x . xs) (cons* x xs)))
 
      ;list-ref
      ;list-tail
@@ -563,8 +567,10 @@
      ;string->list
 
      ;length
-     ;foldl
-     ;foldr
+     ;(foldl (lambda (f acc xs)
+              ;(if (null? xs) acc (foldl f (f (car xs) acc) (cdr xs)))))
+     ;(foldr (lambda (f acc xs)
+              ;(if (null? xs) acc (f (car xs) (foldr f acc (cdr xs))))))
      ;(append #,code-append)
      ;reverse-append
      ;reverse
@@ -573,6 +579,8 @@
 
      ;assoc
      ;member
+
+     (apply (lambda (f x . xs) (apply f (cons* x xs))))
      ))
 
 (define (stdlib program)
