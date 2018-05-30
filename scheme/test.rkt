@@ -285,6 +285,12 @@
 (test 'qq-5
   (ev #'`(1 ,@(cons 2 (cons 3 '())) 4))
   '(1 2 3 4))
+(test 'qq-6
+  (ev #'`#(1 ,(cons 2 (cons 3 '())) 4))
+  '#(1 (2 3) 4))
+(test 'qq-7
+  (ev #'`#(1 ,@(cons 2 (cons 3 '())) 4))
+  '#(1 2 3 4))
 
 (test 'let*-1
   (ev #'(let* ((a 1) (b `(2 ,a))) b))

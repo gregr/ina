@@ -392,7 +392,7 @@
     (lambda (form)
       (define (bad msg) (exception `(,'quasiquote ,msg) form))
       (define (build-pair a d) #`(cons #,a #,d))
-      (define (build-l->v xs) (exception 'TODO:list->vector form))
+      (define (build-l->v xs) #`(#,code-list->vector #,xs))
       (define (build-append xs ys) #`(#,code-append #,xs #,ys))
       (define (tag t e) (build-pair #`(quote #,t) (build-pair e #'(quote ()))))
       (match form
@@ -413,7 +413,7 @@
              (#'unquote-splicing         (bad 'unquote-splicing))
              (#`(unquote-splicing . #,_) (bad 'unquote-splicing))
 
-             (#`#(#,@vqq)       (build-l->v (loop level vqq)))
+             (#`#(#,@vqq) (build-l->v (loop level (datum->syntax #f vqq))))
              (#`(#,qqa . #,qqd) (build-pair (loop level qqa) (loop level qqd)))
              (literal            #`(quote #,literal)))))
         (_ (bad 'quasiquote))))))
@@ -499,6 +499,20 @@
                    ys
                    (cons (car xs) (append (cdr xs) ys))))))
       append))
+
+(define code-list->vector
+  '(letrec ((length (lambda (xs) (if (null? xs) 0 (+ 1 (length (cdr xs))))))
+            (loop (lambda (mv i xs)
+                    (unless (null? xs)
+                      (mutable-vector-set! mv i (car xs))
+                      (loop mv (+ 1 i) (cdr xs)))))
+            (list->vector
+              (lambda (xs)
+                (define size (length xs))
+                (define mv (make-mutable-vector size #t))
+                (loop mv 0 xs)
+                (mutable-vector->vector mv))))
+     list->vector))
 
 ;'apply' should not be a normal op
 
