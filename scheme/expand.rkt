@@ -365,14 +365,14 @@
   (syntax-transformer
     (lambda (form)
       (match form
-        (#`(#,_ #,c #,t) #`(if #,c #,t #t))
+        (#`(#,_ #,c . #,t) #`(if #,c (let () . #,t) #t))
         (_ (exception 'when form))))))
 
 (define expand-unless
   (syntax-transformer
     (lambda (form)
       (match form
-        (#`(#,_ #,c #,f) #`(if #,c #t #,f))
+        (#`(#,_ #,c . #,f) #`(if #,c #t (let () . #,f)))
         (_ (exception 'unless form))))))
 
 (define expand-cond
@@ -380,7 +380,7 @@
     (lambda (form)
       (match form
         (#`(cond) #`('error:cond:no-matching-clause))
-        (#`(cond (else #,e)) e)
+        (#`(cond (else . #,body)) #`(let () . #,body))
         (#`(cond (#,c => #,p) . #,cs)
          #`(let ((v #,c)) (if v (#,p v) (cond . #,cs))))
         (#`(cond (#,c . #,body) . #,cs)
