@@ -303,21 +303,21 @@
                   (append '(1 2) '(3 4))))))
   '(() (foo bar) (1 2 3 4)))
 
-;(test 'fix-1
-  ;(ev #'(let ((list (lambda xs xs))
-              ;(fix (lambda (f)
-                     ;((lambda (d) (d d))
-                      ;(lambda (x) (f (lambda a (apply (x x) a))))))))
-          ;(let ((append
-                  ;(fix (lambda (append)
-                         ;(lambda (xs ys)
-                           ;(if (null? xs)
-                             ;ys
-                             ;(cons (car xs) (append (cdr xs) ys))))))))
-            ;(list (append '() '())
-                  ;(append '(foo) '(bar))
-                  ;(append '(1 2) '(3 4))))))
-  ;'(() (foo bar) (1 2 3 4)))
+(test 'fix-1
+  (ev #'(let ((list (lambda xs xs))
+              (fix (lambda (f)
+                     ((lambda (d) (d d))
+                      (lambda (x) (f (lambda a (apply (x x) a))))))))
+          (let ((append
+                  (fix (lambda (append)
+                         (lambda (xs ys)
+                           (if (null? xs)
+                             ys
+                             (cons (car xs) (append (cdr xs) ys))))))))
+            (list (append '() '())
+                  (append '(foo) '(bar))
+                  (append '(1 2) '(3 4))))))
+  '(() (foo bar) (1 2 3 4)))
 
 ;(test 'fix-2
   ;(ev #'(let ((list (lambda xs xs))

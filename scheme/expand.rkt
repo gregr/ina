@@ -151,6 +151,11 @@
   (if (or (term-exception? proc) (ormap term-exception? arg*))
     (exception #f tm)
     tm))
+(define (build-apply-list proc args)
+  (define tm `#(apply-list ,proc ,args))
+  (if (or (term-exception? proc) (term-exception? args))
+    (exception #f tm)
+    tm))
 
 (define (build-if c t f)
   (define tm `#(if ,c ,t ,f))
@@ -253,6 +258,12 @@
                  (#`(#,@a*) (map (lambda (a) (expand env a)) a*))
                  (_ (exception 'apply-args (cdr dform)))))
   (if (exception? args) (exception 'apply form) (build-apply proc args)))
+
+(define (expand-apply-list env form)
+  (match form
+    (#`(#,_ #,proc #,args)
+     (build-apply-list (expand env proc) (expand env args)))
+    (_ (exception 'apply-list form))))
 
 (define-type undefined undefined?)
 (define i-undefined (generate-identifier #'undefined))
@@ -589,6 +600,7 @@
     (append
       (keyword-binding*
         `((,i-undefined . ,expand-undefined)
+          (apply . ,expand-apply-list)
           (quote . ,expand-quote)
           (,'quasiquote . ,expand-quasiquote)
           (lambda . ,expand-lambda)
@@ -682,6 +694,13 @@
         (define proc (evaluate depth env tproc))
         (define arg* (vector-map (lambda (ta) (evaluate depth env ta)) targ*))
         (evaluate-apply proc arg*))
+
+      (`#(apply-list ,tproc ,targlist)
+        (define proc (evaluate depth env tproc))
+        (define arglist (evaluate depth env targlist))
+        (if (list? arglist)
+          (evaluate-apply proc (list->vector arglist))
+          (exception 'apply-list-non-list `#(apply-list ,proc ,arglist))))
 
       (`#(primitive-op ,name ,targ*)
         (define op (hash-ref primitive-op-evaluators name))
