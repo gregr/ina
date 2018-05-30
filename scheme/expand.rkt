@@ -17,9 +17,9 @@
   variable-binding-value*
   variable-binding*
   keyword-binding*
-  env-initial-expand
-  env-initial-evaluate
+  env-initial
   evaluate
+  stdlib
   )
 
 (require
@@ -571,14 +571,6 @@
   #`(let #,(map po->def primitive-ops)
       (letrec #,derived-ops #,program)))
 
-(define env-initial-evaluate-bindings
-  (variable-binding-value*
-    `(
-      )))
-
-(define env-initial-evaluate
-  (env-extend* env-empty env-initial-evaluate-bindings))
-
 (define primitive-op-expanders
   (keyword-binding*
     (map (lambda (po-desc)
@@ -587,7 +579,7 @@
            (cons name (expand-primitive-op name arity)))
          primitive-ops)))
 
-(define env-initial-expand
+(define env-initial
   (env-extend*
     env-empty
     (append
@@ -620,8 +612,7 @@
           ;(letrec*-syntax+values . ,expand-letrec*-syntax+values)
           ;splicing variants...
           ))
-      primitive-op-expanders
-      (variable-binding* (map car env-initial-evaluate-bindings)))))
+      primitive-op-expanders)))
 
 (define primitive-op-evaluators
   (make-immutable-hash

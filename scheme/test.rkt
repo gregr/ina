@@ -11,8 +11,7 @@
      (begin (printf "testing: ~s\n" name)
             (check-equal? actual expected)))))
 
-(define (ev stx) (evaluate #f env-initial-evaluate
-                           (expand env-initial-expand stx)))
+(define (ev stx) (evaluate #f env-empty (expand env-initial stx)))
 
 (test 'literals
   (map ev (list #'(quote ()) #'#t #'4))
