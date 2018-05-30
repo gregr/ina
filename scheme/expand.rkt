@@ -431,12 +431,18 @@
 (define-type closure closure?
   closure-variadic? closure-param* closure-body closure-env)
 
+(define-type mvector mvector? mvector-v)
+
+(define (make-mvector i k) (mvector (make-vector i k)))
+(define (mvector-set! mv i v) (vector-set! (mvector-v mv) i v))
+(define (mvector->vector mv) (vector-copy (mvector-v mv)))
+
 ;; TODO: type list instead of arity, and include operator
 (define primitive-ops
   `((eqv? (,datum-atom? ,datum-atom?) ,eqv?)
 
-    (procedure? (#f) ,closure?)
-    ;mutable-vector?
+    (procedure?      (#f) ,closure?)
+    (mutable-vector? (#f) ,mvector?)
     (vector?  (#f) ,vector?)
     (pair?    (#f) ,pair?)
     (null?    (#f) ,null?)
@@ -462,9 +468,9 @@
     (vector-ref    (,vector? ,integer?) ,vector-ref)
     (vector-length (,vector?)           ,vector-length)
 
-    ;make-mutable-vector
-    ;mutable-vector->vector
-    ;mutable-vector-set!
+    (make-mutable-vector    (,integer? #f)           ,make-mvector)
+    (mutable-vector-set!    (,mvector? ,integer? #f) ,mvector-set!)
+    (mutable-vector->vector (,mvector?)              ,mvector->vector)
 
     (=  (,number? ,number?) ,=)
     (<= (,number? ,number?) ,<=)
