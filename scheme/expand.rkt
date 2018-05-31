@@ -26,6 +26,7 @@
   "match.rkt"
   "syntax.rkt"
   "type.rkt"
+  racket/control
   racket/list
   racket/vector
   )
@@ -168,6 +169,16 @@
   (define body (i*->body i*))
   (define tm `#(lambda ,variadic? ,(list->vector i?*) ,body))
   (if (term-exception? body) (exception #f tm) tm))
+
+(define (build-reset body)
+  (define tm `#(reset ,body))
+  (if (term-exception? body) (exception #f tm) tm))
+(define (build-shift proc)
+  (define tm `#(shift ,proc))
+  (if (term-exception? proc) (exception #f tm) tm))
+(define (build-unshift k arg)
+  (define tm `#(unshift ,k ,arg))
+  (if (or (term-exception? k) (term-exception? arg)) (exception #f tm) tm))
 
 (define (build-primitive-op name a*)
   `#(primitive-op ,name ,(list->vector a*)))
@@ -433,6 +444,35 @@
              (literal            #`(quote #,literal)))))
         (_ (bad 'quasiquote))))))
 
+(define (expand-reset env form)
+  (match form
+    (#`(#,_ #,body) (build-reset (expand env body)))
+    (_ (exception 'reset form))))
+
+(define (expand-shift-internal env form)
+  (match form
+    (#`(#,_ #,proc) (build-shift (expand env proc)))
+    (_ (exception 'shift-internal form))))
+
+(define (expand-unshift-internal env form)
+  (match form
+    (#`(#,_ #,k #,arg) (build-unshift (expand env k) (expand env arg)))
+    (_ (exception 'unshift form))))
+
+(define i-shift (generate-identifier #'shift))
+(define i-unshift (generate-identifier #'unshift))
+
+(define expand-shift
+  (syntax-transformer
+    (lambda (form)
+      (match form
+        (#`(#,_ #,k . #,body)
+         #`(#,i-shift
+            (lambda (k-raw)
+              (let ((#,k (lambda (arg) (#,i-unshift k-raw arg))))
+                . #,body))))
+        (_ (exception 'shift form))))))
+
 (define (expand-primitive-op name arity)
   (lambda (env form)
     (match form
@@ -442,6 +482,7 @@
          (exception `(bad primitive op: ,name ,arity) form)))
       (_ (exception `(bad primitive op: ,name ,arity) form)))))
 
+(define-type continuation continuation? continuation-k)
 
 (define-type closure closure?
   closure-variadic? closure-param* closure-body closure-env)
@@ -632,8 +673,10 @@
           (or . ,expand-or)
           (when . ,expand-when)
           (unless . ,expand-unless)
-          ;(reset . ,expand-reset)
-          ;(shift . ,expand-shift)
+          (reset . ,expand-reset)
+          (,i-shift . ,expand-shift-internal)
+          (,i-unshift . ,expand-unshift-internal)
+          (shift . ,expand-shift)
           ;(let-syntax . ,expand-let-syntax)
           ;(letrec-syntax . ,expand-letrec-syntax)
           ;(letrec*-syntax+values . ,expand-letrec*-syntax+values)
@@ -725,6 +768,18 @@
         (cond ((box? v) (set-box! v (evaluate depth env tvalue)) #t)
               ((exception? v) v)
               (else (exception `(set!-failed: ,v) tm))))
+
+      (`#(reset ,tbody) (reset (evaluate depth env tbody)))
+
+      (`#(shift ,tproc)
+        (define proc (evaluate depth env tproc))
+        (shift k (evaluate-apply proc (vector (continuation k)))))
+
+      (`#(unshift ,tk ,targ)
+        (define k (evaluate depth env tk))
+        (define arg (evaluate depth env targ))
+        (cond ((continuation? k) ((continuation-k k) arg))
+              (else (exception `(unshift-failed: ,k) tm))))
 
       (`#(undefined) undefined)
 

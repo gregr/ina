@@ -294,6 +294,13 @@
   (ev #'(let* ((a 1) (b `(2 ,a))) b))
   (let* ((a 1) (b `(2 ,a))) b))
 
+(test 'shift/reset-1
+  (ev #'(* 2 (reset (+ 1 (shift k (k 5))))))
+  12)
+(test 'shift/reset-2
+  (ev #'(reset (* 2 (shift k (k (k 4))))))
+  16)
+
 (test 'fix-0
   (ev #'(let ((list (lambda xs xs))
               (fix (lambda (f)
