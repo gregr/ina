@@ -132,11 +132,11 @@
   (define d (syntax-unwrap stx)) (null? d)
   (and (not (null? d))
        (or (not (pair? d)) (variadic-formal-param*? (cdr d)))))
-(define (renamed-formal-param* p*)
+(define (renamed-formal-param* dc p*)
   (if (null? p*) '()
     (let ((p (car p*)))
-      (cons (if (identifier? p) (identifier-rename p) p)
-            (renamed-formal-param* (cdr p*))))))
+      (cons (if (identifier? p) (identifier-rename dc p) p)
+            (renamed-formal-param* dc (cdr p*))))))
 
 (define (term-exception? t) (exception? (term-datum t)))
 (define build-undefined '#(undefined))
@@ -163,7 +163,7 @@
 
 (define (build-lambda env variadic? p* i*->body)
   (define param* (formal-param* p*))
-  (define i?* (renamed-formal-param* param*))
+  (define i?* (renamed-formal-param* (defctx) param*))
   (define i* (filter identifier? i?*))
   (define body (i*->body i*))
   (define tm `#(lambda ,variadic? ,(list->vector i?*) ,body))
@@ -191,6 +191,7 @@
   (lambda (env stx) (transform stx)))
 (define (generate-identifier i)
   (identifier-rename
+    (defctx)
     ((procedure->hygienic-syntax-transformer (lambda (form) i)) i)))
 
 (define (expand-top env original-form rest*)
@@ -202,7 +203,7 @@
        (expand-top env #`(define #,name (lambda #,p* . #,body)) rest*))
 
       (#`(define #,(? identifier? name) #,body)
-       (define i* (filter identifier? (renamed-formal-param* (list name))))
+       (define i* (filter identifier? (renamed-formal-param* (defctx) (list name))))
        (define env-rest (env-extend* env (variable-binding* i*)))
        (define (rename f) (syntax-rename/identifier* f i*))
        (define renamed-rest* (map rename rest*))

@@ -13,6 +13,8 @@
   syntax->datum
   datum->syntax
 
+  defctx
+
   identifier?
   free-identifier=?
   bound-identifier=?
@@ -25,6 +27,7 @@
 
   syntax-rename/identifier
   syntax-rename/identifier*
+  syntax-rename/defctx
 
   procedure->hygienic-syntax-transformer
   )

@@ -13,6 +13,8 @@
   syntax-new->datum
   datum->syntax-new
 
+  defctx
+
   identifier-new?
   free-identifier-new=?
   bound-identifier-new=?
@@ -25,6 +27,7 @@
 
   syntax-rename/identifier
   syntax-rename/identifier*
+  syntax-rename/defctx
 
   procedure->hygienic-syntax-transformer
   )
@@ -42,14 +45,22 @@
 (define label-fresh
   (let ((label 0)) (lambda () (set! label (+ 1 label)) label)))
 
+(define-type _defctx defctx? _defctx-renamings)
+(define (defctx) (_defctx (box '())))
+(define (defctx-renamings-add! s rn)
+  (define rbox (_defctx-renamings s))
+  (set-box! rbox (cons rn (unbox rbox))))
+(define (defctx-renamings s) (unbox (_defctx-renamings s)))
+
 (define-type renaming renaming?
   renaming-symbol renaming-marks renaming-label)
 (define (renaming-fresh symbol marks) (renaming symbol marks (label-fresh)))
 
-(define (identifier-rename i)
+(define (identifier-rename dc i)
   (when (not (identifier-new? i)) (error "cannot rename non-identifier:" i))
-  (syntax-hygiene-cons
-    i (renaming-fresh (syntax-new->datum i) (syntax->mark* i))))
+  (define rn (renaming-fresh (syntax-new->datum i) (syntax->mark* i)))
+  (defctx-renamings-add! dc rn)
+  (syntax-hygiene-cons i dc))
 (define (identifier->renaming i)
   (when (not (identifier-new? i))
     (error "cannot retrieve renaming of non-identifier:" i))
@@ -67,13 +78,17 @@
 (define (hygiene->mark* h*) (filter mark? h*))
 
 (define (hygiene->label h* symbol)
-  (cond ((null? h*) symbol)
-        (else (define h (car h*))
-              (if (and (renaming? h)
-                       (eqv? (renaming-symbol h) symbol)
-                       (equal? (renaming-marks h) (hygiene->mark* (cdr h*))))
-                (renaming-label h)
-                (hygiene->label (cdr h*) symbol)))))
+  (cond
+    ((null? h*) symbol)
+    (else (define h (car h*))
+          (define h-rest (cdr h*))
+          (cond ((defctx? h)
+                 (hygiene->label (append (defctx-renamings h) h-rest) symbol))
+                ((and (renaming? h)
+                      (eqv? (renaming-symbol h) symbol)
+                      (equal? (renaming-marks h) (hygiene->mark* h-rest)))
+                 (renaming-label h))
+                (else (hygiene->label h-rest symbol))))))
 
 (define-type
   (syntax syntax-new (lambda (s) (list (syntax-new->datum s)))) syntax-new?
@@ -119,6 +134,7 @@
   (syntax-hygiene-cons stx (identifier->renaming i)))
 (define (syntax-rename/identifier* stx i*)
   (foldl (lambda (i stx) (syntax-rename/identifier stx i)) stx i*))
+(define (syntax-rename/defctx stx dc) (syntax-hygiene-cons stx dc))
 
 (define (syntax-unwrap stx)
   (define datum (syntax-datum stx))
