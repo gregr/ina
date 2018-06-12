@@ -45,8 +45,7 @@
     ((m ==? s succeed fail `qq)    (match-pat-qq ==? s succeed fail qq))
     ((m ==? s succeed fail (cons pa pd))
      (if (pair? s) (let ((a (car s)) (d (cdr s)))
-                     (match-pat ==? a
-                                (match-pat ==? d succeed fail pd)
+                     (match-pat ==? a (match-pat ==? d succeed fail pd)
                                 fail pa))
        fail))
     ((m ==? s succeed fail (list* pat)) (match-pat ==? s succeed fail pat))
@@ -55,9 +54,7 @@
     ((m ==? s succeed fail (list pat ...))
      (match-pat ==? s succeed fail (list* pat ... '())))
     ((m ==? s succeed fail (vector pat ...))
-     (if (vector? s) (let ((s-list (vector->list s)))
-                       (match-pat ==? s-list succeed fail (list pat ...)))
-       fail))
+     (match-pat-qq ==? s succeed fail #(,pat ...)))
     ((m ==? s succeed fail literal) (match-pat ==? s succeed fail 'literal))))
 
 (define-syntax match-pat-qq
