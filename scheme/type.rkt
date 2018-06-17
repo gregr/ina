@@ -2,6 +2,7 @@
 (provide
   define-type
   define-type*
+  define-vector-type
   )
 (require
   racket/struct
@@ -75,3 +76,41 @@
     ((_ vp? ((vname v? field* ...) v* ...) (p?* ...))
      (begin (define-type vname v? field* ...)
             (define-type*-etc vp? (v* ...) (p?* ... v?))))))
+
+(define-syntax define-vector-type
+  (syntax-rules ()
+    ((_ (name singleton-name) name?)
+     (define-vector-type/singleton name singleton-name name?))
+    ((_ (name construct) name? f* ...)
+     (define-vector-type/multi-field name construct name? f* ...))
+    ((_ name name? f* ...) (define-vector-type (name name) name? f* ...))))
+(define-syntax define-vector-type/singleton
+  (syntax-rules ()
+    ((_ name singleton-name name?)
+     (begin (define singleton-name '#(name))
+            (define (name? datum) (eq? singleton-name datum))))))
+(define-syntax define-vector-type/multi-field
+  (syntax-rules ()
+    ((_ name construct name? f* ...)
+     (begin (define (name? datum) (and (vector? datum)
+                                       (<= 1 (vector-length datum))
+                                       (eq? 'name (vector-ref datum 0))))
+            (define-vector-type-etc name? name construct 1 (f* ...) ())))))
+(define-syntax define-vector-type-etc
+  (syntax-rules ()
+    ((_ name? tag construct _ () (field* ...))
+     (define (construct field* ...) (vector 'tag field* ...)))
+    ((_ name? tag construct index ((get set) f* ...) field*)
+     (begin (define-vector-type-etc
+              name? tag construct index (get f* ...) field*)
+            (define (set datum value) (let ((new (vector-copy datum)))
+                                        (vector-set! new index value)
+                                        new))))
+    ((_ name? tag construct index (get f* ...) (field* ...))
+     (begin (define-vector-type-etc
+              name? tag construct (+ 1 index) (f* ...) (field* ... get))
+            (define (get datum)
+              (if (name? datum)
+                (vector-ref datum index)
+                (error (format "~a with wrong argument type:" 'get)
+                       datum)))))))
