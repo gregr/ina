@@ -60,6 +60,9 @@
   (define a* (filter-not not a?*))
   (ast-lambda variadic? a?* (b*->body (map cons (filter-not not p*) a*))))
 (define ($let p* a?* v* b*->body) (ast-apply* ($lambda #f p* a?* b*->body) v*))
+(define ($b*->body env body)
+  (lambda (b*) (let ((cenv (env-extend env)))
+                 (env-bind*! cenv b*) (expand-once cenv body))))
 
 (define (form->transformer env form)
   (define b (syntax-resolve env (if (pair? form) (car form) form)))
@@ -87,9 +90,7 @@
                 (`(lambda ,~p* ,body)
                   (define p* (~list->list ~p*))
                   (assert-param* p*)
-                  (define (pbody b*)
-                    (let ((cenv (env-extend env)))
-                      (env-bind*! cenv b*) (expand-once cenv body)))
+                  (define pbody ($b*->body env body))
                   ($lambda (improper-list? ~p*) p* (param*->addr* p*) pbody))
 
                 ;(`(let ,name ,b* ,body) (guard (name? name))
@@ -101,9 +102,7 @@
                   (assert-binding* b*)
                   (define p* (map car b*))
                   (define v* (map cadr b*))
-                  (define (pbody b*)
-                    (let ((cenv (env-extend env)))
-                      (env-bind*! cenv b*) (expand-once cenv body)))
+                  (define pbody ($b*->body env body))
                   ($let p* (param*->addr* p*) (map loop v*) pbody))
 
                 (`(,op-name . ,a*)
