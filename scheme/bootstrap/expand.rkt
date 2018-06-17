@@ -105,6 +105,22 @@
                   (define pbody ($b*->body env body))
                   ($let p* (param*->addr* p*) (map loop v*) pbody))
 
+                (`(reset ,body) (ast-reset (loop body)))
+                (`(shift ,k ,body)
+                  (define k-raw-addr (fresh-name 'k-raw))
+                  (define k-addr     (fresh-name 'k))
+                  (define arg-addr   (fresh-name 'arg))
+                  (define inner-body
+                    ($let (list k) (list k-addr)
+                          (list ($lambda
+                                  #f (list arg-addr) (list arg-addr)
+                                  (lambda _
+                                    (ast-unshift (ast-variable k-raw-addr)
+                                                 (ast-variable arg-addr)))))
+                          ($b*->body env body)))
+                  (ast-shift ($lambda #f (list k-raw-addr) (list k-raw-addr)
+                                      (lambda _ inner-body))))
+
                 (`(,op-name . ,a*)
                   (guard (hash-has-key? primitive-op-expanders op-name))
                   ((hash-ref primitive-op-expanders op-name) env form))
@@ -116,10 +132,6 @@
 
   ;; TODO:
   ;; lambda body recursive definition contexts
-
-  ;; reset
-  ;; shift
-  ;; unshift
 
   ;; let*, letrec, letrec*
   ;; begin

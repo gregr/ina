@@ -8,6 +8,7 @@
   "ast.rkt"
   "data.rkt"
   "match.rkt"
+  racket/control
   racket/list
   )
 
@@ -80,18 +81,13 @@
       (define op (hash-ref primitive-op-evaluators name))
       (op (map loop a*)))
 
-    ;; TODO: translate these.
-    ;(`#(reset ,tbody) (reset (evaluate depth env tbody)))
-
-    ;(`#(shift ,tproc)
-      ;(define proc (evaluate depth env tproc))
-      ;(shift k (evaluate-apply proc (vector (continuation k)))))
-
-    ;(`#(unshift ,tk ,targ)
-      ;(define k (evaluate depth env tk))
-      ;(define arg (evaluate depth env targ))
-      ;(cond ((continuation? k) ((continuation-k k) arg))
-            ;(else (exception `(unshift-failed: ,k) tm))))
+    (`#(reset ,body) (reset (loop body)))
+    (`#(shift ,proc)
+      (shift k (evaluate-apply (loop proc) (list (continuation k)))))
+    (`#(unshift ,k-raw ,arg)
+      (define k (loop k-raw))
+      (cond ((continuation? k) ((continuation-k k) (loop arg)))
+            (else (error "invalid continuation:" k))))
 
     (_ (error "unknown term:" (ast->v tm)))))
 
