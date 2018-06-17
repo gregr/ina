@@ -52,7 +52,7 @@
                      (`(,_ . ,a*)
                        (guard (list? a*) (= arity (length a*)))
                        (ast-primitive-op
-                         name (map (lambda (a) (expand-once env a)) a*)))
+                         name (map (lambda (a) (expand/env env a)) a*)))
                      (_ (error "invalid primitive op:" name arity form))))))
          primitive-ops)))
 
@@ -62,14 +62,14 @@
 (define ($let p* a?* v* b*->body) (ast-apply* ($lambda #f p* a?* b*->body) v*))
 (define ($b*->body env body)
   (lambda (b*) (let ((cenv (env-extend env)))
-                 (env-bind*! cenv b*) (expand-once cenv body))))
+                 (env-bind*! cenv b*) (expand/env cenv body))))
 
 (define (form->transformer env form)
   (define b (syntax-resolve env (if (pair? form) (car form) form)))
   (and (procedure? b) b))
 
 (define (expand-once env form)
-  (define (loop d) (expand-once env d))
+  (define (loop d) (expand/env env d))
   (cond ((form->transformer env form) => (lambda (t) (t env form)))
         ((or (boolean? form) (number? form) (char? form) (string? form))
          (ast-literal form))
@@ -142,9 +142,11 @@
   ;; let-syntax, letrec-syntax
   )
 
-(define (expand form)
-  (define expanded (expand-once env-empty form))
-  (if (ast? expanded) expanded (expand expanded)))
+(define (expand/env env form)
+  (define expanded (expand-once env form))
+  (if (ast? expanded) expanded (expand/env env expanded)))
+
+(define (expand form) (expand/env env-empty form))
 
 
 ;; TODO: translate this.
