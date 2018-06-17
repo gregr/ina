@@ -45,20 +45,20 @@
     (eval-ast/env env body))
   (define plen (length addr*))
   (cond ((closure-variadic? clo)
-         (lambda (arg*)
+         (lambda arg*
            (when (< (length arg*) (- plen 1))
              (error "too few arguments:" (- plen 1) (length arg*) clo arg*))
            (let ((a0* (take arg* (- plen 1))) (a1* (drop arg* (- plen 1))))
              (continue (append a0* (list a1*))))))
-        (else (lambda (arg*)
+        (else (lambda arg*
                 (when (not (= (length arg*) plen))
                   (error "arity mismatch:" plen (length arg*) clo arg*))
                 (continue arg*)))))
 
 (define (evaluate-apply proc arg*)
-  ((cond ((procedure? proc) proc)
-         ((closure? proc) (closure->procedure proc))
-         (else (error "cannot apply non-procedure:" proc))) arg*))
+  (apply (cond ((procedure? proc) proc)
+               ((closure? proc) (closure->procedure proc))
+               (else (error "cannot apply non-procedure:" proc))) arg*))
 
 (define (eval-ast/env env tm)
   (define (loop tm) (eval-ast/env env tm))
@@ -67,6 +67,8 @@
     (`#(var ,address)         (env-ref env address))
     (`#(set! ,address ,tm)    (env-set! env address (loop tm)))
     (`#(if ,c ,t ,f)          (if (loop c) (loop t) (loop f)))
+    ;; To produce racket procedures, use this line instead:
+    ;(`#(lambda ,v? ,a* ,body) (closure->procedure (closure v? a* body env)))
     (`#(lambda ,v? ,a* ,body) (closure v? a* body env))
     (`#(apply* ,p ,a*)        (evaluate-apply (loop p) (map loop a*)))
     (`#(apply ,p ,a)          (define a* (loop a))
