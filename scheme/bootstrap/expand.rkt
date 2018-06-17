@@ -112,6 +112,25 @@
                   (define pbody ($b*->body env body))
                   ($let p* (param*->addr* p*) (map loop v*) pbody))
 
+                (`(letrec ,b* ,body)
+                  (assert-binding* b*)
+                  (define p* (map car b*))
+                  (define v* (map cadr b*))
+                  (define uninitialized* (map (lambda (_) (loop #t)) p*))
+                  (define pbody
+                    (lambda (b*)
+                      (let* ((cenv (env-extend env))
+                             (_ (env-bind*! cenv b*))
+                             (a* (map cdr b*))
+                             (e* (map (lambda (v) (expand/env cenv v)) v*)))
+                        ($begin (map (lambda (a e) (ast-set! a e)) a* e*)
+                                (expand/env cenv body)))))
+                  ($let p* (param*->addr* p*) uninitialized* pbody))
+
+                (`(letrec* ,b* ,body)
+                  (syntax-close
+                    env `(letrec ,(syntax-open b*) ,(syntax-open body))))
+
                 (`(reset ,body) (ast-reset (loop body)))
                 (`(shift ,k ,body)
                   (define k-raw-addr (fresh-name 'k-raw))
@@ -146,7 +165,7 @@
   ;; TODO:
   ;; lambda body recursive definition contexts
 
-  ;; let*, letrec, letrec*
+  ;; let*
   ;; quasiquote
 
   ;; cond, and, or, when, unless, case, match
