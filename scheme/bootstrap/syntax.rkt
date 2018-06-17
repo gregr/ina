@@ -9,6 +9,7 @@
   labeled-name labeled-name?
   syntax-close closed-name? closed-name-env closed-name-n
   syntax-open syntax-open?
+  name->symbol
 
   syntax-resolve syntax=? match-syntax
   )

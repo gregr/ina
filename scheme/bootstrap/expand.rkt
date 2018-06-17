@@ -13,6 +13,8 @@
   racket/set
   )
 
+(define (fresh-name sym) (labeled-name sym (mvector '#())))
+
 ;;; Parameters
 (define (improper-list? d)
   (and (not (null? d)) (or (not (pair? d)) (improper-list? (cdr d)))))
@@ -33,9 +35,10 @@
                             (or (not (car b)) (name? (car b)))))
   (when (not (and (list? b*) (andmap binding? b*)))
     (error "invalid binding list:" b*)))
-
-(define (fresh-name sym) (labeled-name sym (mvector '#())))
-(define (rename* p*) (map (lambda (p) (and (name? p) (fresh-name p))) p*))
+(define (param*->addr* n*)
+  (map (let ((label 0))
+         (lambda (n) (and (name? n) (set! label (+ 1 label))
+                          (labeled-name (name->symbol n) label)))) n*))
 
 ;;; Expansion
 (define primitive-op-expanders
@@ -87,7 +90,7 @@
                   (define (pbody b*)
                     (let ((cenv (env-extend env)))
                       (env-bind*! cenv b*) (expand-once cenv body)))
-                  ($lambda (improper-list? ~p*) p* (rename* p*) pbody))
+                  ($lambda (improper-list? ~p*) p* (param*->addr* p*) pbody))
 
                 ;(`(let ,name ,b* ,body) (guard (name? name))
                                         ;(assert-binding* b*)
@@ -101,7 +104,7 @@
                   (define (pbody b*)
                     (let ((cenv (env-extend env)))
                       (env-bind*! cenv b*) (expand-once cenv body)))
-                  ($let p* (rename* p*) (map loop v*) pbody))
+                  ($let p* (param*->addr* p*) (map loop v*) pbody))
 
                 (`(,op-name . ,a*)
                   (guard (hash-has-key? primitive-op-expanders op-name))
