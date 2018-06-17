@@ -68,7 +68,7 @@
 (define (syntax-close env stx)
   (let loop ((stx stx))
     (cond ((syntax-open? stx) (syntax-open-form stx))
-          ((name? stx)        (closed-name stx env))
+          ((name? stx)        (closed-name env stx))
           ((pair? stx)        (cons (loop (car stx)) (loop (cdr stx))))
           ((vector? stx)      (vector-map loop stx))
           (else               stx))))
