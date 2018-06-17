@@ -13,6 +13,9 @@
   racket/set
   )
 
+(define (reverse-append xs ys)
+  (if (null? xs) ys (reverse-append (cdr xs) (cons (car xs) ys))))
+
 (define (fresh-name sym) (labeled-name sym (mvector '#())))
 
 ;;; Parameters
@@ -60,6 +63,10 @@
   (define a* (filter-not not a?*))
   (ast-lambda variadic? a?* (b*->body (map cons (filter-not not p*) a*))))
 (define ($let p* a?* v* b*->body) (ast-apply* ($lambda #f p* a?* b*->body) v*))
+(define ($begin body* body-final)
+  (cond ((null? body*) body-final)
+        (else ($let '(#f) '(#f) (list (car body*))
+                    (lambda _ ($begin (cdr body*) body-final))))))
 (define ($b*->body env body)
   (lambda (b*) (let ((cenv (env-extend env)))
                  (env-bind*! cenv b*) (expand/env cenv body))))
@@ -121,6 +128,12 @@
                   (ast-shift ($lambda #f (list k-raw-addr) (list k-raw-addr)
                                       (lambda _ inner-body))))
 
+                (`(begin ,body-first ,@body-rest)
+                  (let ((body-first (loop body-first))
+                        (body-rest (map loop body-rest)))
+                    (define body* (reverse-append body-rest (list body-first)))
+                    ($begin (reverse (cdr body*)) (car body*))))
+
                 (`(,op-name . ,a*)
                   (guard (hash-has-key? primitive-op-expanders op-name))
                   ((hash-ref primitive-op-expanders op-name) env form))
@@ -134,7 +147,6 @@
   ;; lambda body recursive definition contexts
 
   ;; let*, letrec, letrec*
-  ;; begin
   ;; quasiquote
 
   ;; cond, and, or, when, unless, case, match
