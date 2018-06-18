@@ -93,7 +93,8 @@
                   (guard (or (closed-name? name) (name? name)))
                   (define addr
                     (if (closed-name? name)
-                      (env-ref-lexical (closed-name-env) (closed-name-n name))
+                      (env-ref-lexical (closed-name-env name)
+                                       (closed-name-n name))
                       (env-ref-lexical env name)))
                   (ast-set! addr (loop e)))
                 (`(lambda ,~p* ,body)
