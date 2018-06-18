@@ -75,13 +75,14 @@
   (define b (syntax-resolve env (if (pair? form) (car form) form)))
   (and (procedure? b) b))
 
-(define (expand-once env form)
+(define (expand/env env form)
   (define (loop d) (expand/env env d))
-  (cond ((form->transformer env form) => (lambda (t) (t env form)))
+  (cond ((form->transformer env form)
+         => (lambda (t) (expand/env env (t env form))))
         ((or (boolean? form) (number? form) (char? form) (string? form))
          (ast-literal form))
         ((closed-name? form)
-         (expand-once (closed-name-env form) (closed-name-n form)))
+         (expand/env (closed-name-env form) (closed-name-n form)))
         ((name? form)
          (ast-variable (env-ref-lexical env form)))
         (else (match-syntax
@@ -128,8 +129,8 @@
                   ($let p* (param*->addr* p*) uninitialized* pbody))
 
                 (`(letrec* ,b* ,body)
-                  (syntax-close
-                    env `(letrec ,(syntax-open b*) ,(syntax-open body))))
+                  (loop (syntax-close env `(letrec ,(syntax-open b*)
+                                             ,(syntax-open body)))))
 
                 (`(reset ,body) (ast-reset (loop body)))
                 (`(shift ,k ,body)
@@ -172,10 +173,6 @@
 
   ;; let-syntax, letrec-syntax
   )
-
-(define (expand/env env form)
-  (define expanded (expand-once env form))
-  (if (ast? expanded) expanded (expand/env env expanded)))
 
 (define (expand form) (expand/env env-empty form))
 
