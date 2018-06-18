@@ -101,10 +101,16 @@
                   (define pbody ($b*->body env body))
                   ($lambda (improper-list? ~p*) p* (param*->addr* p*) pbody))
 
-                ;(`(let ,name ,b* ,body) (guard (name? name))
-                                        ;(assert-binding* b*)
-
-                  ;)
+                (`(let ,nm ,b* ,bdy)
+                  (guard (or (name? nm)))
+                  (assert-binding* b*)
+                  (define name (syntax-open nm))
+                  (define p* (syntax-open (map car b*)))
+                  (define v* (syntax-open (map cadr b*)))
+                  (define body (syntax-open bdy))
+                  (loop (syntax-close
+                          env-initial `(letrec* ((,name (lambda ,p* ,body)))
+                                                (,name . ,v*)))))
 
                 (`(let ,b* ,body)
                   (assert-binding* b*)
