@@ -129,8 +129,8 @@
                   ($let p* (param*->addr* p*) uninitialized* pbody))
 
                 (`(letrec* ,b* ,body)
-                  (loop (syntax-close env `(letrec ,(syntax-open b*)
-                                             ,(syntax-open body)))))
+                  (loop (syntax-close env-initial `(letrec ,(syntax-open b*)
+                                                     ,(syntax-open body)))))
 
                 (`(reset ,body) (ast-reset (loop body)))
                 (`(shift ,k ,body)
@@ -174,7 +174,9 @@
   ;; let-syntax, letrec-syntax
   )
 
-(define (expand form) (expand/env env-empty form))
+(define env-initial env-empty)
+
+(define (expand form) (expand/env env-initial form))
 
 
 ;; TODO: translate this.
