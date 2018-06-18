@@ -93,6 +93,5 @@
         (else (equal? (syntax-resolve env a) (syntax-resolve env b)))))
 (define-syntax match-syntax
   (syntax-rules ()
-    ((_ env body ...) (begin (define e env)
-                             (define (=? a b) (syntax=? e a b))
-                             (match/== =? body ...)))))
+    ((_ env body ...) (let* ((e env) (=? (lambda (a b) (syntax=? e a b))))
+                        (match/== =? body ...)))))
