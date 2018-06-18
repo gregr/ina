@@ -77,6 +77,7 @@
 
 (define (expand/env env form)
   (define (loop d) (expand/env env d))
+  (define (loop-close d) (loop (syntax-close env-initial d)))
   (cond ((form->transformer env form)
          => (lambda (t) (expand/env env (t env form))))
         ((or (boolean? form) (number? form) (char? form) (string? form))
@@ -108,9 +109,8 @@
                   (define p* (syntax-open (map car b*)))
                   (define v* (syntax-open (map cadr b*)))
                   (define body (syntax-open bdy))
-                  (loop (syntax-close
-                          env-initial `(letrec* ((,name (lambda ,p* ,body)))
-                                                (,name . ,v*)))))
+                  (loop-close `(letrec ((,name (lambda ,p* ,body)))
+                                 (,name . ,v*))))
 
                 (`(let ,b* ,body)
                   (assert-binding* b*)
@@ -135,8 +135,7 @@
                   ($let p* (param*->addr* p*) uninitialized* pbody))
 
                 (`(letrec* ,b* ,body)
-                  (loop (syntax-close env-initial `(letrec ,(syntax-open b*)
-                                                     ,(syntax-open body)))))
+                  (loop-close `(letrec ,(syntax-open b*) ,(syntax-open body))))
 
                 (`(reset ,body) (ast-reset (loop body)))
                 (`(shift ,k ,body)
