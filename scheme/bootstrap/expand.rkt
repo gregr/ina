@@ -77,6 +77,7 @@
     (form->transformer (closed-name-env n) (closed-name-n n))
     (env-ref-transformer env n)))
 
+(define (expand form) (expand/env env-initial form))
 (define (expand/env env form)
   (define (loop d) (expand/env env d))
   (define (loop-close d) (loop (syntax-close env-initial d)))
@@ -137,9 +138,6 @@
                                 (expand/env cenv body)))))
                   ($let p* (param*->addr* p*) uninitialized* pbody))
 
-                (`(letrec* ,b* ,body)
-                  (loop-close `(letrec ,(syntax-open b*) ,(syntax-open body))))
-
                 (`(reset ,body) (ast-reset (loop body)))
                 (`(shift ,k ,body)
                   (define k-raw-addr (fresh-name 'k-raw))
@@ -182,10 +180,22 @@
   ;; let-syntax, letrec-syntax
   )
 
-(define env-initial env-empty)
-
-(define (expand form) (expand/env env-initial form))
-
+(define env-initial (env-extend env-empty))
+(define-syntax define-syntax-transformer*
+  (syntax-rules ()
+    ((_ e-local e f) '())
+    ((_ e-local e f (name clause ...) rest ...)
+     `((name . ,(lambda (e f)
+                  (syntax-close e-local (match-syntax
+                                          e f clause ...
+                                          (_ (error "invalid syntax:" f))))))
+       . ,(define-syntax-transformer* e-local e f rest ...)))))
+(env-bind-transformer*!
+  env-initial
+  (define-syntax-transformer*
+    env-initial env form
+    (letrec* (`(,_ ,b* ,body) `(letrec ,(syntax-open b*) ,(syntax-open body))))
+    ))
 
 ;; TODO: translate this.
 ;(define (stdlib program)
