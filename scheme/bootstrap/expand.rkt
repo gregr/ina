@@ -72,8 +72,10 @@
                  (env-bind*! cenv b*) (expand/env cenv body))))
 
 (define (form->transformer env form)
-  (define b (syntax-resolve env (if (pair? form) (car form) form)))
-  (and (procedure? b) b))
+  (define n (if (pair? form) (car form) form))
+  (if (closed-name? n)
+    (form->transformer (closed-name-env n) (closed-name-n n))
+    (env-ref-transformer env n)))
 
 (define (expand/env env form)
   (define (loop d) (expand/env env d))

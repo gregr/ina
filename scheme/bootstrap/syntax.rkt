@@ -3,15 +3,16 @@
   environment?
   env-empty
   env-extend
-  env-ref-lexical
-  env-bind*! env-hide! env-alias!
+  env-ref-lexical env-ref-transformer
+  env-hide! env-alias!
+  env-bind*! env-bind-transformer*!
 
   labeled-name labeled-name?
   syntax-close closed-name? closed-name-env closed-name-n
   syntax-open syntax-open?
   name->symbol
 
-  syntax-resolve syntax=? match-syntax
+  syntax=? match-syntax
   )
 
 (require
@@ -23,6 +24,7 @@
 ;;; Syntactic environments
 (define-type*
   address?
+  (addr-transformer addr-transformer? addr-transformer-proc)
   (addr-lexical addr-lexical? addr-lexical-v)
   (addr-unbound addr-unbound? addr-unbound-v))
 (define-type environment environment? env-frames)
@@ -43,12 +45,18 @@
   (define addr (env-ref env n))
   (when (not (addr-lexical? addr)) (error "unbound variable:" n))
   (addr-lexical-v addr))
+(define (env-ref-transformer env n)
+  (define addr (env-ref env n))
+  (and (addr-transformer? addr) (addr-transformer-proc addr)))
 (define (env-hide! env n)
   (env-set*! env `((,n . ,(addr-unbound (fresh-name (name->symbol n)))))))
 (define (env-alias! env n aliased)
   (env-set*! env `((,n . ,(env-ref env aliased)))))
 (define (env-bind*! env b*)
   (env-set*! env (map (lambda (b) (cons (car b) (addr-lexical (cdr b)))) b*)))
+(define (env-bind-transformer*! env b*)
+  (env-set*! env (map (lambda (b) (cons (car b) (addr-transformer (cdr b))))
+                      b*)))
 
 ;;; Names
 ;; Closed names are late-resolved to support recursive definition contexts.
