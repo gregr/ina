@@ -67,7 +67,18 @@
         (else ($let '(#f) '(#f) (list (car body*))
                     (lambda _ ($begin (cdr body*) body-final))))))
 (define ($b*->body env body)
-  (lambda (b*) (env-bind*! env b*) (expand/env env body)))
+  (lambda (b*)
+    (env-bind*! env b*)
+    (define denv (env-extend env))
+    (define def*&body (expand-define* denv body))  ;; list of ((p . a) . rhs)
+    (when (null? def*&body) (error "body cannot be empty:" body))
+    (define rd*b (reverse def*&body))
+    (define def* (reverse (cdr rd*b)))
+    (define final-rib (car rd*b))
+    (define final (cdr final-rib))
+    (when (caar final-rib) (error "body cannot end with a definition:" body))
+    (let ((p* (map caar def*)) (a* (map cdar def*)) (v* (map cdr def*)))
+      (expand-letrec denv p* a* v* final))))
 
 (define (form->transformer env form)
   (define n (if (pair? form) (car form) form))
@@ -84,6 +95,35 @@
       ($begin (map (lambda (a? e) (if a? (ast-set! a? e) e)) a?* e*)
               (expand/env env body))))
   ($let p* a?* uninitialized* pbody))
+
+(define (expand-define* env body)
+  (when (not (list? body)) (error "invalid definition body:" body))
+  (let outer-loop ((top body) (pending '()))
+    (match top
+      (`(,original-form . ,body-rest)
+        (let loop ((form original-form))
+          (match-syntax
+            env form
+            (`(begin ,@e*) (outer-loop e* (cons body-rest pending)))
+            (`(define ,n ,def-body)
+              (guard (name? n))
+              (define b (cons n (car (param*->addr* (list n)))))
+              (env-bind*! env (list b))
+              (cons (cons b def-body) (outer-loop body-rest pending)))
+            (`(define (,n . ,p*) . ,def-body)
+              (loop (syntax-close
+                      env-initial `(define ,(syntax-open n)
+                                     (lambda ,(syntax-open p*)
+                                       . ,(syntax-open def-body))))))
+            (`(begin . ,_) (error "invalid begin syntax:" form))
+            (`(define . ,_) (error "invalid define syntax:" form))
+            (_ (cond ((form->transformer env form)
+                      => (lambda (t) (loop (t env form))))
+                     (else (cons (cons (cons #f #f) original-form)
+                                 (outer-loop body-rest pending))))))))
+      ('() (match pending
+             (`(,top . ,pending) (outer-loop top pending))
+             ('() '()))))))
 
 (define (expand form) (expand/env env-initial form))
 (define (expand/env env form)
@@ -108,7 +148,7 @@
                                        (closed-name-n name))
                       (env-ref-lexical env name)))
                   (ast-set! addr (loop e)))
-                (`(lambda ,~p* ,body)
+                (`(lambda ,~p* ,@body)
                   (define p* (~list->list ~p*))
                   (assert-param* p*)
                   (define pbody ($b*->body (env-extend env) body))
@@ -124,7 +164,7 @@
                   (loop-close `(letrec ((,name (lambda ,p* ,body)))
                                  (,name . ,v*))))
 
-                (`(let ,b* ,body)
+                (`(let ,b* ,@body)
                   (assert-binding* b*)
                   (define p* (map car b*))
                   (define v* (map cadr b*))
@@ -139,7 +179,7 @@
                     (env-extend env) p* (param*->addr* p*) v* body))
 
                 (`(reset ,body) (ast-reset (loop body)))
-                (`(shift ,k ,body)
+                (`(shift ,k ,@body)
                   (match (param*->addr* '(k-raw k arg))
                     ((list k-raw-addr k-addr arg-addr)
                      (define inner-body
