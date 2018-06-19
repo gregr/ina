@@ -80,10 +80,10 @@
   (define uninitialized* (map (lambda (_) ast-true) p*))
   (define (pbody b*)
     (env-bind*! env b*)
-    (let ((a?* (map cdr b*)) (e* (map (lambda (v) (expand/env env v)) v*)))
+    (let ((e* (map (lambda (v) (expand/env env v)) v*)))
       ($begin (map (lambda (a? e) (if a? (ast-set! a? e) e)) a?* e*)
               (expand/env env body))))
-  ($let p* (param*->addr* p*) uninitialized* pbody))
+  ($let p* a?* uninitialized* pbody))
 
 (define (expand form) (expand/env env-initial form))
 (define (expand/env env form)
