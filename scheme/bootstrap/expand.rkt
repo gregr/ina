@@ -59,9 +59,8 @@
                      (_ (error "invalid primitive op:" name arity form))))))
          primitive-ops)))
 
-(define ($lambda variadic? p* a?* b*->body)
-  (define a* (filter-not not a?*))
-  (ast-lambda variadic? a?* (b*->body (map cons (filter-not not p*) a*))))
+(define ($lambda variadic? p* a* b*->body)
+  (ast-lambda variadic? a* (b*->body (map cons p* a*))))
 (define ($let p* a?* v* b*->body) (ast-apply* ($lambda #f p* a?* b*->body) v*))
 (define ($begin body* body-final)
   (cond ((null? body*) body-final)
