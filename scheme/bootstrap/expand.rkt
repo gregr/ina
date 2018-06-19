@@ -78,7 +78,7 @@
     (define final (cdr final-rib))
     (when (caar final-rib) (error "body cannot end with a definition:" body))
     (let ((p* (map caar def*)) (a* (map cdar def*)) (v* (map cdr def*)))
-      (expand-letrec denv p* a* v* final))))
+      (expand-letrec denv p* a* v* (lambda (env) (expand/env env final))))))
 
 (define (form->transformer env form)
   (define n (if (pair? form) (car form) form))
@@ -86,14 +86,14 @@
     (form->transformer (closed-name-env n) (closed-name-n n))
     (env-ref-transformer env n)))
 
-(define (expand-letrec env p* a?* v* body)
+(define (expand-letrec env p* a?* v* expand-body)
   (define ast-true (expand #t))
   (define uninitialized* (map (lambda (_) ast-true) p*))
   (define (pbody b*)
     (env-bind*! env b*)
     (let ((e* (map (lambda (v) (expand/env env v)) v*)))
       ($begin (map (lambda (a? e) (if a? (ast-set! a? e) e)) a?* e*)
-              (expand/env env body))))
+              (expand-body env))))
   ($let p* a?* uninitialized* pbody))
 
 (define (expand-define* env body)
@@ -175,8 +175,8 @@
                   (assert-binding* b*)
                   (define p* (map car b*))
                   (define v* (map cadr b*))
-                  (expand-letrec
-                    (env-extend env) p* (param*->addr* p*) v* body))
+                  (expand-letrec (env-extend env) p* (param*->addr* p*) v*
+                                 (lambda (env) (expand/env env body))))
 
                 (`(reset ,body) (ast-reset (loop body)))
                 (`(shift ,k ,@body)
