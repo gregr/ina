@@ -131,9 +131,10 @@
                     (lambda (b*)
                       (let* ((cenv (env-extend env))
                              (_ (env-bind*! cenv b*))
-                             (a* (map cdr b*))
+                             (a?* (map cdr b*))
                              (e* (map (lambda (v) (expand/env cenv v)) v*)))
-                        ($begin (map (lambda (a e) (ast-set! a e)) a* e*)
+                        ($begin (map (lambda (a? e)
+                                       (if a? (ast-set! a? e) e)) a?* e*)
                                 (expand/env cenv body)))))
                   ($let p* (param*->addr* p*) uninitialized* pbody))
 
