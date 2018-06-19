@@ -155,14 +155,14 @@
                   (define pbody ($b*->body (env-extend env) body))
                   ($lambda (improper-list? ~p*) p* (param*->addr* p*) pbody))
 
-                (`(let ,nm ,b* ,bdy)
+                (`(let ,nm ,b* . ,bdy)
                   (guard (or (name? nm)))
                   (assert-binding* b*)
                   (define name (syntax-open nm))
                   (define p* (syntax-open (map car b*)))
                   (define v* (syntax-open (map cadr b*)))
                   (define body (syntax-open bdy))
-                  (loop-close `(letrec ((,name (lambda ,p* ,body)))
+                  (loop-close `(letrec ((,name (lambda ,p* . ,body)))
                                  (,name . ,v*))))
 
                 (`(let ,b* ,@body)
@@ -172,14 +172,14 @@
                   (define pbody ($b*->body (env-extend env) body))
                   ($let p* (param*->addr* p*) (map loop v*) pbody))
 
-                (`(letrec ,b* ,body)
+                (`(letrec ,b* ,@body)
                   (assert-binding* b*)
                   (define p* (map car b*))
                   (define v* (map cadr b*))
                   (expand-letrec (env-extend env) p* (param*->addr* p*) v*
-                                 (lambda (env) (expand/env env body))))
+                                 (lambda (env) (expand-body* env body))))
 
-                (`(reset ,body) (ast-reset (loop body)))
+                (`(reset ,@body) (ast-reset (expand-body* env body)))
                 (`(shift ,k ,@body)
                   (match (param*->addr* '(k-raw k arg))
                     ((list k-raw-addr k-addr arg-addr)
@@ -210,8 +210,6 @@
                 (_ (error "invalid syntax:" form)))))
 
   ;; TODO:
-  ;; lambda body recursive definition contexts
-
   ;; let*
   ;; quasiquote
 
