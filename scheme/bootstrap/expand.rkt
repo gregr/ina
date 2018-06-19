@@ -140,20 +140,17 @@
          (ast-variable (env-ref-lexical env form)))
         (else (match-syntax
                 env form
-                (`(quote ,datum) (ast-literal datum))
-                (`(set! ,name ,e)
-                  (guard (or (closed-name? name) (name? name)))
-                  (define addr
-                    (if (closed-name? name)
-                      (env-ref-lexical (closed-name-env name)
-                                       (closed-name-n name))
-                      (env-ref-lexical env name)))
-                  (ast-set! addr (loop e)))
                 (`(lambda ,~p* ,@body)
                   (define p* (~list->list ~p*))
                   (assert-param* p*)
                   (define pbody ($b*->body (env-extend env) body))
                   ($lambda (improper-list? ~p*) p* (param*->addr* p*) pbody))
+                (`(letrec ,b* ,@body)
+                  (assert-binding* b*)
+                  (define p* (map car b*))
+                  (define v* (map cadr b*))
+                  (expand-letrec (env-extend env) p* (param*->addr* p*) v*
+                                 (lambda (env) (expand-body* env body))))
 
                 (`(let ,nm ,b* . ,bdy)
                   (guard (or (name? nm)))
@@ -164,20 +161,17 @@
                   (define body (syntax-open bdy))
                   (loop-close `(letrec ((,name (lambda ,p* . ,body)))
                                  (,name . ,v*))))
-
                 (`(let ,b* ,@body)
                   (assert-binding* b*)
                   (define p* (map car b*))
                   (define v* (map cadr b*))
                   (define pbody ($b*->body (env-extend env) body))
                   ($let p* (param*->addr* p*) (map loop v*) pbody))
-
-                (`(letrec ,b* ,@body)
-                  (assert-binding* b*)
-                  (define p* (map car b*))
-                  (define v* (map cadr b*))
-                  (expand-letrec (env-extend env) p* (param*->addr* p*) v*
-                                 (lambda (env) (expand-body* env body))))
+                (`(begin ,body-first ,@body-rest)
+                  (let ((body-first (loop body-first))
+                        (body-rest (map loop body-rest)))
+                    (define body* (reverse-append body-rest (list body-first)))
+                    ($begin (reverse (cdr body*)) (car body*))))
 
                 (`(reset ,@body) (ast-reset (expand-body* env body)))
                 (`(shift ,k ,@body)
@@ -193,21 +187,22 @@
                              ($b*->body (env-extend env) body)))
                      (ast-shift ($lambda #f (list k-raw-addr) (list k-raw-addr)
                                          (lambda _ inner-body))))))
-
-                (`(begin ,body-first ,@body-rest)
-                  (let ((body-first (loop body-first))
-                        (body-rest (map loop body-rest)))
-                    (define body* (reverse-append body-rest (list body-first)))
-                    ($begin (reverse (cdr body*)) (car body*))))
-
+                (`(set! ,name ,e)
+                  (guard (or (closed-name? name) (name? name)))
+                  (define addr (if (closed-name? name)
+                                 (env-ref-lexical (closed-name-env name)
+                                                  (closed-name-n name))
+                                 (env-ref-lexical env name)))
+                  (ast-set! addr (loop e)))
                 (`(,op-name . ,a*)
                   (guard (hash-has-key? primitive-op-expanders op-name))
                   ((hash-ref primitive-op-expanders op-name) env form))
-                (`(if ,c ,t ,f) (ast-if (loop c) (loop t) (loop f)))
-                (`(apply ,p ,a) (ast-apply (loop p) (loop a)))
-                (`(,p . ,a*)    (guard (list? a*))
-                                (ast-apply* (loop p) (map loop a*)))
-                (_ (error "invalid syntax:" form)))))
+
+                (`(quote ,datum) (ast-literal datum))
+                (`(if ,c ,t ,f)  (ast-if (loop c) (loop t) (loop f)))
+                (`(apply ,p ,a)  (ast-apply (loop p) (loop a)))
+                (`(,p ,@a*)      (ast-apply* (loop p) (map loop a*)))
+                (_               (error "invalid syntax:" form)))))
 
   ;; TODO:
   ;; let*
