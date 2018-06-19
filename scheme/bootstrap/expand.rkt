@@ -67,8 +67,7 @@
         (else ($let '(#f) '(#f) (list (car body*))
                     (lambda _ ($begin (cdr body*) body-final))))))
 (define ($b*->body env body)
-  (lambda (b*) (let ((cenv (env-extend env)))
-                 (env-bind*! cenv b*) (expand/env cenv body))))
+  (lambda (b*) (env-bind*! env b*) (expand/env env body)))
 
 (define (form->transformer env form)
   (define n (if (pair? form) (car form) form))
@@ -80,12 +79,10 @@
   (define ast-true (expand #t))
   (define uninitialized* (map (lambda (_) ast-true) p*))
   (define (pbody b*)
-    (let* ((cenv (env-extend env))
-           (_ (env-bind*! cenv b*))
-           (a?* (map cdr b*))
-           (e* (map (lambda (v) (expand/env cenv v)) v*)))
+    (env-bind*! env b*)
+    (let ((a?* (map cdr b*)) (e* (map (lambda (v) (expand/env env v)) v*)))
       ($begin (map (lambda (a? e) (if a? (ast-set! a? e) e)) a?* e*)
-              (expand/env cenv body))))
+              (expand/env env body))))
   ($let p* (param*->addr* p*) uninitialized* pbody))
 
 (define (expand form) (expand/env env-initial form))
@@ -114,7 +111,7 @@
                 (`(lambda ,~p* ,body)
                   (define p* (~list->list ~p*))
                   (assert-param* p*)
-                  (define pbody ($b*->body env body))
+                  (define pbody ($b*->body (env-extend env) body))
                   ($lambda (improper-list? ~p*) p* (param*->addr* p*) pbody))
 
                 (`(let ,nm ,b* ,bdy)
@@ -131,14 +128,15 @@
                   (assert-binding* b*)
                   (define p* (map car b*))
                   (define v* (map cadr b*))
-                  (define pbody ($b*->body env body))
+                  (define pbody ($b*->body (env-extend env) body))
                   ($let p* (param*->addr* p*) (map loop v*) pbody))
 
                 (`(letrec ,b* ,body)
                   (assert-binding* b*)
                   (define p* (map car b*))
                   (define v* (map cadr b*))
-                  (expand-letrec env p* (param*->addr* p*) v* body))
+                  (expand-letrec
+                    (env-extend env) p* (param*->addr* p*) v* body))
 
                 (`(reset ,body) (ast-reset (loop body)))
                 (`(shift ,k ,body)
@@ -151,7 +149,7 @@
                                      (lambda _
                                        (ast-unshift (ast-variable k-raw-addr)
                                                     (ast-variable arg-addr)))))
-                             ($b*->body env body)))
+                             ($b*->body (env-extend env) body)))
                      (ast-shift ($lambda #f (list k-raw-addr) (list k-raw-addr)
                                          (lambda _ inner-body))))))
 
