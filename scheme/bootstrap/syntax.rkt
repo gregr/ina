@@ -3,9 +3,9 @@
   environment?
   env-empty
   env-extend
-  env-ref-lexical env-ref-transformer
+  env-ref-lexical env-ref-transformer env-ref-parser
   env-hide! env-alias!
-  env-bind*! env-bind-transformer*!
+  env-bind*! env-bind-transformer*! env-bind-parser*!
 
   labeled-name labeled-name?
   syntax-close closed-name? closed-name-env closed-name-n
@@ -25,6 +25,7 @@
 (define-type*
   address?
   (addr-transformer addr-transformer? addr-transformer-proc)
+  (addr-parser addr-parser? addr-parser-proc)
   (addr-lexical addr-lexical? addr-lexical-v)
   (addr-unbound addr-unbound? addr-unbound-v))
 (define-type environment environment? env-frames)
@@ -49,6 +50,9 @@
 (define (env-ref-transformer env n)
   (define addr (env-ref env n))
   (and (addr-transformer? addr) (addr-transformer-proc addr)))
+(define (env-ref-parser env n)
+  (define addr (env-ref env n))
+  (and (addr-parser? addr) (addr-parser-proc addr)))
 (define (env-hide! env n)
   (env-set*! env `((,n . ,(addr-unbound (fresh-name (name->symbol n)))))))
 (define (env-alias! env n aliased)
@@ -57,6 +61,9 @@
   (env-set*! env (map (lambda (b) (cons (car b) (addr-lexical (cdr b)))) b*)))
 (define (env-bind-transformer*! env b*)
   (env-set*! env (map (lambda (b) (cons (car b) (addr-transformer (cdr b))))
+                      b*)))
+(define (env-bind-parser*! env b*)
+  (env-set*! env (map (lambda (b) (cons (car b) (addr-parser (cdr b))))
                       b*)))
 
 ;;; Names
