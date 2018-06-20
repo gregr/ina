@@ -1,7 +1,6 @@
 #lang racket/base
 (provide
   expand
-  primitive-op-module
   program/stdlib
   )
 
@@ -280,17 +279,12 @@
                    (_ (error "invalid primitive op:" name arity form))))))
        primitive-ops))
 
-(define primitive-op-module
+(define primitive-op-procs
   (map (lambda (po-desc)
          (define name (car po-desc))
-         (define addr (car (param*->addr* (list name))))
-         (define p*
-           (map (lambda (i)
-                  (string->symbol (string-append "x" (number->string i))))
-                (range (length (cadr po-desc)))))
-         (define body (expand/env env-initial `(lambda ,p* (,name . ,p*))))
-         (env-bind*! env-initial (list (cons name addr)))  ;; Override binding.
-         `(,addr . ,body))
+         (define (x i) (string->symbol (string-append "x" (number->string i))))
+         (define p* (map x (range (length (cadr po-desc)))))
+         `(,name (lambda ,p* (,name . ,p*))))
        primitive-ops))
 
 (define derived-ops
@@ -307,6 +301,7 @@
 (define derived-apply '(apply (lambda (f x . xs) (apply f (cons* x xs)))))
 
 (define (program/stdlib program)
-  (syntax-close env-initial `(letrec ,(syntax-open derived-ops)
-                               (let (,(syntax-open derived-apply))
-                                 ,(syntax-open program)))))
+  (syntax-close env-initial `(let ,(syntax-open primitive-op-procs)
+                               (letrec ,(syntax-open derived-ops)
+                                 (let (,(syntax-open derived-apply))
+                                   ,(syntax-open program))))))

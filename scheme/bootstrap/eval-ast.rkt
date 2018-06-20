@@ -92,8 +92,4 @@
 
     (_ (error "unknown term:" (ast->v tm)))))
 
-(define env-initial
-  (env-extend*
-    env-empty (map (lambda (b) (cons (car b) (eval-ast/env env-empty (cdr b))))
-                   primitive-op-module)))
-(define (eval-ast tm) (eval-ast/env env-initial tm))
+(define (eval-ast tm) (eval-ast/env env-empty tm))
