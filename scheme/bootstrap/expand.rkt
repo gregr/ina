@@ -227,8 +227,8 @@
   env-initial
   (define-syntax-transformer*
     env-initial env form
-    (letrec* ((`(letrec* ,b* ,body)
-                `(letrec ,(syntax-open b*) ,(syntax-open body)))))
+    (letrec* ((`(letrec* ,b* . ,body)
+                `(letrec ,(syntax-open b*) . ,(syntax-open body)))))
     ))
 
 (define env-primitive (env-extend env-initial))
