@@ -218,7 +218,7 @@
                                      (lambda _ inner-body))))))))
   ;; TODO:
   ;; quasiquote
-  ;; cond, and, or, when, unless, case, match
+  ;; and, or, when, unless, case, match
   ;; let-syntax, letrec-syntax
     ))
 
@@ -232,6 +232,21 @@
            (`(let* (,b . ,b*) . ,body)
              `(let (,(syntax-open b))
                 (let* ,(syntax-open b*) . ,(syntax-open body))))))
+    (cond ((`(cond) '((quote error:cond:no-matching-clause)))
+           (`(cond (else ,@body)) `(let () . ,(syntax-open body)))
+           (`(cond (,e) . ,cs)
+             (define t (syntax-open (fresh-name 't)))
+             `(let ((,t ,(syntax-open e)))
+                (if ,t ,t (cond . ,(syntax-open cs)))))
+           (`(cond (,e => ,proc) . ,cs)
+             (define t (syntax-open (fresh-name 't)))
+             `(let ((,t ,(syntax-open e)))
+                (if ,t (,(syntax-open proc) ,t) (cond . ,(syntax-open cs)))))
+           (`(cond (,e ,@body) . ,cs)
+             (define t (syntax-open (fresh-name 't)))
+             `(let ((,t ,(syntax-open e)))
+                (if ,t (let () . ,(syntax-open body))
+                  (cond . ,(syntax-open cs)))))))
     ))
 
 (define env-primitive (env-extend env-initial))
