@@ -263,9 +263,8 @@
                `(if ,(syntax-open c) #t (let () . ,(syntax-open body))))))
     ))
 
-(define env-primitive (env-extend env-initial))
 (env-bind-parser*!
-  env-primitive
+  env-initial
   (map (lambda (po-desc)
          (define name (car po-desc))
          (define arity (length (cadr po-desc)))
@@ -284,10 +283,11 @@
   (map (lambda (po-desc)
          (define name (car po-desc))
          (define addr (car (param*->addr* (list name))))
-         (env-bind*! env-initial (list (cons name addr)))
          (define p*
            (map (lambda (i)
                   (string->symbol (string-append "x" (number->string i))))
                 (range (length (cadr po-desc)))))
-         `(,addr . ,(expand/env env-primitive `(lambda ,p* (,name . ,p*)))))
+         (define body (expand/env env-initial `(lambda ,p* (,name . ,p*))))
+         (env-bind*! env-initial (list (cons name addr)))  ;; Override binding.
+         `(,addr . ,body))
        primitive-ops))
