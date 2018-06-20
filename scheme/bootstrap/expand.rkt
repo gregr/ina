@@ -14,6 +14,34 @@
   racket/set
   )
 
+;;; Expansion
+(define (form->transformer env form)
+  (define n (if (pair? form) (car form) form))
+  (if (closed-name? n)
+    (form->transformer (closed-name-env n) (closed-name-n n))
+    (env-ref-transformer env n)))
+(define (form->parser env form)
+  (define n (if (pair? form) (car form) form))
+  (if (closed-name? n)
+    (form->parser (closed-name-env n) (closed-name-n n))
+    (env-ref-parser env n)))
+
+(define (expand/env env form)
+  (define (loop d) (expand/env env d))
+  (cond ((form->transformer env form)
+         => (lambda (t) (expand/env env (t env form))))
+        ((form->parser env form) => (lambda (p) (p env form)))
+        ((or (boolean? form) (number? form) (char? form) (string? form))
+         (ast-literal form))
+        ((closed-name? form)
+         (expand/env (closed-name-env form) (closed-name-n form)))
+        ((name? form) (ast-variable (env-ref-lexical env form)))
+        (else (match-syntax
+                env form
+                (`(,p ,@a*) (ast-apply* (loop p) (map loop a*)))
+                (_          (error "invalid syntax:" form))))))
+
+;;; Misc
 (define (reverse-append xs ys)
   (if (null? xs) ys (reverse-append (cdr xs) (cons (car xs) ys))))
 
@@ -43,7 +71,7 @@
          (lambda (n) (and (name? n) (set! label (+ 1 label))
                           (labeled-name (name->symbol n) label)))) n*))
 
-;;; Expansion
+;;; High-level AST construction
 (define ($lambda variadic? p* a* b*->body)
   (ast-lambda variadic? a* (b*->body (map cons p* a*))))
 (define ($let p* a?* v* b*->body) (ast-apply* ($lambda #f p* a?* b*->body) v*))
@@ -51,19 +79,10 @@
   (cond ((null? body*) body-final)
         (else ($let '(#f) '(#f) (list (car body*))
                     (lambda _ ($begin (cdr body*) body-final))))))
+
+;;; Standard definitions
 (define ($b*->body env body)
   (lambda (b*) (env-bind*! env b*) (expand-body* env body)))
-
-(define (form->transformer env form)
-  (define n (if (pair? form) (car form) form))
-  (if (closed-name? n)
-    (form->transformer (closed-name-env n) (closed-name-n n))
-    (env-ref-transformer env n)))
-(define (form->parser env form)
-  (define n (if (pair? form) (car form) form))
-  (if (closed-name? n)
-    (form->parser (closed-name-env n) (closed-name-n n))
-    (env-ref-parser env n)))
 
 (define (expand-letrec env p* a?* v* expand-body)
   (define ast-true (expand #t))
@@ -117,30 +136,6 @@
              ('() '()))))))
 
 (define (expand form) (expand/env env-initial form))
-(define (expand/env env form)
-  (define (loop d) (expand/env env d))
-  (cond ((form->transformer env form)
-         => (lambda (t) (expand/env env (t env form))))
-        ((form->parser env form) => (lambda (p) (p env form)))
-        ((or (boolean? form) (number? form) (char? form) (string? form))
-         (ast-literal form))
-        ((closed-name? form)
-         (expand/env (closed-name-env form) (closed-name-n form)))
-        ((name? form)
-         (ast-variable (env-ref-lexical env form)))
-        (else (match-syntax
-                env form
-                (`(,p ,@a*) (ast-apply* (loop p) (map loop a*)))
-                (_          (error "invalid syntax:" form)))))
-
-  ;; TODO:
-  ;; let*
-  ;; quasiquote
-
-  ;; cond, and, or, when, unless, case, match
-
-  ;; let-syntax, letrec-syntax
-  )
 
 (define env-initial (env-extend env-empty))
 (define-syntax define-syntax-parser*
@@ -221,6 +216,11 @@
                          ($b*->body (env-extend env) body)))
                  (ast-shift ($lambda #f (list k-raw-addr) (list k-raw-addr)
                                      (lambda _ inner-body))))))))
+  ;; TODO:
+  ;; let*
+  ;; quasiquote
+  ;; cond, and, or, when, unless, case, match
+  ;; let-syntax, letrec-syntax
     ))
 
 (env-bind-transformer*!
