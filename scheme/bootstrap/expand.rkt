@@ -146,69 +146,11 @@
          (ast-variable (env-ref-lexical env form)))
         (else (match-syntax
                 env form
-                (`(lambda ,~p* ,@body)
-                  (define p* (~list->list ~p*))
-                  (assert-param* p*)
-                  (define pbody ($b*->body (env-extend env) body))
-                  ($lambda (improper-list? ~p*) p* (param*->addr* p*) pbody))
-                (`(letrec ,b* ,@body)
-                  (assert-binding* b*)
-                  (define p* (map car b*))
-                  (define v* (map cadr b*))
-                  (expand-letrec (env-extend env) p* (param*->addr* p*) v*
-                                 (lambda (env) (expand-body* env body))))
-
-                (`(let ,nm ,b* . ,bdy)
-                  (guard (or (name? nm)))
-                  (assert-binding* b*)
-                  (define name (syntax-open nm))
-                  (define p* (syntax-open (map car b*)))
-                  (define v* (syntax-open (map cadr b*)))
-                  (define body (syntax-open bdy))
-                  (loop-close `(letrec ((,name (lambda ,p* . ,body)))
-                                 (,name . ,v*))))
-                (`(let ,b* ,@body)
-                  (assert-binding* b*)
-                  (define p* (map car b*))
-                  (define v* (map cadr b*))
-                  (define pbody ($b*->body (env-extend env) body))
-                  ($let p* (param*->addr* p*) (map loop v*) pbody))
-                (`(begin ,body-first ,@body-rest)
-                  (let ((body-first (loop body-first))
-                        (body-rest (map loop body-rest)))
-                    (define body* (reverse-append body-rest (list body-first)))
-                    ($begin (reverse (cdr body*)) (car body*))))
-
-                (`(reset ,@body) (ast-reset (expand-body* env body)))
-                (`(shift ,k ,@body)
-                  (match (param*->addr* '(k-raw k arg))
-                    ((list k-raw-addr k-addr arg-addr)
-                     (define inner-body
-                       ($let (list k) (list k-addr)
-                             (list ($lambda
-                                     #f (list arg-addr) (list arg-addr)
-                                     (lambda _
-                                       (ast-unshift (ast-variable k-raw-addr)
-                                                    (ast-variable arg-addr)))))
-                             ($b*->body (env-extend env) body)))
-                     (ast-shift ($lambda #f (list k-raw-addr) (list k-raw-addr)
-                                         (lambda _ inner-body))))))
-                (`(set! ,name ,e)
-                  (guard (or (closed-name? name) (name? name)))
-                  (define addr (if (closed-name? name)
-                                 (env-ref-lexical (closed-name-env name)
-                                                  (closed-name-n name))
-                                 (env-ref-lexical env name)))
-                  (ast-set! addr (loop e)))
                 (`(,op-name . ,a*)
                   (guard (hash-has-key? primitive-op-expanders op-name))
                   ((hash-ref primitive-op-expanders op-name) env form))
-
-                (`(quote ,datum) (ast-literal datum))
-                (`(if ,c ,t ,f)  (ast-if (loop c) (loop t) (loop f)))
-                (`(apply ,p ,a)  (ast-apply (loop p) (loop a)))
-                (`(,p ,@a*)      (ast-apply* (loop p) (map loop a*)))
-                (_               (error "invalid syntax:" form)))))
+                (`(,p ,@a*) (ast-apply* (loop p) (map loop a*)))
+                (_          (error "invalid syntax:" form)))))
 
   ;; TODO:
   ;; let*
@@ -236,6 +178,70 @@
                                           e f c* ...
                                           (_ (error "invalid syntax:" f))))))
        . ,(define-syntax-transformer* e-local e f rest ...)))))
+
+(env-bind-parser*!
+  env-initial
+  (define-syntax-parser*
+    env form
+    ((define (loop d) (expand/env env d))
+     (define (loop-close d) (loop (syntax-close env-initial d))))
+    (apply ((`(apply ,p ,a)  (ast-apply (loop p) (loop a)))))
+    (quote ((`(quote ,datum) (ast-literal datum))))
+    (if    ((`(if ,c ,t ,f) (ast-if (loop c) (loop t) (loop f)))))
+    (set! ((`(set! ,name ,e)
+             (guard (or (closed-name? name) (name? name)))
+             (define addr (if (closed-name? name)
+                            (env-ref-lexical (closed-name-env name)
+                                             (closed-name-n name))
+                            (env-ref-lexical env name)))
+             (ast-set! addr (loop e)))))
+    (lambda ((`(lambda ,~p* ,@body)
+               (define p* (~list->list ~p*))
+               (assert-param* p*)
+               (define pbody ($b*->body (env-extend env) body))
+               ($lambda (improper-list? ~p*) p* (param*->addr* p*) pbody))))
+    (letrec ((`(letrec ,b* ,@body)
+               (assert-binding* b*)
+               (define p* (map car b*))
+               (define v* (map cadr b*))
+               (expand-letrec (env-extend env) p* (param*->addr* p*) v*
+                              (lambda (env) (expand-body* env body))))))
+    (let ((`(let ,nm ,b* . ,bdy)
+            (guard (or (name? nm)))
+            (assert-binding* b*)
+            (define name (syntax-open nm))
+            (define p* (syntax-open (map car b*)))
+            (define v* (syntax-open (map cadr b*)))
+            (define body (syntax-open bdy))
+            (loop-close `(letrec ((,name (lambda ,p* . ,body)))
+                           (,name . ,v*))))
+          (`(let ,b* ,@body)
+            (assert-binding* b*)
+            (define p* (map car b*))
+            (define v* (map cadr b*))
+            (define pbody ($b*->body (env-extend env) body))
+            ($let p* (param*->addr* p*) (map loop v*) pbody))))
+    (begin ((`(begin ,body-first ,@body-rest)
+              (let ((body-first (loop body-first))
+                    (body-rest (map loop body-rest)))
+                (define body* (reverse-append body-rest (list body-first)))
+                ($begin (reverse (cdr body*)) (car body*))))))
+    (reset ((`(reset ,@body) (ast-reset (expand-body* env body)))))
+    (shift ((`(shift ,k ,@body)
+              (match (param*->addr* '(k-raw k arg))
+                ((list k-raw-addr k-addr arg-addr)
+                 (define inner-body
+                   ($let (list k) (list k-addr)
+                         (list ($lambda
+                                 #f (list arg-addr) (list arg-addr)
+                                 (lambda _
+                                   (ast-unshift (ast-variable k-raw-addr)
+                                                (ast-variable arg-addr)))))
+                         ($b*->body (env-extend env) body)))
+                 (ast-shift ($lambda #f (list k-raw-addr) (list k-raw-addr)
+                                     (lambda _ inner-body))))))))
+    ))
+
 (env-bind-transformer*!
   env-initial
   (define-syntax-transformer*
