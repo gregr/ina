@@ -217,7 +217,6 @@
                  (ast-shift ($lambda #f (list k-raw-addr) (list k-raw-addr)
                                      (lambda _ inner-body))))))))
   ;; TODO:
-  ;; let*
   ;; quasiquote
   ;; cond, and, or, when, unless, case, match
   ;; let-syntax, letrec-syntax
@@ -229,6 +228,10 @@
     env-initial env form
     (letrec* ((`(letrec* ,b* . ,body)
                 `(letrec ,(syntax-open b*) . ,(syntax-open body)))))
+    (let* ((`(let* () . ,body) `(let () . ,(syntax-open body)))
+           (`(let* (,b . ,b*) . ,body)
+             `(let (,(syntax-open b))
+                (let* ,(syntax-open b*) . ,(syntax-open body))))))
     ))
 
 (define env-primitive (env-extend env-initial))

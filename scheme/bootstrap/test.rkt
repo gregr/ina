@@ -284,12 +284,12 @@
   ;(ev '`#(1 ,@(cons 2 (cons 3 '())) 4))
   ;'#(1 2 3 4))
 
-;(test 'let*-1
-  ;(ev '(let* ((a 1) (b `(2 ,a))) b))
-  ;'(2 1))
-;(test 'let*-2
-  ;(ev '(let* ((a 1) (b `(2 ,a))) b))
-  ;(let* ((a 1) (b `(2 ,a))) b))
+(test 'let*-1
+  (ev '(let* ((a 1) (b (cons 2 a))) b))
+  '(2 . 1))
+(test 'let*-2
+  (ev '(let* ((a 1) (b (cons 2 a))) b))
+  (let* ((a 1) (b (cons 2 a))) b))
 
 (test 'shift/reset-1
   (ev '(* 2 (reset (+ 1 (shift k (k 5))))))
