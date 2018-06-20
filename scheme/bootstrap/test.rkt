@@ -169,43 +169,43 @@
   (ev '(if (cdr '(#t . #f)) 'yes 'no))
   'no)
 
-;(test 'and-1
-  ;(ev '(and))
-  ;#t)
-;(test 'and-2
-  ;(ev '(and 1))
-  ;1)
-;(test 'and-3
-  ;(ev '(and #f 2))
-  ;#f)
-;(test 'and-4
-  ;(ev '(and 2 3))
-  ;3)
-;(test 'and-5
-  ;(ev '(and 2 3 4))
-  ;4)
-;(test 'and-6
-  ;(ev '(and 2 #f 4))
-  ;#f)
+(test 'and-1
+  (ev '(and))
+  #t)
+(test 'and-2
+  (ev '(and 1))
+  1)
+(test 'and-3
+  (ev '(and #f 2))
+  #f)
+(test 'and-4
+  (ev '(and 2 3))
+  3)
+(test 'and-5
+  (ev '(and 2 3 4))
+  4)
+(test 'and-6
+  (ev '(and 2 #f 4))
+  #f)
 
-;(test 'or-1
-  ;(ev '(or))
-  ;#f)
-;(test 'or-2
-  ;(ev '(or 1))
-  ;1)
-;(test 'or-3
-  ;(ev '(or #f 2))
-  ;2)
-;(test 'or-4
-  ;(ev '(or 2 3))
-  ;2)
-;(test 'or-5
-  ;(ev '(or #f #f 4))
-  ;4)
-;(test 'or-6
-  ;(ev '(or 2 #f 4))
-  ;2)
+(test 'or-1
+  (ev '(or))
+  #f)
+(test 'or-2
+  (ev '(or 1))
+  1)
+(test 'or-3
+  (ev '(or #f 2))
+  2)
+(test 'or-4
+  (ev '(or 2 3))
+  2)
+(test 'or-5
+  (ev '(or #f #f 4))
+  4)
+(test 'or-6
+  (ev '(or 2 #f 4))
+  2)
 
 ;(test 'when-1
   ;(ev '(when 1 2))

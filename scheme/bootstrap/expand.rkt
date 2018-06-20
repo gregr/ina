@@ -218,7 +218,7 @@
                                      (lambda _ inner-body))))))))
   ;; TODO:
   ;; quasiquote
-  ;; and, or, when, unless, case, match
+  ;; when, unless, case, match
   ;; let-syntax, letrec-syntax
     ))
 
@@ -247,6 +247,16 @@
              `(let ((,t ,(syntax-open e)))
                 (if ,t (let () . ,(syntax-open body))
                   (cond . ,(syntax-open cs)))))))
+    (and ((`(and) #t)
+          (`(and ,e) (syntax-open e))
+          (`(and ,e . ,e*) `(if ,(syntax-open e)
+                              (and . ,(syntax-open e*)) #f))))
+    (or ((`(or) #f)
+         (`(or ,e) (syntax-open e))
+         (`(or ,e . ,e*)
+           (define t (syntax-open (fresh-name 't)))
+           `(let ((,t ,(syntax-open e)))
+              (if ,t ,t (or . ,(syntax-open e*)))))))
     ))
 
 (define env-primitive (env-extend env-initial))
