@@ -27,7 +27,6 @@
         ((pair? d) (cons (car d) (~list->list (cdr d))))
         (else (list d))))
 
-(define (name? n) (or (symbol? n) (labeled-name? n)))
 (define (param? p) (or (not p) (name? p)))
 (define (assert-param* p*)
   (when (not (andmap param? p*)) (error "invalid parameter list:" p*))
