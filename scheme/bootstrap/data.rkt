@@ -89,6 +89,5 @@
     (-  (,number? ,number?) ,-)
     (/  (,number? ,number?) ,/)
 
-    (append (,list? #f) ,append)
     (list->vector (,list?) ,list->vector)
     ))

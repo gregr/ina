@@ -2,6 +2,7 @@
 (provide
   expand
   primitive-op-module
+  program/stdlib
   )
 
 (require
@@ -291,3 +292,21 @@
          (env-bind*! env-initial (list (cons name addr)))  ;; Override binding.
          `(,addr . ,body))
        primitive-ops))
+
+(define derived-ops
+  '((vector (lambda xs (list->vector xs)))
+    (list?  (lambda (v) (or (and (pair? v) (list? (cdr v))) (null? v))))
+    (list   (lambda xs xs))
+    (cons*  (lambda (x xs)
+              (if (null? xs) x (cons x (cons* (car xs) (cdr xs))))))
+    (list*  (lambda (x . xs) (cons* x xs)))
+    (append (lambda (xs ys)
+              (if (null? xs) ys (cons (car xs) (append (cdr xs) ys)))))
+    ))
+
+(define derived-apply '(apply (lambda (f x . xs) (apply f (cons* x xs)))))
+
+(define (program/stdlib program)
+  (syntax-close env-initial `(letrec ,(syntax-open derived-ops)
+                               (let (,(syntax-open derived-apply))
+                                 ,(syntax-open program)))))
