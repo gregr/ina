@@ -1,6 +1,7 @@
 #lang racket/base
 (provide
   expand
+  primitive-op-module
   )
 
 (require
@@ -231,8 +232,9 @@
                 `(letrec ,(syntax-open b*) ,(syntax-open body)))))
     ))
 
+(define env-primitive (env-extend env-initial))
 (env-bind-parser*!
-  env-initial
+  env-primitive
   (map (lambda (po-desc)
          (define name (car po-desc))
          (define arity (length (cadr po-desc)))
@@ -247,14 +249,14 @@
                    (_ (error "invalid primitive op:" name arity form))))))
        primitive-ops))
 
-;; TODO: translate this.
-;(define (stdlib program)
-  ;(define (po->def po)
-    ;(define name (car po))
-    ;(define p*
-      ;(map (lambda (i) (string->symbol (string-append "x" (number->string i))))
-           ;(range (length (cadr po)))))
-    ;`(,name (lambda ,p* (,name . ,p*))))
-
-  ;#`(let #,(map po->def primitive-ops)
-      ;(letrec #,derived-ops #,program)))
+(define primitive-op-module
+  (map (lambda (po-desc)
+         (define name (car po-desc))
+         (define addr (car (param*->addr* (list name))))
+         (env-bind*! env-initial (list (cons name addr)))
+         (define p*
+           (map (lambda (i)
+                  (string->symbol (string-append "x" (number->string i))))
+                (range (length (cadr po-desc)))))
+         `(,addr . ,(expand/env env-primitive `(lambda ,p* (,name . ,p*)))))
+       primitive-ops))
