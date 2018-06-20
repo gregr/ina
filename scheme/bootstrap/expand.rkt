@@ -44,21 +44,6 @@
                           (labeled-name (name->symbol n) label)))) n*))
 
 ;;; Expansion
-(define primitive-op-expanders
-  (make-immutable-hash
-    (map (lambda (po-desc)
-           (define name (car po-desc))
-           (define arity (length (cadr po-desc)))
-           (cons name
-                 (lambda (env form)
-                   (match-syntax env form
-                     (`(,_ . ,a*)
-                       (guard (list? a*) (= arity (length a*)))
-                       (ast-primitive-op
-                         name (map (lambda (a) (expand/env env a)) a*)))
-                     (_ (error "invalid primitive op:" name arity form))))))
-         primitive-ops)))
-
 (define ($lambda variadic? p* a* b*->body)
   (ast-lambda variadic? a* (b*->body (map cons p* a*))))
 (define ($let p* a?* v* b*->body) (ast-apply* ($lambda #f p* a?* b*->body) v*))
@@ -146,9 +131,6 @@
          (ast-variable (env-ref-lexical env form)))
         (else (match-syntax
                 env form
-                (`(,op-name . ,a*)
-                  (guard (hash-has-key? primitive-op-expanders op-name))
-                  ((hash-ref primitive-op-expanders op-name) env form))
                 (`(,p ,@a*) (ast-apply* (loop p) (map loop a*)))
                 (_          (error "invalid syntax:" form)))))
 
@@ -249,6 +231,22 @@
     (letrec* ((`(letrec* ,b* ,body)
                 `(letrec ,(syntax-open b*) ,(syntax-open body)))))
     ))
+
+(env-bind-parser*!
+  env-initial
+  (map (lambda (po-desc)
+         (define name (car po-desc))
+         (define arity (length (cadr po-desc)))
+         (cons name
+               (lambda (env form)
+                 (match-syntax
+                   env form
+                   (`(,_ . ,a*)
+                     (guard (list? a*) (= arity (length a*)))
+                     (ast-primitive-op
+                       name (map (lambda (a) (expand/env env a)) a*)))
+                   (_ (error "invalid primitive op:" name arity form))))))
+       primitive-ops))
 
 ;; TODO: translate this.
 ;(define (stdlib program)
