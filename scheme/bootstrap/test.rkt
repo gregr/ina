@@ -207,19 +207,19 @@
   (ev '(or 2 #f 4))
   2)
 
-;(test 'when-1
-  ;(ev '(when 1 2))
-  ;2)
-;(test 'when-2
-  ;(ev '(when #f 3))
-  ;#t)
+(test 'when-1
+  (ev '(when 1 2))
+  2)
+(test 'when-2
+  (ev '(when #f 3))
+  #t)
 
-;(test 'unless-1
-  ;(ev '(unless 1 2))
-  ;#t)
-;(test 'unless-2
-  ;(ev '(unless #f 3))
-  ;3)
+(test 'unless-1
+  (ev '(unless 1 2))
+  #t)
+(test 'unless-2
+  (ev '(unless #f 3))
+  3)
 
 (test 'cond-1
   (ev '(cond (1 2)))
