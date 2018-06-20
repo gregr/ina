@@ -119,7 +119,6 @@
 (define (expand form) (expand/env env-initial form))
 (define (expand/env env form)
   (define (loop d) (expand/env env d))
-  (define (loop-close d) (loop (syntax-close env-initial d)))
   (cond ((form->transformer env form)
          => (lambda (t) (expand/env env (t env form))))
         ((form->parser env form) => (lambda (p) (p env form)))
