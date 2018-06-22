@@ -350,9 +350,16 @@
                                 (else (assoc k (cdr xs))))))
     ))
 
+(define firewall-bindings  ;; Support programs that set! a stdlib definition.
+  (let ((names (append (map car primitive-ops)
+                 (append (map car derived-ops-0)
+                         (cons 'apply (map car derived-ops))))))
+    (map (lambda (n) (list n n)) names)))
+
 (define (program/stdlib program)
   (syntax-close env-initial `(let ,(syntax-open primitive-op-procs)
                                (letrec ,(syntax-open derived-ops-0)
                                  (let (,(syntax-open derived-apply))
                                    (letrec ,(syntax-open derived-ops)
-                                     ,(syntax-open program)))))))
+                                     (let ,(syntax-open firewall-bindings)
+                                       ,(syntax-open program))))))))
