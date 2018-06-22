@@ -46,7 +46,6 @@
     (integer?   (#f) ,integer?)
     (symbol?    (#f) ,symbol?)
     (boolean?   (#f) ,boolean?)
-    (not        (#f) ,not)
 
     (char->integer  (,char?)    ,char->integer)
     (integer->char  (,integer?) ,integer->char)
