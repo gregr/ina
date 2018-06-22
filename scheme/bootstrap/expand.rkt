@@ -41,12 +41,6 @@
                 (`(,p ,@a*) (ast-apply* (loop p) (map loop a*)))
                 (_          (error "invalid syntax:" form))))))
 
-;;; Misc
-(define (reverse-append xs ys)
-  (if (null? xs) ys (reverse-append (cdr xs) (cons (car xs) ys))))
-
-(define (fresh-name sym) (labeled-name sym (mvector '#())))
-
 ;;; Parameters
 (define (improper-list? d)
   (and (not (null? d)) (or (not (pair? d)) (improper-list? (cdr d)))))
@@ -79,6 +73,22 @@
   (cond ((null? body*) body-final)
         (else ($let '(#f) '(#f) (list (car body*))
                     (lambda _ ($begin (cdr body*) body-final))))))
+
+;;; Syntax utilities
+(define (reverse-append xs ys)
+  (if (null? xs) ys (reverse-append (cdr xs) (cons (car xs) ys))))
+
+(define (fresh-name sym) (labeled-name sym (mvector '#())))
+(define-syntax let-open
+  (syntax-rules ()
+    ((_ (name ...) body ...) (let ((name (syntax-open name)) ...) body ...))))
+(define-syntax let-fresh
+  (syntax-rules ()
+    ((_ (name ...) body ...) (let ((name (syntax-open (fresh-name 'name))) ...)
+                               body ...))))
+(define-syntax define-fresh
+  (syntax-rules ()
+    ((_ name ...) (begin (define name (syntax-open (fresh-name 'name))) ...))))
 
 ;;; Standard definitions
 (define ($b*->body env body)
@@ -121,10 +131,9 @@
               (env-bind*! env (list b))
               (cons (cons b def-body) (outer-loop body-rest pending)))
             (`(define (,n . ,p*) . ,def-body)
-              (loop (syntax-close
-                      env-initial `(define ,(syntax-open n)
-                                     (lambda ,(syntax-open p*)
-                                       . ,(syntax-open def-body))))))
+              (let-open (n p* def-body)
+                (loop (syntax-close
+                        env-initial `(define ,n (lambda ,p* . ,def-body))))))
             (`(begin . ,_) (error "invalid begin syntax:" form))
             (`(define . ,_) (error "invalid define syntax:" form))
             (_ (cond ((form->transformer env form)
@@ -182,15 +191,14 @@
                (define v* (map cadr b*))
                (expand-letrec (env-extend env) p* (param*->addr* p*) v*
                               (lambda (env) (expand-body* env body))))))
-    (let ((`(let ,nm ,b* . ,bdy)
-            (guard (or (name? nm)))
+    (let ((`(let ,name ,b* . ,body)
+            (guard (or (name? name)))
             (assert-binding* b*)
-            (define name (syntax-open nm))
-            (define p* (syntax-open (map car b*)))
-            (define v* (syntax-open (map cadr b*)))
-            (define body (syntax-open bdy))
-            (loop-close `(letrec ((,name (lambda ,p* . ,body)))
-                           (,name . ,v*))))
+            (let-open (name body)
+              (define p* (syntax-open (map car b*)))
+              (define v* (syntax-open (map cadr b*)))
+              (loop-close `(letrec ((,name (lambda ,p* . ,body)))
+                             (,name . ,v*)))))
           (`(let ,b* ,@body)
             (assert-binding* b*)
             (define p* (map car b*))
@@ -227,40 +235,32 @@
   (define-syntax-transformer*
     env-initial env form
     (letrec* ((`(letrec* ,b* . ,body)
-                `(letrec ,(syntax-open b*) . ,(syntax-open body)))))
-    (let* ((`(let* () . ,body) `(let () . ,(syntax-open body)))
+                (let-open (b* body) `(letrec ,b* . ,body)))))
+    (let* ((`(let* () . ,body) (let-open (body) `(let () . ,body)))
            (`(let* (,b . ,b*) . ,body)
-             `(let (,(syntax-open b))
-                (let* ,(syntax-open b*) . ,(syntax-open body))))))
+             (let-open (b b* body) `(let (,b) (let* ,b* . ,body))))))
     (cond ((`(cond) '((quote error:cond:no-matching-clause)))
-           (`(cond (else ,@body)) `(let () . ,(syntax-open body)))
+           (`(cond (else ,@body)) (let-open (body) `(let () . ,body)))
            (`(cond (,e) . ,cs)
-             (define t (syntax-open (fresh-name 't)))
-             `(let ((,t ,(syntax-open e)))
-                (if ,t ,t (cond . ,(syntax-open cs)))))
+             (let-open (e cs) (define-fresh t)
+               `(let ((,t ,e)) (if ,t ,t (cond . ,cs)))))
            (`(cond (,e => ,proc) . ,cs)
-             (define t (syntax-open (fresh-name 't)))
-             `(let ((,t ,(syntax-open e)))
-                (if ,t (,(syntax-open proc) ,t) (cond . ,(syntax-open cs)))))
+             (let-open (e cs proc) (define-fresh t)
+               `(let ((,t ,e)) (if ,t (,proc ,t) (cond . ,cs)))))
            (`(cond (,e ,@body) . ,cs)
-             (define t (syntax-open (fresh-name 't)))
-             `(let ((,t ,(syntax-open e)))
-                (if ,t (let () . ,(syntax-open body))
-                  (cond . ,(syntax-open cs)))))))
+             (let-open (e cs body) (define-fresh t)
+               `(let ((,t ,e)) (if ,t (let () . ,body) (cond . ,cs)))))))
     (and ((`(and) #t)
           (`(and ,e) (syntax-open e))
-          (`(and ,e . ,e*) `(if ,(syntax-open e)
-                              (and . ,(syntax-open e*)) #f))))
+          (`(and ,e . ,e*) (let-open (e e*) `(if ,e (and . ,e*) #f)))))
     (or ((`(or) #f)
          (`(or ,e) (syntax-open e))
-         (`(or ,e . ,e*)
-           (define t (syntax-open (fresh-name 't)))
-           `(let ((,t ,(syntax-open e)))
-              (if ,t ,t (or . ,(syntax-open e*)))))))
+         (`(or ,e . ,e*) (let-open (e e*) (define-fresh t)
+                           `(let ((,t ,e)) (if ,t ,t (or . ,e*)))))))
     (when ((`(when ,c . ,body)
-             `(if ,(syntax-open c) (let () . ,(syntax-open body)) #t))))
+             (let-open (c body) `(if ,c (let () . ,body) #t)))))
     (unless ((`(unless ,c . ,body)
-               `(if ,(syntax-open c) #t (let () . ,(syntax-open body))))))
+               (let-open (c body) `(if ,c #t (let () . ,body))))))
     ))
 
 (env-bind-parser*!
