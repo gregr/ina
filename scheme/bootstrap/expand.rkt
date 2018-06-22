@@ -287,6 +287,11 @@
          `(,name (lambda ,p* (,name . ,p*))))
        primitive-ops))
 
+(define derived-ops-0
+  '((cons*  (lambda (x xs)
+              (if (null? xs) x (cons x (cons* (car xs) (cdr xs))))))
+    ))
+(define derived-apply '(apply (lambda (f x . xs) (apply f (cons* x xs)))))
 (define derived-ops
   '((not (lambda (b) (if b #f #t)))
     (vector->list (lambda (v)
@@ -304,8 +309,6 @@
     (vector (lambda xs (list->vector xs)))
     (list?  (lambda (v) (or (and (pair? v) (list? (cdr v))) (null? v))))
     (list   (lambda xs xs))
-    (cons*  (lambda (x xs)
-              (if (null? xs) x (cons x (cons* (car xs) (cdr xs))))))
     (list*  (lambda (x . xs) (cons* x xs)))
     (foldl  (lambda (f acc xs) (if (null? xs) acc
                                  (foldl f (f (car xs) acc) (cdr xs)))))
@@ -340,10 +343,9 @@
                                 (else (assoc k (cdr xs))))))
     ))
 
-(define derived-apply '(apply (lambda (f x . xs) (apply f (cons* x xs)))))
-
 (define (program/stdlib program)
   (syntax-close env-initial `(let ,(syntax-open primitive-op-procs)
-                               (letrec ,(syntax-open derived-ops)
+                               (letrec ,(syntax-open derived-ops-0)
                                  (let (,(syntax-open derived-apply))
-                                   ,(syntax-open program))))))
+                                   (letrec ,(syntax-open derived-ops)
+                                     ,(syntax-open program)))))))
