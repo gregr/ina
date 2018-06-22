@@ -225,10 +225,9 @@
                          ($b*->body (env-extend env) body)))
                  (ast-shift ($lambda #f (list k-raw-addr) (list k-raw-addr)
                                      (lambda _ inner-body))))))))
-  ;; TODO:
-  ;; quasiquote
-  ;; case, match
-  ;; let-syntax, letrec-syntax
+    ;; TODO:
+    ;; case, match
+    ;; let-syntax, letrec-syntax
     ))
 
 (env-bind-transformer*!
@@ -262,6 +261,38 @@
              (let-open (c body) `(if ,c (let () . ,body) #t)))))
     (unless ((`(unless ,c . ,body)
                (let-open (c body) `(if ,c #t (let () . ,body))))))
+    (quasiquote
+      ((`(quasiquote ,qqf)
+         (define (bad msg) (error "malformed quasiquote:" msg form))
+         (define (build-pair a d) `(cons ,a ,d))
+         (define (build-l->v xs) `(list->vector ,xs))
+         (define (build-append xs ys)
+           `(letrec ,(syntax-open
+                       '((append (lambda (xs ys)
+                                   (if (null? xs) ys
+                                     (cons (car xs) (append (cdr xs) ys)))))))
+              (,(syntax-open 'append) ,xs ,ys)))
+         (define (tag t e)
+           (build-pair `(quote ,(syntax-open t)) (build-pair e '(quote ()))))
+         (let loop ((level 0) (qqf qqf))
+           (match-syntax env qqf
+             (`(quasiquote ,qq) (tag 'quasiquote (loop (+ level 1) qq)))
+             (`(,'unquote ,uq) (if (= 0 level) (syntax-open uq)
+                                 (tag 'unquote (loop (- level 1) uq))))
+             (`((,'unquote-splicing ,uqs) . ,qq)
+               (define qqd (loop level qq))
+               (if (= 0 level) (build-append (syntax-open uqs) qqd)
+                 `(,(tag 'unquote-splicing (loop (- level 1) uqs)) . ,qqd)))
+
+             (`(quasiquote . ,x)         (bad 'quasiquote))
+             ('unquote                   (bad 'unquote))
+             (`(,'unquote . ,_)          (bad 'unquote))
+             ('unquote-splicing          (bad 'unquote-splicing))
+             (`(,'unquote-splicing . ,_) (bad 'unquote-splicing))
+
+             (`#(,@vqq)      (build-l->v (loop level vqq)))
+             (`(,qqa . ,qqd) (build-pair (loop level qqa) (loop level qqd)))
+             (literal        `(quote ,(syntax-open literal))))))))
     ))
 
 (env-bind-parser*!

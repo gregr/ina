@@ -265,27 +265,27 @@
         1 2 (lambda x x) 4 5 6 7))
   '(5 (6 7) (a ... z)))
 
-;(test 'qq-1
-  ;(ev '`one)
-  ;'one)
-;(test 'qq-2
-  ;(ev '`((a 1) (b 2)))
-  ;'((a 1) (b 2)))
-;(test 'qq-3
-  ;(ev '`((a 1) ,(cons 'b `(3))))
-  ;'((a 1) (b 3)))
-;(test 'qq-4
-  ;(ev '`(1 `,(cons 2 3) ,(cons 4 5) `(,(cons 6 ,(cons 7 8))) 100))
-  ;`(1 `,(cons 2 3) ,(cons 4 5) `(,(cons 6 ,(cons 7 8))) 100))
-;(test 'qq-5
-  ;(ev '`(1 ,@(cons 2 (cons 3 '())) 4))
-  ;'(1 2 3 4))
-;(test 'qq-6
-  ;(ev '`#(1 ,(cons 2 (cons 3 '())) 4))
-  ;'#(1 (2 3) 4))
-;(test 'qq-7
-  ;(ev '`#(1 ,@(cons 2 (cons 3 '())) 4))
-  ;'#(1 2 3 4))
+(test 'qq-1
+  (ev '`one)
+  'one)
+(test 'qq-2
+  (ev '`((a 1) (b 2)))
+  '((a 1) (b 2)))
+(test 'qq-3
+  (ev '`((a 1) ,(cons 'b `(3))))
+  '((a 1) (b 3)))
+(test 'qq-4
+  (ev '`(1 `,(cons 2 3) ,(cons 4 5) `(,(cons 6 ,(cons 7 8))) 100))
+  `(1 `,(cons 2 3) ,(cons 4 5) `(,(cons 6 ,(cons 7 8))) 100))
+(test 'qq-5
+  (ev '`(1 ,@(cons 2 (cons 3 '())) 4))
+  '(1 2 3 4))
+(test 'qq-6
+  (ev '`#(1 ,(cons 2 (cons 3 '())) 4))
+  '#(1 (2 3) 4))
+(test 'qq-7
+  (ev '`#(1 ,@(cons 2 (cons 3 '())) 4))
+  '#(1 2 3 4))
 
 (test 'let*-1
   (ev '(let* ((a 1) (b (cons 2 a))) b))
@@ -475,13 +475,13 @@
             (vector? '(x x))
             (vector? (lambda x x))))
   '(#t #t #f #f))
-;(test 'vector-5
-  ;(map ev '((vector-ref '#(1 2 3) 0)
-            ;(vector-ref '#(4 5 6) 2)
-            ;(vector-ref `#(7 8 9) 1)
-            ;(vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0) 1))) 1)
-            ;(vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0 ,(car '(10 . #f))) 1))) 3)))
-  ;'(1 6 8 (8 . 9) 10))
+(test 'vector-5
+  (map ev '((vector-ref '#(1 2 3) 0)
+            (vector-ref '#(4 5 6) 2)
+            (vector-ref `#(7 8 9) 1)
+            (vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0) 1))) 1)
+            (vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0 ,(car '(10 . #f))) 1))) 3)))
+  '(1 6 8 (8 . 9) 10))
 
 (test 'list-1
   (map ev '((list)
