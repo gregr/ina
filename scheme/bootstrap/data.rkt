@@ -1,6 +1,7 @@
 #lang racket/base
 (provide
   atom?
+  tagged tagged? tagged-tag tagged-value
   mvector mvector? mvector-v
   continuation continuation? continuation-k
   closure closure? closure-variadic? closure-param* closure-body closure-env
@@ -28,6 +29,8 @@
 (define (mvector-set! mv i v) (vector-set! (mvector-v mv) i v))
 (define (mvector->vector mv) (vector-copy (mvector-v mv)))
 
+(define-type tagged tagged? tagged-tag tagged-value)
+
 (define (eqv?? d) (or (atom? d) (mvector? d)))
 (define (identifier? d) (or (symbol? d) (labeled-name? d)))
 
@@ -35,7 +38,7 @@
   `((eqv?     (,eqv?? ,eqv??)       ,eqv?)
     (syntax=? (,environment? #f #f) ,syntax=?)
 
-    (procedure? (#f) ,closure?)
+    (tagged?    (#f) ,tagged?)
     (mvector?   (#f) ,mvector?)
     (vector?    (#f) ,vector?)
     (pair?      (#f) ,pair?)
@@ -46,6 +49,7 @@
     (integer?   (#f) ,integer?)
     (symbol?    (#f) ,symbol?)
     (boolean?   (#f) ,boolean?)
+    (procedure? (#f) ,closure?)
 
     (char->integer  (,char?)    ,char->integer)
     (integer->char  (,integer?) ,integer->char)
@@ -53,6 +57,10 @@
     (vector->string (,vector?)  ,(lambda (v) (list->string (vector->list v))))
     (string->symbol (,string?)  ,string->symbol)
     (symbol->string (,symbol?)  ,symbol->string)
+
+    (tagged       (#f #f)    ,tagged)
+    (tagged-tag   (,tagged?) ,tagged-tag)
+    (tagged-value (,tagged?) ,tagged-value)
 
     (cons (#f #f)  ,cons)
     (car  (,pair?) ,car)
