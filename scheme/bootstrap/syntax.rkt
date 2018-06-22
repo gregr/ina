@@ -1,10 +1,9 @@
 #lang racket/base
 (provide
   environment?
-  env-empty
-  env-extend
+  env-empty env-extend env-with-only*
   env-ref-lexical env-ref-transformer env-ref-parser
-  env-hide! env-alias!
+  env-hide*! env-alias!
   env-bind*! env-bind-transformer*! env-bind-parser*!
 
   labeled-name labeled-name?
@@ -53,8 +52,13 @@
 (define (env-ref-parser env n)
   (define addr (env-ref env n))
   (and (addr-parser? addr) (addr-parser-proc addr)))
-(define (env-hide! env n)
-  (env-set*! env `((,n . ,(addr-unbound (fresh-name (name->symbol n)))))))
+(define (env-with-only* env n*)
+  (define env-new (env-extend env-empty))
+  (env-set*! env-new (map (lambda (n) (cons n (env-ref env n))) n*)))
+(define (env-hide*! env n*)
+  (env-set*!
+    env (map (lambda (n)
+               (cons n (addr-unbound (fresh-name (name->symbol n))))) n*)))
 (define (env-alias! env n aliased)
   (env-set*! env `((,n . ,(env-ref env aliased)))))
 (define (env-bind*! env b*)
