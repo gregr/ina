@@ -151,18 +151,19 @@
   (syntax-rules ()
     ((_ e f (common* ...)) '())
     ((_ e f (common* ...) (name (c* ...)) rest ...)
-     `((name . ,(lambda (e f) common* ...
-                  (match-syntax e f c* ... (_ (error "invalid syntax:" f)))))
-       . ,(define-syntax-parser* e f (common* ...) rest ...)))))
+     (cons (cons 'name (lambda (e f) common* ...
+                         (match-syntax e f c* ...
+                           (_ (error "invalid syntax:" f)))))
+           (define-syntax-parser* e f (common* ...) rest ...)))))
 (define-syntax define-syntax-transformer*
   (syntax-rules ()
     ((_ e-local e f) '())
     ((_ e-local e f (name (c* ...)) rest ...)
-     `((name . ,(lambda (e f)
-                  (syntax-close e-local (match-syntax
-                                          e f c* ...
-                                          (_ (error "invalid syntax:" f))))))
-       . ,(define-syntax-transformer* e-local e f rest ...)))))
+     (cons (cons 'name (lambda (e f)
+                         (syntax-close
+                           e-local (match-syntax e f c* ...
+                                     (_ (error "invalid syntax:" f))))))
+           (define-syntax-transformer* e-local e f rest ...)))))
 
 (env-bind-parser*!
   env-initial
