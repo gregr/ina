@@ -7,7 +7,6 @@
 (require
   "ast.rkt"
   "data.rkt"
-  "expand.rkt"
   "match.rkt"
   racket/control
   racket/list

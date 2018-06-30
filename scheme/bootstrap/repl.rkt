@@ -3,7 +3,7 @@
 
 (require
   "eval-ast.rkt"
-  "expand.rkt"
+  "scheme.rkt"
   readline
   readline/pread
   )
