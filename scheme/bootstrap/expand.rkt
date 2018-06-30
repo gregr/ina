@@ -35,8 +35,7 @@
         ((closed-name? form)
          (expand/env (closed-name-env form) (closed-name-n form)))
         ((name? form) (ast-variable (env-ref-lexical env form)))
-        (else (match-syntax
-                env form
+        (else (match-syntax env form
                 (`(,p ,@a*) (ast-apply* (loop p) (map loop a*)))
                 (_          (error "invalid syntax:" form))))))
 
@@ -121,8 +120,7 @@
     (match top
       (`(,original-form . ,body-rest)
         (let loop ((form original-form))
-          (match-syntax
-            env form
+          (match-syntax env form
             (`(begin ,@e*) (outer-loop e* (cons body-rest pending)))
             (`(define ,n ,def-body)
               (guard (name? n))
@@ -301,8 +299,7 @@
          (define arity (length (cadr po-desc)))
          (cons name
                (lambda (env form)
-                 (match-syntax
-                   env form
+                 (match-syntax env form
                    (`(,_ . ,a*)
                      (guard (list? a*) (= arity (length a*)))
                      (ast-primitive-op
