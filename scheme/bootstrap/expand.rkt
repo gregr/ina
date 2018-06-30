@@ -28,9 +28,8 @@
 
 (define (expand/env env form)
   (define (loop d) (expand/env env d))
-  (cond ((form->transformer env form)
-         => (lambda (t) (expand/env env (t env form))))
-        ((form->parser env form) => (lambda (p) (p env form)))
+  (cond ((form->transformer env form) => (lambda (t) (loop (t env form))))
+        ((form->parser env form)      => (lambda (p)       (p env form)))
         ((or (boolean? form) (number? form) (char? form) (string? form))
          (ast-literal form))
         ((closed-name? form)
