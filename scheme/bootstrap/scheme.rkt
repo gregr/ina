@@ -130,7 +130,7 @@
             (`(define (,n . ,p*) . ,def-body)
               (let-open (n p* def-body)
                 (loop (syntax-close
-                        env-initial `(define ,n (lambda ,p* . ,def-body))))))
+                        env-scheme `(define ,n (lambda ,p* . ,def-body))))))
             (`(begin . ,_) (error "invalid begin syntax:" form))
             (`(define . ,_) (error "invalid define syntax:" form))
             (_ (cond ((form->transformer env form)
@@ -141,9 +141,9 @@
              (`(,top . ,pending) (outer-loop top pending))
              ('() '()))))))
 
-(define (expand form) (expand/env env-initial form))
+(define (expand form) (expand/env env-scheme form))
 
-(define env-initial (env-extend env-empty))
+(define env-scheme (env-extend env-empty))
 (define-syntax define-syntax-parser*
   (syntax-rules ()
     ((_ e f (common* ...)) '())
@@ -163,11 +163,11 @@
            (define-syntax-transformer* e-local e f rest ...)))))
 
 (env-bind-parser*!
-  env-initial
+  env-scheme
   (define-syntax-parser*
     env form
     ((define (loop d) (expand/env env d))
-     (define (loop-close d) (loop (syntax-close env-initial d))))
+     (define (loop-close d) (loop (syntax-close env-scheme d))))
     (apply ((`(apply ,p ,a)  (ast-apply (loop p) (loop a)))))
     (quote ((`(quote ,datum) (ast-literal datum))))
     (if    ((`(if ,c ,t ,f) (ast-if (loop c) (loop t) (loop f)))))
@@ -228,9 +228,9 @@
     ))
 
 (env-bind-transformer*!
-  env-initial
+  env-scheme
   (define-syntax-transformer*
-    env-initial env form
+    env-scheme env form
     (letrec* ((`(letrec* ,b* . ,body)
                 (let-open (b* body) `(letrec ,b* . ,body)))))
     (let* ((`(let* () . ,body) (let-open (body) `(let () . ,body)))
@@ -293,7 +293,7 @@
     ))
 
 (env-bind-parser*!
-  env-initial
+  env-scheme
   (map (lambda (po-desc)
          (define name (car po-desc))
          (define arity (length (cadr po-desc)))
@@ -389,11 +389,11 @@
     (map (lambda (n) (list n n)) names)))
 
 (define (program/stdlib program)
-  (syntax-close env-initial `(let ,(syntax-open primitive-op-procs)
-                               (letrec ,(syntax-open derived-ops-0)
-                                 (let (,(syntax-open derived-apply))
-                                   (letrec ,(syntax-open derived-ops)
-                                     (let ,(syntax-open firewall-bindings)
-                                       ,(syntax-open program))))))))
+  (syntax-close env-scheme `(let ,(syntax-open primitive-op-procs)
+                              (letrec ,(syntax-open derived-ops-0)
+                                (let (,(syntax-open derived-apply))
+                                  (letrec ,(syntax-open derived-ops)
+                                    (let ,(syntax-open firewall-bindings)
+                                      ,(syntax-open program))))))))
 
 (define (scheme-eval p) (eval-ast (expand (program/stdlib p))))
