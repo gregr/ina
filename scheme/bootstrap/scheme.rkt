@@ -1,12 +1,12 @@
 #lang racket/base
 (provide
-  expand
-  program/stdlib
+  scheme-eval
   )
 
 (require
   "ast.rkt"
   "data.rkt"
+  "eval-ast.rkt"
   "match.rkt"
   "syntax.rkt"
   "../type.rkt"
@@ -395,3 +395,5 @@
                                    (letrec ,(syntax-open derived-ops)
                                      (let ,(syntax-open firewall-bindings)
                                        ,(syntax-open program))))))))
+
+(define (scheme-eval p) (eval-ast (expand (program/stdlib p))))

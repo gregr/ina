@@ -11,7 +11,7 @@
      (begin (printf "testing: ~s\n" name)
             (check-equal? actual expected)))))
 
-(define (ev stx) (define tm (expand (program/stdlib stx))) (eval-ast tm))
+(define (ev stx) (scheme-eval stx))
 
 (test 'literals
   (map ev (list '(quote ()) '#t '4))
