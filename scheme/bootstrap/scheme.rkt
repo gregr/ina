@@ -10,8 +10,9 @@
   "match.rkt"
   "syntax.rkt"
   "../type.rkt"
+  racket/control
   racket/list
-  racket/set
+  (only-in racket/set set-count list->set)
   )
 
 ;;; Expansion
@@ -91,7 +92,26 @@
   (syntax-rules ()
     ((_ name ...) (begin (define name (syntax-open (fresh-name 'name))) ...))))
 
-;;; Standard definitions
+;;; Language extension
+(define-syntax define-syntax-parser*
+  (syntax-rules ()
+    ((_ e f (common* ...)) '())
+    ((_ e f (common* ...) (name (c* ...)) rest ...)
+     (cons (cons 'name (lambda (e f) common* ...
+                         (match-syntax e f c* ...
+                           (_ (error "invalid syntax:" f)))))
+           (define-syntax-parser* e f (common* ...) rest ...)))))
+(define-syntax define-syntax-transformer*
+  (syntax-rules ()
+    ((_ e-local e f) '())
+    ((_ e-local e f (name (c* ...)) rest ...)
+     (cons (cons 'name (lambda (e f)
+                         (syntax-close
+                           e-local (match-syntax e f c* ...
+                                     (_ (error "invalid syntax:" f))))))
+           (define-syntax-transformer* e-local e f rest ...)))))
+
+;;; Mostly standard Scheme definitions
 (define ($b*->body env body)
   (lambda (b*) (env-bind*! env b*) (expand-body* env body)))
 
@@ -147,23 +167,6 @@
 (define (expand form) (expand/env env-scheme form))
 
 (define env-scheme (env-extend env-empty))
-(define-syntax define-syntax-parser*
-  (syntax-rules ()
-    ((_ e f (common* ...)) '())
-    ((_ e f (common* ...) (name (c* ...)) rest ...)
-     (cons (cons 'name (lambda (e f) common* ...
-                         (match-syntax e f c* ...
-                           (_ (error "invalid syntax:" f)))))
-           (define-syntax-parser* e f (common* ...) rest ...)))))
-(define-syntax define-syntax-transformer*
-  (syntax-rules ()
-    ((_ e-local e f) '())
-    ((_ e-local e f (name (c* ...)) rest ...)
-     (cons (cons 'name (lambda (e f)
-                         (syntax-close
-                           e-local (match-syntax e f c* ...
-                                     (_ (error "invalid syntax:" f))))))
-           (define-syntax-transformer* e-local e f rest ...)))))
 
 (env-bind-parser*!
   env-scheme
@@ -310,6 +313,15 @@
                    (_ (error "invalid primitive op:" name arity form))))))
        primitive-ops))
 
+(define (scheme-eval p) (eval-ast (expand p)))
+
+(define (scheme-extend binding-prefix)
+  (let* ((tag (make-continuation-prompt-tag))
+         (e (lambda (env) (set! env-scheme env) (expand (shift-at tag k k))))
+         (continue scheme-eval))
+    (set! scheme-eval
+      (reset-at tag (continue (append binding-prefix (list (expander e))))))))
+
 (define primitive-op-procs
   (map (lambda (po-desc)
          (define name (car po-desc))
@@ -318,11 +330,22 @@
          `(,name (lambda ,p* (,name . ,p*))))
        primitive-ops))
 
+(scheme-extend
+  (syntax-close env-scheme `(let ,(syntax-open primitive-op-procs))))
+
 (define derived-ops-0
   '((cons*  (lambda (x xs)
               (if (null? xs) x (cons x (cons* (car xs) (cdr xs))))))
     ))
-(define derived-apply '(apply (lambda (f x . xs) (apply f (cons* x xs)))))
+
+(scheme-extend
+  (syntax-close env-scheme `(letrec ,(syntax-open derived-ops-0))))
+
+(define derived-apply '((apply (lambda (f x . xs) (apply f (cons* x xs))))))
+
+(scheme-extend
+  (syntax-close env-scheme `(let ,(syntax-open derived-apply))))
+
 (define derived-ops
   '((not (lambda (b) (if b #f #t)))
     (vector->list (lambda (v)
@@ -385,18 +408,14 @@
                                 (else (assoc k (cdr xs))))))
     ))
 
+(scheme-extend
+  (syntax-close env-scheme `(letrec ,(syntax-open derived-ops))))
+
 (define firewall-bindings  ;; Support programs that set! a stdlib definition.
   (let ((names (append (map car primitive-ops)
                  (append (map car derived-ops-0)
                          (cons 'apply (map car derived-ops))))))
     (map (lambda (n) (list n n)) names)))
 
-(define (program/stdlib program)
-  (syntax-close env-scheme `(let ,(syntax-open primitive-op-procs)
-                              (letrec ,(syntax-open derived-ops-0)
-                                (let (,(syntax-open derived-apply))
-                                  (letrec ,(syntax-open derived-ops)
-                                    (let ,(syntax-open firewall-bindings)
-                                      ,(syntax-open program))))))))
-
-(define (scheme-eval p) (eval-ast (expand (program/stdlib p))))
+(scheme-extend
+  (syntax-close env-scheme `(let ,(syntax-open firewall-bindings))))
