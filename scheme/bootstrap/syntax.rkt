@@ -90,7 +90,7 @@
     (cond ((syntax-open? stx) (syntax-open-form stx))
           ((name? stx)        (closed-name env stx))
           ((pair? stx)        (cons (loop (car stx)) (loop (cdr stx))))
-          ((vector? stx)      (vector-map loop stx))
+          ((vector? stx)      stx)
           (else               stx))))
 (define (syntax-resolve env n)
   (cond ((name? n)        (env-ref env n))
