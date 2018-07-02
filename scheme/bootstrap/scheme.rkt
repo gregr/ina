@@ -396,8 +396,22 @@
              (`#(,@vqq)      (build-l->v (loop level vqq)))
              (`(,qqa . ,qqd) (build-pair (loop level qqa) (loop level qqd)))
              (literal        `(quote ,(syntax-open literal))))))))
+    (case
+      ((`(case ,scrutinee ,@clause*)
+         (let-open (scrutinee) (define-fresh x)
+           (define cond-body
+             (let loop ((c* clause*))
+               (match-syntax env c*
+                 ('()                                '())
+                 (`((else . ,body)) (let-open (body) `((else . ,body))))
+                 (`(((,@data) . ,body) . ,cs)
+                   (let-open (body data) (define-fresh d)
+                     (define test `(ormap (lambda (,d) (equal? ,x ,d)) ',data))
+                     (cons `(,test . ,body) (loop cs))))
+                 (_ (error "invalid case clauses:" c*)))))
+           `(let ((,x ,scrutinee)) (cond . ,cond-body))))))
     ;; TODO:
-    ;; case, match
+    ;; match
     ;; let-syntax, letrec-syntax
     ))
 

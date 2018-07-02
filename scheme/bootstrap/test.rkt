@@ -500,6 +500,50 @@
   (ev '(procedure? (vector 3 1 2)))
   #f)
 
+(test 'case-1
+  (ev '(case 3 (else 'ok)))
+  'ok)
+(test 'case-2
+  (ev '(case 3
+         ((4) 'four)
+         (((3 4)) 'multiple)
+         ((3) 'three)
+         ((foo bar) 'foobar)
+         (else 'fail)))
+  'three)
+(test 'case-3
+  (ev '(case 'foo
+         ((4) 'four)
+         (((3 4)) 'multiple)
+         ((3) 'three)
+         ((foo bar) 'foobar)
+         (else 'fail)))
+  'foobar)
+(test 'case-4
+  (ev '(case 'bar
+         ((4) 'four)
+         (((3 4)) 'multiple)
+         ((3) 'three)
+         ((foo bar) 'foobar)
+         (else 'fail)))
+  'foobar)
+(test 'case-5
+  (ev '(case 'baz
+         ((4) 'four)
+         (((3 4)) 'multiple)
+         ((3) 'three)
+         ((foo bar) 'foobar)
+         (else 'fail)))
+  'fail)
+(test 'case-6
+  (ev '(case '(3 4)
+         ((4) 'four)
+         (((3 4)) 'multiple)
+         ((3) 'three)
+         ((foo bar) 'foobar)
+         (else 'fail)))
+  'multiple)
+
 (test 'firewalled-stdlib-1
   (ev '(let ()
          (define (append xs ys)
