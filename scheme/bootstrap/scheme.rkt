@@ -395,7 +395,8 @@
 
              (`#(,@vqq)      (build-l->v (loop level vqq)))
              (`(,qqa . ,qqd) (build-pair (loop level qqa) (loop level qqd)))
-             (literal        `(quote ,(syntax-open literal))))))))
+             (atom (guard (atom? atom)) `(quote ,(syntax-open atom)))
+             (_ (error "invalid quasiquote datum:" qqf)))))))
     (case
       ((`(case ,scrutinee ,@clause*)
          (let-open (scrutinee) (define-fresh x)
