@@ -411,8 +411,10 @@
                  (_ (error "invalid case clauses:" c*)))))
            `(let ((,x ,scrutinee)) (cond . ,cond-body))))))
     ;; TODO:
-    ;; match
-    ;; let-syntax, letrec-syntax
+    ;; match, match/==
+    ;; define-type
+    ;; let-alias, define-alias
+    ;; unlet, unlet-except, undefine
     ))
 
 (define firewall-bindings  ;; Support programs that set! a stdlib definition.
