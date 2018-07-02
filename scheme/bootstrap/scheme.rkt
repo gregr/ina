@@ -384,12 +384,7 @@
          (define (bad msg) (error "malformed quasiquote:" msg form))
          (define (build-pair a d) `(cons ,a ,d))
          (define (build-l->v xs) `(list->vector ,xs))
-         (define (build-append xs ys)
-           `(letrec ,(syntax-open
-                       '((append (lambda (xs ys)
-                                   (if (null? xs) ys
-                                     (cons (car xs) (append (cdr xs) ys)))))))
-              (,(syntax-open 'append) ,xs ,ys)))
+         (define (build-append xs ys) `(append ,xs ,ys))
          (define (tag t e)
            (build-pair `(quote ,(syntax-open t)) (build-pair e '(quote ()))))
          (let loop ((level 0) (qqf qqf))
