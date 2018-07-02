@@ -29,13 +29,15 @@
 
 (define-vector-type expander expander? expander-proc)
 
+(define (literal? form)
+  (or (boolean? form) (number? form) (char? form) (string? form)))
+
 (define (expand/env env form)
   (define (loop d) (expand/env env d))
   (cond ((form->transformer env form) => (lambda (t) (loop (t env form))))
         ((form->parser env form)      => (lambda (p)       (p env form)))
         ((expander? form) ((expander-proc form) env))
-        ((or (boolean? form) (number? form) (char? form) (string? form))
-         (ast-literal form))
+        ((literal? form) (ast-literal form))
         ((closed-name? form)
          (expand/env (closed-name-env form) (closed-name-n form)))
         ((name? form) (ast-variable (env-ref-lexical env form)))
