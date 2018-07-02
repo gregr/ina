@@ -239,7 +239,7 @@
     (let* ((`(let* () . ,body) (let-open (body) `(let () . ,body)))
            (`(let* (,b . ,b*) . ,body)
              (let-open (b b* body) `(let (,b) (let* ,b* . ,body))))))
-    (cond ((`(cond) '((quote error:cond:no-matching-clause)))
+    (cond ((`(cond) `((quote ,(syntax-open 'error:cond:no-matching-clause))))
            (`(cond (else ,@body)) (let-open (body) `(let () . ,body)))
            (`(cond (,e) . ,cs)
              (let-open (e cs) (define-fresh t)
