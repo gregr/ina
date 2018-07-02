@@ -2,7 +2,7 @@
 (provide
   environment?
   env-empty env-extend env-with-only*
-  env-ref-lexical env-ref-transformer env-ref-parser
+  env-bound env-ref-lexical env-ref-transformer env-ref-parser
   env-hide*! env-alias!
   env-bind*! env-bind-transformer*! env-bind-parser*!
 
@@ -36,6 +36,19 @@
   (set-box! frame (foldl (lambda (b h)
                            (if (car b) (hash-set h (car b) (cdr b)) h))
                          (unbox frame) b*)))
+(define (env-bound env)
+  (let loop-env ((frames (env-frames env)))
+    (if (null? frames) '()
+      (let loop-frame ((frame (hash->list (unbox (car frames)))))
+        (cond ((null? frame) (loop-env (cdr frames)))
+              ((addr-unbound? (cdar frame)) (loop-frame (cdr frame)))
+              (else (define rhs (cdar frame))
+                    (cons (cons (caar frame)
+                                (cond ((addr-lexical? rhs) 'lexical)
+                                      ((addr-parser? rhs) 'parser)
+                                      ((addr-transformer? rhs) 'transformer)
+                                      (else (error "invalid frame:" frame))))
+                          (loop-frame (cdr frame)))))))))
 (define (env-ref/default env n default)
   (let loop ((frames (env-frames env)))
     (cond ((null? frames) default)
