@@ -499,3 +499,15 @@
 (test 'procedure-5
   (ev '(procedure? (vector 3 1 2)))
   #f)
+
+(test 'firewalled-stdlib-1
+  (ev '(let ()
+         (define (append xs ys)
+           (if (null? xs) ys
+             (cons (car xs) (append (cdr xs) ys))))
+         (set! cons list)
+         (append '(1 2) '(3 4))))
+  '(1 (2 (3 4))))
+(test 'firewalled-stdlib-2
+  (ev '(let () (set! cons list) (append '(1 2) '(3 4))))
+  '(1 2 3 4))

@@ -412,9 +412,8 @@
     ))
 
 (define firewall-bindings  ;; Support programs that set! a stdlib definition.
-  (let ((names (append (map car primitive-ops)
-                 (append (map car derived-ops-0)
-                         (cons 'apply (map car derived-ops))))))
+  (let ((names (map car (filter (lambda (kv) (eqv? 'lexical (cdr kv)))
+                                (env-bound env-scheme)))))
     (map (lambda (n) (list n n)) names)))
 
 (scheme-extend
