@@ -63,7 +63,7 @@
 
 (define (eval-ast/env env tm)
   (define (loop tm) (eval-ast/env env tm))
-  (match (ast->v tm)
+  (match tm
     (`#(quote ,datum)         datum)
     (`#(var ,address)         (env-ref env address))
     (`#(set! ,address ,tm)    (env-set! env address (loop tm)))
@@ -89,6 +89,6 @@
       (cond ((continuation? k) ((continuation-k k) (loop arg)))
             (else (error "invalid continuation:" k))))
 
-    (_ (error "unknown term:" (ast->v tm)))))
+    (_ (error "unknown term:" tm))))
 
 (define (eval-ast tm) (eval-ast/env env-empty tm))
