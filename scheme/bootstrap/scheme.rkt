@@ -415,7 +415,7 @@
            `(let ((,x ,scrutinee)) (cond . ,cond-body))))))
 
     (match/==
-      ((`(match/== ,==?-e ,scrutinee ,@clause*)
+      ((`(match/== ,==?-e ,scrutinee . ,body)
          (define (sclose stx) (syntax-close env-scheme stx))
          (define (cq p) (list (sclose 'quote) p))
          (define (cqq p) (list (sclose 'quasiquote) p))
@@ -474,12 +474,18 @@
                      (_ (error "invalid pattern:" pat)))))
                (`(,pat . ,body)
                  (loop-clause `(,pat (,(sclose 'guard)) . ,body)))))
-           `(let ((,==? ,==?-e) (,x ,scrutinee))
-              ,(let loop-outer ((c* clause*))
-                 (if (null? c*)
-                   `((quote ,(syntax-open 'error:match:no-matching-clause)) ,x)
-                   `(let ((,k-fail (lambda () ,(loop-outer (cdr c*)))))
-                      ,(loop-clause (car c*))))))))))
+           (define (loop-outer c*)
+             (if (null? c*)
+               `((quote ,(syntax-open 'error:match:no-matching-clause)) ,x)
+               `(let ((,k-fail (lambda () ,(loop-outer (cdr c*)))))
+                  ,(loop-clause (car c*)))))
+           (define match-let-body
+             (match-syntax env body
+               (`(,name ,@clause*) (guard (name? name))
+                                   `(let ,(syntax-open name) ((,x ,scrutinee))
+                                      ,(loop-outer clause*)))
+               (`(,@clause*) `(let ((,x ,scrutinee)) ,(loop-outer clause*)))))
+           `(let ((,==? ,==?-e)) ,match-let-body)))))
     (match ((`(match . ,body) (let-open (body) `(match/== equal? . ,body)))))
     ;; TODO:
     ;; define-type

@@ -684,6 +684,14 @@
          ('foo 'bar)
          (_ 'fail)))
   '(vector: a b c))
+(test 'match-11
+  (ev '(match '((1) "two" (three (4 five) six) 7) loop
+         ('() '())
+         (`(,a . ,d) (cons (loop a) (loop d)))
+         (n (guard (number? n)) 'n)
+         (s (guard (symbol? s)) 's)
+         (_ '?)))
+  '((n) ? (s (n s) s) n))
 
 (test 'firewalled-stdlib-1
   (ev '(let ()
