@@ -118,7 +118,7 @@
   (lambda (b*) (env-bind*! env b*) (expand-body* env body)))
 
 (define (expand-letrec env p* a?* v* expand-body)
-  (define ast-true (expand #t))
+  (define ast-true (ast-literal #t))
   (define uninitialized* (map (lambda (_) ast-true) p*))
   (define (pbody b*)
     (env-bind*! env b*)
