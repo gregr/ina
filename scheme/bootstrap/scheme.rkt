@@ -32,14 +32,14 @@
 (define (literal? form)
   (or (boolean? form) (number? form) (char? form) (string? form)))
 
-(define (expand/env env form)
-  (define (loop d) (expand/env env d))
+(define (expand env form)
+  (define (loop d) (expand env d))
   (cond ((form->transformer env form) => (lambda (t) (loop (t env form))))
         ((form->parser env form)      => (lambda (p)       (p env form)))
         ((expander? form) ((expander-proc form) env))
         ((literal? form) (ast-literal form))
         ((closed-name? form)
-         (expand/env (closed-name-env form) (closed-name-n form)))
+         (expand (closed-name-env form) (closed-name-n form)))
         ((name? form) (ast-variable (env-ref-lexical env form)))
         (else (match-syntax env form
                 (`(,p ,@a*) (ast-apply* (loop p) (map loop a*)))
@@ -122,7 +122,7 @@
   (define uninitialized* (map (lambda (_) ast-true) p*))
   (define (pbody b*)
     (env-bind*! env b*)
-    (let ((e* (map (lambda (v) (expand/env env v)) v*)))
+    (let ((e* (map (lambda (v) (expand env v)) v*)))
       ($begin (map (lambda (a? e) (if a? (ast-set! a? e) e)) a?* e*)
               (expand-body env))))
   ($let p* a?* uninitialized* pbody))
@@ -137,7 +137,7 @@
   (define final (cdr final-rib))
   (when (caar final-rib) (error "body cannot end with a definition:" body))
   (let ((p* (map caar def*)) (a* (map cdar def*)) (v* (map cdr def*)))
-    (expand-letrec denv p* a* v* (lambda (env) (expand/env env final))))  )
+    (expand-letrec denv p* a* v* (lambda (env) (expand env final))))  )
 
 (define (expand-define* env body)
   (when (not (list? body)) (error "invalid definition body:" body))
@@ -166,15 +166,13 @@
              (`(,top . ,pending) (outer-loop top pending))
              ('() '()))))))
 
-(define (expand form) (expand/env env-scheme form))
-
 (define env-scheme (env-extend env-empty))
 
 (env-bind-parser*!
   env-scheme
   (define-syntax-parser*
     env form
-    ((define (loop d) (expand/env env d))
+    ((define (loop d) (expand env d))
      (define (loop-close d) (loop (syntax-close env-scheme d))))
     (apply ((`(apply ,p ,a)  (ast-apply (loop p) (loop a)))))
     (quote ((`(quote ,datum) (ast-literal datum))))
@@ -275,15 +273,16 @@
                    (`(,_ . ,a*)
                      (guard (list? a*) (= arity (length a*)))
                      (ast-primitive-op
-                       name (map (lambda (a) (expand/env env a)) a*)))
+                       name (map (lambda (a) (expand env a)) a*)))
                    (_ (error "invalid primitive op:" name arity form))))))
        primitive-ops))
 
-(define (scheme-eval p) (eval-ast (expand p)))
+(define (scheme-eval p) (eval-ast (expand env-scheme p)))
 
 (define (scheme-extend binding-prefix)
   (let* ((tag (make-continuation-prompt-tag))
-         (e (lambda (env) (set! env-scheme env) (expand (shift-at tag k k))))
+         (e (lambda (env) (set! env-scheme env)
+              (expand env-scheme (shift-at tag k k))))
          (continue scheme-eval))
     (set! scheme-eval
       (reset-at tag (continue (append binding-prefix (list (expander e))))))))
