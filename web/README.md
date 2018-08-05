@@ -2,6 +2,17 @@
 
 ## TODO
 
+### semi-isolated embedded interactive systems
+
+Normally, when evaluating programs within the editor, the results are displayed as structured data (that can then also be manipulated).  This data can be visualized as raw symbolic expressions, or with custom visualizations (e.g., viewing the data in some graphical form, or with a different notation that better matches the domain).
+
+Beyond treating results as data, some can also be treated as interactive systems of their own (the editor itself can be thought of as such an interactive system).  For safety by default, these interactions are isolated/sandboxed, in that any events/effects they have are recorded in buffers, but don't otherwise escape.  If desired, their effects/events can be hooked up to capabilities that allow them to communicate with and manipulate external systems, including the host editor.
+
+These embedded interactive systems should support logging, replaying, and arbitrary splicing/editing of incoming and generated events (event sourcing), to support exploration and debugging.
+
+Bootstrapping goal: it should be possible to build new systems, such as games or editors, as embedded interactions for testing, and then reboot directly into the interaction to treat it as the new host system (shedding/garbage collecting any "dead code or data" not needed from the old host system).
+
+
 ### self-extensible browser-based editor
 
 * text-like editor mode
