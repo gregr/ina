@@ -13,8 +13,6 @@
   ast-primitive-op
   )
 
-(require "../type.rkt")
-
 (define (ast-literal datum)    `#(quote ,datum))
 (define (ast-variable address) `#(var ,address))
 (define (ast-set! addr value)  `#(set! ,addr ,value))

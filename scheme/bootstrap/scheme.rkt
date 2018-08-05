@@ -9,7 +9,7 @@
   "eval-ast.rkt"
   "match.rkt"
   "syntax.rkt"
-  "../type.rkt"
+  "type.rkt"
   racket/control
   racket/list
   (only-in racket/set set-count list->set)

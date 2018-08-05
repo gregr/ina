@@ -10,7 +10,7 @@
 
 (require
   "syntax.rkt"
-  "../type.rkt"
+  "type.rkt"
   racket/vector
   )
 

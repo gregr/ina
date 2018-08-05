@@ -16,7 +16,7 @@
 
 (require
   "match.rkt"
-  "../type.rkt"
+  "type.rkt"
   racket/vector
   )
 
