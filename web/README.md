@@ -13,6 +13,21 @@ These embedded interactive systems should support logging, replaying, and arbitr
 Bootstrapping goal: it should be possible to build new systems, such as games or editors, as embedded interactions for testing, and then reboot directly into the interaction to treat it as the new host system (shedding/garbage collecting any "dead code or data" not needed from the old host system).
 
 
+### YSWYG/YAHWYS/WYSYAH editor
+
+* what is the first UI you see/type-into when opening?
+  * keyboard command pane on far right
+  * named relation explorer on far left
+  * definition/palette pane on the left
+  * (multiple) view/result pane(s) on the right
+
+* personalization
+  * accessibility
+  * color schemes: color blindness, solarized, vim, emacs, etc.
+  * suggestion/hint/advice settings (new user, experienced user, power user)
+  * user-configurable resource quotas
+
+
 ### self-extensible browser-based editor
 
 * text-like editor mode
@@ -38,6 +53,7 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
 
 
 ### smart editors
+
 * non-textual
   * directly manipulate program structure
     * syntactically-correct programs by construction
@@ -120,9 +136,8 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
 
 ### Data representation
 
-Annotating data with metadata supports choosing UI that depends on context.
-
 * metadata ideas
+  * Annotating data with metadata supports choosing UI that depends on context.
   * uids
   * UI-related concerns such as element styling/layout/navigation-modes
   * provenance tracking
@@ -134,6 +149,34 @@ Annotating data with metadata supports choosing UI that depends on context.
     * "parsing" code maps uids to corresponding aspect info
 * mirror tree for annotating data with metadata
   * keep data structures separately interpretable in O(1) from their metadata
+
+* design a DOM-compatible algebra
+  * look at REBOL UI constructors for inspiration
+  * mouse icons?
+  * DOM-making capabilities
+    * safe tags, attrs, styles (e.g., forbid `<script>` and `<style>`)
+  * basic text
+  * anchor
+  * image
+  * button
+  * form, input
+    * label
+    * text
+    * checkbox
+    * radio
+  * textarea
+  * slider/range
+  * progress
+  * list (u/o)
+  * table
+  * select/dropdown
+  * styling
+    * position/size/spacing
+    * overlay
+    * emphasis/underline/etc.
+    * color
+    * highlighting
+    * animation, fading, motion
 
 
 ### Misc design and UI ideas
@@ -166,6 +209,67 @@ Annotating data with metadata supports choosing UI that depends on context.
   * https://docs.google.com/presentation/d/1MD-CgzODFWzdpnYXr8bEgysfDmb8PDV6iCAjH5JIvaI/edit#slide=id.g1d7c11dd1b_0_304
 
 
-### Example apps
+### Example apps and ideas
 
+* TodoMVC
+* https://github.com/eugenkiss/7guis/wiki
 * kill the bill: splitting a bill via collaborative editing
+* https://foam-framework.github.io/foam/
+* Drawing: https://make8bitart.com/
+* deck of cards, board games
+* etoys examples, dynamic systems, simulations, real-time games
+* collab tools
+  * secure identities/signing, peer-to-peer communication
+  * shared whiteboard
+  * room-based chat with offline/async/email-like support
+  * rich text docs, spreadsheets
+  * video calling
+
+
+### Technical issues
+
+  * data persistence and ingestion
+    * appcache
+    * local storage
+    * indexedDB
+    * dumpfile download
+    * file upload
+    * link-only representations
+      * e.g., inline image data to not depend on external source availability
+    * tab synchronization
+      * how would browser tabs coordinate shared state?
+      * are they separate processes? who owns what?
+      * is local storage and indexed db a separate process?
+      * test localstorage tab count
+
+  * communication
+    * cors without web server
+    * webRTC, webcam
+    * websockets
+    * peer to peer connection (STUN servers?)
+
+  * events
+    * simple tagged events
+    * UI element event handlers
+      * use data- attributes
+        * get/setAttribute
+      * define per element type
+      * database of per element attributes/deltas/state to supplement crappy event fields
+    * filtered event log view
+    * think pygame?
+    * http://quirksmode.org/js/contents.html#events
+    * http://sprymedia.co.uk/
+      * design/UI ideas, ve1+2
+    * extensions
+      * network, db, process control
+        * processes as timer rules (time-triggered events)
+      * reactive state changes
+
+  * UI
+    * accessibility
+    * can you program just with two thumbs? (mobile UI)
+    * drag and drop
+    * measure textarea ch units
+    * DOM rendering/graphics/audio with diffing
+
+  * introduce revocation handles when distributing capabilities
