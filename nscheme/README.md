@@ -165,6 +165,7 @@ Support other forms of evaluation using the same syntax:
     * lattice-join the constraints (conservatively)
     * apply those when filtering other (finite) relations for their joins
     * then finally, when joining with the infinite relation, apply the constraints accurately
+* possible names: tKanren, underlog, icarus, wilt
 
 
 ### computational logic, building proofs
@@ -260,12 +261,55 @@ Support other forms of evaluation using the same syntax:
 ## References by topic
 
 ### De Bruijn indices and explicit substitutions
-- [Wikipedia: De Bruijn index](https://en.wikipedia.org/wiki/De_Bruijn_index)
-- [How I learned to stop worrying and love de Bruijn indices](http://disciple-devel.blogspot.ca/2011/08/how-i-learned-to-stop-worrying-and-love.html)
-- [Wikipedia: Explicit substitution](https://en.wikipedia.org/wiki/Explicit_substitution)
-- Blitz introduction to de Bruijn indices and explicit substitution: [How to implement dependent type theory III](http://math.andrej.com/2012/11/29/how-to-implement-dependent-type-theory-iii/)
+* [Wikipedia: De Bruijn index](https://en.wikipedia.org/wiki/De_Bruijn_index)
+* [How I learned to stop worrying and love de Bruijn indices](http://disciple-devel.blogspot.ca/2011/08/how-i-learned-to-stop-worrying-and-love.html)
+* [Wikipedia: Explicit substitution](https://en.wikipedia.org/wiki/Explicit_substitution)
+* Blitz introduction to de Bruijn indices and explicit substitution: [How to implement dependent type theory III](http://math.andrej.com/2012/11/29/how-to-implement-dependent-type-theory-iii/)
 
 ### Reduction systems
-- [Explicit evaluation](http://fexpr.blogspot.ca/2013/07/explicit-evaluation.html)
-- [Continuations and term-rewriting calculi](http://fexpr.blogspot.ca/2014/03/continuations-and-term-rewriting-calculi.html)
-- Part II of [Fexprs as the basis of Lisp function application; or, $vau: the ultimate abstraction](https://www.wpi.edu/Pubs/ETD/Available/etd-090110-124904/unrestricted/jshutt.pdf)
+* [Explicit evaluation](http://fexpr.blogspot.ca/2013/07/explicit-evaluation.html)
+* [Continuations and term-rewriting calculi](http://fexpr.blogspot.ca/2014/03/continuations-and-term-rewriting-calculi.html)
+* Part II of [Fexprs as the basis of Lisp function application; or, $vau: the ultimate abstraction](https://www.wpi.edu/Pubs/ETD/Available/etd-090110-124904/unrestricted/jshutt.pdf)
+
+### Milawa proof checker implementation
+* https://www.cs.utexas.edu/users/jared/milawa/Documentation/defense.pdf
+* https://www.cs.utexas.edu/users/jared/milawa/Documentation/dissertation.pdf
+* https://www.cs.utexas.edu/users/jared/publications/2015-jar-milawa.pdf
+  * terms T; formulas F ::= T=T | not F | F or F
+  * appeal (proof step) { method (rule name, such as 'axiom, 'theorem (something already proven), 'expansion (A or B), etc.), conclusion, subproofs, extras }
+    * restructure appeal as variant, one alternative per inference rule
+  * consider clauses instead of sequents; consider proofs with multiple conclusions
+
+### Low-level verification
+* http://plv.csail.mit.edu/bedrock/
+* http://adam.chlipala.net/papers/BedrockPOPL15/BedrockPOPL15.pdf
+
+### Theory of changes
+* http://www.umut-acar.org/self-adjusting-computation
+* http://ttic.uchicago.edu/~pl/sa-sml/
+* http://lambda-the-ultimate.org/node/5115
+
+### Live programming
+* processes (discrete position updates per time step) vs. equational continuity (motion equations as function of time as if it's yet another spatial dimension on the canvas)
+* http://research.microsoft.com/en-us/um/people/smcdirm/apx/
+* http://research.microsoft.com/en-us/people/smcdirm/managedtime.aspx
+* http://gbracha.blogspot.ca/2008/07/debugging-visual-metaphors.html
+
+### Document-based computing
+* https://github.com/zot/Leisure
+* http://www.quantrix.com/en/
+  * https://www.youtube.com/watch?v=LDKI8eeLf2M
+
+### Related work
+* [user actions as metaprogramming](https://groups.google.com/forum/#!topic/augmented-programming/gazxhLLXscQ)
+* http://bracha.org/objectsAsSoftwareServices.pdf
+* https://www.cl.cam.ac.uk/~afb21/CognitiveDimensions/CDtutorial.pdf
+* https://en.wikipedia.org/wiki/AgentSheets
+* http://openendedgroup.com/field/StandardLibrary.html
+* https://web.archive.org/web/20070927190552/http://users.ipa.net/~dwighth/smalltalk/Fabrik/Fabrik.html
+* http://arxiv.org/abs/0710.2358
+* http://cs.brown.edu/~spr/research/env.html
+* https://github.com/bloom-lang/bud/blob/master/docs/operational.md
+* http://www.jgrasp.org/
+* http://foswiki.cs.uu.nl/foswiki/Proxima/WebHome
+* http://www.alice.org/index.php
