@@ -51,6 +51,8 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
     * which portions of the program determine a given component of the output?
   * generalization from examples
   * allows more intelligent version control
+  * interact/inspect/debug under lambda: abstract bindings
+  * debugging with provenance tracking
 * layered program views and elaboration
   * infer lower levels from higher levels
     * specifications -> high-level implementations -> low-level representations
@@ -89,6 +91,7 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
     * checkbox, radio, dropdown/list, lightswitch
   * numbers
     * slider, color selector
+    * textual digits in different bases: 7 vs. #b111
   * tuples and sets
     * (labeled) lists/forms
     * tables
@@ -114,4 +117,55 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
       * brackets/ranges, candlesticks
       * histograms
 
+
 ### Data representation
+
+Annotating data with metadata supports choosing UI that depends on context.
+
+* metadata ideas
+  * uids
+  * UI-related concerns such as element styling/layout/navigation-modes
+  * provenance tracking
+  * aspect info based on usage, such as syntax highlighting annotations for data treated as code
+    * e.g., keyword, variable, literal, expr/component/grouping with type/arity
+    * this information guides/augments editing/visualization interfaces
+      * e.g., variable renaming, subexpr choices/constraints, syntax errors, rich literal editors/renderers
+      * debuggers via hyperprogrammed small step evaluators
+    * "parsing" code maps uids to corresponding aspect info
+* mirror tree for annotating data with metadata
+  * keep data structures separately interpretable in O(1) from their metadata
+
+
+### Misc design and UI ideas
+
+* code layout/styling/navigation
+  * configure absolute vs. hierarchical navigation per element
+  * style information as data that's also manipulated in the editor
+  * default vs. override
+  * layout, direction
+  * lanky, compact
+  * styling for quote, quasiquote, unquote
+    * generally, styling to preserve presentation close to original text
+* highlight/animate changes
+* clearly indicate UI element selection/selectability
+* map simple data to document types?
+  * visual indication
+  * lists may change presentation to look like underlying pairs in hierarchical mode
+  * absolute mode may force alignment with adjacent siblings along structural similarity
+    * spreadsheet-like grid
+* folder-like exploration
+  * scopes and palettes
+  * garbage area
+* allow user to provide alternative UI and data values for cells
+  * allows exploring alternate computations by just clicking a radio button, check box, etc.
+* maybe infer lenses from editing actions
+* possible sources of inspiration:
+  * https://semantic-ui.com/
+  * https://github.com/Shopify/draggable
+  * https://conclave-team.github.io/conclave-site/
+  * https://docs.google.com/presentation/d/1MD-CgzODFWzdpnYXr8bEgysfDmb8PDV6iCAjH5JIvaI/edit#slide=id.g1d7c11dd1b_0_304
+
+
+### Example apps
+
+* kill the bill: splitting a bill via collaborative editing
