@@ -11,6 +11,9 @@
   match/==  ;; TODO: generalize to match/syntax.
   define-vector-type
   define-vector-type*
+  lambda/import
+  import
+  export
   (rename-out
     (new-symbol? symbol?)
     (new-symbol=? symbol=?)
@@ -219,3 +222,26 @@
                 (error (format "~a with wrong argument type:" 'get) datum)))))
     ((_ name? tag construct _ () (field* ...))
      (define (construct field* ...) (vector tag field* ...)))))
+
+(define-syntax lambda/import
+  (syntax-rules ()
+    ((_ (items ...) body ...) (lambda (env) (import-etc env items ...) body ...))))
+(define-syntax import
+  (syntax-rules ()
+    ((_ env items ...) (begin (define e env) (import-etc e items ...)))))
+(define-syntax import-etc
+  (syntax-rules (rename)
+    ((_ env) (begin))
+    ((_ env (rename) items ...) (import-etc env items ...))
+    ((_ env (rename (old new) rns ...) items ...)
+     (begin (define new (cdr (assoc (symbol->string 'old) env)))
+            (import-etc env (rename rns ...) items ...)))
+    ((_ env name items ...) (import-etc env (rename (name name)) items ...))))
+(define-syntax export
+  (syntax-rules (rename)
+    ((_) '())
+    ((_ (rename) items ...) (export items ...))
+    ((_ (rename (old new) rns ...) items ...)
+     (cons (cons (symbol->string 'new) old)
+           (export (rename rns ...) items ...)))
+    ((_ name items ...) (export (rename (name name)) items ...))))
