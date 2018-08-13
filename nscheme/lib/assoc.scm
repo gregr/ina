@@ -1,4 +1,13 @@
-(lambda/import ()
+(lambda/module
+  (provide
+    assoc-empty
+    assoc-ref
+    assoc-set
+    assoc-remove
+    assoc-remove*
+    assoc-simplify
+    test!)
+
   (define assoc-empty '())
 
   (define (assoc-ref d k default)
@@ -49,12 +58,4 @@
       (assoc-simplify
         (assoc-set (assoc-set (assoc-set (assoc-set assoc-empty
                                                     'a 1) 'b 2) 'a 3) 'c 4))
-      '((c . 4) (a . 3) (b . 2))))
-
-  (export assoc-empty
-          assoc-ref
-          assoc-set
-          assoc-remove
-          assoc-remove*
-          assoc-simplify
-          test!))
+      '((c . 4) (a . 3) (b . 2)))))

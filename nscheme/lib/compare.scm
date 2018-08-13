@@ -1,4 +1,10 @@
-(lambda/import ()
+(lambda/module
+  (provide
+    compare
+    max/any
+    min/any
+    test!)
+
   (define (typecode d)
     (cond ((null? d)      0)
           ((boolean? d)   1)
@@ -120,9 +126,4 @@
       #t)
     (test 'min-3
       (min/any 3 8 #t 'x (vector 2) #f (cons 88 7))
-      #f))
-
-  (export compare
-          max/any
-          min/any
-          test!))
+      #f)))

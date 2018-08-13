@@ -2,6 +2,7 @@
 (require
   racket/include
   "nscheme.rkt"
+  "nscheme-module.rkt"
   )
 
 (define tests-total 0)
@@ -24,12 +25,11 @@
                       expected actual)
               (set! test-failures (cons name test-failures)))))
 
-(define (link env ms) (foldl (lambda (m env) (append (m env) env)) env ms))
 (define-syntax include-list
   (syntax-rules () ((_ fname ...) (list (include fname) ...))))
 
-(define env (link '() (include-list "lib/assoc.scm"
-                                    "lib/compare.scm")))
+(define env (link/module '() (include-list "lib/assoc.scm"
+                                           "lib/compare.scm")))
 
 (let ()
   (map (lambda (t) (t test))
