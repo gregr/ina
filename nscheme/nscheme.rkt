@@ -178,6 +178,8 @@
 
 (define-syntax define-vector-type
   (syntax-rules ()
+    ((_ (construct tag) #f f* ...)
+     (define-vector-type-etc #f t construct 0 (f* ...) ()))
     ((_ (construct tag) name? f* ...)
      (begin (define t tag)
             (define (name? datum) (and (vector? datum)
@@ -193,16 +195,22 @@
      (begin (define-vector-type-etc
               name? tag construct index (get f* ...) field*)
             (define (set datum value)
-              (if (name? datum)
-                (let ((new (vector-copy datum)))
-                  (vector-set! new index value) new)
-                (error "wrong argument type:" 'set datum)))))
+              (define-vector-type/check-use
+                name? datum 'set (let ((new (vector-copy datum)))
+                                   (vector-set! new index value) new)))))
     ((_ name? tag construct index (get f* ...) (field* ...))
      (begin (define-vector-type-etc
               name? tag construct (+ 1 index) (f* ...) (field* ... get))
             (define (get datum)
-              (if (name? datum)
-                (vector-ref datum index)
-                (error "wrong argument type:" 'get datum)))))
+              (define-vector-type/check-use
+                name? datum 'get (vector-ref datum index)))))
+    ((_ #f tag construct _ () (field* ...))
+     (define (construct field* ...) (vector field* ...)))
     ((_ name? tag construct _ () (field* ...))
      (define (construct field* ...) (vector tag field* ...)))))
+
+(define-syntax define-vector-type/check-use
+  (syntax-rules ()
+    ((_ #f datum method-name use) use)
+    ((_ valid? datum method-name use)
+     (if (valid? datum) use (error "wrong argument type:" 'method-name datum)))))
