@@ -178,44 +178,31 @@
 
 (define-syntax define-vector-type
   (syntax-rules ()
-    ((_ (name tag) name?)
-     (define-vector-type/singleton tag name name?))
     ((_ (construct tag) name? f* ...)
-     (define-vector-type/multi tag construct name? f* ...))
-    ((_ name name? f* ...)
-     (define-vector-type (name (new-quote name)) name? f* ...))))
-
-(define-syntax define-vector-type/singleton
-  (syntax-rules ()
-    ((_ tag name name?)
-     (begin (define name (vector tag))
-            (define (name? datum) (new-equal? name datum))))))
-
-(define-syntax define-vector-type/multi
-  (syntax-rules ()
-    ((_ tag construct name? f* ...)
      (begin (define t tag)
             (define (name? datum) (and (vector? datum)
                                        (<= 1 (vector-length datum))
                                        (new-equal? t (vector-ref datum 0))))
-            (define-vector-type/multi-etc name? t construct 1 (f* ...) ())))))
+            (define-vector-type-etc name? t construct 1 (f* ...) ())))
+    ((_ name name? f* ...)
+     (define-vector-type (name (new-quote name)) name? f* ...))))
 
-(define-syntax define-vector-type/multi-etc
+(define-syntax define-vector-type-etc
   (syntax-rules ()
     ((_ name? tag construct index ((get set) f* ...) field*)
-     (begin (define-vector-type/multi-etc
+     (begin (define-vector-type-etc
               name? tag construct index (get f* ...) field*)
             (define (set datum value)
               (if (name? datum)
                 (let ((new (vector-copy datum)))
                   (vector-set! new index value) new)
-                (error (format "~a with wrong argument type:" 'set) datum)))))
+                (error "wrong argument type:" 'set datum)))))
     ((_ name? tag construct index (get f* ...) (field* ...))
-     (begin (define-vector-type/multi-etc
+     (begin (define-vector-type-etc
               name? tag construct (+ 1 index) (f* ...) (field* ... get))
             (define (get datum)
               (if (name? datum)
                 (vector-ref datum index)
-                (error (format "~a with wrong argument type:" 'get) datum)))))
+                (error "wrong argument type:" 'get datum)))))
     ((_ name? tag construct _ () (field* ...))
      (define (construct field* ...) (vector tag field* ...)))))
