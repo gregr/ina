@@ -1,0 +1,27 @@
+(provide
+  ast-literal
+  ast-variable
+  ast-set!
+  ast-apply
+  ast-apply*
+  ast-lambda
+  ast-reset
+  ast-shift
+  ast-error
+  ast-primitive-op)
+
+(define (ast-literal datum)    `#(quote ,datum))
+(define (ast-variable address) `#(var ,address))
+(define (ast-set! addr value)  `#(set! ,addr ,value))
+(define (ast-if c t f)         `#(if ,c ,t ,f))
+(define (ast-apply proc args)  `#(apply ,proc ,args))
+(define (ast-apply* proc arg*) `#(apply* ,proc ,arg*))
+
+(define (ast-lambda variadic? address?* body)
+  `#(lambda ,variadic? ,address?* ,body))
+
+(define (ast-reset body) `#(reset ,body))
+(define (ast-shift proc) `#(shift ,proc))
+(define (ast-error a*)   `#(error ,a*))
+
+(define (ast-primitive-op name a*) `#(prim-op ,name ,a*))
