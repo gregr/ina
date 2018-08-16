@@ -46,7 +46,9 @@
                                (vector-ref (nsmod-provided m) 1)))) nscm-ns)))
 
 (define (apply/module m env)
-  (define rs (map (lambda (r) (cdr (assoc r env))) (car m)))
+  (define rs (map (lambda (r) (cdr (or (assoc (symbol->string r) env)
+                                       (error "missing requirement:" r))))
+                  (car m)))
   (apply (cdr m) rs))
 
 (define (link/module m env) (append (apply/module m env) env))
