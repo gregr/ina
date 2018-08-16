@@ -4,9 +4,6 @@
 
 ### bootstrap with only simple code
 
-* ast.scm
-* data.scm
-* eval-ast.scm: mini bootstrap interpreter to skip middle and backend
 * nscheme.scm: frontend
   * syntax.rkt should be absorbed by nscheme.scm; only need env/address/name defs
 * test.scm
@@ -21,5 +18,3 @@
   * replace closed-name with overriding expander
     * expanders as procs, no need for wrapper?
       * similar for names?
-* remove unshift
-* fix `procedure?`
