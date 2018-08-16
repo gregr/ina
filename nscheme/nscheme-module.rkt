@@ -1,50 +1,53 @@
 #lang racket/base
 (provide
-  nsmod
-  nsmod?
-  nsmod-required
-  nsmod-provided
-  nsmod-code
-  nsmod-proc
-  lambda/module
+  nscheme-module
+  eval/module
   apply/module
   link/module
-  rename
   )
 
 (require
-  "nscheme.rkt"
+  racket/match
+  racket/runtime-path
+  (only-in "nscheme.rkt" define-vector-type)
   )
 
-(define-vector-type
-  nsmod nsmod? nsmod-required nsmod-provided nsmod-code nsmod-proc)
+(define-vector-type nsmod #f nsmod-required nsmod-provided nsmod-body)
 
-(define rename (void))
+(define (nscheme-module body)
+  (define (i->r items rrns)
+    (for/fold ((rrns rrns)) ((item items))
+      (match item
+        (`(rename . ,rns) (append (reverse rns) rrns))
+        (name (cons (list name name) rrns)))))
+  (let loop ((body body) (rrequired '()) (rprovided '()))
+    (define next (and (pair? body) (car body)))
+    (match next
+      (`(require . ,items) (loop (cdr body) (i->r items rrequired) rprovided))
+      (`(provide . ,items) (loop (cdr body) rrequired (i->r items rprovided)))
+      (_ (let ((rd (reverse rrequired)) (pd (reverse rprovided)))
+           (nsmod `#(,(map car rd) ,(map cadr rd))
+                  `#(,(map cadr pd) ,(map car pd))
+                  body))))))
 
-(define-syntax lambda/module
-  (syntax-rules ()
-    ((_ body ...) (lambda/module-etc () () body ...))))
-(define-syntax lambda/module-etc
-  (syntax-rules (provide require rename)
-    ((_ is es (provide) b ...) (lambda/module-etc is es b ...))
-    ((_ is (es ...) (provide (rename (old new) ...) items ...) b ...)
-     (lambda/module-etc is (es ... (old new) ...) (provide items ...) b ...))
-    ((_ is (es ...) (provide name items ...) b ...)
-     (lambda/module-etc is (es ... (name name)) (provide items ...) b ...))
+(define local-ns (current-namespace))
+(define-runtime-module-path nscheme-rkt "nscheme.rkt")
+(define nscm-ns (parameterize ((current-namespace (make-base-namespace)))
+                  (namespace-attach-module local-ns nscheme-rkt)
+                  (namespace-require nscheme-rkt)
+                  (current-namespace)))
 
-    ((_ is es (require) b ...) (lambda/module-etc is es b ...))
-    ((_ (is ...) es (require (rename (old new) ...) items ...) b ...)
-     (lambda/module-etc (is ... (old new) ...) es (require items ...) b ...))
-    ((_ (is ...) es (require name items ...) b ...)
-     (lambda/module-etc (is ... (name name)) es (require items ...) b ...))
-
-    ((_ ((iold inew) ...) ((eold enew) ...) body ...)
-     (nsmod '(iold ...) '(enew ...) '(body ...)
-            (lambda (inew ...) body ... (list (cons 'enew eold) ...))))))
+(define (eval/module m)
+  (cons (vector-ref (nsmod-required m) 0)
+        (eval `(lambda ,(vector-ref (nsmod-required m) 1)
+                 ,@(nsmod-body m)
+                 (list . ,(map (lambda (enew eold) `(cons ',enew ,eold))
+                               (vector-ref (nsmod-provided m) 0)
+                               (vector-ref (nsmod-provided m) 1)))) nscm-ns)))
 
 (define (apply/module m env)
-  (define rs (map (lambda (r) (cdr (assoc r env))) (nsmod-required m)))
-  (apply (nsmod-proc m) rs))
+  (define rs (map (lambda (r) (cdr (assoc r env))) (car m)))
+  (apply (cdr m) rs))
 
 (define (link/module env ms)
   (foldl (lambda (m env) (append (apply/module m env) env)) env ms))

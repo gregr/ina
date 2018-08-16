@@ -2,23 +2,25 @@
 (require
   racket/include
   "filesystem.rkt"
-  (only-in "nscheme.rkt" (read nscm-read) (write nscm-write))
+  "nscheme-module.rkt"
   )
 
 (define sources
-  (for/list ((src '(("lib" "assoc" "compare"))))
+  (for/list ((src '((lib assoc compare))))
     (define library-name (car src))
     `(,library-name
        . ,(for/list ((module-name (cdr src)))
             (call-with-input-file
               (local-path
-                (build-path library-name (string-append module-name ".scm")))
-              (lambda (in) (let loop ((rbody '()))
-                             (define datum (nscm-read in))
-                             (if (eof-object? datum)
-                               `(,module-name
-                                  . (lambda/module . ,(reverse rbody)))
-                               (loop (cons datum rbody))))))))))
+                (build-path (symbol->string library-name)
+                            (string-append (symbol->string module-name)
+                                           ".scm")))
+              (lambda (in)
+                (let loop ((rbody '()))
+                  (define datum (nscm-read in))
+                  (if (eof-object? datum)
+                    `(,module-name . ,(nscheme-module (reverse rbody)))
+                    (loop (cons datum rbody))))))))))
 
 (call-with-output-file
   (local-path "sources.db.scm")

@@ -26,21 +26,10 @@
                       expected actual)
               (set! test-failures (cons name test-failures)))))
 
-
 (define lib (cdr (assoc 'lib (with-input-from-file
                                (local-path "sources.db.scm") read))))
 
-(define local-ns (current-namespace))
-(define-runtime-module-path nscheme-rkt "nscheme.rkt")
-(define-runtime-module-path nscheme-module-rkt "nscheme-module.rkt")
-(define ns (parameterize ((current-namespace (make-base-namespace)))
-             (namespace-attach-module local-ns nscheme-rkt)
-             (namespace-attach-module local-ns nscheme-module-rkt)
-             (namespace-require nscheme-rkt)
-             (namespace-require nscheme-module-rkt)
-             (current-namespace)))
-
-(define env (link/module '() (map (lambda (a) (eval (cdr a) ns)) lib)))
+(define env (link/module '() (map (lambda (a) (eval/module (cdr a))) lib)))
 
 (let ()
   (map (lambda (t) (t test))
