@@ -2,22 +2,6 @@
 
 ## TODO
 
-### bootstrap with only simple code
-
-* env: [(srcname, (tgtname, proc|'lexical|#f))]
-* representation independence: environments, closures, continuations?
-* eliminate macros after all
-  * no open/close needed
-  * keep env-bound parsers
-  * will need better `$lambda`, `$let`, `$let*`, and `$letrec`
-    * $lambda takes source names for params, and `(src&renamed)*->body`
-  * replace closed-name with overriding expander
-    * expanders as procs, no need for wrapper?
-      * similar for names?
-* remove unshift
-* fix `procedure?`
-
-
 ### compiler
 
 #### frontend
@@ -116,7 +100,7 @@ Support this both to bootstrap and to quickly support:
 
 ##### other backends to consider
 
-Python, C, Java, .NET, x86, ARM, ...
+WebAssembly, Python, C, Java, .NET, x86, ARM, ...
 
 
 ### alternative semantics
