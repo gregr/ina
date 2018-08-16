@@ -1,7 +1,12 @@
 #lang racket/base
 (provide
+  boolean=?
+  filter-not
+  string->vector
+  vector->string
   make-mvector
   mvector?
+  mvector=?
   mvector-length
   mvector-ref
   mvector-set!
@@ -22,6 +27,8 @@
     ))
 
 (require
+  racket/bool
+  racket/list
   racket/vector
   (for-syntax racket/base))
 
@@ -29,11 +36,15 @@
 ;; Support for #f parameters in define, lambda, let, etc.
 
 (struct mvector (v) #:transparent)
+(define (mvector=? m n) (eq? m n))
 (define (make-mvector k d) (mvector (make-vector k d)))
 (define (mvector-length mv) (vector-length (mvector-v mv)))
 (define (mvector-ref mv i) (vector-ref (mvector-v mv) i))
 (define (mvector-set! mv i d) (vector-set! (mvector-v mv) i d))
 (define (mvector->vector mv) (vector-copy (mvector-v mv)))
+
+(define (string->vector s) (list->vector (string->list s)))
+(define (vector->string v) (list->string (vector->list v)))
 
 (define (new-symbol? d) (string? d))
 (define (new-symbol=? a b) (string=? a b))
