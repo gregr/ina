@@ -40,7 +40,7 @@
              (namespace-require nscheme-module-rkt)
              (current-namespace)))
 
-(define env (link/module '() (map (lambda (a) (eval (car (cdr a)) ns)) lib)))
+(define env (link/module '() (map (lambda (a) (eval (cdr a) ns)) lib)))
 
 (let ()
   (map (lambda (t) (t test))

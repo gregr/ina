@@ -16,7 +16,8 @@
               (lambda (in) (let loop ((rbody '()))
                              (define datum (nscm-read in))
                              (if (eof-object? datum)
-                               `(,module-name . ,(reverse rbody))
+                               `(,module-name
+                                  . (lambda/module . ,(reverse rbody)))
                                (loop (cons datum rbody))))))))))
 
 (call-with-output-file
