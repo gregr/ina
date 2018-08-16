@@ -1,4 +1,4 @@
-# nScheme library
+# Data library
 
 Avoid leaky abstractions: implement libraries that don't make strong assumptions and so don't have to compromise.  Users should get to decide all important tradeoffs.
 
@@ -18,3 +18,5 @@ For example, don't implement a one-size-fits-all dictionary.  Instead, implement
 * Binary search on vectors
 
 Implement lattice operations (join and meet) where applicable.
+
+Maybe put merge-sort in list.scm?

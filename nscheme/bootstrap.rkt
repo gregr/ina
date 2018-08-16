@@ -5,14 +5,14 @@
   "nscheme-module.rkt"
   )
 
-(define sources
-  (for/list ((src '((lib assoc compare))))
+(define lib
+  (for/list ((src '((data assoc compare))))
     (define library-name (car src))
     `(,library-name
        . ,(for/list ((module-name (cdr src)))
             (call-with-input-file
               (local-path
-                (build-path (symbol->string library-name)
+                (build-path "lib" (symbol->string library-name)
                             (string-append (symbol->string module-name)
                                            ".scm")))
               (lambda (in)
@@ -22,9 +22,8 @@
                     `(,module-name . ,(nscheme-module (reverse rbody)))
                     (loop (cons datum rbody))))))))))
 
-(call-with-output-file
-  (local-path "sources.db.scm")
-  (lambda (out) (nscm-write sources out)))
+(call-with-output-file (local-path "lib.db.scm")
+                       (lambda (out) (nscm-write lib out)))
 
 ;; TODO: do something like this:
 

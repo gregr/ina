@@ -26,10 +26,10 @@
                       expected actual)
               (set! test-failures (cons name test-failures)))))
 
-(define lib (cdr (assoc 'lib (with-input-from-file
-                               (local-path "sources.db.scm") read))))
+(define data (cdr (assoc 'data (with-input-from-file
+                                 (local-path "lib.db.scm") read))))
 
-(define env (foldl link/module '() (map eval/module (map cdr lib))))
+(define env (foldl link/module '() (map eval/module (map cdr data))))
 
 (let ()
   (map (lambda (t) (t test))
