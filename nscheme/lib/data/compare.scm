@@ -14,7 +14,7 @@
         ((vector? d)    6)
         ((mvector? d)   7)
         ((procedure? d) 8)
-        (else "no typecode for type:" d)))
+        (else '"no typecode for type:" d)))
 (define (typecode->compare t)
   (case t
     ((0) compare-null)
@@ -24,9 +24,9 @@
     ((4) compare-string)
     ((5) compare-pair)
     ((6) compare-vector)
-    ((7) (error "cannot compare mvectors"))
-    ((8) (error "cannot compare procedures"))
-    (else "invalid typecode:" t)))
+    ((7) (error '"cannot compare mvectors"))
+    ((8) (error '"cannot compare procedures"))
+    (else '"invalid typecode:" t)))
 
 (define (compare-typecode ta tb lt eq gt)
   (cond ((< ta tb) lt) ((> ta tb) gt) (else eq)))
