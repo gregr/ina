@@ -1,8 +1,27 @@
 #lang racket/base
 (require
   racket/include
-  "nscheme.rkt"
+  "filesystem.rkt"
+  (only-in "nscheme.rkt" (read nscm-read) (write nscm-write))
   )
+
+(define sources
+  (for/list ((src '(("lib" "assoc" "compare"))))
+    (define library-name (car src))
+    `(,library-name
+       . ,(for/list ((module-name (cdr src)))
+            (call-with-input-file
+              (local-path
+                (build-path library-name (string-append module-name ".scm")))
+              (lambda (in) (let loop ((rbody '()))
+                             (define datum (nscm-read in))
+                             (if (eof-object? datum)
+                               `(,module-name . ,(reverse rbody))
+                               (loop (cons datum rbody))))))))))
+
+(call-with-output-file
+  (local-path "sources.db.scm")
+  (lambda (out) (nscm-write sources out)))
 
 ;; TODO: do something like this:
 
