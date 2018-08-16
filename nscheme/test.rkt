@@ -1,7 +1,8 @@
 #lang racket/base
 (require
   racket/include
-  "nscheme.rkt"
+  racket/runtime-path
+  "filesystem.rkt"
   "nscheme-module.rkt"
   )
 
@@ -25,13 +26,23 @@
                       expected actual)
               (set! test-failures (cons name test-failures)))))
 
-(define-syntax include-list
-  (syntax-rules () ((_ fname ...) (list (include fname) ...))))
 
-(define env (link/module '() (include-list "lib/assoc.scm"
-                                           "lib/compare.scm")))
+(define lib (cdr (assoc 'lib (with-input-from-file
+                               (local-path "sources.db.scm") read))))
+
+(define local-ns (current-namespace))
+(define-runtime-module-path nscheme-rkt "nscheme.rkt")
+(define-runtime-module-path nscheme-module-rkt "nscheme-module.rkt")
+(define ns (parameterize ((current-namespace (make-base-namespace)))
+             (namespace-attach-module local-ns nscheme-rkt)
+             (namespace-attach-module local-ns nscheme-module-rkt)
+             (namespace-require nscheme-rkt)
+             (namespace-require nscheme-module-rkt)
+             (current-namespace)))
+
+(define env (link/module '() (map (lambda (a) (eval (car (cdr a)) ns)) lib)))
 
 (let ()
   (map (lambda (t) (t test))
-       (map cdr (filter (lambda (rib) (string=? 'test! (car rib))) env)))
+       (map cdr (filter (lambda (rib) (string=? "test!" (car rib))) env)))
   (test-report))
