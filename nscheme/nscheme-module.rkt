@@ -34,7 +34,7 @@
 (define-runtime-module-path nscheme-rkt "nscheme.rkt")
 (define nscm-ns (parameterize ((current-namespace (make-base-namespace)))
                   (namespace-attach-module local-ns nscheme-rkt)
-                  (namespace-require nscheme-rkt)
+                  (namespace-require/constant nscheme-rkt)
                   (current-namespace)))
 
 (define (eval/module m)
