@@ -49,5 +49,4 @@
   (define rs (map (lambda (r) (cdr (assoc r env))) (car m)))
   (apply (cdr m) rs))
 
-(define (link/module env ms)
-  (foldl (lambda (m env) (append (apply/module m env) env)) env ms))
+(define (link/module m env) (append (apply/module m env) env))

@@ -29,7 +29,7 @@
 (define lib (cdr (assoc 'lib (with-input-from-file
                                (local-path "sources.db.scm") read))))
 
-(define env (link/module '() (map (lambda (a) (eval/module (cdr a))) lib)))
+(define env (foldl link/module '() (map eval/module (map cdr lib))))
 
 (let ()
   (map (lambda (t) (t test))
