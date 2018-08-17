@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  reverse-append
   boolean=?
   filter-not
   string->vector
@@ -34,6 +35,9 @@
 
 ;; TODO:
 ;; Support for #f parameters in define, lambda, let, etc.
+
+(define (reverse-append xs ys)
+  (if (null? xs) ys (reverse-append (cdr xs) (cons (car xs) ys))))
 
 (struct mvector (v) #:transparent)
 (define (mvector=? m n) (eq? m n))
