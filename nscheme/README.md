@@ -284,6 +284,10 @@ Support other forms of evaluation using the same syntax:
 * http://www.quantrix.com/en/
   * https://www.youtube.com/watch?v=LDKI8eeLf2M
 
+### Relational programming
+* http://scattered-thoughts.net/blog/2016/10/11/a-practical-relational-query-compiler-in-500-lines/
+* http://scattered-thoughts.net/blog/2017/07/28/relational-ui/
+
 ### Related work
 * [user actions as metaprogramming](https://groups.google.com/forum/#!topic/augmented-programming/gazxhLLXscQ)
 * http://bracha.org/objectsAsSoftwareServices.pdf
