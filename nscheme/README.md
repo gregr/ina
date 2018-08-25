@@ -24,6 +24,7 @@
   * an intermediate representation, but also a lower level user notation
   * aliasing/uniqueness annotations
     * e.g., mvector->vector need not copy if the mvector was unique and is no longer used
+    * single/multi-threaded aliasing constraints can inform mvector optimizations
   * escape/local annotations
     * closures need not be allocated when only used within parent's stack lifetime
     * stack allocations for data with appropriate lifetimes
@@ -53,6 +54,54 @@
       * (pointer-to T)        ;; typical pointer
       * (pointer-between T T) ;; pointer that knows about data before it
         * (pointer-between A B) is a subtype of (pointer-to B)
+  * could go beyond C-like types: memory map types that describe hierarchical context
+    * individual data structures within the context of larger memory (sub)pages
+      * parent alignment allows calculation of parent addresses from child addresses
+    * both static and dynamic offsets within a parent context
+      * . (dot) or [N] (where N is a literal) is sugar for a static offset
+    * AND(&&) and OR(|) types/constraints: OR for something like unions, AND for composing contexts
+      * value-dependent constraints
+        * for determining sizes, positions, and/or which OR branch is relevant
+        * e.g., a tagged pointer where the tag describes what the pointer points to:
+          * example-pointer-union = [bits[61]|0b001] && p1-ptr-type | [bits[61]|0b002] && p2-ptr-type
+            * would also describe calculation of actual address, masking lower 3 bits
+        * length-encoded arrays:
+          * dynamic-array = &[N|any[N]]
+        * endpoint-encoded arrays:
+          * dynamic-array = (word P) && &[end|any[N]] && (N == (end - P) / (type-size any))
+    * full control over all memory management, models, and algorithms
+      * enough descriptive power to optionally verify implementations
+      * e.g., able to describe data in the context of garbage collection metadata
+        * page-type = [prev-page|next-page|type-info|gc-marks[N]|words[N]]
+        * pointer to datum of type {struct T U}:
+          * ptr-type = (word A)
+                    && &(page-type.words[N])
+                    && &{struct T U}
+                    && (N == (A - (address->page-address A)) / (type-size type-info))
+          * can define copying/mark-sweep/mark-copy/generational/etc. gc algorithms
+        * pointer to pool-allocated datum:
+          * pool-page-type = [type-info|allocation-info[N]|obj[N]]
+          * pool-ptr-type = (word A)
+                         && &obj
+                         && &(pool-page-type.obj[N])
+                         && (N == (A - (address->pool-page-address A)) / (type-size type-info))
+          * can define non-fragmenting pool allocation for same-sized objs
+        * size-dependent allocation decisions:
+          * maybe-large-array = &[N|any[N]]
+                             && ((N >= threshold && &([prev|next|N|any[N]][2]))
+                                |(N < threshold  && normal-gc-page-allocated-array)
+      * also e.g., allowing call stack layouts to be described explicitly
+        * plain example (^ denotes frame pointer) for stack frames [0,1,2]:
+          * frame-entry-2     = [^return1|a1|a2|...]
+          * frame-returning-2 = [r1|r2|...|^return1|a1|a2|...]
+          * frame-returned-1  = [^return0|b1|b2|...|r1|r2|...]
+        * explicit frame-specific gc handlers example:
+          * frame-entry-2     = [handle-gc1|^return1|a1|a2|...|handle-gc2]
+          * frame-entry-1     = [handle-gc0|^return0|b1|b2|...|handle-gc1]
+          * could instead map return addresses directly to gc handlers, saving a little space
+          * could instead decorate frames with pointer maps and define a single gc handler
+        * can define segmented, spaghetti, cactus, etc. stacks
+          * can define continuation capturing and resumption
   * motivations and example:
     * immediate unboxing, e.g., operating directly on unboxed flonums
     * vector element unboxing
