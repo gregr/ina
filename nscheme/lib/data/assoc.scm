@@ -2,6 +2,7 @@
   assoc-empty
   assoc-ref
   assoc-set
+  assoc-filter
   assoc-remove
   assoc-remove*
   assoc-simplify
@@ -15,10 +16,12 @@
 
 (define (assoc-set d k v) (cons (cons k v) d))
 
-(define (assoc-remove* d k*)
-  (cond ((null? d)            assoc-empty)
-        ((member (caar d) k*) (assoc-remove* (cdr d) k*))
-        (else                 (cons (car d) (assoc-remove* (cdr d) k*)))))
+(define (assoc-filter d p?)
+  (cond ((null? d)     assoc-empty)
+        ((p? (caar d)) (cons (car d) (assoc-filter (cdr d) p?)))
+        (else          (assoc-filter (cdr d) p?))))
+
+(define (assoc-remove* d k*) (assoc-filter d (lambda (k) (not (member k k*)))))
 
 (define (assoc-remove d k) (assoc-remove* d (list k)))
 
