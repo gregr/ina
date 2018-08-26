@@ -16,7 +16,7 @@
   mvector->vector
   case
   match
-  match/==  ;; TODO: generalize to match/syntax.
+  match/=?  ;; TODO: generalize to match/syntax.
   define-vector-type
   define-vector-type*
   export
@@ -129,7 +129,7 @@
 (define-syntax match
   (syntax-rules () ((_ body ...) (match/== new-equal? body ...))))
 
-(define-syntax match/==
+(define-syntax match/=?
   (syntax-rules ()
     ((_ ==? scrutinee body ...) (match-let-etc ==? scrutinee body ...))))
 
