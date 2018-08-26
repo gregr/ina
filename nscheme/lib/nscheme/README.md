@@ -10,12 +10,26 @@
 * no quasiquote, match, or even case?
   * build userspace versions of these via unify, assoc, etc.
     * case/let, match/let, type construction/deconstruction
-* `and/let*`
-* let/blacklist, let/whitelist[/syntax]
-* (export name ...)
-* (import (name ...) body ...)
-  * produces (cons '(name ...) (lambda (name ...) body ...))
-* userspace definitions: import/apply, import->lambda
+
+* op handling
+  * allow primitives/built-ins to be used in any value position
+    * during compilation, transform these uses based on position
+      * reduces the amount of inlining work
+  * define some derived ops, such as `append` and `equal?`, as built-ins that
+    will be elaborated in terms of real primitives during compilation
+
+* define these now:
+  * `and/let*`
+  * (export name ...)
+  * (import (name ...) body ...)
+    * produces (cons '(name ...) (lambda (name ...) body ...))
+  * userspace definitions: import/apply, import->lambda
+* define these after bootstrapping: let/blacklist, let/whitelist[/syntax]
+
+* define box.scm
+* define type.scm to share type predicate deconstruction idea
+* update data.scm, ast.scm, eval-ast.scm to avoid match
+  * use new type predicates for ast
 
 * nscheme.scm: frontend
 * test.scm
