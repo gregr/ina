@@ -19,6 +19,10 @@
   match/==  ;; TODO: generalize to match/syntax.
   define-vector-type
   define-vector-type*
+  export
+  import
+  import/apply
+  import->lambda
   (rename-out
     (new-symbol? symbol?)
     (new-symbol=? symbol=?)
@@ -236,3 +240,19 @@
     ((_ #f datum method-name use) use)
     ((_ valid? datum method-name use)
      (if (valid? datum) use (error "wrong argument type:" 'method-name datum)))))
+
+(define-syntax import
+  (syntax-rules ()
+    ((_ (name ...) body ...)
+     (cons (new-quote (name ...)) (lambda (name ...) body ...)))))
+
+(define-syntax export
+  (syntax-rules ()
+    ((_ name ...) (list (cons (new-quote name) name) ...))))
+
+(define (import->lambda i) (lambda (env) (import/apply i env)))
+
+(define (import/apply i env)
+  (apply (cdr i) (map (lambda (name)
+                        (cdr (or (assoc name env)
+                                 (error "missing argument:" name)))) (car i))))
