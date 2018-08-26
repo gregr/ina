@@ -3,8 +3,10 @@
   reverse-append
   boolean=?
   filter-not
+  range
   string->vector
   vector->string
+  vector-set
   make-mvector
   mvector?
   mvector=?
@@ -46,6 +48,11 @@
 (define (mvector-ref mv i) (vector-ref (mvector-v mv) i))
 (define (mvector-set! mv i d) (vector-set! (mvector-v mv) i d))
 (define (mvector->vector mv) (vector-copy (mvector-v mv)))
+
+(define (vector-set v i d)
+  (define new (vector-copy v))
+  (vector-set! new i d)
+  new)
 
 (define (string->vector s) (list->vector (string->list s)))
 (define (vector->string v) (list->string (vector->list v)))
