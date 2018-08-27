@@ -9,10 +9,13 @@
 (require
   racket/match
   racket/runtime-path
-  (only-in "nscheme.rkt" define-vector-type)
+  (only-in "nscheme.rkt")  ;; namespace-attach-module depends on this.
   )
 
-(define-vector-type nsmod #f nsmod-required nsmod-provided nsmod-body)
+(define (nsmod required provided body) (vector required provided body))
+(define (nsmod-required m)             (vector-ref m 0))
+(define (nsmod-provided m)             (vector-ref m 1))
+(define (nsmod-body m)                 (vector-ref m 2))
 
 (define (nscheme-module body)
   (define (i->r items rrns)
