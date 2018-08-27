@@ -79,14 +79,9 @@
   (define (valid-type? t)
     (or (equal? #t t) (not t) (member t type-predicates)))
   (define (valid-primop? op)
-    (match op
-      (`(,name ,in* ,out)
-        (guard (symbol? name))
-        (and (valid-type? out)
-             (andmap valid-type? in*)
-
-             ))
-      (_ #f)))
+    (and (list? op) (= 3 (length op)) (symbol? (car op))
+         (andmap valid-type? (cadr op))
+         (valid-type? (caddr op))))
   (define malformed (filter-not valid-primop? primitive-ops))
   (unless (null? malformed)
     (error '"malformed primitive-ops:" malformed)))
