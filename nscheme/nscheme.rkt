@@ -19,6 +19,7 @@
   match/=?  ;; TODO: generalize to match/syntax.
   define-vector-type
   define-vector-type*
+  and/let*
   export
   import
   import/apply
@@ -240,6 +241,12 @@
     ((_ #f datum method-name use) use)
     ((_ valid? datum method-name use)
      (if (valid? datum) use (error "wrong argument type:" 'method-name datum)))))
+
+(define-syntax and/let*
+  (syntax-rules ()
+    ((_ () body ...) (and body ...))
+    ((_ ((lhs rhs) bindings ...) body ...)
+     (let ((lhs rhs)) (and lhs (and/let* (bindings ...) body ...))))))
 
 (define-syntax import
   (syntax-rules ()
