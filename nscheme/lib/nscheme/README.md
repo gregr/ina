@@ -4,12 +4,11 @@
 
 ### bootstrap with only simple code
 
-* discard define-vector-type
-  * instead, define vector type predicates as deconstructors
-    * return #f or assoc of components
-* no quasiquote, match, or even case?
-  * build userspace versions of these via unify, assoc, etc.
-    * case/let, match/let, type construction/deconstruction
+* no syntax for match
+  * build userspace version of this via unify, assoc, etc.
+  * `var`, `identifier`, `_`
+  * `quote`, `quasiquote`, `cons`, `list*`, `list`, `vector`, `literal`
+  * `unquote`, `unquote-splicing`, `#(qq ...)`, `(qq . qq)`, `literal`
 
 * op handling
   * allow primitives/built-ins to be used in any value position
@@ -17,17 +16,13 @@
       * reduces the amount of inlining work
   * define some derived ops, such as `append` and `equal?`, as built-ins that
     will be elaborated in terms of real primitives during compilation
+  * these still need lexical entries in the expansion environment, though
 
-* define these now:
-  * `and/let*`
-  * (export name ...)
-  * (import (name ...) body ...)
-    * produces (cons '(name ...) (lambda (name ...) body ...))
-  * userspace definitions: import/apply, import->lambda
+* better firewalling of base library/env
+  * mark lexical bindings as constant (set! disallowed)
+
 * define these after bootstrapping: let/blacklist, let/whitelist[/syntax]
 
-* define box.scm
-* define type.scm to share type predicate deconstruction idea
 * update data.scm, ast.scm, eval-ast.scm to avoid match
   * use new type predicates for ast
 
@@ -35,6 +30,7 @@
 * test.scm
 
 * env: [(srcname, (tgtname, proc|'lexical|#f))]
+  * incorporate lexical constant (set! disallowed) markings
 * representation independence: environments, closures, continuations?
 * eliminate macros after all
   * no open/close needed
@@ -51,3 +47,5 @@
     * but, would like to keep optimization aspects separate via hyperprograms
   * operatives that specifically operate within definition lists
     * simpler than recognizing macros that generate uses of begin/define
+
+* flexible module body interpretation: (language evaluation-adaptor ...)
