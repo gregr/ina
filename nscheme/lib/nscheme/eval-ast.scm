@@ -1,7 +1,19 @@
-(provide eval-ast)
+(provide eval-ast test!)
 
-(require assoc-empty assoc-ref assoc-set
-         primitive-ops)
+(require
+  assoc-empty assoc-ref assoc-set
+  primitive-ops
+  ast-quote?
+  ast-var?
+  ast-set!?
+  ast-if?
+  ast-apply?
+  ast-apply*?
+  ast-lambda?
+  ast-reset?
+  ast-shift?
+  ast-error?
+  ast-primitive-op?)
 
 ;;; Runtime environments
 (define env-empty assoc-empty)
@@ -83,23 +95,45 @@
                   (error '"arity mismatch:" plen (length arg*) clo arg*))
                 (continue arg*)))))
 
+;; TODO: import/match ?
+(define (import/case d clause*)
+  ((or (ormap (lambda (clause)
+                (and/let* ((env ((car clause) d)))
+                  (lambda () (import/apply (cdr clause) env)))) clause*)
+       (error '"no matching import/case clause:" d))))
+
 (define (eval-ast/env env tm)
   (define (loop tm) (eval-ast/env env tm))
-  (match tm
-    (`#(quote ,datum)         datum)
-    (`#(var ,address)         (env-ref env address))
-    (`#(set! ,address ,tm)    (env-set! env address (loop tm)))
-    (`#(if ,c ,t ,f)          (if (loop c) (loop t) (loop f)))
-    (`#(lambda ,v? ,a* ,body) (closure->procedure v? a* body env))
-    (`#(apply* ,p ,a*)        (apply (loop p) (map loop a*)))
-    (`#(apply ,p ,a)          (apply (loop p) (loop a)))
-    (`#(reset ,body)          (reset (loop body)))
-    (`#(shift ,proc)          (shift k ((loop proc) k)))
-    (`#(error ,a*)            (apply error a*))
-    (`#(prim-op ,name ,a*)
-      (define op (assoc-ref primitive-op-evaluators name
-                            (lambda _ (error '"invalid primitive op:" name))))
-      (op (map loop a*)))
-    (_ (error '"unknown term:" tm))))
+  (import/case
+    tm
+    `((,ast-quote?  . ,(import (datum) datum))
+      (,ast-var?    . ,(import (address) (env-ref env address)))
+      (,ast-set!?   . ,(import (address value)
+                         (env-set! env address (loop value))))
+      (,ast-if?     . ,(import (c t f) (if (loop c) (loop t) (loop f))))
+      (,ast-lambda? . ,(import (variadic? a* body)
+                         (closure->procedure variadic? a* body env)))
+      (,ast-apply?  . ,(import (proc arg*)
+                         (apply (loop proc) (map loop arg*))))
+      (,ast-apply*? . ,(import (proc args) (apply (loop proc) (loop args))))
+      (,ast-reset?  . ,(import (body) (reset (loop body))))
+      (,ast-shift?  . ,(import (proc) (shift k ((loop proc) k))))
+      (,ast-error?  . ,(import (a*)   (apply error (map loop a*))))
+      (,ast-primitive-op?
+        . (import (name a*)
+            (define (invalid-op . _) (error '"invalid primitive op:" name))
+            (define op (assoc-ref primitive-op-evaluators name invalid-op))
+            (op (map loop a*)))))))
 
 (define (eval-ast tm) (eval-ast/env env-empty tm))
+
+(define (test! test)
+  (test 'quote
+    (eval-ast '#(quote 7))
+    7)
+  (test 'if-1
+    (eval-ast '#(if #(quote #t) #(quote 1) #(quote 2)))
+    1)
+  (test 'if-2
+    (eval-ast '#(if #(quote #f) #(quote 1) #(quote 2)))
+    2))
