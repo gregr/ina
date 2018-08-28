@@ -120,10 +120,10 @@
       (,ast-shift?  . ,(import (proc) (shift k ((loop proc) k))))
       (,ast-error?  . ,(import (a*)   (apply error (map loop a*))))
       (,ast-primitive-op?
-        . (import (name a*)
-            (define (invalid-op . _) (error '"invalid primitive op:" name))
-            (define op (assoc-ref primitive-op-evaluators name invalid-op))
-            (op (map loop a*)))))))
+        . ,(import (name a*)
+             (define (invalid-op . _) (error '"invalid primitive op:" name))
+             (define op (assoc-ref primitive-op-evaluators name invalid-op))
+             (op (map loop a*)))))))
 
 (define (eval-ast tm) (eval-ast/env env-empty tm))
 
