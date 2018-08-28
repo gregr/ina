@@ -5,6 +5,7 @@
   assoc-filter
   assoc-remove
   assoc-remove*
+  assoc-keep*
   assoc-simplify
   test!)
 
@@ -24,6 +25,8 @@
 (define (assoc-remove* d k*) (assoc-filter d (lambda (k) (not (member k k*)))))
 
 (define (assoc-remove d k) (assoc-remove* d (list k)))
+
+(define (assoc-keep* d k*) (map (lambda (k) (assoc k d)) k*))
 
 (define (assoc-simplify d)
   (let loop ((d d) (k* '()))
@@ -60,4 +63,10 @@
     (assoc-simplify
       (assoc-set (assoc-set (assoc-set (assoc-set assoc-empty
                                                   'a 1) 'b 2) 'a 3) 'c 4))
-    '((c . 4) (a . 3) (b . 2))))
+    '((c . 4) (a . 3) (b . 2)))
+  (test 'assoc-7
+    (assoc-keep*
+      (assoc-set (assoc-set (assoc-set (assoc-set assoc-empty
+                                                  'a 1) 'b 2) 'c 3) 'd 4)
+      '(b d))
+    '((b . 2) (d . 4))))
