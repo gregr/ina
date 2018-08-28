@@ -126,7 +126,7 @@
                                       (case-etc x c ...)))))
 
 (define-syntax match
-  (syntax-rules () ((_ body ...) (match/== new-equal? body ...))))
+  (syntax-rules () ((_ body ...) (match/=? new-equal? body ...))))
 
 (define-syntax match/=?
   (syntax-rules ()
