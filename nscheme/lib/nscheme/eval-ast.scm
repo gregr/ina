@@ -2,18 +2,7 @@
 
 (require
   assoc-empty assoc-ref assoc-set
-  primitive-ops
-  ast-quote?
-  ast-var?
-  ast-set!?
-  ast-if?
-  ast-apply?
-  ast-apply*?
-  ast-lambda?
-  ast-reset?
-  ast-shift?
-  ast-error?
-  ast-primitive-op?)
+  primitive-ops)
 
 ;;; Runtime environments
 (define env-empty assoc-empty)
