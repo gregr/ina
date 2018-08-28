@@ -9,6 +9,7 @@
   * `var`, `identifier`, `_`
   * `quote`, `quasiquote`, `cons`, `list*`, `list`, `vector`, `literal`
   * `unquote`, `unquote-splicing`, `#(qq ...)`, `(qq . qq)`, `literal`
+  * maybe support a simpler match syntax instead
 
 * op handling
   * allow primitives/built-ins to be used in any value position
@@ -23,11 +24,17 @@
 
 * define these after bootstrapping: let/blacklist, let/whitelist[/syntax]
 
-* update data.scm, ast.scm, eval-ast.scm to avoid match
-  * use new type predicates for ast
-
 * nscheme.scm: frontend
 * test.scm
+
+* ast-code (transparent data) vs. ast-eval (opaque procedures)
+  * more explicit linking and program building
+    * show example of varied implementations of the same exported names
+    * try building a program.db.scm (also maybe rename lib to library)
+
+* `assoc-ref*`
+
+* better naming convention: import-apply
 
 * env: [(srcname, (tgtname, proc|'lexical|#f))]
   * incorporate lexical constant (set! disallowed) markings
