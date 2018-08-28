@@ -20,7 +20,7 @@
   and/let*
   export
   import
-  import/apply
+  import-apply
   import->lambda
   (rename-out
     (new-symbol? symbol?)
@@ -210,9 +210,9 @@
   (syntax-rules ()
     ((_ name ...) (list (cons (new-quote name) name) ...))))
 
-(define (import->lambda i) (lambda (env) (import/apply i env)))
+(define (import->lambda i) (lambda (env) (import-apply i env)))
 
-(define (import/apply i env)
+(define (import-apply i env)
   (apply (cdr i) (map (lambda (name)
                         (cdr (or (assoc name env)
                                  (error "missing argument:" name)))) (car i))))

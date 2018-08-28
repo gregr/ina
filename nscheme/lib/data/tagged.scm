@@ -16,7 +16,7 @@
   (define (example x y)       (vector example:tag x y))
   (define (example? d)        (tagged-vector? example:tag '(x y) d))
   (define (example?! d)       (tagged-vector?! example:tag '(x y) d))
-  (define (example-x e)       (import/apply (import (x) x) (example?! e)))
+  (define (example-x e)       (import-apply (import (x) x) (example?! e)))
   (define (example-x-set e x) (example?! e) (vector-set e 1 x))
 
   (test 'example-1
