@@ -7,7 +7,7 @@
 
 (define lib
   (for/list ((src '((data box tagged assoc compare)
-                    (nscheme ast data eval-ast))))
+                    (nscheme data ast ast-eval eval-ast))))
     (define library-name (car src))
     `(,library-name
        . ,(for/list ((module-name (cdr src)))
