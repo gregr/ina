@@ -11,12 +11,12 @@
   ast-error
   ast-primitive-op)
 
-(define (ast-quote datum)      `#(quote ,datum))
-(define (ast-var address)      `#(var ,address))
-(define (ast-set! addr value)  `#(set! ,addr ,value))
-(define (ast-if c t f)         `#(if ,c ,t ,f))
-(define (ast-apply proc args)  `#(apply ,proc ,args))
-(define (ast-apply* proc arg*) `#(apply* ,proc ,arg*))
+(define (ast-quote datum)     `#(quote ,datum))
+(define (ast-var address)     `#(var ,address))
+(define (ast-set! addr value) `#(set! ,addr ,value))
+(define (ast-if c t f)        `#(if ,c ,t ,f))
+(define (ast-apply proc arg*) `#(apply ,proc ,arg*))
+(define (ast-apply* proc arg) `#(apply* ,proc ,arg))
 
 (define (ast-lambda variadic? address?* body)
   `#(lambda ,variadic? ,address?* ,body))
