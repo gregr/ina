@@ -3,10 +3,8 @@
   (all-from-out "nscheme.rkt")
   env-current
   env-extend
-  libraries
+  lib
   import/env
-
-  eval-ast
   )
 
 (require
@@ -15,14 +13,13 @@
   "nscheme-module.rkt"
   )
 
-(define libraries (with-input-from-file (local-path "lib.db.scm") nscm-read))
+(define lib (with-input-from-file (local-path "lib.db.scm") nscm-read))
 
 (define env '())
 (define (env-current) env)
 (define (env-extend library-name)
-  (define rib (assoc (string->symbol library-name) libraries))
-  (define library (cdr (or rib (error "unknown library:" library-name))))
-  (set! env (foldl link/module env (map eval/module (map cdr library)))))
+  (define name (string->symbol library-name))
+  (set! env (link/module* env (map cdr (library-get lib name)))))
 
 (define-syntax import/env
   (syntax-rules ()
@@ -32,4 +29,3 @@
 
 (env-extend 'data)
 (env-extend 'nscheme)
-(import/env eval-ast)
