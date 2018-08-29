@@ -96,7 +96,7 @@
                  (error '"invalid primitive op:" name)))
   (lambda (env) (op (ap* env a*))))
 
-(define (ast-lambda variadic? address?* body)
+(define (ast-lambda variadic? addr* body)
   (define (continue cenv a*)
     (define b?* (map (lambda (addr a) (and addr (cons addr a))) addr* a*))
     (define env (env-extend* cenv (filter-not not b?*)))
