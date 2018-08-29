@@ -3,6 +3,8 @@
   nscheme-module
   eval/module
   link/module
+  link/module*
+  library-get
   )
 
 (require
@@ -48,4 +50,11 @@
                            (export . ,(vector-ref (nsmod-provided m) 1))))
                    nscm-ns))))
 
-(define (link/module m env) (append (import-apply m env) env))
+(define (link/module env m) (append (import-apply m env) env))
+(define (link/module* env m*) (foldl (lambda (m e) (link/module e m)) env m*))
+
+(define (assoc-get a k)
+  (cdr (or (assoc k a) (error "assoc missing key:" k (map car a)))))
+(define (assoc-map a f)
+  (map (lambda (kv) (cons (car kv) (f (cdr kv)))) a))
+(define (library-get a k) (assoc-map (assoc-get a k) eval/module))

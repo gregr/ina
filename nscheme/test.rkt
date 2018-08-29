@@ -27,13 +27,15 @@
                       expected actual)
               (set! test-failures (cons name test-failures)))))
 
-(define libs (with-input-from-file (local-path "lib.db.scm") read))
-(define modules (append* (map (lambda (lib) (cdr (assoc lib libs)))
-                              '(data nscheme))))
-(define env (foldl link/module '() (map eval/module (map cdr modules))))
+(define lib (with-input-from-file (local-path "lib.db.scm") read))
+(define lib:data    (library-get lib 'data))
+(define lib:nscheme (library-get lib 'nscheme))
+
+(define env:data    (link/module* '() (map cdr lib:data)))
+(define env:nscheme (link/module* env:data (map cdr lib:nscheme)))
 
 (let ()
   (map (lambda (t) (t test))
-       (reverse
-         (map cdr (filter (lambda (rib) (string=? "test!" (car rib))) env))))
+       (reverse (map cdr (filter (lambda (rib) (string=? "test!" (car rib)))
+                                 env:nscheme))))
   (test-report))
