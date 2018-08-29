@@ -2,14 +2,13 @@
 (provide
   nscheme-module
   eval/module
-  apply/module
   link/module
   )
 
 (require
   racket/match
   racket/runtime-path
-  (only-in "nscheme.rkt")  ;; namespace-attach-module depends on this.
+  (only-in "nscheme.rkt" import-apply)  ;; namespace-attach-module depends on this.
   )
 
 (define (nsmod required provided body) (vector required provided body))
@@ -41,17 +40,12 @@
                   (current-namespace)))
 
 (define (eval/module m)
-  (cons (vector-ref (nsmod-required m) 0)
-        (eval `(lambda ,(vector-ref (nsmod-required m) 1)
-                 ,@(nsmod-body m)
-                 (list . ,(map (lambda (enew eold) `(cons ',enew ,eold))
-                               (vector-ref (nsmod-provided m) 0)
-                               (vector-ref (nsmod-provided m) 1)))) nscm-ns)))
+  (cons (map symbol->string (vector-ref (nsmod-required m) 0))
+        (cdr (eval `(import ,(vector-ref (nsmod-required m) 1)
+                      ,@(nsmod-body m)
+                      (map (lambda (enew e) (cons enew (cdr e)))
+                           ',(vector-ref (nsmod-provided m) 0)
+                           (export . ,(vector-ref (nsmod-provided m) 1))))
+                   nscm-ns))))
 
-(define (apply/module m env)
-  (define rs (map (lambda (r) (cdr (or (assoc (symbol->string r) env)
-                                       (error "missing requirement:" r))))
-                  (car m)))
-  (apply (cdr m) rs))
-
-(define (link/module m env) (append (apply/module m env) env))
+(define (link/module m env) (append (import-apply m env) env))
