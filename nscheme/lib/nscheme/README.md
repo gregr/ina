@@ -4,13 +4,6 @@
 
 ### bootstrap with only simple code
 
-* no syntax for match
-  * build userspace version of this via unify, assoc, etc.
-  * `var`, `identifier`, `_`
-  * `quote`, `quasiquote`, `cons`, `list*`, `list`, `vector`, `literal`
-  * `unquote`, `unquote-splicing`, `#(qq ...)`, `(qq . qq)`, `literal`
-  * maybe support a simpler match syntax instead
-
 * op handling
   * allow primitives/built-ins to be used in any value position
     * during compilation, transform these uses based on position
@@ -26,15 +19,6 @@
 
 * nscheme.scm: frontend
 * test.scm
-
-* ast-code (transparent data) vs. ast-eval (opaque procedures)
-  * more explicit linking and program building
-    * show example of varied implementations of the same exported names
-    * try building a program.db.scm (also maybe rename lib to library)
-
-* `assoc-ref*`
-
-* better naming convention: import-apply
 
 * env: [(srcname, (tgtname, proc|'lexical|#f))]
   * incorporate lexical constant (set! disallowed) markings
