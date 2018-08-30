@@ -1,10 +1,12 @@
 #lang racket/base
 (provide
   (all-from-out "nscheme.rkt")
-  env-current
+  env
   env-extend
-  lib
+  db:lib
   import/env
+  s->ns
+  ns->s
   )
 
 (require
@@ -13,13 +15,13 @@
   "nscheme-module.rkt"
   )
 
-(define lib (ns->s (with-input-from-file db:lib-path read)))
+(define db:lib/s (ns->s (with-input-from-file db:lib-path read)))
+(define db:lib (s->ns db:lib/s))
 
 (define env '())
-(define (env-current) env)
 (define (env-extend library-name)
   (define name (string->symbol library-name))
-  (set! env (link/module* env (map cdr (library-get lib name)))))
+  (set! env (link/module* env (map cdr (library-get db:lib/s name)))))
 
 (define-syntax import/env
   (syntax-rules ()

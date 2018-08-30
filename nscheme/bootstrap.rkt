@@ -5,7 +5,7 @@
   "nscheme-module.rkt"
   )
 
-(define lib
+(define db:lib
   (for/list ((src '((data box tagged assoc compare)
                     (nscheme data ast ast-eval))))
     (define library-name (car src))
@@ -24,7 +24,7 @@
                     (loop (cons datum rbody))))))))))
 
 (call-with-output-file db:lib-path
-                       (lambda (out) (write (ns->s/write lib) out)))
+                       (lambda (out) (write (ns->s/write db:lib) out)))
 
 ;; TODO: do something like this:
 

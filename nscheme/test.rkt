@@ -27,9 +27,9 @@
                       expected actual)
               (set! test-failures (cons name test-failures)))))
 
-(define lib (with-input-from-file db:lib-path read))
-(define lib:data    (library-get lib 'data))
-(define lib:nscheme (library-get lib 'nscheme))
+(define db:lib (with-input-from-file db:lib-path read))
+(define lib:data    (library-get db:lib 'data))
+(define lib:nscheme (library-get db:lib 'nscheme))
 
 (define env:data    (link/module* '() (map cdr lib:data)))
 (define env:nscheme (link/module* env:data (map cdr lib:nscheme)))
