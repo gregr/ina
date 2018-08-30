@@ -23,7 +23,7 @@
                     `(,module-name . ,(nscheme-module (reverse rbody)))
                     (loop (cons datum rbody))))))))))
 
-(call-with-output-file (local-path "lib.db.scm")
+(call-with-output-file db:lib-path
                        (lambda (out) (write (ns->s/write lib) out)))
 
 ;; TODO: do something like this:

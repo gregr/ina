@@ -4,6 +4,7 @@
   s->ns
   ns->s
   ns->s/write
+  db:lib-path
   )
 
 (require
@@ -14,6 +15,7 @@
 (define (local-path rpath)
   (build-path (path-only (path->complete-path (find-system-path 'run-file)))
               rpath))
+(define db:lib-path (local-path "lib.db.scm"))
 
 (define (s->ns d)
   (cond ((symbol? d) (symbol->string d))

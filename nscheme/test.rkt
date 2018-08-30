@@ -27,7 +27,7 @@
                       expected actual)
               (set! test-failures (cons name test-failures)))))
 
-(define lib (with-input-from-file (local-path "lib.db.scm") read))
+(define lib (with-input-from-file db:lib-path read))
 (define lib:data    (library-get lib 'data))
 (define lib:nscheme (library-get lib 'nscheme))
 
