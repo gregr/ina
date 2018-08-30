@@ -14,11 +14,11 @@
   test!)
 
 (require
-  assoc-empty assoc-ref assoc-set
+  assoc:empty assoc-ref assoc-set
   primitive-ops)
 
 ;;; Runtime environments
-(define env-empty assoc-empty)
+(define env:empty assoc:empty)
 (define (env-extend* env b*)
   (foldl (lambda (b e) (assoc-set e (car b) (make-mvector 1 (cdr b)))) env b*))
 (define (env-ref-box env addr)
@@ -128,17 +128,17 @@
      (`#(shift ,proc)          (ast:shift (loop proc)))
      (`#(error ,a*)            (ast:error (map loop a*)))
      (`#(prim-op ,name ,a*)    (ast:primitive-op name (map loop a*)))
-     (_ (error '"unknown ast:" ast))) env-empty))
+     (_ (error '"unknown ast:" ast))) env:empty))
 
 (define (test! test)
   (test 'ast:quote
-    ((ast:quote 7) env-empty)
+    ((ast:quote 7) env:empty)
     7)
   (test 'ast:if-1
-    ((ast:if (ast:quote #t) (ast:quote 1) (ast:quote 2)) env-empty)
+    ((ast:if (ast:quote #t) (ast:quote 1) (ast:quote 2)) env:empty)
     1)
   (test 'ast:if-2
-    ((ast:if (ast:quote #f) (ast:quote 1) (ast:quote 2)) env-empty)
+    ((ast:if (ast:quote #f) (ast:quote 1) (ast:quote 2)) env:empty)
     2)
 
   (test 'quote
