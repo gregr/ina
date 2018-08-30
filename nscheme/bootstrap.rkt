@@ -18,13 +18,13 @@
                                            ".scm")))
               (lambda (in)
                 (let loop ((rbody '()))
-                  (define datum (nscm-read in))
+                  (define datum (ns->s (read in)))
                   (if (eof-object? datum)
                     `(,module-name . ,(nscheme-module (reverse rbody)))
                     (loop (cons datum rbody))))))))))
 
 (call-with-output-file (local-path "lib.db.scm")
-                       (lambda (out) (nscm-write lib out)))
+                       (lambda (out) (write (ns->s/write lib) out)))
 
 ;; TODO: do something like this:
 

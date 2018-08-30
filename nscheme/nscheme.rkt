@@ -33,6 +33,7 @@
     ))
 
 (require
+  "filesystem.rkt"
   racket/bool
   racket/list
   racket/vector
@@ -72,22 +73,9 @@
       (and (vector? a) (vector? b)
            (new-equal? (vector->list a) (vector->list b)))))
 
-(define (new-read . args)
-  (let convert ((d (apply read args)))
-    (cond ((symbol? d) (symbol->string d))
-          ((pair? d) (cons (convert (car d)) (convert (cdr d))))
-          ((vector? d) (vector-map convert d))
-          (else d))))
+(define (new-read . args) (s->ns (apply read args)))
 
-(define (new-write d . args)
-  (define (convert d)
-    (cond ((new-symbol? d) (string->symbol d))
-          ((pair? d) (cons (convert (car d)) (convert (cdr d))))
-          ((vector? d) (vector-map convert d))
-          ((mvector? d) (error "cannot write mvector:" d))
-          ((procedure? d) (error "cannot write procedure:" d))
-          (else d)))
-  (apply write (convert d) args))
+(define (new-write d . args) (apply write (ns->s/write d) args))
 
 (define-syntax (new-quote stx)
   (syntax-case stx ()

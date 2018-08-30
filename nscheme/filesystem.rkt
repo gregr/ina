@@ -1,8 +1,9 @@
 #lang racket/base
 (provide
   local-path
-  nscm-read
-  nscm-write
+  s->ns
+  ns->s
+  ns->s/write
   )
 
 (require
@@ -14,11 +15,21 @@
   (build-path (path-only (path->complete-path (find-system-path 'run-file)))
               rpath))
 
-(define (nscm-read . args)
-  (let convert ((d (apply read args)))
-    (cond ((string? d) (string->symbol d))
-          ((pair? d) (cons (convert (car d)) (convert (cdr d))))
-          ((vector? d) (vector-map convert d))
-          (else d))))
+(define (s->ns d)
+  (cond ((symbol? d) (symbol->string d))
+        ((pair? d) (cons (s->ns (car d)) (s->ns (cdr d))))
+        ((vector? d) (vector-map s->ns d))
+        (else d)))
 
-(define (nscm-write . args) (apply write args))
+(define (ns->s d)
+  (cond ((string? d) (string->symbol d))
+        ((pair? d) (cons (ns->s (car d)) (ns->s (cdr d))))
+        ((vector? d) (vector-map ns->s d))
+        (else d)))
+
+(define (ns->s/write d)
+  (cond ((string? d) (string->symbol d))
+        ((pair? d) (cons (ns->s (car d)) (ns->s (cdr d))))
+        ((vector? d) (vector-map ns->s d))
+        ((or (boolean? d) (null? d) (number? d) (char? d)) d)
+        (else (error "cannot write:" d))))

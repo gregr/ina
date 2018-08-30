@@ -13,7 +13,7 @@
   "nscheme-module.rkt"
   )
 
-(define lib (with-input-from-file (local-path "lib.db.scm") nscm-read))
+(define lib (ns->s (with-input-from-file (local-path "lib.db.scm") read)))
 
 (define env '())
 (define (env-current) env)
