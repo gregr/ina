@@ -15,7 +15,7 @@
 (define (local-path rpath)
   (build-path (path-only (path->complete-path (find-system-path 'run-file)))
               rpath))
-(define db:lib-path (local-path "lib.db.scm"))
+(define db:lib-path (local-path (build-path "db" "lib.scm")))
 
 (define (s->ns d)
   (cond ((symbol? d) (symbol->string d))
