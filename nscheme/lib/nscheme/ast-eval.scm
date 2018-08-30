@@ -1,15 +1,15 @@
 (provide
-  ast-quote
-  ast-var
-  ast-set!
-  ast-if
-  ast-apply
-  ast-apply*
-  ast-lambda
-  ast-reset
-  ast-shift
-  ast-error
-  ast-primitive-op
+  ast:quote
+  ast:var
+  ast:set!
+  ast:if
+  ast:apply
+  ast:apply*
+  ast:lambda
+  ast:reset
+  ast:shift
+  ast:error
+  ast:primitive-op
   eval/ast
   test!)
 
@@ -81,22 +81,22 @@
 
 (define (ap* env ast*) (map (lambda (tm) (tm env)) ast*))
 
-(define (ast-quote datum) (lambda (env) datum))
-(define (ast-var address) (lambda (env) (env-ref env address)))
-(define (ast-set! addr v) (lambda (env) (env-set! env address (v env))))
-(define (ast-if c t f)    (lambda (env) (if (c env) (t env) (f env))))
-(define (ast-apply proc arg*) (lambda (env) (apply (proc env) (ap* env arg*))))
-(define (ast-apply* proc arg) (lambda (env) (apply (proc env) (arg env))))
-(define (ast-reset body) (lambda (env) (reset (body env))))
-(define (ast-shift proc) (lambda (env) (shift k ((proc env) k))))
-(define (ast-error a*)   (lambda (env) (apply error (ap* env a*))))
+(define (ast:quote datum) (lambda (env) datum))
+(define (ast:var address) (lambda (env) (env-ref env address)))
+(define (ast:set! addr v) (lambda (env) (env-set! env address (v env))))
+(define (ast:if c t f)    (lambda (env) (if (c env) (t env) (f env))))
+(define (ast:apply proc arg*) (lambda (env) (apply (proc env) (ap* env arg*))))
+(define (ast:apply* proc arg) (lambda (env) (apply (proc env) (arg env))))
+(define (ast:reset body) (lambda (env) (reset (body env))))
+(define (ast:shift proc) (lambda (env) (shift k ((proc env) k))))
+(define (ast:error a*)   (lambda (env) (apply error (ap* env a*))))
 
-(define (ast-primitive-op name a*)
+(define (ast:primitive-op name a*)
   (define op (or (assoc-ref primitive-op-evaluators name #f)
                  (error '"invalid primitive op:" name)))
   (lambda (env) (op (ap* env a*))))
 
-(define (ast-lambda variadic? addr* body)
+(define (ast:lambda variadic? addr* body)
   (define (continue cenv a*)
     (define b?* (map (lambda (addr a) (and addr (cons addr a))) addr* a*))
     (define env (env-extend* cenv (filter-not not b?*)))
@@ -117,28 +117,28 @@
 
 (define (eval/ast ast)
   ((match ast loop
-     (`#(quote ,datum)         (ast-quote datum))
-     (`#(var ,address)         (ast-var address))
-     (`#(set! ,address ,v)     (ast-set! address (loop v)))
-     (`#(if ,c ,t ,f)          (ast-if (loop c) (loop t) (loop f)))
-     (`#(lambda ,v? ,a* ,body) (ast-lambda v? a* (loop body)))
-     (`#(apply ,p ,a*)         (ast-apply (loop p) (map loop a*)))
-     (`#(apply* ,p ,a)         (ast-apply* (loop p) (loop a)))
-     (`#(reset ,body)          (ast-reset (loop body)))
-     (`#(shift ,proc)          (ast-shift (loop proc)))
-     (`#(error ,a*)            (ast-error (map loop a*)))
-     (`#(prim-op ,name ,a*)    (ast-primitive-op name (map loop a*)))
+     (`#(quote ,datum)         (ast:quote datum))
+     (`#(var ,address)         (ast:var address))
+     (`#(set! ,address ,v)     (ast:set! address (loop v)))
+     (`#(if ,c ,t ,f)          (ast:if (loop c) (loop t) (loop f)))
+     (`#(lambda ,v? ,a* ,body) (ast:lambda v? a* (loop body)))
+     (`#(apply ,p ,a*)         (ast:apply (loop p) (map loop a*)))
+     (`#(apply* ,p ,a)         (ast:apply* (loop p) (loop a)))
+     (`#(reset ,body)          (ast:reset (loop body)))
+     (`#(shift ,proc)          (ast:shift (loop proc)))
+     (`#(error ,a*)            (ast:error (map loop a*)))
+     (`#(prim-op ,name ,a*)    (ast:primitive-op name (map loop a*)))
      (_ (error '"unknown ast:" ast))) env-empty))
 
 (define (test! test)
-  (test 'ast-quote
-    ((ast-quote 7) env-empty)
+  (test 'ast:quote
+    ((ast:quote 7) env-empty)
     7)
-  (test 'ast-if-1
-    ((ast-if (ast-quote #t) (ast-quote 1) (ast-quote 2)) env-empty)
+  (test 'ast:if-1
+    ((ast:if (ast:quote #t) (ast:quote 1) (ast:quote 2)) env-empty)
     1)
-  (test 'ast-if-2
-    ((ast-if (ast-quote #f) (ast-quote 1) (ast-quote 2)) env-empty)
+  (test 'ast:if-2
+    ((ast:if (ast:quote #f) (ast:quote 1) (ast:quote 2)) env-empty)
     2)
 
   (test 'quote
