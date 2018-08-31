@@ -27,18 +27,16 @@
 (define (address name value) (vector name value))
 (define (address-name a)     (vector-ref a 0))
 (define (address-value a)    (vector-ref a 1))
-(define atag:unbound          'unbound)
-(define atag:lexical-mutable  'lexical-mutable)
-(define atag:lexical-constant 'lexical-constant)
+(define atag:unbound      'unbound)
+(define atag:var-mutable  'var-mutable)
+(define atag:var-constant 'var-constant)
 (define (address:syntax name parser) (address name parser))
 (define (address:unbound name)       (address name atag:unbound))
 (define (address:unbound? a)         (equal? (address-value a) atag:unbound))
-(define (address:lexical name)       (address name atag:lexical))
-(define (address:lexical? a)
-  (define v (address-value a))
-  (or (equal? v atag:lexical-mutable) (equal? v atag:lexical-constant)))
-(define (address:lexical-mutable? a)
-  (equal? (address-value a) atag:lexical-mutable))
+(define (address:var name)           (address name atag:var))
+(define (address:var? a) (define v (address-value a))
+  (or (equal? v atag:var-mutable) (equal? v atag:var-constant)))
+(define (address:var-mutable? a) (equal? (address-value a) atag:var-mutable))
 
 (define env:empty            assoc-empty)
 (define (env-extend env b)   (assoc-set env (car b) (cdr b)))
@@ -46,21 +44,20 @@
 (define (env-extend*/syntax env b*)
   (env-extend* env (map (lambda (b) (define n (car b)) (define parse (cdr b))
                           (cons n (address:syntax (fresh-name n) parse))) b*)))
-(define (env-extend*/lexical env b?*)
-  (env-extend* env (map (lambda (b) (cons (car b) (address:lexical (cdr b))))
+(define (env-extend*/var env b?*)
+  (env-extend* env (map (lambda (b) (cons (car b) (address:var (cdr b))))
                         (filter (lambda (b?) (car b?)) b?*))))
 (define (env-ref/default env n default) (assoc-ref env n default))
 (define (env-ref env n) (or (env-ref/default env n #f) (address:unbound n)))
 (define (env-ref/syntax-parser? env n)
   (define p (address-value (env-ref env n)))
   (and (procedure? p) p))
-(define (env-ref/lexical env n)
+(define (env-ref/var env n) (define a (env-ref env n))
+  (if (address:var? a) (address-name a) (error '"unbound variable:" n)))
+(define (env-ref/var-mutable env n)
   (define a (env-ref env n))
-  (if (address:lexical? a) (address-name a) (error '"unbound variable:" n)))
-(define (env-ref/lexical-mutable env n)
-  (define a (env-ref env n))
-  (unless (address:lexical? a)         (error '"unbound variable:" n))
-  (unless (address:lexical-mutable? a) (error '"immutable variable:" n))
+  (unless (address:var? a)         (error '"unbound variable:" n))
+  (unless (address:var-mutable? a) (error '"immutable variable:" n))
   (address-name a))
 (define (env-alias env n aliased)
   (env-extend env n (env-ref env aliased)))
@@ -68,7 +65,7 @@
   (define (unbound n) (cons n (address:unbound (fresh-name n))))
   (env-extend* env (map unbound n*)))
 (define (env-freeze* env n*)
-  (define (frz n) (cons n (address:lexical-constant (env-ref/lexical env n))))
+  (define (frz n) (cons n (address:var-constant (env-ref/var env n))))
   (env-extend* env (map frz n*)))
 (define (env-only env n*)
   (env-extend* env (map (lambda (n) (cons n (env-ref env n))) n*)))
@@ -99,7 +96,7 @@
     (cond ((form->parser env form) => (lambda (p) (p env form)))
           ((expander? form) ((expander-proc form) env))
           ((literal? form)  (ast:quote form))
-          ((name? form)     (ast:var (env-ref/lexical env form)))
+          ((name? form)     (ast:var (env-ref/var env form)))
           (else (match form
                   (`(,p ,@a*) (expand:apply env p a*))
                   (_          (error '"invalid syntax:" form)))))))
@@ -147,7 +144,7 @@
 
 ;; High-level expansion
 (define (b?*->expand:body* env body*)
-  (lambda (b?*) (expand:body* (env-extend*/lexical env b?*) body*)))
+  (lambda (b?*) (expand:body* (env-extend*/var env b?*) body*)))
 (define (expand:lambda env ~p?* body*)
   (define p* (~list->list ~p*)) (param*?! p*)
   ($lambda (improper-list? ~p*) p* (b?*->expand:body* env body*)))
@@ -156,11 +153,11 @@
 (define (expand:let/temp env e $temp->body)
   (define temp (fresh-name 'temp))
   ($let (list temp) (list (expand env e))
-        (lambda (b*) (define $temp (expand (env-extend*/lexical env b*) temp))
+        (lambda (b*) (define $temp (expand (env-extend*/var env b*) temp))
           ($temp->body $temp))))
 (define (expand:letrec env p?* e* env->body)
   (define (b?*->v*&body b?*)
-    (let ((env (env-extend*/lexical env b?*)))
+    (let ((env (env-extend*/var env b?*)))
       (cons (expand* env e*) (env->body env))))
   ($letrec p?* b?*->v*&body))
 (define (expand:body* env body*)
@@ -193,7 +190,7 @@
 (define (expand:or env e $rest)
   (expand:let/temp env e (lambda ($temp) (ast:if $temp $temp $rest))))
 
-;; Parsers for primitive syntax (no lexical dependencies)
+;; Parsers for primitive syntax (no var dependencies)
 
 ;; For convenience, we can share the same parser for syntactic forms
 ;; defined at the same lexical level.  We determine the appropriate handler by
@@ -205,7 +202,7 @@
     (`(quote ,datum) (ast:quote datum))
     (`(if ,c ,t ,f) (ast:if (ex c) (ex t) (ex f)))
     (`(set! ,name ,v) (guard (name? name))
-                      (ast:set! (env-ref/lexical-mutable env name) (ex v)))
+                      (ast:set! (env-ref/var-mutable env name) (ex v)))
     (`(reset ,@body*) (ast:reset (expand:body* env body*)))
     (`(shift ,k ,@body*)
       (ast:shift ($lambda #f (list k) (b?*->expand:body* env body*))))
@@ -225,7 +222,7 @@
     (`(let* ,b* ,@body*)
       (binding*?! b*)
       (let loop ((b* b*) (env env))
-        (define (continue b?*) (loop (cdr b*) (env-extend*/lexical env b?*)))
+        (define (continue b?*) (loop (cdr b*) (env-extend*/var env b?*)))
         (cond ((null? b*) (expand:body* env body*))
               ((pair? b*) ($let (list (caar b*)) (list (expand env (cadar b*)))
                                 continue)))))
@@ -253,7 +250,9 @@
     (_ (error '"invalid syntax:" form))))
 
 ;; TODO:
-;; let-alias, let-without|unlet, let-only|unlet-except[/lexical][/syntax][/all]
+;; let-alias, let-without|unlet, let-only|unlet-except[/var][/syntax][/all]
+
+;; TODO: add primitive ops as syntax bindings.
 
 (define env:primitive-syntax
   (env-extend*/syntax
@@ -266,7 +265,7 @@
 ;; Don't forget to mark everything constant.
 (define env:base _)
 
-;; Parsers with lexical dependencies on: append, equal?
+;; Parsers with dependencies on: append, equal?
 ;; TODO: quasiquote, case, match (var patterns to match _ ids)
 
 (set! env:base
