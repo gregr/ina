@@ -2,6 +2,7 @@
 
 (require box tagged-vector? tagged-vector?!
          assoc-empty assoc-ref assoc-set assoc-filter
+         primitive-ops
          ast:quote ast:var ast:set! ast:if ast:apply ast:apply* ast:lambda
          ast:reset ast:shift ast:error ast:primitive-op)
 
@@ -252,13 +253,20 @@
 ;; TODO:
 ;; let-alias, let-without|unlet, let-only|unlet-except[/var][/syntax][/all]
 
-;; TODO: add primitive ops as syntax bindings.
-
 (define env:primitive-syntax
   (env-extend*/syntax
-    env:empty (map (lambda (sname) (cons sname expand:primitive-syntax))
-                   '(apply quote if set! lambda letrec let begin reset shift
-                           letrec* let* cond and or when unless))))
+    (env-extend*/syntax
+      env:empty (map (lambda (sname) (cons sname expand:primitive-syntax))
+                     '(apply quote if set! lambda letrec let begin reset shift
+                             letrec* let* cond and or when unless)))
+    (map (lambda (po-desc)
+           (define name (car po-desc)) (define arity (length (cadr po-desc)))
+           (cons name (lambda (env form)
+                        (match form
+                          (`(,_ ,@a*) (guard (= arity (length a*)))
+                                      (ast:primitive-op name (expand* env a*)))
+                          (_ (error '"invalid primitive op:" po-desc form))))))
+         primitive-ops)))
 
 ;; Some derived operations
 ;; TODO: bind derived operation names in initial version of env:base
