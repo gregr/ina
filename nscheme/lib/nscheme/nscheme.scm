@@ -68,10 +68,11 @@
 (define (env-freeze* env n*)
   (define (frz n) (cons n (address:var-constant (env-ref/var env n))))
   (env-extend* env (map frz n*)))
+(define (env-freeze*/mutable env)
+  (define (mutable? b) (address:var-mutable? (cdr b)))
+  (env-freeze* env (map car (filter mutable? env))))
 (define (env-only env n*)
   (env-extend* env (map (lambda (n) (cons n (env-ref env n))) n*)))
-(define (env-filter env p?)
-  (assoc-filter env (lambda (a) (p? (address-value a)))))
 
 (define (make-syntax=? env-a env-b)
   (define (=? a b)
@@ -268,21 +269,96 @@
                           (_ (error '"invalid primitive op:" po-desc form))))))
          primitive-ops)))
 
-;; Some derived operations
-;; TODO: bind derived operation names in initial version of env:base
-;; Don't forget to mark everything constant.
-(define env:base _)
+;; Bindings for variables
+(define primitive-op-procs
+  (map (lambda (po-desc)
+         (define (x i) (string-append 'x (number->string i)))
+         (define p* (map x (range (length (cadr po-desc)))))
+         `(,name (lambda ,p* (,(car po-desc) . ,p*)))) primitive-ops))
+
+(define derived-op-procs
+  '((not (lambda (b) (if b #f #t)))
+    (vector->list (lambda (v)
+                    (let loop ((i (- (vector-length v) 1)) (xs '()))
+                      (if (< i 0) xs
+                        (loop (- i 1) (cons (vector-ref v i) xs))))))
+    (equal? (lambda (a b)
+              (cond ((pair? a) (and (pair? b) (equal? (car a) (car b))
+                                    (equal? (cdr a) (cdr b))))
+                    ((vector? a) (and (vector? b) (equal? (vector->list a)
+                                                          (vector->list b))))
+                    ((boolean? a) (and (boolean? b) (boolean=? a b)))
+                    ((char?    a) (and (char?    b) (char=?    a b)))
+                    ((string?  a) (and (string?  b) (string=?  a b)))
+                    ((mvector? a) (and (mvector? b) (mvector=? a b)))
+                    ((number?  a) (and (number?  b) (=         a b)))
+                    ((null? a)    (null? b))
+                    ((procedure? a)
+                     (and (procedure? b)
+                          (error '"cannot use equal? on two procedures:" a b)))
+                    (else (error '"invalid type for equal?:" a b)))))
+    (vector (lambda xs (list->vector xs)))
+    (list?  (lambda (v) (or (and (pair? v) (list? (cdr v))) (null? v))))
+    (list   (lambda xs xs))
+    (list*  (lambda (x . xs) (cons* x xs)))
+    (foldl  (lambda (f acc xs) (if (null? xs) acc
+                                 (foldl f (f (car xs) acc) (cdr xs)))))
+    (foldr  (lambda (f acc xs) (if (null? xs) acc
+                                 (f (car xs) (foldr f acc (cdr xs))))))
+    (map (lambda (f xs . xss)
+           (define (map1 f xs) (if (null? xs) '()
+                                 (cons (f (car xs)) (map1 f (cdr xs)))))
+           (cond ((null? xs) '())
+                 (else (cons (apply f (car xs) (map1 car xss))
+                             (apply map f (cdr xs) (map1 cdr xss)))))))
+    (andmap (lambda (f xs . xss)
+              (let loop ((last #t) (xs xs) (xss xss))
+                (and last (if (null? xs) last
+                            (loop (apply f (car xs) (map car xss))
+                                  (cdr xs) (map cdr xss)))))))
+    (ormap (lambda (f xs . xss)
+             (cond ((null? xs) #f)
+                   ((apply f (car xs) (map car xss)) => (lambda (y) y))
+                   (else (apply ormap f (cdr xs) (map cdr xss))))))
+    (filter (lambda (p? xs)
+              (cond ((null? xs) '())
+                    ((p? (car xs)) (cons (car xs) (filter p? (cdr xs))))
+                    (else (filter p? (cdr xs))))))
+    (filter-not (lambda (p? xs) (filter (lambda (x) (not (p? x))) xs)))
+    (length (lambda (xs) (foldl (lambda (_ l) (+ 1 l)) 0 xs)))
+    (append (lambda (xs ys) (foldr cons ys xs)))
+    (reverse-append (lambda (xs ys) (foldl cons ys xs)))
+    (reverse (lambda (xs) (reverse-append xs '())))
+    ;; TODO: range
+    (take (lambda (xs n) (if (= 0 n) '()
+                           (cons (car xs) (take (cdr xs) (- n 1))))))
+    (drop (lambda (xs n) (if (= 0 n) xs (drop (cdr xs) (- n 1)))))
+    (member (lambda (v xs) (cond ((null? xs) #f)
+                                 ((equal? v (car xs)) xs)
+                                 (else (member v (cdr xs))))))
+    (caar (lambda (v) (car (car v))))
+    (assoc (lambda (k xs) (cond ((null? xs) #f)
+                                ((equal? k (caar xs)) (car xs))
+                                (else (assoc k (cdr xs))))))))
+
+(define env:base #t)
+(define nscheme:expand
+  (reset (expand env:primitive-syntax
+                 `(let ,primitive-op-procs
+                    (letrec ((cons* (lambda (x xs)
+                                      (if (null? xs) x
+                                        (cons x (cons* (car xs) (cdr xs)))))))
+                      (let ((apply (lambda (f x . xs) (apply f (cons* x xs)))))
+                        (letrec ,derived-op-procs
+                          ,(expander
+                             (lambda (env)
+                               (set! env:base (env-freeze*/mutable env))
+                               (expand env:base (shift k k)))))))))))
 
 ;; Parsers with dependencies on: append, equal?
 ;; TODO: quasiquote, case, match (var patterns to match _ ids)
+;(set! env:base
+  ;(env-extend*/syntax
+    ;env:base
 
-(set! env:base
-  (env-extend*/syntax
-    env:base
-
-    ))
-
-;; TODO: define the rest of the base library.
-;; Don't forget to mark everything constant.
-
-(define (nscheme:expand form) _)
+    ;))
