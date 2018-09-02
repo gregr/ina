@@ -233,7 +233,7 @@
                       ($begin (reverse (cdr rb*)) (car rb*)))
     (`(cond ,@clause*)
       (guard (pair? clause*))
-      (let loop ((c* c*))
+      (let loop ((c* clause*))
         (match/=? (make-syntax=? env:primitive-syntax env) c*
           (`((else ,@body*)) (expand:body* env body*))
           (`((else . ,_) . ,_) (error '"invalid else clause in cond:" form))
