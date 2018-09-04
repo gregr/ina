@@ -192,82 +192,93 @@
 (define (expand:or env e $rest)
   (expand:let/temp env e (lambda ($temp) (ast:if $temp $temp $rest))))
 
+,(
 ;; Parsers for primitive syntax (no var dependencies)
-
-;; For convenience, we can share the same parser for syntactic forms
-;; defined at the same lexical level.  We determine the appropriate handler by
-;; matching the form's name.
-(define (expand:primitive-syntax env form)
-  (define (ex form) (expand env form))
-  (match/=? (make-syntax=? env:primitive-syntax env) form
-    (`(apply ,p ,a) (ast:apply* (ex p) (ex a)))
-    (`(quote ,datum) (ast:quote datum))
-    (`(if ,c ,t ,f) (ast:if (ex c) (ex t) (ex f)))
-    (`(set! ,name ,v) (guard (name? name))
-                      (ast:set! (env-ref/var-mutable env name) (ex v)))
-    (`(reset ,@body*) (ast:reset (expand:body* env body*)))
-    (`(shift ,k ,@body*)
-      (ast:shift ($lambda #f (list k) (b?*->expand:body* env body*))))
-    (`(error ,@a*) (expand:error env a*))
-    (`(lambda ,~p?* ,@body*) (expand:lambda env ~p?* body*))
-    (`(letrec ,b* ,@body*)
-      (binding*?! b*) (expand:letrec env (map car b*) (map cadr b*)
-                                     (lambda (env) (expand:body* env body*))))
-    (`(let ,name ,b* . ,body)
-      (guard (name? name))
-      (binding*?! b*)
-      (define (ex-proc env) (expand:lambda env (map car b*) body))
-      (expand:letrec env (list name) (list (expander ex-proc))
-                     (lambda (env) (expand:apply env name (map cadr b*)))))
-    (`(let ,b* ,@body*) (binding*?! b*)
-                        (expand:let env (map car b*) (map cadr b*) body*))
-    (`(let* ,b* ,@body*)
-      (binding*?! b*)
-      (let loop ((b* b*) (env env))
-        (define (continue b?*) (loop (cdr b*) (env-extend*/var env b?*)))
-        (cond ((null? b*) (expand:body* env body*))
-              ((pair? b*) ($let (list (caar b*)) (list (expand env (cadar b*)))
-                                continue)))))
-    (`(begin ,@body*) (guard (pair? body*))
-                      (define rb* (reverse (map ex body*)))
-                      ($begin (reverse (cdr rb*)) (car rb*)))
-    (`(cond ,@clause*)
-      (guard (pair? clause*))
-      (let loop ((c* clause*))
-        (match/=? (make-syntax=? env:primitive-syntax env) c*
-          (`((else ,@body*)) (expand:body* env body*))
-          (`((else . ,_) . ,_) (error '"invalid else clause in cond:" form))
-          (`((,e) . ,c*) (expand:or env e (loop c*)))
-          (`((,e => ,p) . ,c*)
-            (define ($t->body $t) (ast:if $t (ast:apply (ex p) $t) (loop c*)))
-            (expand:let/temp env e $t->body))
-          (`((,e ,@e*) . ,c*) (ast:if (ex e) (expand:body* env e*) (loop c*)))
-          ('() (ast:error (list (ast:quote '"no matching cond clause:")
-                                (ast:quote form))))
-          (_ (error '"invalid cond:" form)))))
-    (`(and ,@e*) (foldr (lambda (e rest) (expand:and env e rest)) $true e*))
-    (`(or ,@e*)  (foldr (lambda (e rest) (expand:or env e rest)) $false e*))
-    (`(when ,c ,@body*) (ast:if (ex c) (expand:body* env body*) $true))
-    (`(unless ,c ,@body*) (ast:if (ex c) $true (expand:body* env body*)))
-    (_ (error '"invalid syntax:" form))))
+(define parsers:primitive
+  '((apply (`(,_ ,p ,a)    (ast:apply* (ex p) (ex a))))
+    (quote (`(,_ ,datum)   (ast:quote datum)))
+    (if    (`(,_ ,c ,t ,f) (ast:if (ex c) (ex t) (ex f))))
+    (set!  (`(,_ ,name ,v) (guard (name? name))
+                           (ast:set! (env-ref/var-mutable env name) (ex v))))
+    (error (`(,_ ,@a*)     (expand:error env a*)))
+    (reset (`(,_ ,@e*)     (ast:reset (expand:body* env e*))))
+    (shift (`(,_ ,k ,@e*)  (ast:shift ($lambda #f (list k)
+                                               (b?*->expand:body* env e*)))))
+    (lambda (`(,_ ,~p?* ,@e*) (expand:lambda env ~p?* e*)))
+    (letrec (`(,_ ,b* ,@e*)
+              (binding*?! b*)
+              (expand:letrec env (map car b*) (map cadr b*)
+                             (lambda (env) (expand:body* env e*)))))
+    (let (`(,_ ,name ,b* . ,e*)
+           (guard (name? name))
+           (binding*?! b*)
+           (define (ex-proc env) (expand:lambda env (map car b*) e*))
+           (expand:letrec env (list name) (list (expander ex-proc))
+                          (lambda (env)
+                            (expand:apply env name (map cadr b*)))))
+      (`(,_ ,b* ,@e*) (binding*?! b*)
+                      (expand:let env (map car b*) (map cadr b*) e*)))
+    (let* (`(,_ ,b* ,@e*)
+            (binding*?! b*)
+            (let loop ((b* b*) (env env))
+              (define (next b?*) (loop (cdr b*) (env-extend*/var env b?*)))
+              (cond ((null? b*) (expand:body* env e*))
+                    ((pair? b*) ($let (list (caar b*))
+                                      (list (expand env (cadar b*))) next))))))
+    (begin (`(,_ ,@e*) (guard (pair? e*))
+                       (define rb* (reverse (map ex e*)))
+                       ($begin (reverse (cdr rb*)) (car rb*))))
+    (cond
+      (`(,_ ,@clause*)
+        (guard (pair? clause*))
+        (let loop ((c* clause*))
+          (match/=? (make-syntax=? env:primitive-syntax env) c*
+            (`((else ,@e*))      (expand:body* env e*))
+            (`((else . ,_) . ,_) (error '"invalid else clause in cond:" form))
+            (`((,e) . ,c*)       (expand:or env e (loop c*)))
+            (`((,e => ,p) . ,c*)
+              (define ($t->body $t)
+                (ast:if $t (ast:apply (ex p) $t) (loop c*)))
+              (expand:let/temp env e $t->body))
+            (`((,e ,@e*) . ,c*)
+              (ast:if (ex e) (expand:body* env e*) (loop c*)))
+            ('() (ast:error (list (ast:quote '"no matching cond clause:")
+                                  (ast:quote form))))
+            (_ (error '"invalid cond:" form))))))
+    (and (`(,_ ,@e*) (foldr (lambda (e r) (expand:and env e r)) $true e*)))
+    (or (`(,_ ,@e*)  (foldr (lambda (e r) (expand:or env e r)) $false e*)))
+    (when (`(,_ ,c ,@e*)   (ast:if (ex c) (expand:body* env e*) $true)))
+    (unless (`(,_ ,c ,@e*) (ast:if (ex c) $true (expand:body* env e*))))))
 
 ;; TODO:
 ;; let-alias, let-without|unlet, let-only|unlet-except[/var][/syntax][/all]
+;; import, export, and/let*
 
-(define env:primitive-syntax
-  (env-extend*/syntax
-    (env-extend*/syntax
-      env:empty (map (lambda (sname) (cons sname expand:primitive-syntax))
-                     '(apply quote if set! lambda letrec let begin reset shift
-                             letrec* let* cond and or when unless)))
-    (map (lambda (po-desc)
-           (define name (car po-desc)) (define arity (length (cadr po-desc)))
-           (cons name (lambda (env form)
-                        (match form
-                          (`(,_ ,@a*) (guard (= arity (length a*)))
-                                      (ast:primitive-op name (expand* env a*)))
-                          (_ (error '"invalid primitive op:" po-desc form))))))
-         primitive-ops)))
+(define (parser-descs->b* descs)
+  (cons 'list
+        (map (lambda (name&clause*)
+               `(cons ,(car name&clause*)
+                      (lambda (env form)
+                        (define (ex form) (expand env form))
+                        (match/=? (make-syntax=? env:primitive-syntax env) form
+                          ,@(cdr name&clause*)
+                          (_ (error '"invalid syntax:" form)))))) descs)))
+
+`(define env:primitive-syntax
+   (env-extend*/syntax
+     (env-extend*/syntax env:empty ,(parser-descs->b* parsers:primitive))
+     (map (lambda (po-desc)
+            (define name (car po-desc)) (define arity (length (cadr po-desc)))
+            (cons name
+                  (lambda (env form)
+                    (match form
+                      (`(,_ ,@a*) (guard (= arity (length a*)))
+                                  (ast:primitive-op name (expand* env a*)))
+                      (_ (error '"invalid primitive op:" po-desc form))))))
+          primitive-ops)))
+
+;; TODO: build env:base here, similarly.
+)
 
 ;; Bindings for variables
 (define primitive-op-procs
