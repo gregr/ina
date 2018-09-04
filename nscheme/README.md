@@ -9,12 +9,26 @@
 * minimalistic lisp
   * purpose: target multiple backend systems with one simple, self-processing language
   * real-world [effect?] interaction/reaction
-    * request handling
+    * monolithic request handling
       * value: `(value ,val)
       * request: `(request ,payload ,continuation)
       * continuation: -> `(lambda (response) ...)
       * eval: program -> value|request
       * handle: value|request -> ...
+    * a non-monolithic channel-like alternative that also supports concurrency
+      * (produce key value) => #t  ;; aka send, as in (send channel value)
+      * (consume key) => value     ;; aka recv or receive
+      * keys can be any eqv?-able data (e.g., numbers or mvectors)
+      * user programs should not directly use produce/consume, or manage keys
+        * host systems provide procedures that manage these interactions
+          * for immediate, synchronous uses (e.g., system calls), compile
+            produce/consume pairs into simple procedure calls
+    * a thread-based alternative that just deals with concurrency
+      * external interaction can be modelled as systems manipulating shared mvectors
+      * (spawn definition-body ...) => thread-control-procedure?
+      * (mvector-compare-and-swap! mvec index expected-value new-value) => boolean?
+      * analyze mvector uses for efficient compilation:
+        * along with aliasing, infer thread-local and uncontended mvector accesses
   * syntax extension ideas
     * hygienic, non-macro syntax extension inspired by f-exprs, but static
     * open eval recursion

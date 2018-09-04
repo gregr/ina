@@ -32,6 +32,14 @@
     * expanders as procs, no need for wrapper?
       * similar for names?
 
+* small-step evaluation with transparent values
+  * for interleaving evaluation and compilation
+    * guarantees serializability of residual programs
+    * e.g., transformations such as inlining, staged compilation
+    * flexible syntactic extension
+      * parsers can safely produce code containing computed values
+        * the computed values will be serializable, amenable to analysis
+
 * when should convenient syntactic abstraction be reintroduced?
   * staging operatives (i.e., staged vau) that build transparent code?
     * transparency allows some local optimization/rewriting
@@ -40,3 +48,6 @@
     * simpler than recognizing macros that generate uses of begin/define
 
 * flexible module body interpretation: (language evaluation-adaptor ...)
+
+* module-level unquote[-splicing]
+  * for convenient local macro expansion during bootstrap
