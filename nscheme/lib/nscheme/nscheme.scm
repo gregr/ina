@@ -283,6 +283,8 @@
                       (if (< i 0) xs
                         (loop (- i 1) (cons (vector-ref v i) xs))))))
     (equal? (lambda (a b)
+              (when (ormap procedure? (list a b))
+                (error '"cannot use equal? on procedures:" a b))
               (cond ((pair? a) (and (pair? b) (equal? (car a) (car b))
                                     (equal? (cdr a) (cdr b))))
                     ((vector? a) (and (vector? b) (equal? (vector->list a)
@@ -293,9 +295,6 @@
                     ((mvector? a) (and (mvector? b) (mvector=? a b)))
                     ((number?  a) (and (number?  b) (=         a b)))
                     ((null? a)    (null? b))
-                    ((procedure? a)
-                     (and (procedure? b)
-                          (error '"cannot use equal? on two procedures:" a b)))
                     (else (error '"invalid type for equal?:" a b)))))
     (vector (lambda xs (list->vector xs)))
     (list?  (lambda (v) (or (and (pair? v) (list? (cdr v))) (null? v))))

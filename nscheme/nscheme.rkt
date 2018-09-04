@@ -65,6 +65,8 @@
 (define (new-symbol=? a b) (string=? a b))
 
 (define (new-equal? a b)
+  (when (ormap procedure? (list a b))
+    (error "cannot use equal? on procedures:" a b))
   (or (eqv? a b)
       (and (new-symbol? a) (new-symbol? b) (new-symbol=? a b))
       (and (pair? a) (pair? b)
