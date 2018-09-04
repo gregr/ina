@@ -293,7 +293,7 @@
                     ((char?    a) (and (char?    b) (char=?    a b)))
                     ((string?  a) (and (string?  b) (string=?  a b)))
                     ((mvector? a) (and (mvector? b) (mvector=? a b)))
-                    ((number?  a) (and (number?  b) (=         a b)))
+                    ((number?  a) (and (number?  b) (number=?  a b)))
                     ((null? a)    (null? b))
                     (else (error '"invalid type for equal?:" a b)))))
     (vector (lambda xs (list->vector xs)))

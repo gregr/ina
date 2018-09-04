@@ -41,6 +41,7 @@
     (procedure?      . ,procedure?)
     (boolean=?       . ,boolean=?)
     (char=?          . ,char=?)
+    (number=?        . ,eqv?)
     (string=?        . ,string=?)
     (mvector=?       . ,mvector=?)
     (char->integer   . ,char->integer)

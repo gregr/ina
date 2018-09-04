@@ -30,6 +30,7 @@
 
     (boolean=? (boolean? boolean?) boolean?)
     (char=?    (char? char?)       boolean?)
+    (number=?  (number? number?)   boolean?)
     (string=?  (string? string?)   boolean?)
     (mvector=? (mvector? mvector?) boolean?)
 

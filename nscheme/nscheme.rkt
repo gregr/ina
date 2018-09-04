@@ -2,6 +2,7 @@
 (provide
   reverse-append
   boolean=?
+  number=?
   filter-not
   range
   string->vector
@@ -63,6 +64,8 @@
 
 (define (new-symbol? d) (string? d))
 (define (new-symbol=? a b) (string=? a b))
+
+(define (number=? a b) (eqv? a b))
 
 (define (new-equal? a b)
   (when (ormap procedure? (list a b))
