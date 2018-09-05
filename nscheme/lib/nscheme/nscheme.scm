@@ -131,6 +131,13 @@
 (define ($lambda variadic? p?* b?*->body)
   (define a?* (param*->addr* p?*))
   (ast:lambda variadic? a?* (b?*->body (map cons p?* a?*))))
+(define ($thunk body) (ast:lambda #f '() body))
+(define ($lambda/temp temp-name $temp->body)
+  (define temp (fresh-name temp-name))
+  (define (body b*) ($temp->body (expand (env-extend*/var env:empty b*) temp)))
+  ($lambda #f (list temp) body))
+(define ($let/temp temp-name $v $temp->body)
+  (ast:apply ($lambda/temp temp-name $temp->body) (list $v)))
 (define ($let p?* v* b?*->body) (ast:apply ($lambda #f p?* b?*->body) v*))
 (define ($begin body-initial* body-final)
   (cond ((null? body-initial*) body-final)
@@ -152,11 +159,8 @@
   ($lambda (improper-list? ~p*) p* (b?*->expand:body* env body*)))
 (define (expand:let env p?* e* body*)
   ($let p?* (expand* env e*) (b?*->expand:body* env body*)))
-(define (expand:let/temp env e $temp->body)
-  (define temp (fresh-name 'temp))
-  ($let (list temp) (list (expand env e))
-        (lambda (b*) (define $temp (expand (env-extend*/var env b*) temp))
-          ($temp->body $temp))))
+(define (expand:let/temp temp-name env e $temp->body)
+  ($let/temp temp-name (expand env e) $temp->body))
 (define (expand:letrec env p?* e* env->body)
   (define (b?*->v*&body b?*)
     (let ((env (env-extend*/var env b?*)))
@@ -188,9 +192,10 @@
   (expand:letrec env (map car p?e*) (map cdr p?e*)
                  (lambda (env) (expand env body-final))))
 (define (expand:error env a*) (ast:error (expand* env a*)))
-(define (expand:and env e $rest) ($if (expand env e1) $rest $false))
-(define (expand:or env e $rest)
-  (expand:let/temp env e (lambda ($temp) (ast:if $temp $temp $rest))))
+(define (expand:and* env e*)
+  (foldr (lambda (e r) (ast:if (expand env e) r $false)) $true e*))
+(define (expand:or2 env e $rest)
+  (expand:let/temp 'temp env e (lambda ($temp) (ast:if $temp $temp $rest))))
 
 ;; Bindings for variables
 (define primitive-op-procs
@@ -317,18 +322,18 @@
           (match/=? (make-syntax=? env:primitive-syntax env) c*
             (`((else ,@e*))      (expand:body* env e*))
             (`((else . ,_) . ,_) (error '"invalid else clause in cond:" form))
-            (`((,e) . ,c*)       (expand:or env e (loop c*)))
+            (`((,e) . ,c*)       (expand:or2 env e (loop c*)))
             (`((,e => ,p) . ,c*)
               (define ($t->body $t)
                 (ast:if $t (ast:apply (ex p) (list $t)) (loop c*)))
-              (expand:let/temp env e $t->body))
+              (expand:let/temp 'temp env e $t->body))
             (`((,e ,@e*) . ,c*)
               (ast:if (ex e) (expand:body* env e*) (loop c*)))
             ('() (ast:error (list (ast:quote '"no matching cond clause:")
                                   (ast:quote form))))
             (_ (error '"invalid cond:" form))))))
-    (and (`(,_ ,@e*) (foldr (lambda (e r) (expand:and env e r)) $true e*)))
-    (or (`(,_ ,@e*)  (foldr (lambda (e r) (expand:or env e r)) $false e*)))
+    (and (`(,_ ,@e*) (expand:and* env e*)))
+    (or (`(,_ ,@e*)  (foldr (lambda (e r) (expand:or2 env e r)) $false e*)))
     (when (`(,_ ,c ,@e*)   (ast:if (ex c) (expand:body* env e*) $true)))
     (unless (`(,_ ,c ,@e*) (ast:if (ex c) $true (expand:body* env e*))))))
 
@@ -336,9 +341,14 @@
 ;; let-alias, let-without|unlet, let-only|unlet-except[/var][/syntax][/all]
 ;; import, export, and/let*
 
-;; Parsers with dependencies on: equal?, append, list->vector, vector->list
+;; Parsers with dependencies on base definitions
 (define ($cons a d)       (ast:primitive-op 'cons (list a d)))
+(define ($pair? x)        (ast:primitive-op 'pair? (list x)))
+(define ($car x)          (ast:primitive-op 'car (list x)))
+(define ($cdr x)          (ast:primitive-op 'cdr (list x)))
+(define ($vector? x)      (ast:primitive-op 'vector? (list x)))
 (define ($equal? a b)     (ast:apply $var:equal? (list a b)))
+(define ($list? x)        (ast:apply $var:list?  (list x)))
 (define ($append a b)     (ast:apply $var:append (list a b)))
 (define ($list->vector x) (ast:apply $var:list->vector (list x)))
 (define ($vector->list x) (ast:apply $var:vector->list (list x)))
@@ -348,7 +358,7 @@
       (`(,_ ,scrutinee ,@clause*)
         (guard (pair? clause*))
         (expand:let/temp
-          env scrutinee
+          'scrutinee env scrutinee
           (lambda (x)
             (match/=? (make-syntax=? env:base env) clause* loop
               (`((else ,@e*)) (expand:body* env e*))
@@ -420,6 +430,7 @@
                             (expand env:base (shift k k)))))))))))
 
    (define $var:equal?       (env-ref/var env:base 'equal?))
+   (define $var:list?        (env-ref/var env:base 'list?))
    (define $var:append       (env-ref/var env:base 'append))
    (define $var:list->vector (env-ref/var env:base 'list->vector))
    (define $var:vector->list (env-ref/var env:base 'vector->list))
