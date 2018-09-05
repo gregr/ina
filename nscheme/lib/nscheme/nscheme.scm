@@ -344,8 +344,49 @@
 (define ($vector->list x) (ast:apply $var:vector->list (list x)))
 
 (define parsers:base
-  ;; TODO: case, quasiquote, match/=?, match
-  '())
+  '((case
+      (`(,_ ,scrutinee ,@clause*)
+        (guard (pair? clause*))
+        (expand:let/temp
+          env scrutinee
+          (lambda (x)
+            (match/=? (make-syntax=? env:base env) clause* loop
+              (`((else ,@e*)) (expand:body* env e*))
+              (`((else . ,_) . ,_)
+                (error '"invalid else clause in case:" form))
+              (`(((,@data) ,@e*) . ,c*)
+                (ast:if (foldr (lambda (d r) (ast:if ($equal? x d) $true r))
+                               $false (map ast:quote data))
+                        (expand:body* env e*) (loop c*)))
+              ('() (ast:error (list (ast:quote '"no matching case clause:")
+                                    x (ast:quote form))))
+              (c* (error '"invalid case clauses:" c*)))))))
+
+    (quasiquote
+      (`(,_ ,qqf)
+        (define (bad msg) (error '"malformed quasiquote:" msg form))
+        (define (tag t e) ($cons (ast:quote t) ($cons e (ast:quote '()))))
+        (let loop ((level 0) (qqf qqf))
+          (match/=? (make-syntax=? env:base env) qqf
+            (`(quasiquote ,qq) (tag 'quasiquote (loop (+ level 1) qq)))
+            (`(,'unquote ,uq) (if (= 0 level) (ex eq)
+                                (tag 'unquote (loop (- level 1) uq))))
+            (`((,'unquote-splicing ,uqs) . ,qq)
+              (define qqd (loop level qq))
+              (if (= 0 level) ($append (ex uqs) qqd)
+                ($cons (tag 'unquote-splicing (loop (- level 1) uqs)) qqd)))
+            (`(quasiquote . ,x)         (bad 'quasiquote))
+            ('unquote                   (bad 'unquote))
+            (`(,'unquote . ,_)          (bad 'unquote))
+            ('unquote-splicing          (bad 'unquote-splicing))
+            (`(,'unquote-splicing . ,_) (bad 'unquote-splicing))
+            (`#(,@vqq)      ($list->vector (loop level vqq)))
+            (`(,qqa . ,qqd) ($cons (loop level qqa) (loop level qqd)))
+            (datum          (ast:quote datum))
+            (_              (error "invalid quasiquote template:" qqf))))))
+
+    ;; TODO: match/=?, match
+    ))
 
 ;; Environment construction
 `(begin
