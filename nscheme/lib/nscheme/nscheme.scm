@@ -353,6 +353,78 @@
 (define ($list->vector x) (ast:apply $var:list->vector (list x)))
 (define ($vector->list x) (ast:apply $var:vector->list (list x)))
 
+(define (parse:match/=? env =?-e scrutinee body* full-form)
+  (define (parse:clause $=? $x env pat rhs $k-fail)
+    (define $fail (ast:apply $k-fail '()))
+    (define ($try $c $k) (ast:if $c $k $fail))
+    (define ($succeed env)
+      (match/=? (make-syntax=? env:base env) rhs
+        (`((guard ,@conds) . ,rhs)
+          (guard (pair? rhs))
+          ($try (expand:and* env conds) (expand:body* env rhs)))
+        (`((guard . ,_) . ,_) (error '"invalid match rhs:" rhs))
+        (_ (expand:body* env rhs))))
+    (define (tqq datum) (list 'quasiquote datum))
+    (let loop (($x $x) (p pat) (env env) ($succeed $succeed))
+      (define ($try-vec pat)
+        (define (k $x) (loop $x pat env $succeed))
+        ($try ($vector? $x) ($let/temp 'x ($vector->list $x) k)))
+      (match p retry
+        ('_                            ($succeed env))
+        (id         (guard (name? id)) (retry `(var p)))
+        (`(var ,id) (guard (name? id))
+                    ($let (list id) (list $x)
+                          (lambda (b*) ($succeed (env-extend*/var env b*)))))
+        (`(quote ,datum) ($try (ast:apply $=? (list $x (ast:quote datum)))
+                               ($succeed env)))
+        (`(cons ,pa ,pd)
+          (define ($k env) ($let/temp 'x-cdr ($cdr $x)
+                                      (lambda ($x) (loop $x pd env $succeed))))
+          ($try ($pair? $x) ($let/temp 'x-car ($car $x)
+                                       (lambda ($x) (loop $x pa env $k)))))
+        (`(list* ,pat)     (retry p))
+        (`(list* ,p . ,p*) (retry `(cons ,p (list* ,p*))))
+        (`(list ,@p*)      (retry `(list* ,(append p* (list '())))))
+        (`(vector ,@p*)    ($try-vec `(list . ,p*)))
+        ((list 'quasiquote qq)
+         (match qq
+           ((list (list 'unquote-splicing id)) (guard (name? id))
+                                               ($try ($list? $x) (retry id)))
+           ((list 'unquote p) (retry p))
+           (`(,qa . ,qd)      (retry `(cons ,(tqq qa) ,(tqq qd))))
+           (`#(,@qqv)         ($try-vec (tqq qqv)))
+           ('unquote          (error '"bad unquote:" pat))
+           ('unquote-splicing (error '"bad unquote-splicing:" pat))
+           (datum             (retry `(quote ,datum)))))
+        (lit (guard (or (boolean? pat) (number? pat) (char? pat)))
+             (retry `(quote ,lit)))
+        (_ (error '"invalid pattern:" pat)))))
+  (define (parse:clauses $=? env c*)
+    ($lambda/temp
+      'scrutinee
+      (lambda ($x)
+        (foldr (lambda (c $fail)
+                 (match c
+                   (`(,pat ,@rhs)
+                     (expand:let/temp
+                       'k-fail (list (expander (lambda _ ($thunk $fail))))
+                       (lambda ($kf) (parse:clause $=? $x env pat rhs $kf))))
+                   (_ (error '"invalid match clause:" c))))
+               (ast:error (list (ast:quote '"no matching clause:")
+                                $x (ast:quote full-form))) c*))))
+  (expand:let/temp
+    '=? env =?-e
+    (lambda ($=?)
+      (ast:apply
+        (match body*
+          (`(,name . ,clause*)
+            (guard (name? name))
+            (define (e env) (parse:clauses $=? env clause*))
+            (expand:letrec env (list name) (list (expander e))
+                           (lambda (env) (env-ref/var env name))))
+          (clause* (parse:clauses $=? env clause*)))
+        (expand env scrutinee)))))
+
 (define parsers:base
   '((case
       (`(,_ ,scrutinee ,@clause*)
@@ -371,7 +443,6 @@
               ('() (ast:error (list (ast:quote '"no matching case clause:")
                                     x (ast:quote form))))
               (c* (error '"invalid case clauses:" c*)))))))
-
     (quasiquote
       (`(,_ ,qqf)
         (define (bad msg) (error '"malformed quasiquote:" msg form))
@@ -394,9 +465,13 @@
             (`(,qqa . ,qqd) ($cons (loop level qqa) (loop level qqd)))
             (datum          (ast:quote datum))
             (_              (error "invalid quasiquote template:" qqf))))))
-
-    ;; TODO: match/=?, match
-    ))
+    (match/=?
+      (`(,_ ,=?-e ,scrutinee ,@body)
+        (parse:match/=? env =?-e scrutinee body form)))
+    (match
+      (`(,_ ,scrutinee ,@body)
+        (parse:match/=? env (expander (lambda _ $var:equal?))
+                        scrutinee body form)))))
 
 ;; Environment construction
 `(begin
