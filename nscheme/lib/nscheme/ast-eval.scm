@@ -15,7 +15,7 @@
 
 (require
   assoc:empty assoc-ref assoc-set
-  primitive-ops)
+  type-predicates primitive-ops)
 
 ;;; Runtime environments
 (define env:empty assoc:empty)
@@ -74,7 +74,9 @@
          (define return-sig (caddr po-desc))  ;; TODO: validate return type?
          (define op (assoc-ref primitive-op-procs name #f))
          (define (valid? a*)
-           (andmap (lambda (ty? a) (or (not ty?) (ty? a))) arg-sig a*))
+           (andmap (lambda (ty? a)
+                     (or (not ty?) ((cdr (assoc ty? type-predicates)) a)))
+                   arg-sig a*))
          (define (full-op a*)
            (if (valid? a*) (apply op a*)
              (error '"primitive op type error:" name arg-sig a*)))

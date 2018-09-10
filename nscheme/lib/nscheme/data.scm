@@ -2,18 +2,18 @@
 
 ;; TODO: build and sanity check compiler backend primitive op tables.
 (define type-predicates
-  '(boolean?
-    null?
-    char?
-    flonum?
-    fixnum?
-    integer?
-    number?
-    string?
-    pair?
-    vector?
-    mvector?
-    procedure?
+  `((boolean?   . ,boolean?)
+    (null?      . ,null?)
+    (char?      . ,char?)
+    (flonum?    . ,flonum?)
+    (fixnum?    . ,fixnum?)
+    (integer?   . ,integer?)
+    (number?    . ,number?)
+    (string?    . ,string?)
+    (pair?      . ,pair?)
+    (vector?    . ,vector?)
+    (mvector?   . ,mvector?)
+    (procedure? . ,procedure?)
     ))
 
 (define primitive-ops
@@ -78,7 +78,7 @@
 ;; Sanity check primitive-ops.
 (let ()
   (define (valid-type? t)
-    (or (equal? #t t) (not t) (member t type-predicates)))
+    (or (equal? #t t) (not t) (assoc t type-predicates)))
   (define (valid-primop? op)
     (and (list? op) (= 3 (length op)) (symbol? (car op))
          (andmap valid-type? (cadr op))
