@@ -7,7 +7,7 @@
 
 (define db:lib
   (for/list ((src '((data box tagged assoc compare)
-                    (nscheme data ast ast-eval))))
+                    (nscheme data ast ast-eval nscheme))))
     (define library-name (car src))
     `(,library-name
        . ,(for/list ((module-name (cdr src)))
