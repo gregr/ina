@@ -84,7 +84,7 @@
 
 (define (ast:quote datum) (lambda (env) datum))
 (define (ast:var address) (lambda (env) (env-ref env address)))
-(define (ast:set! addr v) (lambda (env) (env-set! env address (v env))))
+(define (ast:set! addr v) (lambda (env) (env-set! env addr (v env))))
 (define (ast:if c t f)    (lambda (env) (if (c env) (t env) (f env))))
 (define (ast:apply proc arg*) (lambda (env) (apply (proc env) (ap* env arg*))))
 (define (ast:apply* proc arg) (lambda (env) (apply (proc env) (arg env))))
