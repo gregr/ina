@@ -44,8 +44,8 @@
         (name (cons (list name name) rrns)))))
   (define (body-element def)
     (match def
-      ((cons 'unquote body)          (nscm:eval `(let () . ,body)))
-      ((cons 'unquote-splicing body) (cons 'begin
+      ((list 'unquote body)          (nscm:eval `(let () . ,body)))
+      ((list 'unquote-splicing body) (cons 'begin
                                            (nscm:eval `(let () . ,body))))
       (_ def)))
   (let loop ((body body) (rrequired '()) (rprovided '()))
