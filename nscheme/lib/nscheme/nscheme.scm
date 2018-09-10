@@ -1,7 +1,7 @@
 (provide nscheme:expand)
 
 (require box tagged-vector? tagged-vector?!
-         assoc-empty assoc-ref assoc-set assoc-filter
+         assoc:empty assoc-ref assoc-set assoc-filter
          primitive-ops
          ast:quote ast:var ast:set! ast:if ast:apply ast:apply* ast:lambda
          ast:reset ast:shift ast:error ast:primitive-op)
@@ -11,7 +11,7 @@
 (define (lname sym label) (vector lname:tag sym label))
 (define (lname? d)        (tagged-vector? lname:tag '(symbol label) d))
 (define (lname?! d)       (tagged-vector?! lname:tag '(symbol label) d))
-(define (lname-sym d)     (import/apply (import (symbol) symbol) (lname?! d)))
+(define (lname-sym d)     (import-apply (import (symbol) symbol) (lname?! d)))
 (define (make-fresh-name)
   (let ((label 0)) (lambda (n) (set! label (+ label 1))
                      (lname (if (string? n) n (lname-sym n)) label))))
@@ -33,13 +33,20 @@
 (define atag:var-constant 'var-constant)
 (define (address:syntax name parser) (address name parser))
 (define (address:unbound name)       (address name atag:unbound))
-(define (address:unbound? a)         (equal? (address-value a) atag:unbound))
-(define (address:var name)           (address name atag:var))
-(define (address:var? a) (define v (address-value a))
-  (or (equal? v atag:var-mutable) (equal? v atag:var-constant)))
-(define (address:var-mutable? a) (equal? (address-value a) atag:var-mutable))
+(define (address:var name)           (address name atag:var-mutable))
+(define (address:var-constant name)  (address name atag:var-constant))
+(define (address:unbound? a)
+  (define v (address-value a))
+  (and (not (procedure? v)) (equal? v atag:unbound)))
+(define (address:var? a)
+  (define v (address-value a))
+  (and (not (procedure? v))
+       (or (equal? v atag:var-mutable) (equal? v atag:var-constant))))
+(define (address:var-mutable? a)
+  (define v (address-value a))
+  (and (not (procedure? v)) (equal? v atag:var-mutable)))
 
-(define env:empty            assoc-empty)
+(define env:empty            assoc:empty)
 (define (env-extend env b)   (assoc-set env (car b) (cdr b)))
 (define (env-extend* env b*) (foldl (lambda (b e) (env-extend e b)) env b*))
 (define (env-extend*/syntax env b*)
@@ -86,17 +93,17 @@
 ;; Expansion
 (define expander:tag    (box 'expander))
 (define (expander proc) (vector expander:tag proc))
-(define (expander? d)   (tagged-vector? expander:tag '(proc)))
+(define (expander? d)   (tagged-vector? expander:tag '(proc) d))
 (define (literal? d) (or (boolean? d) (number? d) (char? d)))
 (define (form->parser env form)
   (define n (if (pair? form) (car form) form))
   (and (name? n) (env-ref/syntax-parser? env n)))
 (define (expand:apply env proc a*)
-  (ast:apply (expand env p) (map (lambda (a) (expand env a)) a*)))
+  (ast:apply (expand env proc) (map (lambda (a) (expand env a)) a*)))
 (define (expand env form)
   (let loop ((form form))
     (cond ((form->parser env form) => (lambda (p) (p env form)))
-          ((expander? form) ((expander-proc form) env))
+          ((expander? form) => (import->lambda (import (proc) (proc env))))
           ((literal? form)  (ast:quote form))
           ((name? form)     (ast:var (env-ref/var env form)))
           (else (match form
@@ -149,14 +156,14 @@
     (let* ((v*b (b?*->v*&body b?*)) (v* (car v*b)) (body (cdr v*b)))
       (define a?* (map cdr b?*))
       ($begin (map (lambda (a? v) (if a? (ast:set! a? v) v)) a?* v*) body)))
-  ($let p?* uninitialized* b*->body))
+  ($let p?* uninitialized* b?*->body))
 
 ;; High-level expansion
 (define (b?*->expand:body* env body*)
   (lambda (b?*) (expand:body* (env-extend*/var env b?*) body*)))
 (define (expand:lambda env ~p?* body*)
-  (define p* (~list->list ~p*)) (param*?! p*)
-  ($lambda (improper-list? ~p*) p* (b?*->expand:body* env body*)))
+  (define p* (~list->list ~p?*)) (param*?! p*)
+  ($lambda (improper-list? ~p?*) p* (b?*->expand:body* env body*)))
 (define (expand:let env p?* e* body*)
   ($let p?* (expand* env e*) (b?*->expand:body* env body*)))
 (define (expand:let/temp temp-name env e $temp->body)
@@ -173,7 +180,7 @@
       (unless (list? body*) (error '"body must be a list:" body*))
       (foldl
         (lambda (form rdef*)
-          (match/=? (make-syntax=? env:base env) form
+          (match/=? (make-syntax=? env:primitive-syntax env) form
             (`(begin ,@e*) (body*->rdef* e* rdef*))
             (`(define ,n ,body) (guard (name? n)) ($define n body rdef*))
             (`(define (,n . ,~p?*) . ,def-body*)
@@ -183,7 +190,6 @@
             (`(begin . ,_)  (error '"invalid begin:" form))
             (`(define . ,_) (error '"invalid define:" form))
             (_ ($define #f form rdef*)))) rdef* body*)))
-  (define rdef* (body*->rdef* env body*))
   (when (null? rdef*) (error '"body cannot be empty:" body*))
   (define p?e* (reverse (cdr rdef*)))
   (define final-def (car rdef*))
@@ -202,11 +208,15 @@
   (map (lambda (po-desc)
          (define (x i) (string-append 'x (number->string i)))
          (define p* (map x (range (length (cadr po-desc)))))
-         `(,name (lambda ,p* (,(car po-desc) . ,p*)))) primitive-ops))
+         `(,(car po-desc) (lambda ,p* (,(car po-desc) . ,p*)))) primitive-ops))
 
 (define derived-op-procs
   '((not (lambda (b) (if b #f #t)))
-    ;; TODO: list->vector
+    (list->vector (lambda (xs)
+                    (define result (make-mvector (length xs) #t))
+                    (foldl (lambda (x i) (mvector-set! result i x) (+ i 1))
+                           0 xs)
+                    result))
     (vector->list (lambda (v)
                     (let loop ((i (- (vector-length v) 1)) (xs '()))
                       (if (< i 0) xs
@@ -273,7 +283,7 @@
 (define (parser-descs->b* descs)
   (cons 'list
         (map (lambda (name&clause*)
-               `(cons ,(car name&clause*)
+               `(cons ',(car name&clause*)
                       (lambda (env form)
                         (define (ex form) (expand env form))
                         (match/=? (make-syntax=? env:primitive-syntax env) form
@@ -371,7 +381,7 @@
         ($try ($vector? $x) ($let/temp 'x ($vector->list $x) k)))
       (match p retry
         ('_                            ($succeed env))
-        (id         (guard (name? id)) (retry `(var p)))
+        (id         (guard (name? id)) (retry `(var ,p)))
         (`(var ,id) (guard (name? id))
                     ($let (list id) (list $x)
                           (lambda (b*) ($succeed (env-extend*/var env b*)))))
@@ -382,7 +392,7 @@
                                       (lambda ($x) (loop $x pd env $succeed))))
           ($try ($pair? $x) ($let/temp 'x-car ($car $x)
                                        (lambda ($x) (loop $x pa env $k)))))
-        (`(list* ,pat)     (retry p))
+        (`(list* ,pat)     (retry pat))
         (`(list* ,p . ,p*) (retry `(cons ,p (list* ,p*))))
         (`(list ,@p*)      (retry `(list* ,(append p* (list '())))))
         (`(vector ,@p*)    ($try-vec `(list . ,p*)))
@@ -483,10 +493,10 @@
               (define arity (length (cadr po-desc)))
               (cons name
                     (lambda (env form)
-                      (match form
-                        (`(,_ ,@a*) (guard (= arity (length a*)))
-                                    (ast:primitive-op name (expand* env a*)))
-                        (_ (error '"invalid primitive op:" po-desc form))))))
+                      ,'(match form
+                          (`(,_ ,@a*) (guard (= arity (length a*)))
+                                      (ast:primitive-op name (expand* env a*)))
+                          (_ (error '"invalid primitive op:" po-desc form))))))
             primitive-ops)))
 
    (define env:base #t)
