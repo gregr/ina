@@ -1,6 +1,9 @@
 #lang racket/base
 (provide
+  shift
+  reset
   reverse-append
+  remove-duplicates
   boolean=?
   number=?
   filter-not
@@ -36,6 +39,7 @@
 (require
   "filesystem.rkt"
   racket/bool
+  racket/control
   racket/list
   racket/vector
   (for-syntax racket/base))
