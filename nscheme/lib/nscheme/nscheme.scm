@@ -274,7 +274,9 @@
     (append (lambda (xs ys) (foldr cons ys xs)))
     (reverse-append (lambda (xs ys) (foldl cons ys xs)))
     (reverse (lambda (xs) (reverse-append xs '())))
-    ;; TODO: range
+
+    (range (lambda (n)
+             (let loop ((i 0)) (if (= i n) '() (cons i (loop (+ i 1)))))))
     (take (lambda (xs n) (if (= 0 n) '()
                            (cons (car xs) (take (cdr xs) (- n 1))))))
     (drop (lambda (xs n) (if (= 0 n) xs (drop (cdr xs) (- n 1)))))
@@ -284,7 +286,11 @@
     (caar (lambda (v) (car (car v))))
     (assoc (lambda (k xs) (cond ((null? xs) #f)
                                 ((equal? k (caar xs)) (car xs))
-                                (else (assoc k (cdr xs))))))))
+                                (else (assoc k (cdr xs))))))
+    (remove-duplicates
+      (lambda (xs)
+        (define (ucons x acc) (if (member x acc) acc (cons x acc)))
+        (reverse (foldl ucons '() xs))))))
 
 ,(
 (define (parser-descs->b* qenv descs)
