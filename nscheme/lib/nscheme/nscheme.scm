@@ -279,13 +279,13 @@
                                 (else (assoc k (cdr xs))))))))
 
 ,(
-(define (parser-descs->b* descs)
+(define (parser-descs->b* qenv descs)
   (cons 'list
         (map (lambda (name&clause*)
                `(cons ',(car name&clause*)
                       (lambda (env form)
                         (define (ex form) (expand env form))
-                        (match/=? (make-syntax=? env:primitive-syntax env) form
+                        (match/=? (make-syntax=? ,qenv env) form
                           ,@(cdr name&clause*)
                           (_ (error '"invalid syntax:" form)))))) descs)))
 
@@ -350,90 +350,6 @@
 ;; let-alias, let-without|unlet, let-only|unlet-except[/var][/syntax][/all]
 ;; import, export, and/let*
 
-;; Parsers with dependencies on base definitions
-(define ($cons a d)       (ast:primitive-op 'cons (list a d)))
-(define ($pair? x)        (ast:primitive-op 'pair? (list x)))
-(define ($car x)          (ast:primitive-op 'car (list x)))
-(define ($cdr x)          (ast:primitive-op 'cdr (list x)))
-(define ($vector? x)      (ast:primitive-op 'vector? (list x)))
-(define ($equal? a b)     (ast:apply $var:equal? (list a b)))
-(define ($list? x)        (ast:apply $var:list?  (list x)))
-(define ($append a b)     (ast:apply $var:append (list a b)))
-(define ($list->vector x) (ast:apply $var:list->vector (list x)))
-(define ($vector->list x) (ast:apply $var:vector->list (list x)))
-
-(define (parse:match/=? env =?-e scrutinee body* full-form)
-  (define (parse:clause $=? $x env pat rhs $k-fail)
-    (define $fail (ast:apply $k-fail '()))
-    (define ($try $c $k) (ast:if $c $k $fail))
-    (define ($succeed env)
-      (match/=? (make-syntax=? env:base env) rhs
-        (`((guard ,@conds) . ,rhs)
-          (guard (pair? rhs))
-          ($try (expand:and* env conds) (expand:body* env rhs)))
-        (`((guard . ,_) . ,_) (error '"invalid match rhs:" rhs))
-        (_ (expand:body* env rhs))))
-    (define (tqq datum) (list 'quasiquote datum))
-    (let loop (($x $x) (p pat) (env env) ($succeed $succeed))
-      (define ($try-vec pat)
-        (define (k $x) (loop $x pat env $succeed))
-        ($try ($vector? $x) ($let/temp 'x ($vector->list $x) k)))
-      (match p retry
-        ('_                            ($succeed env))
-        (id         (guard (name? id)) (retry `(var ,p)))
-        (`(var ,id) (guard (name? id))
-                    ($let (list id) (list $x)
-                          (lambda (b*) ($succeed (env-extend*/var env b*)))))
-        (`(quote ,datum) ($try (ast:apply $=? (list $x (ast:quote datum)))
-                               ($succeed env)))
-        (`(cons ,pa ,pd)
-          (define ($k env) ($let/temp 'x-cdr ($cdr $x)
-                                      (lambda ($x) (loop $x pd env $succeed))))
-          ($try ($pair? $x) ($let/temp 'x-car ($car $x)
-                                       (lambda ($x) (loop $x pa env $k)))))
-        (`(list* ,pat)     (retry pat))
-        (`(list* ,p . ,p*) (retry `(cons ,p (list* ,p*))))
-        (`(list ,@p*)      (retry `(list* ,(append p* (list '())))))
-        (`(vector ,@p*)    ($try-vec `(list . ,p*)))
-        ((list 'quasiquote qq)
-         (match qq
-           ((list (list 'unquote-splicing id)) (guard (name? id))
-                                               ($try ($list? $x) (retry id)))
-           ((list 'unquote p) (retry p))
-           (`(,qa . ,qd)      (retry `(cons ,(tqq qa) ,(tqq qd))))
-           (`#(,@qqv)         ($try-vec (tqq qqv)))
-           ('unquote          (error '"bad unquote:" pat))
-           ('unquote-splicing (error '"bad unquote-splicing:" pat))
-           (datum             (retry `(quote ,datum)))))
-        (lit (guard (or (boolean? pat) (number? pat) (char? pat)))
-             (retry `(quote ,lit)))
-        (_ (error '"invalid pattern:" pat)))))
-  (define (parse:clauses $=? env c*)
-    ($lambda/temp
-      'scrutinee
-      (lambda ($x)
-        (foldr (lambda (c $fail)
-                 (match c
-                   (`(,pat ,@rhs)
-                     (expand:let/temp
-                       'k-fail (list (expander (lambda _ ($thunk $fail))))
-                       (lambda ($kf) (parse:clause $=? $x env pat rhs $kf))))
-                   (_ (error '"invalid match clause:" c))))
-               (ast:error (list (ast:quote '"no matching clause:")
-                                $x (ast:quote full-form))) c*))))
-  (expand:let/temp
-    '=? env =?-e
-    (lambda ($=?)
-      (ast:apply
-        (match body*
-          (`(,name . ,clause*)
-            (guard (name? name))
-            (define (e env) (parse:clauses $=? env clause*))
-            (expand:letrec env (list name) (list (expander e))
-                           (lambda (env) (env-ref/var env name))))
-          (clause* (parse:clauses $=? env clause*)))
-        (expand env scrutinee)))))
-
 (define parsers:base
   '((case
       (`(,_ ,scrutinee ,@clause*)
@@ -459,7 +375,7 @@
         (let loop ((level 0) (qqf qqf))
           (match/=? (make-syntax=? env:base env) qqf
             (`(quasiquote ,qq) (tag 'quasiquote (loop (+ level 1) qq)))
-            (`(,'unquote ,uq) (if (= 0 level) (ex eq)
+            (`(,'unquote ,uq) (if (= 0 level) (ex uq)
                                 (tag 'unquote (loop (- level 1) uq))))
             (`((,'unquote-splicing ,uqs) . ,qq)
               (define qqd (loop level qq))
@@ -484,9 +400,87 @@
 
 ;; Environment construction
 `(begin
+   ,'(define (parse:match/=? env =?-e scrutinee body* full-form)
+       (define (parse:clause $=? $x env pat rhs $k-fail)
+         (define $fail (ast:apply $k-fail '()))
+         (define ($try $c $k) (ast:if $c $k $fail))
+         (define ($succeed env)
+           (match/=? (make-syntax=? env:base env) rhs
+             (`((guard ,@conds) . ,rhs)
+               (guard (pair? rhs))
+               ($try (expand:and* env conds) (expand:body* env rhs)))
+             (`((guard . ,_) . ,_) (error '"invalid match rhs:" rhs))
+             (_ (expand:body* env rhs))))
+         (define (tqq datum) (list 'quasiquote datum))
+         (let loop (($x $x) (p pat) (env env) ($succeed $succeed))
+           (define ($try-vec pat)
+             (define (k $x) (loop $x pat env $succeed))
+             ($try ($vector? $x) ($let/temp 'x ($vector->list $x) k)))
+           (match p retry
+             ('_                            ($succeed env))
+             (id         (guard (name? id)) (retry `(var ,id)))
+             (`(var ,id) (guard (name? id))
+                         ($let (list id) (list $x)
+                               (lambda (b*)
+                                 ($succeed (env-extend*/var env b*)))))
+             (`(quote ,datum) ($try (ast:apply $=? (list $x (ast:quote datum)))
+                                    ($succeed env)))
+             (`(cons ,pa ,pd)
+               (define ($k env) ($let/temp 'x-cdr ($cdr $x)
+                                           (lambda ($x)
+                                             (loop $x pd env $succeed))))
+               ($try ($pair? $x) ($let/temp 'x-car ($car $x)
+                                            (lambda ($x)
+                                              (loop $x pa env $k)))))
+             (`(list* ,p)       (retry p))
+             (`(list* ,p . ,p*) (retry `(cons ,p (list* . ,p*))))
+             (`(list ,@p*)      (retry `(list* . ,(append p* (list ''())))))
+             (`(vector ,@p*)    ($try-vec `(list . ,p*)))
+             ((list 'quasiquote qq)
+              (match qq
+                ((list (list 'unquote-splicing id))
+                 (guard (name? id)) ($try ($list? $x) (retry id)))
+                ((list 'unquote p) (retry p))
+                (`(,qa . ,qd)      (retry `(cons ,(tqq qa) ,(tqq qd))))
+                (`#(,@qqv)         ($try-vec (tqq qqv)))
+                ('unquote          (error '"bad unquote:" pat))
+                ('unquote-splicing (error '"bad unquote-splicing:" pat))
+                (datum             (retry `(quote ,datum)))))
+             (lit (guard (or (boolean? pat) (number? pat) (char? pat)))
+                  (retry `(quote ,lit)))
+             (p (error '"invalid pattern:" pat p)))))
+       (define (parse:clauses $=? env c*)
+         ($lambda/temp
+           'scrutinee
+           (lambda ($x)
+             (foldr
+               (lambda (c $fail)
+                 (match c
+                   (`(,pat ,@rhs)
+                     ($let/temp
+                       'k-fail ($thunk $fail)
+                       (lambda ($kf) (parse:clause $=? $x env pat rhs $kf))))
+                   (_ (error '"invalid match clause:" c))))
+               ($error (ast:quote '"no matching clause:")
+                       $x (ast:quote full-form)) c*))))
+       (expand:let/temp
+         '=? env =?-e
+         (lambda ($=?)
+           (ast:apply
+             (match body*
+               (`(,name . ,clause*)
+                 (guard (name? name))
+                 (define (e env) (parse:clauses $=? env clause*))
+                 (expand:letrec
+                   env (list name) (list (expander e))
+                   (lambda (env) (ast:var (env-ref/var env name)))))
+               (clause* (parse:clauses $=? env clause*)))
+             (list (expand env scrutinee))))))
+
    (define env:primitive-syntax
      (env-extend*/syntax
-       (env-extend*/syntax env:empty ,(parser-descs->b* parsers:primitive))
+       (env-extend*/syntax
+         env:empty ,(parser-descs->b* 'env:primitive-syntax parsers:primitive))
        (map (lambda (po-desc)
               (define name (car po-desc))
               (define arity (length (cadr po-desc)))
@@ -511,14 +505,27 @@
                        ,(expander
                           (lambda (env)
                             (set! env:base (env-freeze*/mutable env))
-                            (expand env:base (shift k k)))))))))))
+                            (define form (shift k k))
+                            (expand env:base form))))))))))
 
-   (define $var:equal?       (env-ref/var env:base 'equal?))
-   (define $var:list?        (env-ref/var env:base 'list?))
-   (define $var:append       (env-ref/var env:base 'append))
-   (define $var:list->vector (env-ref/var env:base 'list->vector))
-   (define $var:vector->list (env-ref/var env:base 'vector->list))
+   ;; Parsers with dependencies on base definitions
+   (define ($cons a d)       (ast:primitive-op 'cons (list a d)))
+   (define ($pair? x)        (ast:primitive-op 'pair? (list x)))
+   (define ($car x)          (ast:primitive-op 'car (list x)))
+   (define ($cdr x)          (ast:primitive-op 'cdr (list x)))
+   (define ($vector? x)      (ast:primitive-op 'vector? (list x)))
+   (define ($equal? a b)     (ast:apply $var:equal? (list a b)))
+   (define ($list? x)        (ast:apply $var:list?  (list x)))
+   (define ($append a b)     (ast:apply $var:append (list a b)))
+   (define ($list->vector x) (ast:apply $var:list->vector (list x)))
+   (define ($vector->list x) (ast:apply $var:vector->list (list x)))
+
+   (define $var:equal?       (ast:var (env-ref/var env:base 'equal?)))
+   (define $var:list?        (ast:var (env-ref/var env:base 'list?)))
+   (define $var:append       (ast:var (env-ref/var env:base 'append)))
+   (define $var:list->vector (ast:var (env-ref/var env:base 'list->vector)))
+   (define $var:vector->list (ast:var (env-ref/var env:base 'vector->list)))
 
    (set! env:base (env-extend*/syntax
-                    env:base ,(parser-descs->b* parsers:base)))
+                    env:base ,(parser-descs->b* 'env:base parsers:base)))
    ))
