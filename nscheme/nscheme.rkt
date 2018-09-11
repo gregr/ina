@@ -72,8 +72,8 @@
 (define (number=? a b) (eqv? a b))
 
 (define (new-equal? a b)
-  (when (ormap procedure? (list a b))
-    (error "cannot use equal? on procedures:" a b))
+  (when (andmap procedure? (list a b))
+    (error "equal? undefined for two procedures:" a b))
   (or (eqv? a b)
       (and (new-symbol? a) (new-symbol? b) (new-symbol=? a b))
       (and (pair? a) (pair? b)
