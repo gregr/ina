@@ -8,6 +8,8 @@
   number=?
   filter-not
   range
+  take
+  drop
   string->vector
   vector->string
   vector-set
