@@ -128,6 +128,7 @@
   (map (lambda (n) (and (name? n) (fresh-name n))) n*))
 
 ;;; High-level AST construction
+(define $null (ast:quote '()))
 (define $true (ast:quote #t))
 (define $false (ast:quote #f))
 (define ($lambda variadic? p?* b?*->body)
@@ -152,6 +153,13 @@
       (define a?* (map cdr b?*))
       ($begin (map (lambda (a? v) (if a? (ast:set! a? v) v)) a?* v*) body)))
   ($let p?* uninitialized* b?*->body))
+(define ($cons a d)  (ast:primitive-op 'cons (list a d)))
+(define ($pair? x)   (ast:primitive-op 'pair? (list x)))
+(define ($car x)     (ast:primitive-op 'car (list x)))
+(define ($cdr x)     (ast:primitive-op 'cdr (list x)))
+(define ($vector? x) (ast:primitive-op 'vector? (list x)))
+(define ($list . xs) (foldr $cons $null xs))
+(define ($error . a*) (ast:error (apply $list a*)))
 
 ;; High-level expansion
 (define (b?*->expand:body* env body*)
@@ -192,7 +200,7 @@
   (when (car final-def) (error '"body cannot end with a definition:" body*))
   (expand:letrec env (map car p?e*) (map cdr p?e*)
                  (lambda (env) (expand env body-final))))
-(define (expand:error env a*) (ast:error (expand* env a*)))
+(define (expand:error env a*) (apply $error (expand* env a*)))
 (define (expand:and* env e*)
   (define re* (reverse e*))
   (if (null? re*) $true
@@ -338,8 +346,8 @@
               (expand:let/temp 'temp env e $t->body))
             (`((,e ,@e*) . ,c*)
               (ast:if (ex e) (expand:body* env e*) (loop c*)))
-            ('() (ast:error (list (ast:quote '"no matching cond clause:")
-                                  (ast:quote form))))
+            ('() ($error (ast:quote '"no matching cond clause:")
+                         (ast:quote form)))
             (_ (error '"invalid cond:" form))))))
     (and (`(,_ ,@e*) (expand:and* env e*)))
     (or (`(,_ ,@e*)  (foldr (lambda (e r) (expand:or2 env e r)) $false e*)))
@@ -365,8 +373,8 @@
                 (ast:if (foldr (lambda (d r) (ast:if ($equal? x d) $true r))
                                $false (map ast:quote data))
                         (expand:body* env e*) (loop c*)))
-              ('() (ast:error (list (ast:quote '"no matching case clause:")
-                                    x (ast:quote form))))
+              ('() ($error (ast:quote '"no matching case clause:")
+                           x (ast:quote form)))
               (c* (error '"invalid case clauses:" c*)))))))
     (quasiquote
       (`(,_ ,qqf)
@@ -509,11 +517,6 @@
                             (expand env:base form))))))))))
 
    ;; Parsers with dependencies on base definitions
-   (define ($cons a d)       (ast:primitive-op 'cons (list a d)))
-   (define ($pair? x)        (ast:primitive-op 'pair? (list x)))
-   (define ($car x)          (ast:primitive-op 'car (list x)))
-   (define ($cdr x)          (ast:primitive-op 'cdr (list x)))
-   (define ($vector? x)      (ast:primitive-op 'vector? (list x)))
    (define ($equal? a b)     (ast:apply $var:equal? (list a b)))
    (define ($list? x)        (ast:apply $var:list?  (list x)))
    (define ($append a b)     (ast:apply $var:append (list a b)))

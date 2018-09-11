@@ -23,6 +23,6 @@
 
 (define (ast:reset body) `#(reset ,body))
 (define (ast:shift proc) `#(shift ,proc))
-(define (ast:error a*)   `#(error ,a*))
+(define (ast:error a)    `#(error ,a))
 
 (define (ast:primitive-op name a*) `#(prim-op ,name ,a*))

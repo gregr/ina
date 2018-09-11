@@ -92,7 +92,10 @@
 (define (ast:apply* proc arg) (lambda (env) (apply (proc env) (arg env))))
 (define (ast:reset body) (lambda (env) (reset (body env))))
 (define (ast:shift proc) (lambda (env) (shift k ((proc env) k))))
-(define (ast:error a*)   (lambda (env) (apply error (ap* env a*))))
+(define (ast:error a)    (lambda (env)
+                           (define a* (a env))
+                           (unless (list? a*) '"error expects a list:" a*)
+                           (apply error a*)))
 
 (define (ast:primitive-op name a*)
   (define op (or (assoc-ref primitive-op-evaluators name #f)
@@ -129,7 +132,7 @@
      (`#(apply* ,p ,a)         (ast:apply* (loop p) (loop a)))
      (`#(reset ,body)          (ast:reset (loop body)))
      (`#(shift ,proc)          (ast:shift (loop proc)))
-     (`#(error ,a*)            (ast:error (map loop a*)))
+     (`#(error ,a)             (ast:error (loop a)))
      (`#(prim-op ,name ,a*)    (ast:primitive-op name (map loop a*)))
      (_ (error '"unknown ast:" ast))) env:empty))
 
