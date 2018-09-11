@@ -194,7 +194,10 @@
                  (lambda (env) (expand env body-final))))
 (define (expand:error env a*) (ast:error (expand* env a*)))
 (define (expand:and* env e*)
-  (foldr (lambda (e r) (ast:if (expand env e) r $false)) $true e*))
+  (define re* (reverse e*))
+  (if (null? re*) $true
+    (foldr (lambda (e r) (ast:if (expand env e) r $false))
+           (expand env (car re*)) (reverse (cdr re*)))))
 (define (expand:or2 env e $rest)
   (expand:let/temp 'temp env e (lambda ($temp) (ast:if $temp $temp $rest))))
 
