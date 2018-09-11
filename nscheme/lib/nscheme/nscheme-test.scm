@@ -1,8 +1,8 @@
 (provide test!)
 
-(require nscheme:expand)
+(require eval/ast nscheme:expand)
 
-(define (ev form) ((nscheme:expand form) '()))
+(define (ev form) (eval/ast (nscheme:expand form)))
 
 (define (test! test)
   (test 'literals
