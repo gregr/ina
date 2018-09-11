@@ -214,7 +214,7 @@
                     (define result (make-mvector (length xs) #t))
                     (foldl (lambda (x i) (mvector-set! result i x) (+ i 1))
                            0 xs)
-                    result))
+                    (mvector->vector result)))
     (vector->list (lambda (v)
                     (let loop ((i (- (vector-length v) 1)) (xs '()))
                       (if (< i 0) xs
