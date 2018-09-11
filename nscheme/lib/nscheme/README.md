@@ -4,16 +4,11 @@
 
 ### bootstrap with only simple code
 
-* test and debug current nscheme frontend
-
 * rename lname to symbol
   * stop using `symbol?` where `string?` is intended
   * restructure as: (vector 'symbol (box string:name))
   * fresh-name => gensym
   * define `string->symbol`, `symbol->string`, etc.
-
-* redefine ast:error to take one arg, not `a*`
-  * this will simplify its one-hole context
 
 * multi-context environments
   * example contexts: expression, definition
@@ -37,9 +32,6 @@
   * don't need import/export primitives
 
 * define these after bootstrapping: let/blacklist, let/whitelist[/syntax]
-
-* nscheme.scm: frontend
-* test.scm
 
 * small-step evaluation with transparent values
   * for interleaving evaluation and compilation
