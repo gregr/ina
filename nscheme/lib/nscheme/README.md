@@ -4,10 +4,6 @@
 
 ### bootstrap with only simple code
 
-* multi-context environments
-  * example contexts: expression, definition
-  * to support "micro-like" namespaces for operatives
-
 * nscheme in "one page"
   * try again to eliminate match/case/quasiquote during bootstrapping
     * can we even get away without cond? maybe an incomplete cond?
