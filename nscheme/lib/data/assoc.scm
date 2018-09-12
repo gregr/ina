@@ -2,6 +2,7 @@
   assoc:empty
   assoc-ref
   assoc-set
+  assoc-set/remove
   assoc-filter
   assoc-remove
   assoc-remove*
@@ -15,7 +16,8 @@
   (define rib (assoc k d))
   (if rib (cdr rib) default))
 
-(define (assoc-set d k v) (cons (cons k v) d))
+(define (assoc-set d k v)        (cons (cons k v) d))
+(define (assoc-set/remove d k v) (assoc-set (assoc-remove d k) k v))
 
 (define (assoc-filter d p?)
   (cond ((null? d)     assoc:empty)
@@ -23,10 +25,8 @@
         (else          (assoc-filter (cdr d) p?))))
 
 (define (assoc-remove* d k*) (assoc-filter d (lambda (k) (not (member k k*)))))
-
-(define (assoc-remove d k) (assoc-remove* d (list k)))
-
-(define (assoc-keep* d k*) (map (lambda (k) (assoc k d)) k*))
+(define (assoc-remove d k)   (assoc-remove* d (list k)))
+(define (assoc-keep* d k*)   (map (lambda (k) (assoc k d)) k*))
 
 (define (assoc-simplify d)
   (let loop ((d d) (k* '()))
@@ -69,4 +69,7 @@
       (assoc-set (assoc-set (assoc-set (assoc-set assoc:empty
                                                   'a 1) 'b 2) 'c 3) 'd 4)
       '(b d))
-    '((b . 2) (d . 4))))
+    '((b . 2) (d . 4)))
+  (test 'assoc-8
+    (assoc-set/remove '((a . 1) (b . 2) (c . 3)) 'b 4)
+    '((b . 4) (a . 1) (c . 3))))
