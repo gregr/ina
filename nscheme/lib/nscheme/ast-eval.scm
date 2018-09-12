@@ -122,19 +122,20 @@
                   (continue env a*))))))
 
 (define (eval/ast ast)
-  ((match ast loop
-     (`#(quote ,datum)         (ast:quote datum))
-     (`#(var ,address)         (ast:var address))
-     (`#(set! ,address ,v)     (ast:set! address (loop v)))
-     (`#(if ,c ,t ,f)          (ast:if (loop c) (loop t) (loop f)))
-     (`#(lambda ,v? ,a* ,body) (ast:lambda v? a* (loop body)))
-     (`#(apply ,p ,a*)         (ast:apply (loop p) (map loop a*)))
-     (`#(apply* ,p ,a)         (ast:apply* (loop p) (loop a)))
-     (`#(reset ,body)          (ast:reset (loop body)))
-     (`#(shift ,proc)          (ast:shift (loop proc)))
-     (`#(error ,a)             (ast:error (loop a)))
-     (`#(prim-op ,name ,a*)    (ast:primitive-op name (map loop a*)))
-     (_ (error '"unknown ast:" ast))) env:empty))
+  ((if (procedure? ast) ast
+     (match ast loop
+       (`#(quote ,datum)         (ast:quote datum))
+       (`#(var ,address)         (ast:var address))
+       (`#(set! ,address ,v)     (ast:set! address (loop v)))
+       (`#(if ,c ,t ,f)          (ast:if (loop c) (loop t) (loop f)))
+       (`#(lambda ,v? ,a* ,body) (ast:lambda v? a* (loop body)))
+       (`#(apply ,p ,a*)         (ast:apply (loop p) (map loop a*)))
+       (`#(apply* ,p ,a)         (ast:apply* (loop p) (loop a)))
+       (`#(reset ,body)          (ast:reset (loop body)))
+       (`#(shift ,proc)          (ast:shift (loop proc)))
+       (`#(error ,a)             (ast:error (loop a)))
+       (`#(prim-op ,name ,a*)    (ast:primitive-op name (map loop a*)))
+       (_ (error '"unknown ast:" ast)))) env:empty))
 
 (define (test! test)
   (test 'ast:quote
