@@ -80,7 +80,7 @@
   (define (valid-type? t)
     (or (equal? #t t) (not t) (assoc t type-predicates)))
   (define (valid-primop? op)
-    (and (list? op) (= 3 (length op)) (symbol? (car op))
+    (and (list? op) (= 3 (length op)) (string? (car op))
          (andmap valid-type? (cadr op))
          (valid-type? (caddr op))))
   (define malformed (filter-not valid-primop? primitive-ops))

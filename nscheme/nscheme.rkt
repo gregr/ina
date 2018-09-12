@@ -29,8 +29,6 @@
   import-apply
   import->lambda
   (rename-out
-    (new-symbol? symbol?)
-    (new-symbol=? symbol=?)
     (new-equal? equal?)
     (new-read read)
     (new-write write)
@@ -68,16 +66,13 @@
 (define (string->vector s) (list->vector (string->list s)))
 (define (vector->string v) (list->string (vector->list v)))
 
-(define (new-symbol? d) (string? d))
-(define (new-symbol=? a b) (string=? a b))
-
 (define (number=? a b) (eqv? a b))
 
 (define (new-equal? a b)
   (when (andmap procedure? (list a b))
     (error "equal? undefined for two procedures:" a b))
   (or (eqv? a b)
-      (and (new-symbol? a) (new-symbol? b) (new-symbol=? a b))
+      (and (string? a) (string? b) (string=? a b))
       (and (pair? a) (pair? b)
            (new-equal? (car a) (car b))
            (new-equal? (cdr a) (cdr b)))

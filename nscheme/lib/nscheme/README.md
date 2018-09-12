@@ -5,7 +5,6 @@
 ### bootstrap with only simple code
 
 * rename lname to symbol
-  * stop using `symbol?` where `string?` is intended
   * restructure as: (vector 'symbol (box string:name))
   * fresh-name => gensym
   * define `string->symbol`, `symbol->string`, etc.
