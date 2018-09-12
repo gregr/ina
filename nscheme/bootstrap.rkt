@@ -6,7 +6,7 @@
   )
 
 (define db:lib
-  (for/list ((src '((data box tagged assoc compare)
+  (for/list ((src '((data box tagged symbol assoc compare)
                     (nscheme data ast-eval ast nscheme nscheme-test))))
     (define library-name (car src))
     `(,library-name

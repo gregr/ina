@@ -4,11 +4,6 @@
 
 ### bootstrap with only simple code
 
-* rename lname to symbol
-  * restructure as: (vector 'symbol (box string:name))
-  * fresh-name => gensym
-  * define `string->symbol`, `symbol->string`, etc.
-
 * multi-context environments
   * example contexts: expression, definition
   * to support "micro-like" namespaces for operatives
