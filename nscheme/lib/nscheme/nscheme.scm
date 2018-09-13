@@ -190,14 +190,13 @@
 (define (defst-env st)    (vector-ref st 0))
 (define (defst-rdef* st)  (vector-ref st 1))
 (define ($define st n def-body)
-  (cons (defst-env st) (cons (cons n def-body) (defst-rdef* st))))
+  (vector (defst-env st) (cons (cons n def-body) (defst-rdef* st))))
 ;; TODO: $define-syntax ?
 (define (expand:definition* st form*)
   (foldl (lambda (form st)
            (cond ((form->parser (defst-env st) ctx:def form)
                   => (lambda (p) (p st form)))
                  (else ($define st #f form)))) st form*))
-;; TODO: add these to env:primitive-syntax in definition context.
 (define (parse:begin st form)
   (match form
     (`(,_ ,@e*) (expand:definition* st e*))
@@ -213,21 +212,8 @@
 
 (define (expand:body* env body*)
   (define ($define n def-body rdef*) (cons (cons n def-body) rdef*))
-  (define rdef*
-    (let body*->rdef* ((body* body*) (rdef* '()))
-      (unless (list? body*) (error '"body must be a list:" body*))
-      (foldl
-        (lambda (form rdef*)
-          (match/=? (make-syntax=? ctx:expr env:primitive-syntax env) form
-            (`(begin ,@e*) (body*->rdef* e* rdef*))
-            (`(define ,n ,body) (guard (name? n)) ($define n body rdef*))
-            (`(define (,n . ,~p?*) . ,def-body*)
-              (guard (name? n))
-              (define (edef env) (expand:lambda env ~p?* def-body*))
-              ($define n (expander edef) rdef*))
-            (`(begin . ,_)  (error '"invalid begin:" form))
-            (`(define . ,_) (error '"invalid define:" form))
-            (_ ($define #f form rdef*)))) rdef* body*)))
+  (unless (list? body*) (error '"body must be a list:" body*))
+  (define rdef* (defst-rdef* (expand:definition* (defst:empty env) body*)))
   (when (null? rdef*) (error '"body cannot be empty:" body*))
   (define p?e* (reverse (cdr rdef*)))
   (define final-def (car rdef*))
@@ -526,11 +512,15 @@
                (clause* (parse:clauses $=? env clause*)))
              (list (expand env scrutinee))))))
 
+
+
    (define env:primitive-syntax
      (env-extend*/syntax
        (env-extend*/syntax
-         env:empty ctx:expr
-         ,(parser-descs->b* 'env:primitive-syntax parsers:primitive))
+         (env-extend*/syntax
+           env:empty ctx:expr
+           ,(parser-descs->b* 'env:primitive-syntax parsers:primitive))
+         ctx:def `((begin . ,parse:begin) (define . ,parse:define)))
        ctx:expr
        (map (lambda (po-desc)
               (define name (car po-desc))
