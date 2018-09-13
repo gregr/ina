@@ -4,7 +4,6 @@
 
 ### bootstrap with only simple code
 
-* define ctx:expr, ctx:def, to avoid string typos
 * expression bindings should interrupt definition bindings of the same name
   * flatten env w.r.t. context
   * can't use assoc due to interruption-handling

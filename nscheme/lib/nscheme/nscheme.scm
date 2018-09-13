@@ -25,6 +25,8 @@
         (else n)))
 
 ;;; Syntactic environments
+(define ctx:expr 'expression)
+(define ctx:def 'definition)
 (define (address name value) (vector name value))
 (define (address-name a)     (vector-ref a 0))
 (define (address-value a)    (vector-ref a 1))
@@ -65,22 +67,22 @@
 (define (env-ref/syntax-parser? env ctx n)
   (define p (address-value (env-ref env ctx n))) (and (procedure? p) p))
 (define (env-extend*/var env b?*)
-  (env-extend* env 'expression
+  (env-extend* env ctx:expr
                (map (lambda (b) (cons (car b) (address:var (cdr b))))
                     (filter (lambda (b?) (car b?)) b?*))))
-(define (env-ref/var env n) (define a (env-ref env 'expression n))
+(define (env-ref/var env n) (define a (env-ref env ctx:expr n))
   (if (address:var? a) (address-name a) (error '"unbound variable:" n)))
 (define (env-ref/var-mutable env n)
-  (define a (env-ref env 'expression n))
+  (define a (env-ref env ctx:expr n))
   (unless (address:var? a)         (error '"unbound variable:" n))
   (unless (address:var-mutable? a) (error '"immutable variable:" n))
   (address-name a))
 (define (env-freeze* env n*)
   (define (frz n) (cons n (address:var-constant (env-ref/var env n))))
-  (env-extend* env 'expression (map frz n*)))
+  (env-extend* env ctx:expr (map frz n*)))
 (define (env-freeze*/mutable env)
   (define (mutable? b) (address:var-mutable? (cdr b)))
-  (env-freeze* env (map car (filter mutable? (env-context env 'expression)))))
+  (env-freeze* env (map car (filter mutable? (env-context env ctx:expr)))))
 
 (define (make-syntax=? context env-a env-b)
   (define (=? a b)
@@ -104,7 +106,7 @@
   (ast:apply (expand env proc) (map (lambda (a) (expand env a)) a*)))
 (define (expand env form)
   (let loop ((form form))
-    (cond ((form->parser env 'expression form) => (lambda (p) (p env form)))
+    (cond ((form->parser env ctx:expr form) => (lambda (p) (p env form)))
           ((expander? form) => (import->lambda (import (proc) (proc env))))
           ((literal? form)  (ast:quote form))
           ((name? form)     (ast:var (env-ref/var env form)))
@@ -192,7 +194,7 @@
 ;; TODO: $define-syntax ?
 (define (expand:definition* st form*)
   (foldl (lambda (form st)
-           (cond ((form->parser (defst-env st) 'definition form)
+           (cond ((form->parser (defst-env st) ctx:def form)
                   => (lambda (p) (p st form)))
                  (else ($define st #f form)))) st form*))
 ;; TODO: add these to env:primitive-syntax in definition context.
@@ -216,7 +218,7 @@
       (unless (list? body*) (error '"body must be a list:" body*))
       (foldl
         (lambda (form rdef*)
-          (match/=? (make-syntax=? 'expression env:primitive-syntax env) form
+          (match/=? (make-syntax=? ctx:expr env:primitive-syntax env) form
             (`(begin ,@e*) (body*->rdef* e* rdef*))
             (`(define ,n ,body) (guard (name? n)) ($define n body rdef*))
             (`(define (,n . ,~p?*) . ,def-body*)
@@ -332,7 +334,7 @@
                `(cons ',(car name&clause*)
                       (lambda (env form)
                         (define (ex form) (expand env form))
-                        (match/=? (make-syntax=? 'expression ,qenv env) form
+                        (match/=? (make-syntax=? ctx:expr ,qenv env) form
                           ,@(cdr name&clause*)
                           (_ (error '"invalid syntax:" form)))))) descs)))
 
@@ -375,7 +377,7 @@
       (`(,_ ,@clause*)
         (guard (pair? clause*))
         (let loop ((c* clause*))
-          (match/=? (make-syntax=? 'expression env:primitive-syntax env) c*
+          (match/=? (make-syntax=? ctx:expr env:primitive-syntax env) c*
             (`((else ,@e*))      (expand:body* env e*))
             (`((else . ,_) . ,_) (error '"invalid else clause in cond:" form))
             (`((,e) . ,c*)       (expand:or2 env e (loop c*)))
@@ -404,7 +406,7 @@
         (expand:let/temp
           'scrutinee env scrutinee
           (lambda (x)
-            (match/=? (make-syntax=? 'expression env:base env) clause* loop
+            (match/=? (make-syntax=? ctx:expr env:base env) clause* loop
               (`((else ,@e*)) (expand:body* env e*))
               (`((else . ,_) . ,_)
                 (error '"invalid else clause in case:" form))
@@ -420,7 +422,7 @@
         (define (bad msg) (error '"malformed quasiquote:" msg form))
         (define (tag t e) ($cons (ast:quote t) ($cons e (ast:quote '()))))
         (let loop ((level 0) (qqf qqf))
-          (match/=? (make-syntax=? 'expression env:base env) qqf
+          (match/=? (make-syntax=? ctx:expr env:base env) qqf
             (`(quasiquote ,qq) (tag 'quasiquote (loop (+ level 1) qq)))
             (`(,'unquote ,uq) (if (= 0 level) (ex uq)
                                 (tag 'unquote (loop (- level 1) uq))))
@@ -452,7 +454,7 @@
          (define $fail (ast:apply $k-fail '()))
          (define ($try $c $k) (ast:if $c $k $fail))
          (define ($succeed env)
-           (match/=? (make-syntax=? 'expression env:base env) rhs
+           (match/=? (make-syntax=? ctx:expr env:base env) rhs
              (`((guard ,@conds) . ,rhs)
                (guard (pair? rhs))
                ($try (expand:and* env conds) (expand:body* env rhs)))
@@ -527,9 +529,9 @@
    (define env:primitive-syntax
      (env-extend*/syntax
        (env-extend*/syntax
-         env:empty 'expression
+         env:empty ctx:expr
          ,(parser-descs->b* 'env:primitive-syntax parsers:primitive))
-       'expression
+       ctx:expr
        (map (lambda (po-desc)
               (define name (car po-desc))
               (define arity (length (cadr po-desc)))
@@ -571,6 +573,6 @@
    (define $var:vector->list (ast:var (env-ref/var env:base 'vector->list)))
 
    (set! env:base (env-extend*/syntax
-                    env:base 'expression
+                    env:base ctx:expr
                     ,(parser-descs->b* 'env:base parsers:base)))
    ))
