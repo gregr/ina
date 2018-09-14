@@ -103,6 +103,7 @@
   (lambda (env) (op (ap* env a*))))
 
 (define (ast:lambda variadic? addr* body)
+  (define (~length ~xs) (if (pair? ~xs) (+ 1 (~length (cdr ~xs))) 0))
   (define (continue cenv a*)
     (define b?* (map (lambda (addr a) (and addr (cons addr a))) addr* a*))
     (define env (env-extend* cenv (filter-not not b?*)))
@@ -111,14 +112,14 @@
   (cond (variadic?
           (lambda (env)
             (lambda a*
-              (when (< (length a*) (- plen 1))
-                (error '"too few arguments:" (- plen 1) (length a*) clo a*))
+              (when (< (~length a*) (- plen 1))
+                (error '"too few arguments:" (- plen 1) (~length a*) a*))
               (let ((a0* (take a* (- plen 1))) (a1* (drop a* (- plen 1))))
                 (continue env (append a0* (list a1*)))))))
         (else (lambda (env)
                 (lambda a*
-                  (when (not (= (length a*) plen))
-                    (error '"arity mismatch:" plen (length a*) clo a*))
+                  (unless (and (list? a*) (= (length a*) plen))
+                    (error '"arity mismatch:" plen (length a*) a*))
                   (continue env a*))))))
 
 (define (eval/ast ast)
