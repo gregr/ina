@@ -7,8 +7,6 @@
 * nscheme in "one page"
   * try again to eliminate match/case/quasiquote during bootstrapping
     * can we even get away without cond? maybe an incomplete cond?
-    * ast-eval via cond instead of match
-      * just check tag; no need to validate shape
     * concise error checking of shapes
       * various list shape predicates for when we do validate
       * box "logic var" pattern conds

@@ -119,19 +119,20 @@
   (lambda (env) (op (map (lambda (a) (a env)) a*))))
 
 (define (eval/ast ast)
-  ((if (procedure? ast) ast
-     (match ast loop
-       (`#(quote ,datum)         (ast:quote datum))
-       (`#(var ,address)         (ast:var address))
-       (`#(set! ,address ,v)     (ast:set! address (loop v)))
-       (`#(if ,c ,t ,f)          (ast:if (loop c) (loop t) (loop f)))
-       (`#(lambda ,v? ,a* ,body) (ast:lambda v? a* (loop body)))
-       (`#(apply ,p ,a)          (ast:apply (loop p) (loop a)))
-       (`#(reset ,body)          (ast:reset (loop body)))
-       (`#(shift ,proc)          (ast:shift (loop proc)))
-       (`#(error ,a)             (ast:error (loop a)))
-       (`#(prim-op ,name ,a*)    (ast:primitive-op name (map loop a*)))
-       (_ (error '"unknown ast:" ast)))) env:empty))
+  ((let loop ((ast ast))
+     (define (@ i) (vector-ref ast i)) (define (? tag) (equal? (@ 0) tag))
+     (if (procedure? ast) ast
+       (cond ((? 'quote)   (ast:quote (@ 1)))
+             ((? 'var)     (ast:var (@ 1)))
+             ((? 'set!)    (ast:set! (@ 1) (loop (@ 2))))
+             ((? 'if)      (ast:if (loop (@ 1)) (loop (@ 2)) (loop (@ 3))))
+             ((? 'apply)   (ast:apply (loop (@ 1)) (loop (@ 2))))
+             ((? 'lambda)  (ast:lambda (@ 1) (@ 2) (loop (@ 3))))
+             ((? 'reset)   (ast:reset (loop (@ 1))))
+             ((? 'shift)   (ast:shift (loop (@ 1))))
+             ((? 'error)   (ast:error (loop (@ 1))))
+             ((? 'prim-op) (ast:primitive-op (@ 1) (map loop (@ 2))))
+             (else (error '"unknown ast:" ast))))) env:empty))
 
 (define (test! test)
   (test 'ast:quote
