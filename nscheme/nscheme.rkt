@@ -4,6 +4,7 @@
   reset
   reverse-append
   remove-duplicates
+  assoc
   boolean=?
   number=?
   filter-not
@@ -82,6 +83,10 @@
 (define (new-read . args) (s->ns (apply read args)))
 
 (define (new-write d . args) (apply write (ns->s/write d) args))
+
+(define (assoc k xs) (cond ((null? xs) #f)
+                           ((new-equal? k (caar xs)) (car xs))
+                           (else (assoc k (cdr xs)))))
 
 (define-syntax (new-quote stx)
   (syntax-case stx ()
