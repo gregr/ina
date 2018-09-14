@@ -1,101 +1,94 @@
 (provide nscheme:expand)
 
 (require box tagged-vector? tagged-vector?!
-         assoc:empty assoc-ref assoc-set assoc-set/remove assoc-filter
          primitive-ops
          ast:quote ast:var ast:set! ast:if ast:apply ast:apply* ast:lambda
          ast:reset ast:shift ast:error ast:primitive-op)
 
-;; Names
-(define (fresh-uid name) (box name))
-(define (name? n) (string? n))
-
 ;; Syntactic environments
-(define ctx:expr 'expression)
-(define ctx:def 'definition)
-(define (address name value) (vector name value))
-(define (address-name a)     (vector-ref a 0))
-(define (address-value a)    (vector-ref a 1))
-(define atag:unbound      'unbound)
-(define atag:var-mutable  'var-mutable)
-(define atag:var-constant 'var-constant)
-(define (address:syntax name parser) (address name parser))
-(define (address:unbound name)       (address name atag:unbound))
-(define (address:var name)           (address name atag:var-mutable))
-(define (address:var-constant name)  (address name atag:var-constant))
-(define (address:unbound? a)      (equal? (address-value a) atag:unbound))
-(define (address:var-mutable? a)  (equal? (address-value a) atag:var-mutable))
-(define (address:var-constant? a) (equal? (address-value a) atag:var-constant))
-(define (address:var? a)          (or (address:var-mutable? a)
-                                      (address:var-constant? a)))
+(define (name? n) (string? n))
+(define (fresh-uid name) (box name))
+(define ctx:var  'variable)
+(define ctx:set! 'set!)
+(define ctx:op   'operator)
+(define ctx:def  'definition)
+(define (binding name ctx uid value) (vector name ctx uid value))
+(define (binding-name b)             (vector-ref b 0))
+(define (binding-context b)          (vector-ref b 1))
+(define (binding-uid b)              (vector-ref b 2))
+(define (binding-value b)            (vector-ref b 3))
+(define (binding:var name uid)  (binding name ctx:var uid ast:var))
+(define (binding:set! name uid) (binding name ctx:set! uid ast:set!))
 
-(define env:empty assoc:empty)
-(define (env-context env context) (assoc-ref env context '()))
-(define (env-ref/default env context n default)
-  (assoc-ref (env-context env context) n default))
-(define (env-ref env context n)
-  (or (env-ref/default env context n #f) (address:unbound n)))
-(define (env-extend* env context b*)
-  (assoc-set/remove
-    env context (foldl (lambda (b e) (assoc-set e (car b) (cdr b)))
-                       (env-context env context) b*)))
-(define (env-alias env ctx n aliased)
-  (env-extend* env ctx (list (cons n (env-ref env ctx aliased)))))
-(define (env-hide* env ctx n*)
-  (define (unbound n) (cons n (address:unbound (fresh-uid n))))
-  (env-extend* env ctx (map unbound n*)))
-(define (env-only env ctx n*)
-  (env-extend* env ctx (map (lambda (n) (cons n (env-ref env ctx n))) n*)))
-(define (env-extend*/syntax env ctx b*)
-  (env-extend* env ctx
-               (map (lambda (b) (define n (car b)) (define parse (cdr b))
-                      (cons n (address:syntax (fresh-uid n) parse))) b*)))
-(define (env-ref/syntax-parser? env ctx n)
-  (define p (address-value (env-ref env ctx n))) (and (procedure? p) p))
+(define env:empty            '())
+(define (env-extend* env b*) (append b* env))
+(define (env-ref env ctx* n)
+  (define b*? (memf (lambda (b) (and (equal? (binding-name b) n)
+                                     (member (binding-context b) ctx*))) env))
+  (or (and b*? (car b*?)) (binding n (car ctx*) n #f)))
+(define (env-ref? env ctx* n)
+  (define b (env-ref env ctx* n))
+  (and (equal? (binding-context b) (car ctx*)) (binding-value b) b))
+
 (define (env-extend*/var env b?*)
-  (env-extend* env ctx:expr
-               (map (lambda (b) (cons (car b) (address:var (cdr b))))
-                    (filter (lambda (b?) (car b?)) b?*))))
-(define (env-ref/var env n) (define a (env-ref env ctx:expr n))
-  (if (address:var? a) (address-name a) (error '"unbound variable:" n)))
-(define (env-ref/var-mutable env n)
-  (define a (env-ref env ctx:expr n))
-  (unless (address:var? a)         (error '"unbound variable:" n))
-  (unless (address:var-mutable? a) (error '"immutable variable:" n))
-  (address-name a))
-(define (env-freeze* env n*)
-  (define (frz n) (cons n (address:var-constant (env-ref/var env n))))
-  (env-extend* env ctx:expr (map frz n*)))
-(define (env-freeze*/mutable env)
-  (define (mutable? b) (address:var-mutable? (cdr b)))
-  (env-freeze* env (map car (filter mutable? (env-context env ctx:expr)))))
+  (foldl (lambda (b* env) (env-extend* env b*)) env
+         (map (lambda (b) (list (binding:set! (car b) (cdr b))
+                                (binding:var (car b) (cdr b))))
+              (filter (lambda (b?) (car b?)) b?*))))
+(define (env-extend*/syntax env ctx b*)
+  (env-extend*
+    env (map (lambda (b) (define n (car b)) (define parse (cdr b))
+               (binding n ctx (fresh-uid n) parse)) b*)))
+(define (env-freeze env)
+  (filter-not (lambda (b) (equal? (binding-context b) ctx:set!)) env))
+(define (env-alias env ctx n aliased)
+  (define b (env-ref env (list ctx) aliased))
+  (env-extend* env (list (binding n ctx (binding-uid b) (binding-value b)))))
+(define (env-hide* env ctx n*)
+  (env-extend* env (map (lambda (n) (binding n ctx (fresh-uid n) #f)) n*)))
 
 (define (make-syntax=? context env-a env-b)
   (define (=? a b)
     (cond ((and (pair? a) (pair? b)) (and (=? (car a) (car b))
                                           (=? (cdr a) (cdr b))))
           ((and (name? a) (name? b))
-           (equal? (address-name (env-ref env-a context a))
-                   (address-name (env-ref env-b context b))))
+           (equal? (binding-uid (env-ref env-a (list context) a))
+                   (binding-uid (env-ref env-b (list context) b))))
           (else (equal? a b))))
   =?)
+
+(define (parse:var env n)
+  (define b (or (env-ref? env (list ctx:var) n)
+                (and (displayln `(env: ,env)) #f)
+                (error '"unbound variable:" n)))
+  ((binding-value b) (binding-uid b)))
+(define (parse:set! env n $rhs)
+  (define b (or (env-ref? env (list ctx:set! ctx:var) n)
+                (error '"cannot set! variable:" n)))
+  ((binding-value b) (binding-uid b) $rhs))
+(define (parse:op? env form)
+  (let* ((n (and (pair? form) (car form)))
+         (b (and (name? n) (env-ref? env (list ctx:op ctx:var) n))))
+    (and b ((binding-value b) env form))))
+(define (parse:def? st form)
+  (let* ((n (and (pair? form) (car form)))
+         (b (and (name? n) (env-ref? (defst-env st)
+                                     (list ctx:def ctx:op ctx:var) n))))
+    (and b ((binding-value b) st form))))
 
 ;; Expansion
 (define expander:tag    (box 'expander))
 (define (expander proc) (vector expander:tag proc))
 (define (expander? d)   (tagged-vector? expander:tag '(proc) d))
 (define (literal? d) (or (boolean? d) (number? d) (char? d)))
-(define (form->parser env ctx form)
-  (define n (if (pair? form) (car form) form))
-  (and (name? n) (env-ref/syntax-parser? env ctx n)))
 (define (expand:apply env proc a*)
   (ast:apply (expand env proc) (map (lambda (a) (expand env a)) a*)))
 (define (expand env form)
   (let loop ((form form))
-    (cond ((form->parser env ctx:expr form) => (lambda (p) (p env form)))
+    (cond ((parse:op? env form))
           ((expander? form) => (import->lambda (import (proc) (proc env))))
           ((literal? form)  (ast:quote form))
-          ((name? form)     (ast:var (env-ref/var env form)))
+          ((name? form)     (parse:var env form))
           (else (match form
                   (`(,p ,@a*) (expand:apply env p a*))
                   (_          (error '"invalid syntax:" form)))))))
@@ -179,8 +172,7 @@
 ;; TODO: $define-syntax ?
 (define (expand:definition* st form*)
   (foldl (lambda (form st)
-           (cond ((form->parser (defst-env st) ctx:def form)
-                  => (lambda (p) (p st form)))
+           (cond ((parse:def? st form))
                  (else ($define st #f form)))) st form*))
 (define (parse:begin st form)
   (match form
@@ -305,7 +297,7 @@
                `(cons ',(car name&clause*)
                       (lambda (env form)
                         (define (ex form) (expand env form))
-                        (match/=? (make-syntax=? ctx:expr ,qenv env) form
+                        (match/=? (make-syntax=? ctx:var ,qenv env) form
                           ,@(cdr name&clause*)
                           (_ (error '"invalid syntax:" form)))))) descs)))
 
@@ -314,8 +306,7 @@
   '((apply (`(,_ ,p ,a)    (ast:apply* (ex p) (ex a))))
     (quote (`(,_ ,datum)   (ast:quote datum)))
     (if    (`(,_ ,c ,t ,f) (ast:if (ex c) (ex t) (ex f))))
-    (set!  (`(,_ ,name ,v) (guard (name? name))
-                           (ast:set! (env-ref/var-mutable env name) (ex v))))
+    (set!  (`(,_ ,name ,v) (guard (name? name)) (parse:set! env name (ex v))))
     (error (`(,_ ,@a*)     (expand:error env a*)))
     (reset (`(,_ ,@e*)     (ast:reset (expand:body* env e*))))
     (shift (`(,_ ,k ,@e*)  (ast:shift ($lambda #f (list k)
@@ -348,7 +339,7 @@
       (`(,_ ,@clause*)
         (guard (pair? clause*))
         (let loop ((c* clause*))
-          (match/=? (make-syntax=? ctx:expr env:primitive-syntax env) c*
+          (match/=? (make-syntax=? ctx:var env:primitive-syntax env) c*
             (`((else ,@e*))      (expand:body* env e*))
             (`((else . ,_) . ,_) (error '"invalid else clause in cond:" form))
             (`((,e) . ,c*)       (expand:or2 env e (loop c*)))
@@ -377,7 +368,7 @@
         (expand:let/temp
           'scrutinee env scrutinee
           (lambda (x)
-            (match/=? (make-syntax=? ctx:expr env:base env) clause* loop
+            (match/=? (make-syntax=? ctx:var env:base env) clause* loop
               (`((else ,@e*)) (expand:body* env e*))
               (`((else . ,_) . ,_)
                 (error '"invalid else clause in case:" form))
@@ -393,7 +384,7 @@
         (define (bad msg) (error '"malformed quasiquote:" msg form))
         (define (tag t e) ($cons (ast:quote t) ($cons e (ast:quote '()))))
         (let loop ((level 0) (qqf qqf))
-          (match/=? (make-syntax=? ctx:expr env:base env) qqf
+          (match/=? (make-syntax=? ctx:var env:base env) qqf
             (`(quasiquote ,qq) (tag 'quasiquote (loop (+ level 1) qq)))
             (`(,'unquote ,uq) (if (= 0 level) (ex uq)
                                 (tag 'unquote (loop (- level 1) uq))))
@@ -425,7 +416,7 @@
          (define $fail (ast:apply $k-fail '()))
          (define ($try $c $k) (ast:if $c $k $fail))
          (define ($succeed env)
-           (match/=? (make-syntax=? ctx:expr env:base env) rhs
+           (match/=? (make-syntax=? ctx:var env:base env) rhs
              (`((guard ,@conds) . ,rhs)
                (guard (pair? rhs))
                ($try (expand:and* env conds) (expand:body* env rhs)))
@@ -493,7 +484,7 @@
                  (define (e env) (parse:clauses $=? env clause*))
                  (expand:letrec
                    env (list name) (list (expander e))
-                   (lambda (env) (ast:var (env-ref/var env name)))))
+                   (lambda (env) (parse:var env name))))
                (clause* (parse:clauses $=? env clause*)))
              (list (expand env scrutinee))))))
 
@@ -503,10 +494,10 @@
      (env-extend*/syntax
        (env-extend*/syntax
          (env-extend*/syntax
-           env:empty ctx:expr
+           env:empty ctx:op
            ,(parser-descs->b* 'env:primitive-syntax parsers:primitive))
          ctx:def `((begin . ,parse:begin) (define . ,parse:define)))
-       ctx:expr
+       ctx:op
        (map (lambda (po-desc)
               (define name (car po-desc))
               (define arity (length (cadr po-desc)))
@@ -530,7 +521,7 @@
                      (letrec ,derived-op-procs
                        ,(expander
                           (lambda (env)
-                            (set! env:base (env-freeze*/mutable env))
+                            (set! env:base (env-freeze env))
                             (define form (shift k k))
                             (expand env:base form))))))))))
 
@@ -541,13 +532,13 @@
    (define ($list->vector x) (ast:apply $var:list->vector (list x)))
    (define ($vector->list x) (ast:apply $var:vector->list (list x)))
 
-   (define $var:equal?       (ast:var (env-ref/var env:base 'equal?)))
-   (define $var:list?        (ast:var (env-ref/var env:base 'list?)))
-   (define $var:append       (ast:var (env-ref/var env:base 'append)))
-   (define $var:list->vector (ast:var (env-ref/var env:base 'list->vector)))
-   (define $var:vector->list (ast:var (env-ref/var env:base 'vector->list)))
+   (define $var:equal?       (parse:var env:base 'equal?))
+   (define $var:list?        (parse:var env:base 'list?))
+   (define $var:append       (parse:var env:base 'append))
+   (define $var:list->vector (parse:var env:base 'list->vector))
+   (define $var:vector->list (parse:var env:base 'vector->list))
 
    (set! env:base (env-extend*/syntax
-                    env:base ctx:expr
+                    env:base ctx:op
                     ,(parser-descs->b* 'env:base parsers:base)))
    ))
