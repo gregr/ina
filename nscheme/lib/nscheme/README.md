@@ -4,6 +4,9 @@
 
 ### bootstrap with only simple code
 
+* racket bootstrap interpreter must define a compatible apply
+  * must support passing non-list argument to a variadic procedure
+
 * nscheme in "one page"
   * try again to eliminate match/case/quasiquote during bootstrapping
     * can we even get away without cond? maybe an incomplete cond?

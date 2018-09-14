@@ -2,7 +2,7 @@
 
 (require box tagged-vector? tagged-vector?!
          primitive-ops
-         ast:quote ast:var ast:set! ast:if ast:apply ast:apply* ast:lambda
+         ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
          ast:reset ast:shift ast:error ast:primitive-op)
 
 ;; Syntactic environments
@@ -82,7 +82,7 @@
 (define (expander? d)   (tagged-vector? expander:tag '(proc) d))
 (define (literal? d) (or (boolean? d) (number? d) (char? d)))
 (define (expand:apply env proc a*)
-  (ast:apply (expand env proc) (map (lambda (a) (expand env a)) a*)))
+  ($apply* (expand env proc) (map (lambda (a) (expand env a)) a*)))
 (define (expand env form)
   (let loop ((form form))
     (cond ((parse:op? env form))
@@ -119,6 +119,14 @@
 (define $null (ast:quote '()))
 (define $true (ast:quote #t))
 (define $false (ast:quote #f))
+(define ($cons a d)  (ast:primitive-op 'cons (list a d)))
+(define ($pair? x)   (ast:primitive-op 'pair? (list x)))
+(define ($car x)     (ast:primitive-op 'car (list x)))
+(define ($cdr x)     (ast:primitive-op 'cdr (list x)))
+(define ($vector? x) (ast:primitive-op 'vector? (list x)))
+(define ($list . xs) (foldr $cons $null xs))
+(define ($error . a*) (ast:error (apply $list a*)))
+(define ($apply* $proc $a*) (ast:apply $proc (apply $list $a*)))
 (define ($lambda variadic? p?* b?*->body)
   (define a?* (param*->addr* p?*))
   (ast:lambda variadic? a?* (b?*->body (map cons p?* a?*))))
@@ -127,8 +135,8 @@
   (define (body b*) ($temp->body (expand (env-extend*/var env:empty b*) temp)))
   ($lambda #f (list temp) body))
 (define ($let/temp temp-name $v $temp->body)
-  (ast:apply ($lambda/temp temp-name $temp->body) (list $v)))
-(define ($let p?* v* b?*->body) (ast:apply ($lambda #f p?* b?*->body) v*))
+  ($apply* ($lambda/temp temp-name $temp->body) (list $v)))
+(define ($let p?* v* b?*->body) ($apply* ($lambda #f p?* b?*->body) v*))
 (define ($begin body-initial* body-final)
   (cond ((null? body-initial*) body-final)
         (else ($let '(#f) (list (car body-initial*))
@@ -140,13 +148,6 @@
       (define a?* (map cdr b?*))
       ($begin (map (lambda (a? v) (if a? (ast:set! a? v) v)) a?* v*) body)))
   ($let p?* uninitialized* b?*->body))
-(define ($cons a d)  (ast:primitive-op 'cons (list a d)))
-(define ($pair? x)   (ast:primitive-op 'pair? (list x)))
-(define ($car x)     (ast:primitive-op 'car (list x)))
-(define ($cdr x)     (ast:primitive-op 'cdr (list x)))
-(define ($vector? x) (ast:primitive-op 'vector? (list x)))
-(define ($list . xs) (foldr $cons $null xs))
-(define ($error . a*) (ast:error (apply $list a*)))
 
 ;; High-level expansion
 (define (b?*->expand:body* env body*)
@@ -303,7 +304,7 @@
 
 ;; Parsers for primitive syntax (no var dependencies)
 (define parsers:primitive
-  '((apply (`(,_ ,p ,a)    (ast:apply* (ex p) (ex a))))
+  '((apply (`(,_ ,p ,a)    (ast:apply (ex p) (ex a))))
     (quote (`(,_ ,datum)   (ast:quote datum)))
     (if    (`(,_ ,c ,t ,f) (ast:if (ex c) (ex t) (ex f))))
     (set!  (`(,_ ,name ,v) (guard (name? name)) (parse:set! env name (ex v))))
@@ -345,7 +346,7 @@
             (`((,e) . ,c*)       (expand:or2 env e (loop c*)))
             (`((,e => ,p) . ,c*)
               (define ($t->body $t)
-                (ast:if $t (ast:apply (ex p) (list $t)) (loop c*)))
+                (ast:if $t ($apply* (ex p) (list $t)) (loop c*)))
               (expand:let/temp 'temp env e $t->body))
             (`((,e ,@e*) . ,c*)
               (ast:if (ex e) (expand:body* env e*) (loop c*)))
@@ -413,7 +414,7 @@
 `(begin
    ,'(define (parse:match/=? env =?-e scrutinee body* full-form)
        (define (parse:clause $=? $x env pat rhs $k-fail)
-         (define $fail (ast:apply $k-fail '()))
+         (define $fail ($apply* $k-fail '()))
          (define ($try $c $k) (ast:if $c $k $fail))
          (define ($succeed env)
            (match/=? (make-syntax=? ctx:var env:base env) rhs
@@ -434,7 +435,7 @@
                          ($let (list id) (list $x)
                                (lambda (b*)
                                  ($succeed (env-extend*/var env b*)))))
-             (`(quote ,datum) ($try (ast:apply $=? (list $x (ast:quote datum)))
+             (`(quote ,datum) ($try ($apply* $=? (list $x (ast:quote datum)))
                                     ($succeed env)))
              (`(cons ,pa ,pd)
                (define ($k env) ($let/temp 'x-cdr ($cdr $x)
@@ -477,7 +478,7 @@
        (expand:let/temp
          '=? env =?-e
          (lambda ($=?)
-           (ast:apply
+           ($apply*
              (match body*
                (`(,name . ,clause*)
                  (guard (name? name))
@@ -526,11 +527,11 @@
                             (expand env:base form))))))))))
 
    ;; Parsers with dependencies on base definitions
-   (define ($equal? a b)     (ast:apply $var:equal? (list a b)))
-   (define ($list? x)        (ast:apply $var:list?  (list x)))
-   (define ($append a b)     (ast:apply $var:append (list a b)))
-   (define ($list->vector x) (ast:apply $var:list->vector (list x)))
-   (define ($vector->list x) (ast:apply $var:vector->list (list x)))
+   (define ($equal? a b)     ($apply* $var:equal? (list a b)))
+   (define ($list? x)        ($apply* $var:list?  (list x)))
+   (define ($append a b)     ($apply* $var:append (list a b)))
+   (define ($list->vector x) ($apply* $var:list->vector (list x)))
+   (define ($vector->list x) ($apply* $var:vector->list (list x)))
 
    (define $var:equal?       (parse:var env:base 'equal?))
    (define $var:list?        (parse:var env:base 'list?))

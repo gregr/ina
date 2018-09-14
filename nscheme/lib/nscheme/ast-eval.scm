@@ -4,7 +4,6 @@
   ast:set!
   ast:if
   ast:apply
-  ast:apply*
   ast:lambda
   ast:reset
   ast:shift
@@ -82,25 +81,17 @@
              (error '"primitive op type error:" name arg-sig a*)))
          (cons name full-op)) primitive-ops))
 
-(define (ap* env ast*) (map (lambda (tm) (tm env)) ast*))
-
-(define (ast:quote datum) (lambda (env) datum))
-(define (ast:var address) (lambda (env) (env-ref env address)))
-(define (ast:set! addr v) (lambda (env) (env-set! env addr (v env))))
-(define (ast:if c t f)    (lambda (env) (if (c env) (t env) (f env))))
-(define (ast:apply proc arg*) (lambda (env) (apply (proc env) (ap* env arg*))))
-(define (ast:apply* proc arg) (lambda (env) (apply (proc env) (arg env))))
-(define (ast:reset body) (lambda (env) (reset (body env))))
-(define (ast:shift proc) (lambda (env) (shift k ((proc env) k))))
-(define (ast:error a)    (lambda (env)
-                           (define a* (a env))
-                           (unless (list? a*) '"error expects a list:" a*)
-                           (apply error a*)))
-
-(define (ast:primitive-op name a*)
-  (define op (or (assoc-ref primitive-op-evaluators name #f)
-                 (error '"invalid primitive op:" name)))
-  (lambda (env) (op (ap* env a*))))
+(define (ast:quote datum)    (lambda (env) datum))
+(define (ast:var address)    (lambda (env) (env-ref env address)))
+(define (ast:set! addr v)    (lambda (env) (env-set! env addr (v env))))
+(define (ast:if c t f)       (lambda (env) (if (c env) (t env) (f env))))
+(define (ast:apply proc arg) (lambda (env) (apply (proc env) (arg env))))
+(define (ast:reset body)     (lambda (env) (reset (body env))))
+(define (ast:shift proc)     (lambda (env) (shift k ((proc env) k))))
+(define (ast:error a)        (lambda (env)
+                               (define a* (a env))
+                               (unless (list? a*) '"error expects a list:" a*)
+                               (apply error a*)))
 
 (define (ast:lambda variadic? addr* body)
   (define (~length ~xs) (if (pair? ~xs) (+ 1 (~length (cdr ~xs))) 0))
@@ -122,6 +113,11 @@
                     (error '"arity mismatch:" plen (length a*) a*))
                   (continue env a*))))))
 
+(define (ast:primitive-op name a*)
+  (define op (or (assoc-ref primitive-op-evaluators name #f)
+                 (error '"invalid primitive op:" name)))
+  (lambda (env) (op (map (lambda (a) (a env)) a*))))
+
 (define (eval/ast ast)
   ((if (procedure? ast) ast
      (match ast loop
@@ -130,8 +126,7 @@
        (`#(set! ,address ,v)     (ast:set! address (loop v)))
        (`#(if ,c ,t ,f)          (ast:if (loop c) (loop t) (loop f)))
        (`#(lambda ,v? ,a* ,body) (ast:lambda v? a* (loop body)))
-       (`#(apply ,p ,a*)         (ast:apply (loop p) (map loop a*)))
-       (`#(apply* ,p ,a)         (ast:apply* (loop p) (loop a)))
+       (`#(apply ,p ,a)          (ast:apply (loop p) (loop a)))
        (`#(reset ,body)          (ast:reset (loop body)))
        (`#(shift ,proc)          (ast:shift (loop proc)))
        (`#(error ,a)             (ast:error (loop a)))
