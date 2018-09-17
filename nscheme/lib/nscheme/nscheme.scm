@@ -348,13 +348,13 @@
                                ($begin (reverse (cdr rb*)) (car rb*))))
     (cond
       ((length>=? 2 form)
+       (define =? (make-syntax=? ctx:var env:primitive-syntax env))
+       (unless (length>=? 1 (@. 1)) (error '"invalid cond:" form))
        (let loop ((c* (@. 1)))
-         (define =? (make-syntax=? ctx:var env:primitive-syntax env))
          (cond
            ((null? c*) ($error (ast:quote '"no matching cond clause:")
                                (ast:quote form)))
-           ((not (and (length>=? 1 c*) (length>=? 1 (car c*))))
-            (error '"invalid cond:" form))
+           ((not (length>=? 1 (car c*))) (error '"invalid cond:" form))
            ((and (=? 'else (caar c*)) (length=? 1 c*))
             (expand:body* env (cdar c*)))
            (else
@@ -380,20 +380,24 @@
 
 (define parsers:base
   '((case ((length>=? 3 form)
+           (define =? (make-syntax=? ctx:var env:base env))
            (expand:let/temp
              'scrutinee env (@ 1)
              (lambda (x)
-               (match/=? (make-syntax=? ctx:var env:base env) (@. 2) loop
-                 (`((else ,@e*)) (expand:body* env e*))
-                 (`((else . ,_) . ,_)
-                   (error '"invalid else clause in case:" form))
-                 (`(((,@data) ,@e*) . ,c*)
-                   (ast:if (foldr (lambda (d r) (ast:if ($equal? x d) $true r))
-                                  $false (map ast:quote data))
-                           (expand:body* env e*) (loop c*)))
-                 ('() ($error (ast:quote '"no matching case clause:")
-                              x (ast:quote form)))
-                 (c* (error '"invalid case clauses:" c*)))))))
+               (unless (length>=? 1 (@. 2)) (error '"invalid case:" form))
+               (let loop ((c* (@. 2)))
+                 (cond
+                   ((null? c*) ($error (ast:quote '"no matching case clause:")
+                                       x (ast:quote form)))
+                   ((not (length>=? 2 (car c*))) (error '"invalid case:" form))
+                   ((and (=? 'else (caar c*)) (length=? 1 c*))
+                    (expand:body* env (cdar c*)))
+                   ((list? (caar c*))
+                    (ast:if
+                      (foldr (lambda (d r) (ast:if ($equal? x d) $true r))
+                             $false (map ast:quote (caar c*)))
+                      (expand:body* env (cdar c*)) (loop (cdr c*))))
+                   (else (error '"invalid case:" form))))))))
     (quasiquote
       ((length=? 2 form)
        (define (tag t e) ($cons (ast:quote t) ($cons e (ast:quote '()))))
@@ -430,12 +434,12 @@
          (define $fail ($apply* $k-fail '()))
          (define ($try $c $k) (ast:if $c $k $fail))
          (define ($succeed env)
-           (match/=? (make-syntax=? ctx:var env:base env) rhs
-             (`((guard ,@conds) . ,rhs)
-               (guard (pair? rhs))
-               ($try (expand:and* env conds) (expand:body* env rhs)))
-             (`((guard . ,_) . ,_) (error '"invalid match rhs:" rhs))
-             (_ (expand:body* env rhs))))
+           (define =? (make-syntax=? ctx:var env:base env))
+           (cond ((and (pair? rhs) (length>=? 1 (car rhs))
+                       (=? 'guard (caar rhs)))
+                  ($try (expand:and* env (cdar rhs))
+                        (expand:body* env (cdr rhs))))
+                 (else (expand:body* env rhs))))
          (define (tqq datum) (list 'quasiquote datum))
          (let loop (($x $x) (p pat) (env env) ($succeed $succeed))
            (define ($try-vec pat)
@@ -480,26 +484,24 @@
            (lambda ($x)
              (foldr
                (lambda (c $fail)
-                 (match c
-                   (`(,pat ,@rhs)
-                     ($let/temp
-                       'k-fail ($thunk $fail)
-                       (lambda ($kf) (parse:clause $=? $x env pat rhs $kf))))
-                   (_ (error '"invalid match clause:" c))))
+                 (cond ((length>=? 2 c)
+                        ($let/temp
+                          'k-fail ($thunk $fail)
+                          (lambda ($kf) (parse:clause
+                                          $=? $x env (car c) (cdr c) $kf))))
+                       (error (error '"invalid match clause:" c))))
                ($error (ast:quote '"no matching clause:")
                        $x (ast:quote full-form)) c*))))
        (expand:let/temp
          '=? env =?-e
          (lambda ($=?)
            ($apply*
-             (match body*
-               (`(,name . ,clause*)
-                 (guard (name? name))
-                 (define (e env) (parse:clauses $=? env clause*))
-                 (expand:letrec
-                   env (list name) (list (expander e))
-                   (lambda (env) (parse:var env name))))
-               (clause* (parse:clauses $=? env clause*)))
+             (cond ((name? (car body*))
+                    (define name (car body*))
+                    (define (e env) (parse:clauses $=? env (cdr body*)))
+                    (expand:letrec env (list name) (list (expander e))
+                                   (lambda (env) (parse:var env name))))
+                   (else (parse:clauses $=? env body*)))
              (list (expand env scrutinee))))))
 
    (define env:primitive-syntax
@@ -512,13 +514,13 @@
        ctx:op
        (map (lambda (po-desc)
               (define name (car po-desc))
-              (define arity (length (cadr po-desc)))
               (cons name
                     (lambda (env form)
-                      ,'(match form
-                          (`(,_ ,@a*) (guard (= arity (length a*)))
-                                      (ast:primitive-op name (expand* env a*)))
-                          (_ (error '"invalid primitive op:" po-desc form))))))
+                      (cond ((length=? (+ (length (cadr po-desc)) 1) form)
+                             (ast:primitive-op
+                               name (expand* env (list-tail form 1))))
+                            (else (error '"invalid primitive op:"
+                                         po-desc form))))))
             primitive-ops)))
 
    (define env:base #t)
