@@ -9,15 +9,15 @@
   ast:shift
   ast:primitive-op)
 
-(define (ast:quote datum)     `#(quote ,datum))
-(define (ast:var address)     `#(var ,address))
-(define (ast:set! addr value) `#(set! ,addr ,value))
-(define (ast:if c t f)        `#(if ,c ,t ,f))
-(define (ast:apply proc arg)  `#(apply ,proc ,arg))
-(define (ast:reset body)      `#(reset ,body))
-(define (ast:shift proc)      `#(shift ,proc))
+(define (ast:quote datum)     (vector 'quote datum))
+(define (ast:var address)     (vector 'var address))
+(define (ast:set! addr value) (vector 'set! addr value))
+(define (ast:if c t f)        (vector 'if c t f))
+(define (ast:apply proc arg)  (vector 'apply proc arg))
+(define (ast:reset body)      (vector 'reset body))
+(define (ast:shift proc)      (vector 'shift proc))
 
 (define (ast:lambda variadic? address?* body)
-  `#(lambda ,variadic? ,address?* ,body))
+  (vector 'lambda variadic? address?* body))
 
-(define (ast:primitive-op name a*) `#(prim-op ,name ,a*))
+(define (ast:primitive-op name a*) (vector 'prim-op name a*))

@@ -470,9 +470,11 @@
   (test 'vector-5
     (map ev '((vector-ref '#(1 2 3) 0)
               (vector-ref '#(4 5 6) 2)
-              (vector-ref `#(7 8 9) 1)
-              (vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0) 1))) 1)
-              (vector-ref (car (cdr `(6 #(7 ,(cons 8 9) 0 ,(car '(10 . #f))) 1))) 3)))
+              (vector-ref '#(7 8 9) 1)
+              (vector-ref (car (cdr (list 6 (vector 7 (cons 8 9) 0) 1))) 1)
+              (vector-ref (car (cdr (list 6 (vector
+                                              7 (cons 8 9) 0 (car '(10 . #f)))
+                                          1))) 3)))
     '(1 6 8 (8 . 9) 10))
 
   (test 'list-1

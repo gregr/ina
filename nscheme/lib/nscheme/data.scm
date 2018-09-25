@@ -2,18 +2,17 @@
 
 ;; TODO: build and sanity check compiler backend primitive op tables.
 (define type-predicates
-  `((boolean?   . ,boolean?)
-    (null?      . ,null?)
-    (flonum?    . ,flonum?)
-    (fixnum?    . ,fixnum?)
-    (integer?   . ,integer?)
-    (number?    . ,number?)
-    (string?    . ,string?)
-    (pair?      . ,pair?)
-    (vector?    . ,vector?)
-    (mvector?   . ,mvector?)
-    (procedure? . ,procedure?)
-    ))
+  (list (cons 'boolean?   boolean?)
+        (cons 'null?      null?)
+        (cons 'flonum?    flonum?)
+        (cons 'fixnum?    fixnum?)
+        (cons 'integer?   integer?)
+        (cons 'number?    number?)
+        (cons 'string?    string?)
+        (cons 'pair?      pair?)
+        (cons 'vector?    vector?)
+        (cons 'mvector?   mvector?)
+        (cons 'procedure? procedure?)))
 
 (define primitive-ops
   '((mvector?   (#f) boolean?)

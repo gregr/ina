@@ -220,7 +220,8 @@
   (map (lambda (po-desc)
          (define (x i) (string-append 'x (number->string i)))
          (define p* (map x (range (length (cadr po-desc)))))
-         `(,(car po-desc) (lambda ,p* (,(car po-desc) . ,p*)))) primitive-ops))
+         (list (car po-desc) (list 'lambda p* (cons (car po-desc) p*))))
+       primitive-ops))
 
 (define derived-op-procs
   '((error (lambda args ('error args)))
@@ -299,13 +300,15 @@
 (define (parser-descs->b* qenv descs)
   (cons 'list
         (map (lambda (name&clause*)
-               `(cons ',(car name&clause*)
-                      (lambda (env form)
-                        (define (ex form) (expand env form))
-                        (define (@ i) (list-ref form i))
-                        (define (@. i) (list-tail form i))
-                        (cond ,@(cdr name&clause*)
-                              (else (error '"invalid syntax:" form))))))
+               (list 'cons (list 'quote (car name&clause*))
+                     (list 'lambda '(env form)
+                           '(define (ex form) (expand env form))
+                           '(define (@ i) (list-ref form i))
+                           '(define (@. i) (list-tail form i))
+                           (cons 'cond (append
+                                         (cdr name&clause*)
+                                         '((else (error '"invalid syntax:"
+                                                        form))))))))
              descs)))
 
 ;; Parsers for primitive syntax (no var dependencies)
@@ -424,8 +427,9 @@
                             (@ 1) (@. 2) form)))))
 
 ;; Environment construction
-`(begin
-   ,'(define (parse:match/=? env =?-e scrutinee body* full-form)
+(append
+  '(begin
+     (define (parse:match/=? env =?-e scrutinee body* full-form)
        (define (parse:clause $=? $x env pat rhs $k-fail)
          (define $fail ($apply* $k-fail '()))
          (define ($try $c $k) (ast:if $c $k $fail))
@@ -447,8 +451,8 @@
              (define (?>= n tag) (and (? tag) (length>=? n p)))
              (cond
                ((equal? p '_)                 ($succeed env))
-               ((name? p)                     (retry `(var ,p)))
-               ((or (boolean? p) (number? p)) (retry `(quote ,p)))
+               ((name? p)                     (retry (list 'var p)))
+               ((or (boolean? p) (number? p)) (retry (list 'quote p)))
                ((not (length>=? 1 p)) (error '"invalid pattern:" pat p))
                ((and (?= 2 'var) (name? (cadr p)))
                 ($let (list (cadr p)) (list $x)
@@ -464,9 +468,10 @@
                                              (lambda ($x)
                                                (loop $x (cadr p) env $k)))))
                ((?=  2 'list*) (retry (cadr p)))
-               ((?>= 3 'list*) (retry `(cons ,(cadr p) (list* . ,(cddr p)))))
-               ((? 'list)   (retry `(list* . ,(append (cdr p) (list ''())))))
-               ((? 'vector) ($try-vec `(list . ,(cdr p))))
+               ((?>= 3 'list*) (retry (list 'cons (cadr p)
+                                            (cons 'list* (cddr p)))))
+               ((? 'list)   (retry (cons 'list* (append (cdr p) (list ''())))))
+               ((? 'vector) ($try-vec (cons 'list (cdr p))))
                ((?= 2 'quasiquote)
                 (define qq (cadr p))
                 (cond ((vector? qq) ($try-vec (tqq (vector->list qq))))
@@ -477,11 +482,11 @@
                       ((and (length=? 2 qq) (equal? (car qq) 'unquote))
                        (retry (cadr qq)))
                       ((pair? qq)
-                       (retry `(cons ,(tqq (car qq)) ,(tqq (cdr qq)))))
+                       (retry (list 'cons (tqq (car qq)) (tqq (cdr qq)))))
                       ((ormap (lambda (d) (equal? qq d))
                               '(quasiquote unquote unquote-splicing))
                        (error '"bad quasiquote keyword:" qq pat))
-                      (else (retry `(quote ,qq)))))
+                      (else (retry (list 'quote qq)))))
                (else (error '"invalid pattern:" pat p))))))
        (define (parse:clauses $=? env c*)
          ($lambda/temp
@@ -507,42 +512,50 @@
                     (expand:letrec env (list name) (list (expander e))
                                    (lambda (env) (parse:var env name))))
                    (else (parse:clauses $=? env body*)))
-             (list (expand env scrutinee))))))
+             (list (expand env scrutinee)))))))
 
-   (define env:primitive-syntax
-     (env-extend*/syntax
-       (env-extend*/syntax
-         (env-extend*/syntax
-           env:empty ctx:op
-           ,(parser-descs->b* 'env:primitive-syntax parsers:primitive))
-         ctx:def `((begin . ,parse:begin) (define . ,parse:define)))
-       ctx:op
-       (map (lambda (po-desc)
-              (define name (car po-desc))
-              (cons name
-                    (lambda (env form)
-                      (cond ((length=? (+ (length (cadr po-desc)) 1) form)
-                             (ast:primitive-op
-                               name (expand* env (list-tail form 1))))
-                            (else (error '"invalid primitive op:"
-                                         po-desc form))))))
-            primitive-ops)))
+  (list
+    (list
+      'define 'env:primitive-syntax
+      (list
+        'env-extend*/syntax
+        (list 'env-extend*/syntax
+              (list 'env-extend*/syntax
+                    'env:empty 'ctx:op
+                    (parser-descs->b*
+                      'env:primitive-syntax parsers:primitive))
+              'ctx:def '(list (cons 'begin parse:begin)
+                              (cons 'define parse:define)))
+        'ctx:op
+        '(map (lambda (po-desc)
+                (define name (car po-desc))
+                (cons name
+                      (lambda (env form)
+                        (cond ((length=? (+ (length (cadr po-desc)) 1) form)
+                               (ast:primitive-op
+                                 name (expand* env (list-tail form 1))))
+                              (else (error '"invalid primitive op:"
+                                           po-desc form))))))
+              primitive-ops))))
 
-   (define env:base #t)
+
+ '((define env:base #t)
    (define nscheme:expand
      (reset (expand
               env:primitive-syntax
-              `(let ,primitive-op-procs
-                 (letrec ((cons* (lambda (x xs)
-                                   (if (null? xs) x
-                                     (cons x (cons* (car xs) (cdr xs)))))))
-                   (let ((apply (lambda (f x . xs) (apply f (cons* x xs)))))
-                     (letrec ,derived-op-procs
-                       ,(expander
-                          (lambda (env)
-                            (set! env:base (env-freeze env))
-                            (define form (shift k k))
-                            (expand env:base form))))))))))
+              (list 'let primitive-op-procs
+                    (list 'letrec
+                          '((cons* (lambda (x xs)
+                                     (if (null? xs) x
+                                       (cons x (cons* (car xs) (cdr xs)))))))
+                          (list 'let '((apply (lambda (f x . xs)
+                                                (apply f (cons* x xs)))))
+                                (list 'letrec derived-op-procs
+                                      (expander
+                                        (lambda (env)
+                                          (set! env:base (env-freeze env))
+                                          (define form (shift k k))
+                                          (expand env:base form))))))))))
 
    ;; Parsers with dependencies on base definitions
    (define ($equal? a b)     ($apply* $var:equal? (list a b)))
@@ -555,9 +568,10 @@
    (define $var:list?        (parse:var env:base 'list?))
    (define $var:append       (parse:var env:base 'append))
    (define $var:list->vector (parse:var env:base 'list->vector))
-   (define $var:vector->list (parse:var env:base 'vector->list))
+   (define $var:vector->list (parse:var env:base 'vector->list)))
 
-   (set! env:base (env-extend*/syntax
-                    env:base ctx:op
-                    ,(parser-descs->b* 'env:base parsers:base)))
-   ))
+  (list (list 'set! 'env:base
+              (list 'env-extend*/syntax
+                    'env:base 'ctx:op
+                    (parser-descs->b* 'env:base parsers:base)))))
+)

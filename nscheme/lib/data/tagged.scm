@@ -48,21 +48,21 @@
   (test 'case/import-1
     (case/import
       (example 1 2)
-      `((,example?       . ,(import (x y) (list 'first x y)))
-        (,example2?      . ,(import (z) (list 'second z)))
-        (,(lambda _ '()) . ,(import () 'third))))
+      (list (cons example?       (import (x y) (list 'first x y)))
+            (cons example2?      (import (z) (list 'second z)))
+            (cons (lambda _ '()) (import () 'third))))
     '(first 1 2))
   (test 'case/import-2
     (case/import
       (example2 3)
-      `((,example?  . ,(import (x y) (list 'first x y)))
-        (,example2? . ,(import (z) (list 'second z)))
-        (,(lambda _ '()) . ,(import () 'third))))
+      (list (cons example?  (import (x y) (list 'first x y)))
+            (cons example2? (import (z) (list 'second z)))
+            (cons (lambda _ '()) (import () 'third))))
     '(second 3))
   (test 'case/import-3
     (case/import
       55
-      `((,example?  . ,(import (x y) (list 'first x y)))
-        (,example2? . ,(import (z) (list 'second z)))
-        (,(lambda _ '()) . ,(import () 'third))))
+      (list (cons example?  (import (x y) (list 'first x y)))
+            (cons example2? (import (z) (list 'second z)))
+            (cons (lambda _ '()) (import () 'third))))
     'third))
