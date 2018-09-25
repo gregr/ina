@@ -274,7 +274,7 @@
                     (else (filter p? (cdr xs))))))
     (filter-not (lambda (p? xs) (filter (lambda (x) (not (p? x))) xs)))
     (length (lambda (xs) (foldl (lambda (_ l) (+ 1 l)) 0 xs)))
-    (append (lambda (xs ys) (foldr cons ys xs)))
+    (append (lambda xss (foldr (lambda (xs yss) (foldr cons yss xs)) '() xss)))
     (reverse-append (lambda (xs ys) (foldl cons ys xs)))
     (reverse (lambda (xs) (reverse-append xs '())))
 
