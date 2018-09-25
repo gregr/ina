@@ -15,7 +15,7 @@
   assoc:empty assoc-ref assoc-set
   type-predicates primitive-ops)
 
-;;; Runtime environments
+;; Runtime environments
 (define env:empty assoc:empty)
 (define (env-extend* env b*)
   (foldl (lambda (b e) (assoc-set e (car b) (make-mvector 1 (cdr b)))) env b*))
@@ -25,7 +25,7 @@
 (define (env-ref env addr)    (mvector-ref (env-ref-box env addr) 0))
 (define (env-set! env addr v) (mvector-set! (env-ref-box env addr) 0 v))
 
-;;; Primitive operations
+;; Primitive operations
 (define primitive-op-procs
   (list (cons 'mvector?        mvector?)
         (cons 'vector?         vector?)

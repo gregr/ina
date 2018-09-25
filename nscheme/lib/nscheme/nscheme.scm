@@ -100,7 +100,7 @@
           (else                (error '"invalid syntax:" form)))))
 (define (expand* env form*) (map (lambda (f) (expand env f)) form*))
 
-;;; Parameters
+;; Parameters
 (define (improper-list? d)
   (and (not (null? d)) (or (not (pair? d)) (improper-list? (cdr d)))))
 (define (~list->list d)
@@ -121,7 +121,7 @@
 (define (param*->addr* n*)
   (map (lambda (n) (and (name? n) (fresh-uid n))) n*))
 
-;;; High-level AST construction
+;; High-level AST construction
 (define $null (ast:quote '()))
 (define $true (ast:quote #t))
 (define $false (ast:quote #f))
@@ -186,11 +186,8 @@
         (else               (error '"invalid begin:" form))))
 (define (parse:define st form)
   (define (@ i) (list-ref form i)) (define (@. i) (list-tail form i))
-  (cond ((and (length=? 3 form) (param? (@ 1)))
-         ;; `(,_ ,n ,body)
-         ($define st (@ 1) (@ 2)))
+  (cond ((and (length=? 3 form) (param? (@ 1))) ($define st (@ 1) (@ 2)))
         ((and (~length>=? 3 form) (pair? (@ 1)) (name? (car (@ 1))))
-         ;; `(,_ (,n . ,~p?*) . ,body*)
          (define (edef env) (expand:lambda env (cdr (@ 1)) (@. 2)))
          ($define st (car (@ 1)) (expander edef)))
         (else (error '"invalid define:" form))))
