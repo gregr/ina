@@ -42,6 +42,7 @@
     (number=?        . ,eqv?)
     (string=?        . ,string=?)
     (mvector=?       . ,mvector=?)
+    (procedure=?     . ,procedure=?)
     (char->integer   . ,char->integer)
     (integer->char   . ,integer->char)
     (string->vector  . ,string->vector)

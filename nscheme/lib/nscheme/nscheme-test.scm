@@ -502,6 +502,10 @@
               '((5 6) (4 6) (5 7) #(1 2 3) #(1 8 3))
               '((5 6) (5 6) (5 6) #(1 2 3) #(1 2 3))))
     '(#t #f #f #t #f))
+  (test 'equal-3
+    (ev '(let ((id (lambda (x) x)))
+           (map equal? (list id id) (list id (lambda (x) x)))))
+    '(#t #f))
 
   (test 'case-1
     (ev '(case 3 (else 'ok)))

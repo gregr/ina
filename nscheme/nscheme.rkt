@@ -21,6 +21,7 @@
   mvector-ref
   mvector-set!
   mvector->vector
+  procedure=?
   case
   match
   match/=?  ;; TODO: generalize to match/syntax.
@@ -51,6 +52,8 @@
 (define (reverse-append xs ys)
   (if (null? xs) ys (reverse-append (cdr xs) (cons (car xs) ys))))
 
+(define (procedure=? m n) (eq? m n))
+
 (struct mvector (v) #:transparent)
 (define (mvector=? m n) (eq? m n))
 (define (make-mvector k d) (mvector (make-vector k d)))
@@ -70,8 +73,6 @@
 (define (number=? a b) (eqv? a b))
 
 (define (new-equal? a b)
-  (when (andmap procedure? (list a b))
-    (error "equal? undefined for two procedures:" a b))
   (or (eqv? a b)
       (and (string? a) (string? b) (string=? a b))
       (and (pair? a) (pair? b)

@@ -28,11 +28,12 @@
     (boolean?   (#f) boolean?)
     (procedure? (#f) boolean?)
 
-    (boolean=? (boolean? boolean?) boolean?)
-    (char=?    (char? char?)       boolean?)
-    (number=?  (number? number?)   boolean?)
-    (string=?  (string? string?)   boolean?)
-    (mvector=? (mvector? mvector?) boolean?)
+    (boolean=?   (boolean? boolean?)     boolean?)
+    (char=?      (char? char?)           boolean?)
+    (number=?    (number? number?)       boolean?)
+    (string=?    (string? string?)       boolean?)
+    (mvector=?   (mvector? mvector?)     boolean?)
+    (procedure=? (procedure? procedure?) boolean?)
 
     (char->integer  (char?)    fixnum?)
     (integer->char  (integer?) char?)
