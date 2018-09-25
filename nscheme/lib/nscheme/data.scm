@@ -4,7 +4,6 @@
 (define type-predicates
   `((boolean?   . ,boolean?)
     (null?      . ,null?)
-    (char?      . ,char?)
     (flonum?    . ,flonum?)
     (fixnum?    . ,fixnum?)
     (integer?   . ,integer?)
@@ -22,21 +21,17 @@
     (pair?      (#f) boolean?)
     (null?      (#f) boolean?)
     (string?    (#f) boolean?)
-    (char?      (#f) boolean?)
     (number?    (#f) boolean?)
     (integer?   (#f) boolean?)
     (boolean?   (#f) boolean?)
     (procedure? (#f) boolean?)
 
     (boolean=?   (boolean? boolean?)     boolean?)
-    (char=?      (char? char?)           boolean?)
     (number=?    (number? number?)       boolean?)
     (string=?    (string? string?)       boolean?)
     (mvector=?   (mvector? mvector?)     boolean?)
     (procedure=? (procedure? procedure?) boolean?)
 
-    (char->integer  (char?)    fixnum?)
-    (integer->char  (integer?) char?)
     (string->vector (string?)  vector?)
     (vector->string (vector?)  string?)
 

@@ -494,9 +494,9 @@
 
   (test 'equal-1
     (ev '(map equal?
-              '(9 9 () #t #f one two #\a #\b)
-              '(9 8 () #t #t one one #\a #\a)))
-    '(#t #f #t #t #f #t #f #t #f))
+              '(9 9 () #t #f one two)
+              '(9 8 () #t #t one one)))
+    '(#t #f #t #t #f #t #f))
   (test 'equal-2
     (ev '(map equal?
               '((5 6) (4 6) (5 7) #(1 2 3) #(1 8 3))

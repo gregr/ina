@@ -67,8 +67,8 @@
   (vector-set! new i d)
   new)
 
-(define (string->vector s) (list->vector (string->list s)))
-(define (vector->string v) (list->string (vector->list v)))
+(define (string->vector s) (list->vector (map char->integer (string->list s))))
+(define (vector->string v) (list->string (map integer->char (vector->list v))))
 
 (define (number=? a b) (eqv? a b))
 
