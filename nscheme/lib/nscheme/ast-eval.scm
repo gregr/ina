@@ -7,7 +7,6 @@
   ast:lambda
   ast:reset
   ast:shift
-  ast:error
   ast:primitive-op
   eval/ast
   test!)
@@ -88,10 +87,6 @@
 (define (ast:apply proc arg) (lambda (env) (apply (proc env) (arg env))))
 (define (ast:reset body)     (lambda (env) (reset (body env))))
 (define (ast:shift proc)     (lambda (env) (shift k ((proc env) k))))
-(define (ast:error a)        (lambda (env)
-                               (define a* (a env))
-                               (unless (list? a*) '"error expects a list:" a*)
-                               (apply error a*)))
 
 (define (ast:lambda variadic? addr* body)
   (define (~length ~xs) (if (pair? ~xs) (+ 1 (~length (cdr ~xs))) 0))
@@ -130,7 +125,6 @@
              ((? 'lambda)  (ast:lambda (@ 1) (@ 2) (loop (@ 3))))
              ((? 'reset)   (ast:reset (loop (@ 1))))
              ((? 'shift)   (ast:shift (loop (@ 1))))
-             ((? 'error)   (ast:error (loop (@ 1))))
              ((? 'prim-op) (ast:primitive-op (@ 1) (map loop (@ 2))))
              (else (error '"unknown ast:" ast))))) env:empty))
 

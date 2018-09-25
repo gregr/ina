@@ -7,7 +7,6 @@
   ast:lambda
   ast:reset
   ast:shift
-  ast:error
   ast:primitive-op)
 
 (define (ast:quote datum)     `#(quote ,datum))
@@ -17,7 +16,6 @@
 (define (ast:apply proc arg)  `#(apply ,proc ,arg))
 (define (ast:reset body)      `#(reset ,body))
 (define (ast:shift proc)      `#(shift ,proc))
-(define (ast:error a)         `#(error ,a))
 
 (define (ast:lambda variadic? address?* body)
   `#(lambda ,variadic? ,address?* ,body))

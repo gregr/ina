@@ -3,7 +3,7 @@
 (require box tagged-vector? tagged-vector?!
          primitive-ops
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:reset ast:shift ast:error ast:primitive-op)
+         ast:reset ast:shift ast:primitive-op)
 
 ;; Syntactic environments
 (define (name? n) (string? n))
@@ -131,7 +131,7 @@
 (define ($cdr x)     (ast:primitive-op 'cdr (list x)))
 (define ($vector? x) (ast:primitive-op 'vector? (list x)))
 (define ($list . xs) (foldr $cons $null xs))
-(define ($error . a*) (ast:error (apply $list a*)))
+(define ($error . a*) (ast:apply (ast:quote 'error) (apply $list a*)))
 (define ($apply* $proc $a*) (ast:apply $proc (apply $list $a*)))
 (define ($lambda variadic? p?* b?*->body)
   (define a?* (param*->addr* p?*))
@@ -223,7 +223,8 @@
          `(,(car po-desc) (lambda ,p* (,(car po-desc) . ,p*)))) primitive-ops))
 
 (define derived-op-procs
-  '((not (lambda (b) (if b #f #t)))
+  '((error (lambda args ('error args)))
+    (not (lambda (b) (if b #f #t)))
     (list->vector (lambda (xs)
                     (define result (make-mvector (length xs) #t))
                     (foldl (lambda (x i) (mvector-set! result i x) (+ i 1))
@@ -318,7 +319,6 @@
     (if    ((length=? 4 form) (ast:if (ex (@ 1)) (ex (@ 2)) (ex (@ 3)))))
     (set!  ((and (length=? 3 form) (name? (@ 1)))
             (parse:set! env (@ 1) (ex (@ 2)))))
-    (error ((and (length>=? 1 form) (list? (@. 1))) (expand:error env (@. 1))))
     (reset ((length>=? 2 form) (ast:reset (expand:body* env (@. 1)))))
     (shift ((length>=? 3 form)
             (ast:shift ($lambda #f (list (@ 1))
