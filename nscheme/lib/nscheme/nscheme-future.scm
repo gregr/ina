@@ -207,20 +207,17 @@
                                           (expand env:future form))))))
 
 (define (test! test)
-  (test 'cond-3
+  (test 'cond-4
     (ev '(cond (#f 3)
                ((car '(#f 4)) 5)
                (else 6)))
     6)
-  (test 'cond-4
+  (test 'cond-5
     (ev '(cond (#f 3)
                ((car '(#f 4)) 5)
                ('the => (lambda (v) (cons v 'answer)))
                (else 6)))
     '(the . answer))
-  (test 'cond-5
-    (ev '(cond (8)))
-    8)
 
   (test 'qq-1
     (ev '`one)
