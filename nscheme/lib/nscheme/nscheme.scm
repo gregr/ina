@@ -1,13 +1,11 @@
 (provide nscheme:expand env:base)
 
-(require box tagged-vector? tagged-vector?!
-         primitive-ops
-         ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:reset ast:shift ast:primitive-op)
+(require ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
+         ast:reset ast:shift ast:primitive-op primitive-ops)
 
 ;; Syntactic environments
 (define (name? n) (string? n))
-(define (fresh-uid name) (box name))
+(define (fresh-uid name) (make-mvector 1 name))
 (define ctx:var  'variable)
 (define ctx:set! 'set!)
 (define ctx:op   'operator)
@@ -83,9 +81,11 @@
 (define (length>=? len xs)   (and (list? xs) (~length>=? len xs)))
 
 ;; Expansion
-(define expander:tag    (box 'expander))
+(define expander:tag    (make-mvector 1 'expander))
 (define (expander proc) (vector expander:tag proc))
-(define (expander? d)   (tagged-vector? expander:tag '(proc) d))
+(define (expander? d) (and (vector? d) (= (vector-length d) 2)
+                           (equal? (vector-ref d 0) expander:tag)
+                           (list (cons 'proc (vector-ref d 1)))))
 (define (literal? d)    (or (boolean? d) (number? d)))
 (define (expand:apply env proc a*)
   ($apply* (expand env proc) (map (lambda (a) (expand env a)) a*)))
