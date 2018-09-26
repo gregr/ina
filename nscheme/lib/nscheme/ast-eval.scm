@@ -89,18 +89,15 @@
     (define env (env-extend* cenv (filter-not not b?*)))
     (body env))
   (define plen (length addr*))
-  (cond (variadic?
-          (lambda (env)
-            (lambda a*
-              (when (< (~length a*) (- plen 1))
-                (error '"too few arguments:" (- plen 1) (~length a*) a*))
-              (let ((a0* (take a* (- plen 1))) (a1* (drop a* (- plen 1))))
-                (continue env (append a0* (list a1*)))))))
-        (else (lambda (env)
-                (lambda a*
-                  (unless (and (list? a*) (= (length a*) plen))
-                    (error '"arity mismatch:" plen (length a*) a*))
-                  (continue env a*))))))
+  (if variadic?
+    (lambda (env)
+      (lambda a* (when (< (~length a*) (- plen 1))
+                   (error '"too few arguments:" (- plen 1) (~length a*) a*))
+        (let ((a0* (take a* (- plen 1))) (a1* (drop a* (- plen 1))))
+          (continue env (append a0* (list a1*))))))
+    (lambda (env) (lambda a* (unless (and (list? a*) (= (length a*) plen))
+                               (error '"arity mismatch:" plen (length a*) a*))
+                    (continue env a*)))))
 
 (define (ast:primitive-op name a*)
   (define op (cdr (or (assoc name primitive-op-evaluators)
@@ -120,7 +117,7 @@
              ((? 'reset)   (ast:reset (loop (@ 1))))
              ((? 'shift)   (ast:shift (loop (@ 1))))
              ((? 'prim-op) (ast:primitive-op (@ 1) (map loop (@ 2))))
-             (else (error '"unknown ast:" ast))))) env:empty))
+             (#t           (error '"unknown ast:" ast))))) env:empty))
 
 (define (test! test)
   (test 'ast:quote

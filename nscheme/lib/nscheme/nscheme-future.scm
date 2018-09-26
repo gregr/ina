@@ -14,8 +14,8 @@
                            '(define (@. i) (list-tail form i))
                            (cons 'cond (append
                                          (cdr name&clause*)
-                                         '((else (error '"invalid syntax:"
-                                                        form))))))))
+                                         '((#t (error '"invalid syntax:"
+                                                      form))))))))
              descs)))
 
 ;; Parsers with dependencies on base definitions
@@ -38,7 +38,7 @@
                       (foldr (lambda (d r) (ast:if ($equal? x d) $true r))
                              $false (map ast:quote (caar c*)))
                       (expand:body* env (cdar c*)) (loop (cdr c*))))
-                   (else (error '"invalid case:" form))))))))
+                   (#t (error '"invalid case:" form))))))))
     (quasiquote
       ((length=? 2 form)
        (define (tag t e) ($cons (ast:quote t) ($cons e (ast:quote '()))))
@@ -61,7 +61,7 @@
                ((ormap (lambda (t) (=? t qqf))
                        '(quasiquote unquote unquote-splicing))
                 (error '"malformed quasiquote:" qqf form))
-               (else (ast:quote qqf))))))
+               (#t (ast:quote qqf))))))
     (match/=? ((length>=? 4 form)
                (parse:match/=? env (@ 1) (@ 2) (@. 3) form)))
     (match ((length>=? 3 form)
@@ -80,7 +80,7 @@
                        (=? 'guard (caar rhs)))
                   ($try (expand:and* env (cdar rhs))
                         (expand:body* env (cdr rhs))))
-                 (else (expand:body* env rhs))))
+                 (#t (expand:body* env rhs))))
          (define (tqq datum) (list 'quasiquote datum))
          (let loop (($x $x) (p pat) (env env) ($succeed $succeed))
            (define ($try-vec pat)
@@ -127,8 +127,8 @@
                       ((ormap (lambda (d) (equal? qq d))
                               '(quasiquote unquote unquote-splicing))
                        (error '"bad quasiquote keyword:" qq pat))
-                      (else (retry (list 'quote qq)))))
-               (else (error '"invalid pattern:" pat p))))))
+                      (#t (retry (list 'quote qq)))))
+               (#t (error '"invalid pattern:" pat p))))))
        (define (parse:clauses $=? env c*)
          ($lambda/temp
            'scrutinee
@@ -140,7 +140,7 @@
                           'k-fail ($thunk $fail)
                           (lambda ($kf) (parse:clause
                                           $=? $x env (car c) (cdr c) $kf))))
-                       (error (error '"invalid match clause:" c))))
+                       (#t (error '"invalid match clause:" c))))
                ($error (ast:quote '"no matching clause:")
                        $x (ast:quote full-form)) c*))))
        (expand:let/temp
@@ -152,7 +152,7 @@
                     (define (e env) (parse:clauses $=? env (cdr body*)))
                     (expand:letrec env (list name) (list (expander e))
                                    (lambda (env) (parse:var env name))))
-                   (else (parse:clauses $=? env body*)))
+                   (#t (parse:clauses $=? env body*)))
              (list (expand env scrutinee)))))))
 
   (list (list 'define 'env:future
