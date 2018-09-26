@@ -2,6 +2,16 @@
 
 (require eval/ast expand expander nscheme:expand env:base)
 
+(define (make-syntax=? context env-a env-b)
+  (define (=? a b)
+    (cond ((and (pair? a) (pair? b)) (and (=? (car a) (car b))
+                                          (=? (cdr a) (cdr b))))
+          ((and (name? a) (name? b))
+           (equal? (binding-uid (env-ref env-a (list context) a))
+                   (binding-uid (env-ref env-b (list context) b))))
+          (#t (equal? a b))))
+  =?)
+
 ;; TODO: define these in userspace after bootstrapping $-based extension.
 ,(
 (define (parser-descs->b* qenv descs)
@@ -20,7 +30,26 @@
 
 ;; Parsers with dependencies on base definitions
 (define parsers:future
-  '((case ((length>=? 3 form)
+  '((cond
+      ((length>=? 2 form)
+       (define =? (make-syntax=? ctx:var env:primitive-syntax env))
+       (unless (length>=? 1 (@. 1)) (error '"invalid cond:" form))
+       (let loop ((c* (@. 1)))
+         (cond
+           ((null? c*) ($error (ast:quote '"no matching cond clause:")
+                               (ast:quote form)))
+           ((not (length>=? 1 (car c*))) (error '"invalid cond:" form))
+           ((and (=? 'else (caar c*)) (length=? 1 c*))
+            (expand:body* env (cdar c*)))
+           (#t (let* (($* (loop (cdr c*))) (c0 (caar c*)) (c. (cdar c*)))
+                 (cond ((=? 'else c0) (error '"invalid else in cond:" form))
+                       ((null? c.)    (expand:or2 env c0 $*))
+                       ((and (=? '=> (car c.)) (length=? 1 (cdr c.)))
+                        (define ($t->body $t)
+                          (ast:if $t ($apply* (ex (cadr c.)) (list $t)) $*))
+                        (expand:let/temp 'temp env c0 $t->body))
+                       (#t (ast:if (ex c0) (expand:body* env c.) $*)))))))))
+    (case ((length>=? 3 form)
            (define =? (make-syntax=? ctx:var env:future env))
            (expand:let/temp
              'scrutinee env (@ 1)
@@ -178,6 +207,21 @@
                                           (expand env:future form))))))
 
 (define (test! test)
+  (test 'cond-3
+    (ev '(cond (#f 3)
+               ((car '(#f 4)) 5)
+               (else 6)))
+    6)
+  (test 'cond-4
+    (ev '(cond (#f 3)
+               ((car '(#f 4)) 5)
+               ('the => (lambda (v) (cons v 'answer)))
+               (else 6)))
+    '(the . answer))
+  (test 'cond-5
+    (ev '(cond (8)))
+    8)
+
   (test 'qq-1
     (ev '`one)
     'one)
