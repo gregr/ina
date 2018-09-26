@@ -4,38 +4,15 @@
 
 ### bootstrap with only simple code
 
-* nscheme in "one page"
-  * try again to eliminate match/case/quasiquote during bootstrapping
-    * can we even get away without cond? maybe an incomplete cond?
-    * concise error checking of shapes
-      * various list shape predicates for when we do validate
-      * box "logic var" pattern conds
-      * e.g.,
-        (define a (box #t)) (define b (box #t)) ...
-        (define (? pattern)
-          _unify with some datum, treating boxes like lvar via set-box!_)
-        (cond ((? `(foo ,a ,b)) _use (unbox a) and (unbox b)_)
-              ((? `(bar ,a)) _etc.) ...)
-        * note, we might not have quasiquote when bootstrapping
-  * don't need import/export primitives
-
 * Implement bootstrap interpeter for nScheme in Racket
+  * don't need import/export primitives
   * instead of poorly emulating nScheme in Racket as we're doing now
   * must define a compatible apply
     * apply must support passing non-list argument to a variadic procedure
 
-* introduce convenient syntax extension immediately via fexprs/operatives
-  * start with minimal operatives to conveniently define full self-evaluator
-    * (e.g., define, let)
-  * staging operatives (i.e., staged vau) that build transparent code?
-    * transparency allows some local optimization/rewriting
-    * but, would like to keep optimization aspects separate via hyperprograms
-    * can simulate "immediate eval" operatives with wrappers that stage calls
-      to the wrapped operative, so that it can eval directly without worry
+* Define $ (staged eval) for syntactic extension
 
 * flexible module body interpretation: (language evaluation-adaptor ...)
-
-* define these after bootstrapping: let/blacklist, let/whitelist[/syntax]
 
 * small-step evaluation with transparent values
   * for interleaving evaluation and compilation
