@@ -11,17 +11,15 @@
   eval/ast
   test!)
 
-(require
-  assoc:empty assoc-ref assoc-set
-  type-predicates primitive-ops)
+(require type-predicates primitive-ops)
 
 ;; Runtime environments
-(define env:empty assoc:empty)
+(define env:empty '())
 (define (env-extend* env b*)
-  (foldl (lambda (b e) (assoc-set e (car b) (make-mvector 1 (cdr b)))) env b*))
+  (foldl (lambda (b e) (cons (cons (car b) (make-mvector 1 (cdr b))) e)) env b*))
 (define (env-ref-box env addr)
-  (define box (assoc-ref env addr #f))
-  (or box (error '"unbound address:" addr)))
+  (define rib (assoc addr env))
+  (if rib (cdr rib) (error '"unbound address:" addr)))
 (define (env-ref env addr)    (mvector-ref (env-ref-box env addr) 0))
 (define (env-set! env addr v) (mvector-set! (env-ref-box env addr) 0 v))
 
@@ -66,7 +64,7 @@
          (define name (car po-desc))
          (define arg-sig (cadr po-desc))
          (define return-sig (caddr po-desc))  ;; TODO: validate return type?
-         (define op (assoc-ref primitive-op-procs name #f))
+         (define op (cdr (assoc name primitive-op-procs)))
          (define (valid? a*)
            (andmap (lambda (ty? a)
                      (or (not ty?) ((cdr (assoc ty? type-predicates)) a)))
@@ -105,8 +103,8 @@
                   (continue env a*))))))
 
 (define (ast:primitive-op name a*)
-  (define op (or (assoc-ref primitive-op-evaluators name #f)
-                 (error '"invalid primitive op:" name)))
+  (define op (cdr (or (assoc name primitive-op-evaluators)
+                      (error '"invalid primitive op:" name))))
   (lambda (env) (op (map (lambda (a) (a env)) a*))))
 
 (define (eval/ast ast)
