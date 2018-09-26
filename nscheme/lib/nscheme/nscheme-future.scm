@@ -12,6 +12,12 @@
           (#t (equal? a b))))
   =?)
 
+(define ($pair? x)          (ast:primitive-op 'pair?   (list x)))
+(define ($car x)            (ast:primitive-op 'car     (list x)))
+(define ($cdr x)            (ast:primitive-op 'cdr     (list x)))
+(define ($vector? x)        (ast:primitive-op 'vector? (list x)))
+(define ($thunk body)       (ast:lambda #f '() body))
+
 ;; TODO: define these in userspace after bootstrapping $-based extension.
 ,(
 (define (parser-descs->b* qenv descs)
