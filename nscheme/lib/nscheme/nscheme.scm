@@ -1,7 +1,7 @@
 (provide lang:base)
 
 (require ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:reset ast:shift ast:primitive-op primitive-ops)
+         ast:reset ast:shift ast:prim primitive-ops)
 
 ;; Pattern matching
 (define (length=? len xs)  (and (list? xs) (= (length xs) len)))
@@ -67,7 +67,7 @@
 (define $null               (ast:quote '()))
 (define $true               (ast:quote #t))
 (define $false              (ast:quote #f))
-(define ($cons a d)         (ast:primitive-op 'cons    (list a d)))
+(define ($cons a d)         (ast:prim 'cons (list a d)))
 (define ($list . xs)        (foldr $cons $null xs))
 (define ($error . a*)       (ast:apply (ast:quote 'error) (apply $list a*)))
 (define ($apply* $proc $a*) (ast:apply $proc (apply $list $a*)))
@@ -229,18 +229,17 @@
                                          '((#t (error '"invalid syntax:"
                                                       form))))))))
        parsers:primitive))
-(define code:primops
+(define code:prims
   '(map (lambda (po-desc)
           (define name (car po-desc))
           (cons name
                 (lambda (env form)
                   (cond ((length=? (+ (length (cadr po-desc)) 1) form)
-                         (ast:primitive-op
-                           name (parse* env (list-tail form 1))))
+                         (ast:prim name (parse* env (list-tail form 1))))
                         (#t (error '"invalid primitive op:"
                                    po-desc form))))))
         primitive-ops))
-(define code:ops (cons 'list* (append code:syntax (list code:primops))))
+(define code:ops (cons 'list* (append code:syntax (list code:prims))))
 (define code:env:primitive
   (list 'env-extend*/syntax
         (list 'env-extend*/syntax 'env:empty 'ctx:op code:ops)

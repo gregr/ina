@@ -1,15 +1,5 @@
-(provide
-  ast:quote
-  ast:var
-  ast:set!
-  ast:if
-  ast:apply
-  ast:lambda
-  ast:reset
-  ast:shift
-  ast:primitive-op
-  eval/ast
-  test!)
+(provide ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
+         ast:reset ast:shift ast:prim eval/ast test!)
 
 (require type-predicates primitive-ops)
 
@@ -99,7 +89,7 @@
                                (error '"arity mismatch:" plen (length a*) a*))
                     (continue env a*)))))
 
-(define (ast:primitive-op name a*)
+(define (ast:prim name a*)
   (define op (cdr (or (assoc name primitive-op-evaluators)
                       (error '"invalid primitive op:" name))))
   (lambda (env) (op (map (lambda (a) (a env)) a*))))
@@ -116,7 +106,7 @@
              ((? 'lambda)  (ast:lambda (@ 1) (@ 2) (loop (@ 3))))
              ((? 'reset)   (ast:reset (loop (@ 1))))
              ((? 'shift)   (ast:shift (loop (@ 1))))
-             ((? 'prim-op) (ast:primitive-op (@ 1) (map loop (@ 2))))
+             ((? 'prim)    (ast:prim (@ 1) (map loop (@ 2))))
              (#t           (error '"unknown ast:" ast))))) env:empty))
 
 (define (test! test)

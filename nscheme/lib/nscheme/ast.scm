@@ -1,13 +1,5 @@
-(provide
-  ast:quote
-  ast:var
-  ast:set!
-  ast:if
-  ast:apply
-  ast:lambda
-  ast:reset
-  ast:shift
-  ast:primitive-op)
+(provide ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
+         ast:reset ast:shift ast:prim)
 
 (define (ast:quote datum)     (vector 'quote datum))
 (define (ast:var address)     (vector 'var address))
@@ -20,4 +12,4 @@
 (define (ast:lambda variadic? address?* body)
   (vector 'lambda variadic? address?* body))
 
-(define (ast:primitive-op name a*) (vector 'prim-op name a*))
+(define (ast:prim name a*) (vector 'prim name a*))
