@@ -1,6 +1,6 @@
 (provide test!)
 
-(require eval/ast lang:base)
+(require eval/ast lang:base env-reify)
 
 (define (ev form) (eval/ast (lang:base form)))
 
@@ -477,4 +477,15 @@
     (ev '(let ((id (lambda (x) x)))
            (map equal? (list id id) (list id (lambda (x) x)))))
     '(#t #f))
+
+  (test 'reify-1
+    (ev (list
+          '(lambda (env)
+             (define (n->uid n)
+               (vector-ref (car (memf (lambda (b) (equal? (vector-ref b 0) n))
+                                      (vector-ref env 1))) 2))
+             (((car (cdr (assoc (n->uid 'vector) (vector-ref env 0)))))
+              1 2 3))
+          (vector 'expander env-reify)))
+    '#(1 2 3))
   )

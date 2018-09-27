@@ -1,4 +1,4 @@
-(provide lang:base)
+(provide lang:base env-reify)
 
 (require ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
          ast:reset ast:shift ast:prim primitive-ops)
@@ -37,11 +37,11 @@
                                 (binding:var (car b) (cdr b))))
               (filter (lambda (b?) (car b?)) b?*))))
 (define (env-extend*/syntax env ctx b*)
-  (env-extend*
-    env (map (lambda (b) (define n (car b)) (define parse (cdr b))
-               (binding n ctx (fresh-uid n) parse)) b*)))
+  (env-extend* env (map (lambda (b) (define n (car b)) (define parse (cdr b))
+                          (binding n ctx (fresh-uid n) parse)) b*)))
 (define (env-freeze env)
   (filter-not (lambda (b) (equal? (binding-context b) ctx:set!)) env))
+
 
 ;; Parameters
 (define (improper-list? d)
@@ -69,6 +69,14 @@
 (define $false              (ast:quote #f))
 (define ($cons a d)         (ast:prim 'cons (list a d)))
 (define ($list . xs)        (foldr $cons $null xs))
+(define ($vector . xs)
+  ($let '(mv) (list (ast:prim 'make-mvector
+                              (list (ast:quote (length xs)) $true)))
+        (lambda (b*)
+          (define $mv (b*-var b* 'mv))
+          (define (! i x) (ast:prim 'mvector-set! (list $mv (ast:quote i) x)))
+          ($begin (map ! (range (length xs)) xs)
+                  (ast:prim 'mvector->vector (list $mv))))))
 (define ($error . a*)       (ast:apply (ast:quote 'error) (apply $list a*)))
 (define ($apply* $proc $a*) (ast:apply $proc (apply $list $a*)))
 (define ($lambda variadic? p?* b?*->body)
@@ -81,7 +89,7 @@
                   (lambda (_) ($begin (cdr body-initial*) body-final))))))
 
 ;; Parsing
-(define expander:tag      (make-mvector 1 'expander))
+(define expander:tag      'expander)
 (define (expander proc)   (vector expander:tag proc))
 (define (expander-proc d) (vector-ref d 1))
 (define (expander? d)     (and (vector? d) (= (vector-length d) 2)
@@ -113,6 +121,7 @@
          (b (and (name? n) (env-ref? (defst-env st)
                                      (list ctx:def ctx:op ctx:var) n))))
     (and b ((binding-value b) st form))))
+(define (b*-var b* name) (parse (env-extend*/var env:empty b*) name))
 
 (define (parse:apply env p a*) ($apply* (parse env p) (parse* env a*)))
 (define (b?*->parse:body* env body*)
@@ -167,9 +176,25 @@
     (foldr (lambda (e r) (ast:if (parse env e) r $false))
            (parse env (car re*)) (reverse (cdr re*)))))
 (define (parse:or2 env e $rest)
-  (define (body b*) (let (($tmp (parse (env-extend*/var env:empty b*) 'tmp)))
-                      (ast:if $tmp $tmp $rest)))
+  (define (body b*) (let (($tmp (b*-var b* 'tmp))) (ast:if $tmp $tmp $rest)))
   ($apply* ($lambda #f (list 'tmp) body) (list (parse env e))))
+
+(define (env-reify env)
+  (define (uids c)
+    (map binding-uid (filter (lambda (b) (equal? (binding-context b) c)) env)))
+  (define dup-uids (foldr append '() (map uids (list ctx:set! ctx:var))))
+  (define (env-uid ctx uid)
+    (define b*? (memf (lambda (b) (and (equal? (binding-uid b) uid)
+                                       (equal? (binding-context b) ctx))) env))
+    (and b*? (car b*?)))
+  (define (uid-caps uid)
+    (define b@ (env-uid ctx:var uid))
+    (define b! (env-uid ctx:set! uid))
+    (define (get _)  (if b@ ((binding-value b@) uid) $true))
+    (define (set b*) (if b! ((binding-value b!) uid (b*-var b* 'v)) $true))
+    ($cons (ast:quote uid) ($cons ($lambda #f '() get) ($lambda #f '(v) set))))
+  (define renv (map uid-caps (remove-duplicates dup-uids)))
+  ($vector (apply $list renv) (ast:quote env)))
 
 ,(
 ;; Parsers for primitive syntax (no var dependencies)
