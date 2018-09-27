@@ -6,12 +6,16 @@
 ;; Runtime environments
 (define env:empty '())
 (define (env-extend* env b*)
-  (foldl (lambda (b e) (cons (cons (car b) (make-mvector 1 (cdr b))) e)) env b*))
-(define (env-ref-box env addr)
+  (foldl (lambda (b e)
+           (define cell    (make-mvector 1 (cdr b)))
+           (define (get)   (mvector-ref  cell 0))
+           (define (set v) (mvector-set! cell 0 v))
+           (cons (cons (car b) (cons get set)) e)) env b*))
+(define (env-ref-capabilities env addr)
   (define rib (assoc addr env))
   (if rib (cdr rib) (error '"unbound address:" addr)))
-(define (env-ref env addr)    (mvector-ref (env-ref-box env addr) 0))
-(define (env-set! env addr v) (mvector-set! (env-ref-box env addr) 0 v))
+(define (env-ref env addr)    ((car (env-ref-capabilities env addr))))
+(define (env-set! env addr v) ((cdr (env-ref-capabilities env addr)) v))
 
 ;; Primitive operations
 (define primitive-op-procs

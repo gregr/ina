@@ -4,8 +4,6 @@
 
 ### bootstrap with only simple code
 
-* Redefine ast-eval env in terms get/set capabilities
-
 * Implement bootstrap interpeter for nScheme in Racket
   * don't need import/export primitives
   * instead of poorly emulating nScheme in Racket as we're doing now
