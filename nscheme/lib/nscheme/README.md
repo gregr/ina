@@ -4,8 +4,6 @@
 
 ### bootstrap with only simple code
 
-* ast:lambda without variadic? arg; implicit via parameter ~list shape
-
 * parallel processing: spawn, (mvector-cas! mv i expected new) => boolean?
 
 * define ports, read, write
