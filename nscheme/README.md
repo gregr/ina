@@ -5,40 +5,15 @@
 ### compiler
 
 #### frontend
-
 * minimalistic lisp
   * purpose: target multiple backend systems with one simple, self-processing language
-  * real-world [effect?] interaction/reaction
-    * monolithic request handling
-      * value: `(value ,val)
-      * request: `(request ,payload ,continuation)
-      * continuation: -> `(lambda (response) ...)
-      * eval: program -> value|request
-      * handle: value|request -> ...
-    * a non-monolithic channel-like alternative that also supports concurrency
-      * (produce key value) => #t  ;; aka send, as in (send channel value)
-      * (consume key) => value     ;; aka recv or receive
-      * keys can be any eqv?-able data (e.g., numbers or mvectors)
-      * user programs should not directly use produce/consume, or manage keys
-        * host systems provide procedures that manage these interactions
-          * for immediate, synchronous uses (e.g., system calls), compile
-            produce/consume pairs into simple procedure calls
-    * a thread-based alternative that just deals with concurrency
-      * external interaction can be modelled as systems manipulating shared mvectors
-      * (spawn definition-body ...) => thread-control-procedure?
-      * (mvector-compare-and-swap! mvec index expected-value new-value) => boolean?
-      * analyze mvector uses for efficient compilation:
-        * along with aliasing, infer thread-local and uncontended mvector accesses
-  * syntax extension ideas
-    * hygienic, non-macro syntax extension inspired by f-exprs, but static
-    * open eval recursion
-    * set!-based eval (don't forget dynamic-wind protection)
 
 * representation type system
   * an intermediate representation, but also a lower level user notation
   * aliasing/uniqueness annotations
     * e.g., mvector->vector need not copy if the mvector was unique and is no longer used
     * single/multi-threaded aliasing constraints can inform mvector optimizations
+      * along with aliasing, infer thread-local and uncontended mvector accesses
   * escape/local annotations
     * closures need not be allocated when only used within parent's stack lifetime
     * stack allocations for data with appropriate lifetimes
@@ -127,25 +102,17 @@
         * even when the type is 'tagged', at least the stored type tag check can be elided
   * eventually at the RTL level, would like to define procedures with register pre/post conditions
 
-
 #### backend
-
 * support runtime code generation and rebooting
   * ideally support separate compilation, which might make this easier
 * support foreign interaction safely
   * must not violate optimization and linking assumptions
   * must not break garbage collection or other resource management
 
-
 ##### backend for racket
-
-Support this both to bootstrap and to quickly support:
-* a non-web host system
-* a terminal interface
-
+Support this both to bootstrap and to quickly support a non-web Racket-based platform
 
 ##### backend for web
-
 * muJS
   * purpose: implement a simple RTL as a compilation target
   * data
@@ -155,27 +122,40 @@ Support this both to bootstrap and to quickly support:
       * maybe these are too high-level to consider for a compilation target
     * MLton-style CPS/SSA tc/jump continuations?
 
-* javascreme
-  * purpose: implement a JS-like notation for building a runtime system
-  * e.g., console.log, event handling, dom manipulation
-    * maybe present an interface like SDL or pygame (would this require shift/reset?)
-
-
 ##### other backends to consider
-
 WebAssembly, Python, C, Java, .NET, x86, ARM, ...
 
 
-### alternative semantics
+### platforms, systems
+* real-world [effect?] interaction/reaction
+  * monolithic, hierarchical, purely functional request handling
+    * value: `(value ,val)
+    * request: `(request ,payload ,continuation)
+    * continuation: -> `(lambda (response) ...)
+    * eval: program -> value|request
+    * handle: value|request -> ...
+  * independent processes communicating via shared mvectors
+    * arbitrary topology; can support true paralllelism
+    * can reason about host system as a concurrent, black box process
+* automatic persistence, self-contained images
 
+#### Racket
+* terminal/IO/filesystem interface
+
+#### Web browser
+* implement a JS-like notation for building a runtime system
+  * e.g., console.log, event handling, dom manipulation, webRTC, storage, etc.
+    * maybe present an interface like SDL or pygame
+  * could call it javascreme, or some other silly name
+
+
+### alternative semantics
 Support other forms of evaluation using the same syntax:
 * functional logic programming
 * probabilistic programming
 * automatic differentiation
 
-
 ### temporal relational programming
-
 * checked assertions
   * (== x y) :- (p w x) (p w y)
     * w is a unique key
@@ -214,9 +194,7 @@ Support other forms of evaluation using the same syntax:
     * then finally, when joining with the infinite relation, apply the constraints accurately
 * possible names: tKanren, underlog, icarus, wilt
 
-
 ### computational logic, building proofs
-
 * proof-checking decision procedure: (proof? proposition candidate-proof) : Boolean
 * basic props and inference rules include some minimal mix of: ->, ->*, |->, |->*, ~=, term induction
   * bracketing (see Boyer-Moore translations) needs reformulation as a meta-level operator
@@ -270,9 +248,7 @@ Support other forms of evaluation using the same syntax:
         BHK: substitute any prop 'False' you'd like; if handed a (proof? A), suddenly you've proven 'False'
 ```
 
-
 ### certified programming
-
 * entirely optional and available at any sub-program granularity
   * no obligation to statically analyze or type-check programs before running
   * selectively analyze/certify/transform important parts of your program later on
@@ -300,7 +276,6 @@ Support other forms of evaluation using the same syntax:
 * automated program elaboration
   * inference of types, terms, even tests
 * proof-carrying code
-
 
 ### hyperprogramming
 
