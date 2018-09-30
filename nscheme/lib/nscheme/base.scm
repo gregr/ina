@@ -1,4 +1,4 @@
-(provide lang:base env-reify)
+(provide lang:base parse env-reify)
 
 (require ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
          ast:reset ast:shift ast:prim primitive-ops)
