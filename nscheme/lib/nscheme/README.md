@@ -4,16 +4,6 @@
 
 ### bootstrap with only simple code
 
-* redesign environments
-  * consolidate all contexts for a bound name in a single property list
-    * property list stores named capabilities
-    * a name's participation in a context is determined by keys in this assoc
-    * the values for various contexts correspond to parsers
-    * e.g., var or ref, set!, apply, define
-  * should env be a procedure (object)? is this safe when running untrusted code?
-    * untrusted code could inject a malicious env
-    * possible methods: all-names, lookup, set/extend/bind, add-property
-
 * redesign definition list parsing/evaluation
   * express letrec in terms of this instead of the other way around?
   * definition state: #(env defined-names definition-commands expr-last?)

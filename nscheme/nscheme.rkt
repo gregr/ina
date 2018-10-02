@@ -11,6 +11,7 @@
   range
   take
   drop
+  remf
   string->vector
   vector->string
   vector-set
