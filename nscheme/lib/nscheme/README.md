@@ -43,11 +43,6 @@
     #(define* names ...) ;; define each to #t initially
     #(define-vector-type name field ...)
 
-* replace $ names with more ast: names
-* use parse:lambda more liberally
-  * just embed a procedure in the body if context-specific parsing is desired
-    * no need for special behavior of $lambda
-
 * consider ditching explicit parsing, in favor of full (static) fexprs
   * can this simplify things even more? at what cost? still easy to reason about?
     * make ample use of constants to give stable meanings to syntax/fexprs
@@ -71,6 +66,8 @@
       * in the static approach, map can bind f as applicative, guaranteeing
         the security of its source code
 
+* Kernel-like formal parameter trees
+  * (define (x y ... . z) w ...) no longer defines a procedure?
 
 * parallel processing: spawn, (mvector-cas! mv i expected new) => boolean?
 
