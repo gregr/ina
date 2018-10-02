@@ -4,8 +4,6 @@
 
 ### bootstrap with only simple code
 
-* replace #(expander (env -> ast)) with (env -> ast)
-
 * redesign environments
   * consolidate all contexts for a bound name in a single property list
     * property list stores named capabilities
@@ -51,7 +49,7 @@
 
 * replace $ names with more ast: names
 * use parse:lambda more liberally
-  * just use an expander in the body if context-specific parsing is desired
+  * just embed a procedure in the body if context-specific parsing is desired
     * no need for special behavior of $lambda
 
 * consider ditching explicit parsing, in favor of full (static) fexprs

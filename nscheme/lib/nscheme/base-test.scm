@@ -486,6 +486,6 @@
                                       (vector-ref env 1))) 2))
              (((car (cdr (assoc (n->uid 'vector) (vector-ref env 0)))))
               1 2 3))
-          (vector 'expander env-reify)))
+          env-reify))
     '#(1 2 3))
   )

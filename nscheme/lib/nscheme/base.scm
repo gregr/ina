@@ -83,19 +83,14 @@
                   (lambda (_) ($begin (cdr body-initial*) body-final))))))
 
 ;; Parsing
-(define expander:tag      'expander)
-(define (expander proc)   (vector expander:tag proc))
-(define (expander-proc d) (vector-ref d 1))
-(define (expander? d)     (and (vector? d) (= (vector-length d) 2)
-                               (equal? (vector-ref d 0) expander:tag)))
 (define (parse env form)
   (let loop ((form form))
     (cond ((or (boolean? form) (number? form)) (ast:quote form))
           ((parse:op? env form))
-          ((expander? form)    ((expander-proc form) env))
-          ((name? form)        (parse:var env form))
-          ((length>=? 1 form)  (parse:apply env (car form) (cdr form)))
-          (#t                  (error '"invalid syntax:" form)))))
+          ((procedure? form)  (form env))
+          ((name? form)       (parse:var env form))
+          ((length>=? 1 form) (parse:apply env (car form) (cdr form)))
+          (#t                 (error '"invalid syntax:" form)))))
 (define (parse* env form*) (map (lambda (f) (parse env f)) form*))
 
 (define (parse:var env n)
@@ -149,7 +144,7 @@
   (cond ((and (length=? 3 form) (param? (@ 1))) ($define st (@ 1) (@ 2)))
         ((and (length>=? 3 form) (pair? (@ 1)) (name? (car (@ 1))))
          (define (edef env) (parse:lambda env (cdr (@ 1)) (@. 2)))
-         ($define st (car (@ 1)) (expander edef)))
+         ($define st (car (@ 1)) edef))
         (#t (error '"invalid define:" form))))
 
 (define (parse:body* env body*)
@@ -206,7 +201,7 @@
                            (lambda (env) (parse:body* env (@. 2))))))
     (let . (((and (length>=? 4 form) (name? (@ 1)) (bpair*?! (@ 2)))
              (define (ex-proc env) (parse:lambda env (map car (@ 2)) (@. 3)))
-             (parse:letrec env (list (@ 1)) (list (expander ex-proc))
+             (parse:letrec env (list (@ 1)) (list ex-proc)
                            (lambda (env)
                              (parse:apply env (@ 1) (map cadr (@ 2))))))
             ((and (length>=? 3 form) (bpair*?! (@ 1)))
@@ -352,10 +347,10 @@
   '((cons* (lambda (x xs) (if (null? xs) x
                             (cons x (cons* (car xs) (cdr xs))))))))
 (define code:apply '((apply (lambda (f x . xs) (apply f (cons* x xs))))))
-(define expander:base (expander (lambda (env)
-                                  (define env:base (env-freeze env))
-                                  (define form (shift k k))
-                                  (parse env:base form))))
+(define expander:base (lambda (env)
+                        (define env:base (env-freeze env))
+                        (define form (shift k k))
+                        (parse env:base form)))
 (define code (list 'let primitive-op-procs
                    (list 'letrec code:cons*
                          (list 'let code:apply (list 'letrec derived-op-procs
