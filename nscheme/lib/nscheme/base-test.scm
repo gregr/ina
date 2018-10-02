@@ -240,7 +240,7 @@
               'false))
           1 2 (lambda x #f) 4 5 6 7))
     'false)
-  (test 'misc-2
+  (test 'misc-3
     (ev '((lambda (w #f x #f y . z)
             (if 'true
               (x y z '(a ... z))
