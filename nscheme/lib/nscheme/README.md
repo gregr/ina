@@ -10,10 +10,6 @@
     * a name's participation in a context is determined by keys in this assoc
     * the values for various contexts correspond to parsers
     * e.g., var or ref, set!, apply, define
-  * no need for general uids/addresses
-    * ast:lambda will use raw params
-    * keywords can be expressed by tagging a uid in the property list:
-      * e.g., (... (else . (... (keyword . UID) ...)) ...)
   * should env be a procedure (object)? is this safe when running untrusted code?
     * untrusted code could inject a malicious env
     * possible methods: all-names, lookup, set/extend/bind, add-property

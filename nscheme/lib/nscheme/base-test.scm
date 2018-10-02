@@ -481,10 +481,7 @@
   (test 'reify-1
     (ev (list
           '(lambda (env)
-             (define (n->uid n)
-               (vector-ref (car (memf (lambda (b) (equal? (vector-ref b 0) n))
-                                      (vector-ref env 1))) 2))
-             (((car (cdr (assoc (n->uid 'vector) (vector-ref env 0)))))
+             (((car (cdr (assoc 'vector (vector-ref env 0)))))
               1 2 3))
           env-reify))
     '#(1 2 3))
