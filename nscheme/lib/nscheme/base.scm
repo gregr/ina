@@ -9,7 +9,6 @@
 
 ;; Syntactic environments
 (define (name? n) (string? n))
-(define (fresh-uid name) name)
 (define ctx:var  'variable)
 (define ctx:set! 'set!)
 (define ctx:op   'operator)
@@ -18,8 +17,8 @@
 (define (binding-name b)         (vector-ref b 0))
 (define (binding-context b)      (vector-ref b 1))
 (define (binding-value b)        (vector-ref b 2))
-(define (binding:var name uid)  (binding name ctx:var ast:var))
-(define (binding:set! name uid) (binding name ctx:set! ast:set!))
+(define (binding:var name)  (binding name ctx:var ast:var))
+(define (binding:set! name) (binding name ctx:set! ast:set!))
 
 (define env:empty            '())
 (define (env-extend* env b*) (append b* env))
@@ -32,7 +31,7 @@
   (and (equal? (binding-context b) (car ctx*)) (binding-value b) b))
 (define (env-extend*/var env b?*)
   (foldl (lambda (b* env) (env-extend* env b*)) env
-         (map (lambda (b) (list (binding:set! b b) (binding:var b b)))
+         (map (lambda (b) (list (binding:set! b) (binding:var b)))
               (filter (lambda (b?) b?) b?*))))
 (define (env-extend*/syntax env ctx b*)
   (env-extend* env (map (lambda (b) (define n (car b)) (define parse (cdr b))
