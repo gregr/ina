@@ -27,7 +27,7 @@
 (define (vector->string v) (list->string (map integer->char (vector->list v))))
 
 ;; TODO:
-;; properties: apply, define
+;; properties: define
 ;; define a more general make-eval in parsing/applicative nscheme
 
 (define (alist-ref rs key default)
@@ -70,8 +70,7 @@
         (let* ((cell (make-mvector 1 (cdr b)))
                (get (plift (lambda ()  (mvector-ref  cell 0))))
                (set (plift (lambda (v) (mvector-set! cell 0 v)))))
-          (cons (car b) (list (cons '"ref" get) (cons '"set!" set)
-                              '(applicative? . #t)))))
+          (cons (car b) (list (cons '"ref" get) (cons '"set!" set)))))
       (eval (append (map b->rib (tree->b* param a)) cenv) body))))
 
 (define (@apply proc arg)   (proc arg))
@@ -85,10 +84,11 @@
 
 (define (eval env form)
   (cond ((pair? form)
-         (let* ((p (car form)) (a* (cdr form)) (proc (eval env p)))
-           (if (and (string? p) (not (env-ref-prop env p '"applicative?" #f)))
-             (proc (cons env a*))
-             (@apply proc (map (lambda (a) (eval env a)) a*)))))
+         (let* ((p (car form)) (a* (cdr form)))
+           ((or (and (string? p) (env-ref-prop env p '"apply" #f))
+                (lambda _
+                  (@apply (eval env p) (map (lambda (a) (eval env a)) a*))))
+            (list env p a*))))
         ((string? form) ((or (env-ref-prop env form '"ref" #f)
                              (error '"unbound variable:" form))
                          '()))
@@ -96,11 +96,13 @@
         ((procedure? form)                   (form env))
         (#t                                  (error '"invalid syntax:" form))))
 
+(define ($apply env proc args) ((eval env proc) (cons env args)))
 (define (ref-proc p) (cons 'ref (lambda _ (plift p))))
 (define env:base
   (s->ns
     (append
-      (map (lambda (b) (cons (car b) (list (ref-proc (cdr b)))))
+      (map (lambda (b) (cons (car b) (list (ref-proc (cdr b))
+                                           (cons 'apply (plift $apply)))))
            (list (cons 'quote  @quote)
                  (cons 'if     @if)
                  (cons 'reset  @reset)
@@ -110,13 +112,13 @@
                  (cons 'set!   @set!)
                  ;; TODO: cond, let, let*, letrec, begin, when, unless, and, or
                  ))
-      (map (lambda (b) (cons (car b) (list (cons 'ref (lambda _ (cdr b))))))
+      (map (lambda (b) (cons (car b) (list (cons 'ref (lambda _ (cdr b)))
+                                           (cons 'apply (plift $apply)))))
            (list (cons '$ (lambda (args) ((eval (car args) (cadr args))
                                           (cons (car args) (cddr args)))))
                  ))
 
-      (map (lambda (b) (cons (car b) (list (ref-proc (cdr b))
-                                           '(applicative? . #t))))
+      (map (lambda (b) (cons (car b) (list (ref-proc (cdr b)))))
            (list (cons 'eval  eval)
                  (cons 'apply @apply)
 
