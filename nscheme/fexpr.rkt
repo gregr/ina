@@ -27,14 +27,22 @@
 (define (vector->string v) (list->string (map integer->char (vector->list v))))
 
 ;; TODO:
-;; alist-ref, alist-access/list-at
 ;; properties: apply, define
 ;; define a more general make-eval in parsing/applicative nscheme
+
+(define (alist-ref rs key default)
+  (define rib (assoc key rs))
+  (if rib (cdr rib) default))
+(define (alist-remove* rs keys)
+  (filter (lambda (rib) (not (member (car rib) keys))) rs))
+(define (list-at xs ?)  ;; produce a zipper referencing the desired location
+  (let loop ((suffix xs) (prefix '()))
+    (if (or (null? suffix) (? (car suffix))) (cons suffix prefix)
+      (loop (cdr suffix) (cons (car suffix) prefix)))))
+(define (alist-at rs key) (list-at rs (lambda (kv) (equal? (car kv) key))))
+
 (define (env-ref-prop env id property default)
-  (let ((rib (assoc id env)))
-    (if (not rib) (error '"unbound identifier:" id)
-      (let ((kv (assoc property (cdr rib))))
-        (if kv (cdr kv) default)))))
+  (alist-ref (alist-ref env id '()) property default))
 
 ;; TODO: include definition list process here.  Define define/begin separately.
 (define (@lambda env param body)
@@ -56,7 +64,7 @@
             ((and (vector? p) (vector? a))
              (loop (vector->list p) (vector->list a)))
             (else (error '"parameter/argument mismatch:" param arg p a)))))
-  (let ((cenv (filter (lambda (rib) (not (member (car rib) names))) env)))
+  (let ((cenv (alist-remove* env names)))
     (lambda (a)
       (define (b->rib b)
         (let* ((cell (make-mvector 1 (cdr b)))
@@ -82,7 +90,7 @@
              (proc (cons env a*))
              (@apply proc (map (lambda (a) (eval env a)) a*)))))
         ((string? form) ((or (env-ref-prop env form '"ref" #f)
-                             (error '"identifier is not a variable:" form))
+                             (error '"unbound variable:" form))
                          '()))
         ((or (boolean? form) (number? form)) (@quote env form))
         ((procedure? form)                   (form env))
@@ -220,6 +228,10 @@
 (test 'apply-lambda-3
   (ev '((apply lambda (cons ($ (lambda (env) env))  ;; env via $
                             '(_ '5)))))             ;; quote is bound
+  5)
+(test 'apply-lambda-4
+  (ev '((((lambda (x) x) lambda)  ;; another applicative lambda example
+         ($ (lambda (env) env)) '_ ''5)))
   5)
 
 (test-report)
