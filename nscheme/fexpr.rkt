@@ -26,10 +26,6 @@
 (define (string->vector s) (list->vector (map char->integer (string->list s))))
 (define (vector->string v) (list->string (map integer->char (vector->list v))))
 
-;; TODO:
-;; properties: define
-;; define a more general make-eval in parsing/applicative nscheme
-
 (define (alist-ref rs key default)
   (define rib (assoc key rs))
   (if rib (cdr rib) default))
@@ -71,10 +67,41 @@
            (loop (vector->list p) (vector->list a)))
           (else (error '"parameter/argument mismatch:" param arg p a)))))
 
-;; TODO: include definition list process here.  Define define/begin separately.
-(define (@lambda env param body)
+(define (defst:empty env)       (vector env '() '()))
+(define (defst-env st)          (vector-ref st 0))
+(define (defst-names st)        (vector-ref st 1))
+(define (defst-commands st)     (vector-ref st 2))
+(define (defst-env-set st env)
+  (vector env (defst-names st) (defst-commands st)))
+(define (defst-names-add st names)
+  (define new (foldl ncons (defst-names st) names))
+  (vector (defst-env st) new (defst-commands st)))
+(define (defst-commands-add st cmds)
+  (vector (defst-env st) (defst-names st) (append cmds (defst-commands st))))
+(define (defst-eval st)
+  (define env (defst-env st))
+  (foldl (lambda (cmd _) (cmd env)) #t (reverse (defst-commands st))))
+(define (@begin/define st . forms)
+  (foldl (lambda (form st)
+           (define $define
+             (and (pair? form) (string? (car form))
+                  (env-ref-prop (defst-env st) (car form) '"define" #f)))
+           (if $define ($define (cons st (cdr form)))
+             (defst-commands-add st (list (lambda (env) (eval env form))))))
+         st forms))
+(define (@define st param expr)
+  (define names (param-names param))
+  (defst-commands-add
+    (defst-env-set (defst-names-add st names)
+                   (env-extend* (alist-remove* (defst-env st) names)
+                                (map (lambda (n) (cons n #t)) names)))
+    (list (lambda (env) (@set! env param (eval env expr))))))
+
+(define (@lambda env param . body)
   (let ((cenv (alist-remove* env (param-names param))))
-    (lambda (a) (eval (env-extend* cenv (param-zip param a)) body))))
+    (lambda (a)
+      (define st (defst:empty (env-extend* cenv (param-zip param a))))
+      (defst-eval (apply @begin/define st body)))))
 (define (@apply proc arg)   (proc arg))
 (define (@quote env d)      d)
 (define (@if env c t f)     (if (eval env c) (eval env t) (eval env f)))
@@ -87,6 +114,8 @@
             (param-zip param arg))
   #t)
 
+;; TODO:
+;; define a more general make-eval in parsing/applicative nscheme
 (define (eval env form)
   (cond ((pair? form)
          (let* ((p (car form)) (a* (cdr form)))
@@ -106,6 +135,8 @@
 (define env:base
   (s->ns
     (append
+      (list (cons 'define (list (cons 'define (plift @define))))
+            (cons 'begin (list (cons 'define (plift @begin/define)))))
       (map (lambda (b) (cons (car b) (list (ref-proc (cdr b))
                                            (cons 'apply (plift $apply)))))
            (list (cons 'quote  @quote)
@@ -223,6 +254,22 @@
   (ev '((lambda (() a #(b c)) (cons a (cons b (cons c '()))))
         '() 1 '#(2 3)))
   '(1 2 3))
+(test 'lambda-3
+  (ev '((lambda (() a #(b c))
+          (define x (lambda () (+ c y z)))
+          (define y b)
+          (define z a)
+          (x))
+        '() 1 '#(2 3)))
+  6)
+(test 'lambda-4
+  (ev '((lambda (() a #(b c))
+          (begin (define x (lambda () (+ c y z)))
+                 (define y b))
+          (define z a)
+          (x))
+        '() 1 '#(2 3)))
+  6)
 
 (test 'apply-lambda-1
   (ev '((apply lambda (cons '()         ;; empty env
