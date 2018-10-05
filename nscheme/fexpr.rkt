@@ -45,7 +45,7 @@
              (when (member p ns) (error '"duplicate parameter:" p param))
              (cons p ns))
             ((null? p) ns)
-            ;; TODO: vectors?
+            ((vector? p) (loop (vector->list p) ns))
             (else (error '"invalid parameter:" p param)))))
   (define (tree->b* param arg)
     (let loop ((p param) (a arg))
@@ -53,7 +53,8 @@
                                                (loop (cdr p) (cdr a))))
             ((string? p)               (list (cons p a)))
             ((and (null? p) (null? a)) '())
-            ;; TODO: vectors?
+            ((and (vector? p) (vector? a))
+             (loop (vector->list p) (vector->list a)))
             (else (error '"parameter/argument mismatch:" param arg p a)))))
   (let ((cenv (filter (lambda (rib) (not (member (car rib) names))) env)))
     (lambda (a)
@@ -203,6 +204,10 @@
   (ev '((lambda (() a (b)) (cons a b))
         '() 1 '(2)))
   '(1 . 2))
+(test 'lambda-2  ;; Formal parameter lists are generalized to arbitrary trees.
+  (ev '((lambda (() a #(b c)) (cons a (cons b (cons c '()))))
+        '() 1 '#(2 3)))
+  '(1 2 3))
 
 (test 'apply-lambda-1
   (ev '((apply lambda (cons '()         ;; empty env
