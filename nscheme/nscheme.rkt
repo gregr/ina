@@ -60,7 +60,7 @@
 (define (make-mvector k d) (mvector (make-vector k d)))
 (define (mvector-length mv) (vector-length (mvector-v mv)))
 (define (mvector-ref mv i) (vector-ref (mvector-v mv) i))
-(define (mvector-set! mv i d) (vector-set! (mvector-v mv) i d))
+(define (mvector-set! mv i d) (vector-set! (mvector-v mv) i d) #t)
 (define (mvector->vector mv) (vector-copy (mvector-v mv)))
 
 (define (vector-set v i d)
