@@ -8,7 +8,6 @@
   * Racket bootstrap base env could include these definitions to reduce duplication
 
 * Redesign for static fexpr implementation
-  * interpret.scm: interpreter construction, utilities for env, params, defst
   * parse.scm: interpreter for producing asts
   * eval.scm: interpreter for evaluating; written in parseable subset
 
