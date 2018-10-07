@@ -1,7 +1,7 @@
 (provide lang:base parse env-reify)
 
 (require ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:reset ast:shift ast:prim primitive-ops)
+         ast:reset ast:shift ast:prim primitive-op-descriptions)
 
 ;; Association lists
 (define (assoc-ref xs k default) (let ((kv (assoc k xs)))
@@ -213,7 +213,7 @@
                          (ast:prim name (parse* env (list-tail form 1))))
                         (#t (error '"invalid primitive op:"
                                    po-desc form))))))
-        primitive-ops))
+        primitive-op-descriptions))
 (define code:ops (cons 'list* (append code:syntax (list code:prims))))
 (define code:env:primitive
   (list 'env-extend*/syntax
@@ -230,7 +230,7 @@
          (define (x i) (string-append 'x (number->string i)))
          (define p* (map x (range (length (cadr po-desc)))))
          (list (car po-desc) (list 'lambda p* (cons (car po-desc) p*))))
-       primitive-ops))
+       primitive-op-descriptions))
 
 (define derived-op-procs
   '((error (lambda args ('error args)))

@@ -1,8 +1,8 @@
 (provide test!)
 
-(require eval/ast lang:base env-reify)
+(require ast-eval lang:base env-reify)
 
-(define (ev form) (eval/ast (lang:base form)))
+(define (ev form) (ast-eval (lang:base form)))
 
 (define (test! test)
   (test 'literals

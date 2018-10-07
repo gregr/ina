@@ -9,7 +9,6 @@
 
 * Redesign for static fexpr implementation
   * interpret.scm: interpreter construction, utilities for env, params, defst
-  * ast.scm: ast-eval, flatten/simplify the current ast-eval.scm
   * parse.scm: interpreter for producing asts
   * eval.scm: interpreter for evaluating; written in parseable subset
 

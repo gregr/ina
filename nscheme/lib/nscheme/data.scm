@@ -1,4 +1,4 @@
-(provide type-predicates primitive-ops)
+(provide type-predicates primitive-op-descriptions)
 
 ;; TODO: build and sanity check compiler backend primitive op tables.
 (define type-predicates
@@ -14,7 +14,7 @@
         (cons 'mvector?   mvector?)
         (cons 'procedure? procedure?)))
 
-(define primitive-ops
+(define primitive-op-descriptions
   '((mvector?   (#f) boolean?)
     (vector?    (#f) boolean?)
     (pair?      (#f) boolean?)
@@ -70,7 +70,7 @@
     ;remainder
     ))
 
-;; Sanity check primitive-ops.
+;; Sanity check primitive-op-descriptions.
 (let ()
   (define (valid-type? t)
     (or (equal? #t t) (not t) (assoc t type-predicates)))
@@ -78,6 +78,6 @@
     (and (list? op) (= 3 (length op)) (string? (car op))
          (andmap valid-type? (cadr op))
          (valid-type? (caddr op))))
-  (define malformed (filter-not valid-primop? primitive-ops))
+  (define malformed (filter-not valid-primop? primitive-op-descriptions))
   (unless (null? malformed)
-    (error '"malformed primitive-ops:" malformed)))
+    (error '"malformed primitive-op-descriptions:" malformed)))
