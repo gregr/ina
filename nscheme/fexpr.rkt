@@ -53,18 +53,20 @@
 (define (param-names param)
   (let loop ((p param) (ns '()))
     (cond ((pair? p)   (loop (cdr p) (loop (car p) ns)))
+          ((vector? p) (loop (vector->list p) ns))
           ((string? p) (ncons p ns))
           ((null? p)   ns)
-          ((vector? p) (loop (vector->list p) ns))
+          ((not p)     ns)
           (else (error '"invalid parameter:" p param)))))
-(define (param-zip param arg)
+(define (param-bind param arg)
   (let loop ((p param) (a arg))
     (cond ((and (pair? p) (pair? a)) (append (loop (car p) (car a))
                                              (loop (cdr p) (cdr a))))
-          ((string? p)               (list (cons p a)))
-          ((and (null? p) (null? a)) '())
           ((and (vector? p) (vector? a))
            (loop (vector->list p) (vector->list a)))
+          ((string? p)               (list (cons p a)))
+          ((and (null? p) (null? a)) '())
+          ((not p)                   '())
           (else (error '"parameter/argument mismatch:" param arg p a)))))
 
 (define (defst:empty env)       (vector env '() '()))
@@ -100,7 +102,7 @@
 (define (@lambda env param . body)
   (let ((cenv (alist-remove* env (param-names param))))
     (lambda (a)
-      (define st (defst:empty (env-extend* cenv (param-zip param a))))
+      (define st (defst:empty (env-extend* cenv (param-bind param a))))
       (defst-eval (apply @begin/define st body)))))
 (define (@apply proc arg)   (proc arg))
 (define (@quote env d)      d)
@@ -111,7 +113,7 @@
   (for-each (lambda (b) ((or (env-ref-prop env (car b) '"set!" #f)
                              (error '"identifier cannot be set!:" (car b)))
                          (list (cdr b))))
-            (param-zip param arg))
+            (param-bind param arg))
   #t)
 
 ;; TODO:
@@ -270,6 +272,9 @@
           (x))
         '() 1 '#(2 3)))
   6)
+(test 'lambda-5
+  (ev '((lambda (#f x #f) x) 1 2 3))
+  2)
 
 (test 'apply-lambda-1
   (ev '((apply lambda (cons '()         ;; empty env
