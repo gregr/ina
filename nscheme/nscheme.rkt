@@ -2,6 +2,10 @@
 (provide
   shift
   reset
+  alist-ref
+  alist-remove*
+  list-at
+  alist-at
   reverse-append
   remove-duplicates
   assoc
@@ -49,6 +53,17 @@
 
 ;; TODO:
 ;; Support for #f parameters in define, lambda, let, etc.
+
+(define (alist-ref rs key default)
+  (define rib (assoc key rs))
+  (if rib (cdr rib) default))
+(define (alist-remove* rs keys)
+  (filter (lambda (rib) (not (member (car rib) keys))) rs))
+(define (list-at xs ?)  ;; produce a zipper referencing the desired location
+  (let loop ((suffix xs) (prefix '()))
+    (if (or (null? suffix) (? (car suffix))) (cons suffix prefix)
+      (loop (cdr suffix) (cons (car suffix) prefix)))))
+(define (alist-at rs key) (list-at rs (lambda (kv) (equal? (car kv) key))))
 
 (define (reverse-append xs ys)
   (if (null? xs) ys (reverse-append (cdr xs) (cons (car xs) ys))))
