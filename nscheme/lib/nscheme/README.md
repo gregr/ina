@@ -4,6 +4,31 @@
 
 ### bootstrap with only simple code
 
+* Factor out base library, including alist-ref etc.
+  * Racket bootstrap base env could include these definitions to reduce duplication
+
+* Redesign for static fexpr implementation
+  * interpret.scm: interpreter construction, utilities for env, params, defst
+  * ast.scm: ast-eval, flatten/simplify the current ast-eval.scm
+  * parse.scm: interpreter for producing asts
+  * eval.scm: interpreter for evaluating; written in parseable subset
+
+* ditch explicit parsing, in favor of full (static) fexprs
+  * make ample use of constants to give stable meanings to syntax/fexprs
+  * define eval via tiny applicative language (corresponding closely with ast:)
+  * static, in contrast with Kernel's dynamic fexprs
+    * I don't see a downside to the static approach; it seems just as expressive;
+      yet there are modularity/encapsulation benefits, so it may be more expressive
+    * in Kernel, applicative behavior is a dynamic property of values via wrap/unwrap
+    * in this approach, applicative behavior is a static property of bound names
+      * syntactically apparent, determined by how a name is bound
+      * any procedure may behave as an applicative or operative without modification
+    * static approach allows encapsulation where desired
+      * e.g., the dynamic approach, an operative passed to map will observe
+        map's implementation details, and there is no way to prevent this
+      * in the static approach, map can bind f as applicative, guaranteeing
+        the security of its source code
+
 * redesign definition list parsing/evaluation
   * express letrec in terms of this instead of the other way around?
   * definition state: #(env defined-names definition-commands expr-last?)
@@ -33,31 +58,6 @@
     #(define* names ...) ;; define each to #t initially
     #(define-vector-type name field ...)
 
-* consider ditching explicit parsing, in favor of full (static) fexprs
-  * can this simplify things even more? at what cost? still easy to reason about?
-    * make ample use of constants to give stable meanings to syntax/fexprs
-  * could reintroduce parsing if performance is an issue (after optimization)
-  * define eval via tiny applicative language (corresponding closely with ast:)
-    * can eval be written the same way in both Racket and applicative nScheme?
-      * non-list apply is the only issue?
-    * but parse to closures instead of vector-code, for flexibility
-      * can run transparently to emit and optimize first order repr of closures
-      * won't need things like env reification, since closure can just capture
-  * static, in contrast with Kernel's dynamic fexprs
-    * I don't see a downside to the static approach; it seems just as expressive;
-      yet there are modularity/encapsulation benefits, so it may be more expressive
-    * in Kernel, applicative behavior is a dynamic property of values via wrap/unwrap
-    * in this approach, applicative behavior is a static property of bound names
-      * syntactically apparent, determined by how a name is bound
-      * any procedure may behave as an applicative or operative without modification
-    * static approach allows encapsulation where desired
-      * e.g., the dynamic approach, an operative passed to map will observe
-        map's implementation details, and there is no way to prevent this
-      * in the static approach, map can bind f as applicative, guaranteeing
-        the security of its source code
-
-* Kernel-like formal parameter trees
-  * (define (x y ... . z) w ...) no longer defines a procedure?
 
 * parallel processing: spawn, (mvector-cas! mv i expected new) => boolean?
 
