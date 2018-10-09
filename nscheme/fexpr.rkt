@@ -57,7 +57,7 @@
           ((string? p) (ncons p ns))
           ((null? p)   ns)
           ((not p)     ns)
-          (else (error '"invalid parameter:" p param)))))
+          (#t (error '"invalid parameter:" p param)))))
 (define (param-bind param arg)
   (let loop ((p param) (a arg))
     (cond ((and (pair? p) (pair? a)) (append (loop (car p) (car a))
@@ -67,91 +67,143 @@
           ((string? p)               (list (cons p a)))
           ((and (null? p) (null? a)) '())
           ((not p)                   '())
-          (else (error '"parameter/argument mismatch:" param arg p a)))))
+          (#t (error '"parameter/argument mismatch:" param arg p a)))))
 
-(define (defst:empty env)       (vector env '() '()))
-(define (defst-env st)          (vector-ref st 0))
-(define (defst-names st)        (vector-ref st 1))
-(define (defst-commands st)     (vector-ref st 2))
-(define (defst-env-set st env)
-  (vector env (defst-names st) (defst-commands st)))
-(define (defst-names-add st names)
-  (define new (foldl ncons (defst-names st) names))
-  (vector (defst-env st) new (defst-commands st)))
-(define (defst-commands-add st cmds)
-  (vector (defst-env st) (defst-names st) (append cmds (defst-commands st))))
-(define (defst-eval st)
-  (define env (defst-env st))
-  (foldl (lambda (cmd _) (cmd env)) #t (reverse (defst-commands st))))
+(define (defstate:empty env)  (vector env '() '()))
+(define (defstate-env st)     (vector-ref st 0))
+(define (defstate-names st)   (vector-ref st 1))
+(define (defstate-actions st) (vector-ref st 2))
+(define (defstate-env-set st env)
+  (vector env (defstate-names st) (defstate-actions st)))
+(define (defstate-names-add st names)
+  (define new (foldl ncons (defstate-names st) names))
+  (vector (defstate-env st) new (defstate-actions st)))
+(define (defstate-actions-add st act)
+  (define new (cons act (defstate-actions st)))
+  (vector (defstate-env st) (defstate-names st) new))
+(define (defstate-actions-add-expr st form)
+  (defstate-actions-add st (lambda (env) (eval env form))))
+(define (defstate-run st)
+  (define env (defstate-env st))
+  (foldl (lambda (act _) (act env)) #t (reverse (defstate-actions st))))
 (define (@begin/define st . forms)
   (foldl (lambda (form st)
            (define $define
              (and (pair? form) (string? (car form))
-                  (env-ref-prop (defst-env st) (car form) '"define" #f)))
-           (if $define ($define (cons st (cdr form)))
-             (defst-commands-add st (list (lambda (env) (eval env form))))))
+                  (env-ref-prop (defstate-env st) (car form) '"define" #f)))
+           (if $define (@apply $define (cons st (cdr form)))
+             (defstate-actions-add st (lambda (env) (eval env form)))))
          st forms))
-(define (@define st param expr)
+(define (@def st param expr)
   (define names (param-names param))
-  (defst-commands-add
-    (defst-env-set (defst-names-add st names)
-                   (env-extend* (alist-remove* (defst-env st) names)
-                                (map (lambda (n) (cons n #t)) names)))
-    (list (lambda (env) (@set! env param (eval env expr))))))
+  (defstate-actions-add
+    (defstate-env-set (defstate-names-add st names)
+                      (env-extend* (alist-remove* (defstate-env st) names)
+                                   (map (lambda (n) (cons n #t)) names)))
+    (lambda (env) (@set! env param (eval env expr)))))
+(define (@define st param . expr)
+  (if (pair? param)
+    (@define st (car param)
+             (plift (lambda (env) (apply @lambda/definitions
+                                         env (cdr param) expr))))
+    (@def st param (car expr))))
+(define (eval:definitions forms)
+  (plift (lambda (env)
+           (defstate-run (apply @begin/define (defstate:empty env) forms)))))
 
-(define (@lambda env param . body)
+(define (@lambda env param body)
   (let ((cenv (alist-remove* env (param-names param))))
-    (lambda (a)
-      (define st (defst:empty (env-extend* cenv (param-bind param a))))
-      (defst-eval (apply @begin/define st body)))))
-(define (@apply proc arg)   (proc arg))
-(define (@quote env d)      d)
-(define (@if env c t f)     (if (eval env c) (eval env t) (eval env f)))
-(define (@reset env body)   (reset ((@lambda env '() body))))
-(define (@shift env p body) (shift k ((@lambda env p body) k)))
+    (lambda (a) (eval (env-extend* cenv (param-bind param a)) body))))
+(define (@lambda/definitions env param . body)
+  (@lambda env param (eval:definitions body)))
+(define (@apply proc arg) (proc arg))
+(define (@quote env d)    d)
+(define (@if env c t f)   (if (eval env c) (eval env t) (eval env f)))
+(define (@reset env . body)
+  (reset (@apply (eval:definitions body) (list env))))
+(define (@shift env p . body)
+  (shift k (@apply (apply @lambda/definitions env p body) (plift k))))
 (define (@set! env param arg)
   (for-each (lambda (b) ((or (env-ref-prop env (car b) '"set!" #f)
                              (error '"identifier cannot be set!:" (car b)))
                          (list (cdr b))))
             (param-bind param arg))
   #t)
+(define (@letrec env b* body)
+  (define st (foldl (lambda (b st) (@def st (car b) (cadr b)))
+                    (defstate:empty env) b*))
+  (defstate-run (defstate-actions-add-expr st body)))
+(define (@let env b* body)
+  (@apply (@lambda env (map car b*) body)
+          (map (lambda (a) (eval env a)) (map cadr b*))))
+(define (@let/name env name b* body)
+  (define proc (plift (lambda (env) (@lambda env (map car b*) body))))
+  (@letrec env (list (list name proc)) (cons name (map cadr b*))))
+(define (@let* env b* body)
+  (if (null? b*) (eval env body)
+    (@let env (list (car b*))
+          (plift (lambda (env) (@let* env (cdr b*) body))))))
+(define (@let/definitions env . stx)
+  (if (string? (car stx))
+    (@let/name env (car stx) (cadr stx) (eval:definitions (cddr stx)))
+    (@let env (car stx) (eval:definitions (cdr stx)))))
+(define (@let*/definitions env b* . body)
+  (@let* env b* (eval:definitions body)))
+(define (@letrec/definitions env b* . body)
+  (@letrec env b* (eval:definitions body)))
+(define (@begin env . body) (foldl (lambda (form _) (eval env form)) #t body))
+(define (@and env . body)
+  (foldl (lambda (form v) (and v (eval env form))) #t body))
+(define (@or env . body)
+  (foldl (lambda (form v) (or v (eval env form))) #f body))
+(define (@when env c . body)   (@if env c (eval:definitions body) #t))
+(define (@unless env c . body) (@if env c #t (eval:definitions body)))
+(define (@cond env . clauses)
+  (if (null? clauses) #t
+    (let ((? (eval env (caar clauses))))
+      (if ? (if (null? (cdar clauses)) ?
+              (eval env (eval:definitions (cdar clauses))))
+        (apply @cond env (cdr clauses))))))
 
-;; TODO:
-;; define a more general make-eval in parsing/applicative nscheme
 (define (eval env form)
   (cond ((pair? form)
-         (let* ((p (car form)) (a* (cdr form)))
-           ((or (and (string? p) (env-ref-prop env p '"apply" #f))
-                (lambda _
-                  (@apply (eval env p) (map (lambda (a) (eval env a)) a*))))
-            (list env p a*))))
-        ((string? form) ((or (env-ref-prop env form '"ref" #f)
-                             (error '"unbound variable:" form))
-                         '()))
-        ((or (boolean? form) (number? form)) (@quote env form))
-        ((procedure? form)                   (form env))
+         (let* ((p (car form)) (a* (cdr form)) (proc (eval env p)))
+           (if (and (string? p) (env-ref-prop env p '"syntax?" #f))
+             (@apply proc (cons env a*))
+             (@apply proc (map (lambda (a) (eval env a)) a*)))))
+        ((string? form) (@apply (or (env-ref-prop env form '"ref" #f)
+                                    (error '"unbound variable:" form)) '()))
+        ((or (boolean? form) (number? form)) form)
+        ((procedure? form)                   (@apply form (list env)))
         (#t                                  (error '"invalid syntax:" form))))
 
-(define ($apply env proc args) ((eval env proc) (cons env args)))
 (define (ref-proc p) (cons 'ref (lambda _ (plift p))))
-(define env:base
+(define env:primitive
   (s->ns
     (append
       (list (cons 'define (list (cons 'define (plift @define))))
-            (cons 'begin (list (cons 'define (plift @begin/define)))))
+            (cons 'def    (list (cons 'define (plift @def))))
+            (cons 'begin (list (ref-proc @begin) (cons 'syntax? #t)
+                               (cons 'define (plift @begin/define)))))
       (map (lambda (b) (cons (car b) (list (ref-proc (cdr b))
-                                           (cons 'apply (plift $apply)))))
+                                           (cons 'syntax? #t))))
            (list (cons 'quote  @quote)
+                 (cons 'set!   @set!)
                  (cons 'if     @if)
                  (cons 'reset  @reset)
                  (cons 'shift  @shift)
-                 (cons 'lambda @lambda)
-                 ;; TODO: derive?
-                 (cons 'set!   @set!)
-                 ;; TODO: cond, let, let*, letrec, begin, when, unless, and, or
+                 (cons 'lambda @lambda/definitions)
+                 (cons 'let    @let/definitions)
+                 (cons 'let*   @let*/definitions)
+                 (cons 'letrec @letrec/definitions)
+                 (cons 'and    @and)
+                 (cons 'or     @or)
+                 (cons 'when   @when)
+                 (cons 'unless @unless)
+                 (cons 'cond   @cond)
                  ))
       (map (lambda (b) (cons (car b) (list (cons 'ref (lambda _ (cdr b)))
-                                           (cons 'apply (plift $apply)))))
+                                           (cons 'syntax? #t))))
            (list (cons '$ (lambda (args) ((eval (car args) (cadr args))
                                           (cons (car args) (cddr args)))))
                  ))
@@ -217,6 +269,89 @@
       ;; TODO: derived base procedures?
       )))
 
+(define derived-ops
+  '((error (lambda args ('error args)))
+    (not (lambda (b) (if b #f #t)))
+    (list->vector (lambda (xs)
+                    (define result (make-mvector (length xs) #t))
+                    (foldl (lambda (x i) (mvector-set! result i x) (+ i 1))
+                           0 xs)
+                    (mvector->vector result)))
+    (vector->list (lambda (v)
+                    (let loop ((i (- (vector-length v) 1)) (xs '()))
+                      (if (< i 0) xs
+                        (loop (- i 1) (cons (vector-ref v i) xs))))))
+    (equal? (lambda (a b)
+              (cond ((pair? a)   (and (pair? b) (equal? (car a) (car b))
+                                      (equal? (cdr a) (cdr b))))
+                    ((vector? a) (and (vector? b) (equal? (vector->list a)
+                                                          (vector->list b))))
+                    ((boolean? a)   (and (boolean? b)   (boolean=? a b)))
+                    ((string?  a)   (and (string?  b)   (string=?  a b)))
+                    ((number?  a)   (and (number?  b)   (number=?  a b)))
+                    ((mvector? a)   (and (mvector? b)   (mvector=? a b)))
+                    ((procedure? a) (and (procedure? b) (procedure=? a b)))
+                    ((null? a)      (null? b)))))
+    (vector (lambda xs (list->vector xs)))
+    (list?  (lambda (v) (or (and (pair? v) (list? (cdr v))) (null? v))))
+    (list   (lambda xs xs))
+    (list*  (lambda (x . xs) (if (null? xs) x (cons x (apply (list* xs))))))
+    (foldl  (lambda (f acc xs) (if (null? xs) acc
+                                 (foldl f (f (car xs) acc) (cdr xs)))))
+    (foldr  (lambda (f acc xs) (if (null? xs) acc
+                                 (f (car xs) (foldr f acc (cdr xs))))))
+    (map (lambda (f xs . xss)
+           (define (map1 f xs) (if (null? xs) '()
+                                 (cons (f (car xs)) (map1 f (cdr xs)))))
+           (cond ((null? xs) '())
+                 (#t (cons (apply f (car xs) (map1 car xss))
+                           (apply map f (cdr xs) (map1 cdr xss)))))))
+    (andmap (lambda (f xs . xss)
+              (let loop ((last #t) (xs xs) (xss xss))
+                (and last (if (null? xs) last
+                            (loop (apply f (car xs) (map car xss))
+                                  (cdr xs) (map cdr xss)))))))
+    (ormap (lambda (f xs . xss)
+             (cond ((null? xs) #f)
+                   ((apply f (car xs) (map car xss)))
+                   (#t (apply ormap f (cdr xs) (map cdr xss))))))
+    (filter (lambda (p? xs)
+              (cond ((null? xs) '())
+                    ((p? (car xs)) (cons (car xs) (filter p? (cdr xs))))
+                    (#t (filter p? (cdr xs))))))
+    (filter-not (lambda (p? xs) (filter (lambda (x) (not (p? x))) xs)))
+    (length (lambda (xs) (foldl (lambda (_ l) (+ 1 l)) 0 xs)))
+    (append (lambda xss (foldr (lambda (xs yss) (foldr cons yss xs)) '() xss)))
+    (reverse-append (lambda (xs ys) (foldl cons ys xs)))
+    (reverse (lambda (xs) (reverse-append xs '())))
+
+    (range (lambda (n)
+             (let loop ((i 0)) (if (= i n) '() (cons i (loop (+ i 1)))))))
+    (take (lambda (xs n) (if (= 0 n) '()
+                           (cons (car xs) (take (cdr xs) (- n 1))))))
+    (drop (lambda (xs n) (if (= 0 n) xs (drop (cdr xs) (- n 1)))))
+    (memf (lambda (? xs) (cond ((null? xs) #f)
+                               ((? (car xs)) xs)
+                               (#t (memf ? (cdr xs))))))
+    (member (lambda (v xs) (memf (lambda (x) (equal? x v)) xs)))
+    (caar (lambda (v) (car (car v))))
+    (assoc (lambda (k xs) (cond ((null? xs) #f)
+                                ((equal? k (caar xs)) (car xs))
+                                (#t (assoc k (cdr xs))))))
+    (remove-duplicates
+      (lambda (xs)
+        (define (ucons x acc) (if (member x acc) acc (cons x acc)))
+        (reverse (foldl ucons '() xs)))))
+  )
+
+(define env:base
+  (eval env:primitive
+        (s->ns `(let ((apply (lambda (f arg . args)
+                               (define (cons* x xs)
+                                 (if (null? xs) x
+                                   (cons x (cons* (car xs) (cdr xs)))))
+                               (apply f (cons* arg args)))))
+                  (letrec ,derived-ops ($ (lambda (env) env)))))))
 
 ;; Tests:
 (define tests-total 0)
@@ -247,6 +382,10 @@
 (test '$-2  ;; We can even apply such procedures with improper argument lists.
  (ev '($ (lambda (env . tree) tree) 4 . 5))
  '(4 . 5))
+(test '$-3
+  (ev '($ (lambda (env) (((cdr (assoc 'ref (cdr (assoc 'vector env)))))
+                         1 2 3))))
+  '#(1 2 3))
 
 (test 'lambda-1  ;; Formal parameter lists are generalized to arbitrary trees.
   (ev '((lambda (() a (b)) (cons a b))
@@ -257,6 +396,9 @@
         '() 1 '#(2 3)))
   '(1 2 3))
 (test 'lambda-3
+  (ev '((lambda (#f x #f) x) 1 2 3))
+  2)
+(test 'define-1
   (ev '((lambda (() a #(b c))
           (define x (lambda () (+ c y z)))
           (define y b)
@@ -264,7 +406,7 @@
           (x))
         '() 1 '#(2 3)))
   6)
-(test 'lambda-4
+(test 'define-2
   (ev '((lambda (() a #(b c))
           (begin (define x (lambda () (+ c y z)))
                  (define y b))
@@ -272,25 +414,502 @@
           (x))
         '() 1 '#(2 3)))
   6)
-(test 'lambda-5
-  (ev '((lambda (#f x #f) x) 1 2 3))
-  2)
+(test 'define-3
+  (ev '((lambda (() a #(b c))
+          (define ((f w) x y) (list w x y))
+          ((f a) b c))
+        '() 1 '#(2 3)))
+  '(1 2 3))
 
 (test 'apply-lambda-1
   (ev '((apply lambda (cons '()         ;; empty env
                             '(_ 5)))))  ;; quote is unbound
   5)
 (test 'apply-lambda-2
-  (ev `((apply lambda (cons ,(lambda (env) env)  ;; env via injected evaluator
-                            '(_ '5)))))          ;; quote is bound
+  (ev `((apply lambda (cons ,(plift (lambda (env) env))  ;; spliced evaluator
+                            '(_ '5)))))                  ;; quote is bound
   5)
 (test 'apply-lambda-3
-  (ev '((apply lambda (cons ($ (lambda (env) env))  ;; env via $
+  (ev '((apply lambda (cons ($ (lambda (env) env))  ;; evaluator via $
                             '(_ '5)))))             ;; quote is bound
   5)
 (test 'apply-lambda-4
   (ev '((((lambda (x) x) lambda)  ;; another applicative lambda example
          ($ (lambda (env) env)) '_ ''5)))
   5)
+
+(test 'literals
+  (map ev (list '(quote ()) '#t '4))
+  '(() #t 4))
+
+(test 'pair-1
+  (ev '(pair? '(x x)))
+  #t)
+(test 'pair-2
+  (ev '(pair? #t))
+  #f)
+(test 'pair-3
+  (ev '(pair? (lambda x x)))
+  #f)
+
+(test 'procedure-1
+  (ev '(procedure? '(x x)))
+  #f)
+(test 'procedure-2
+  (ev '(procedure? '#t))
+  #f)
+(test 'procedure-3
+  (ev '(procedure? (lambda x x)))
+  #t)
+
+(test 'lambda-shadowing-1
+  (ev '((lambda lambda lambda) 'ok))
+  '(ok))
+
+(test 'lambda-app-1
+  (ev '((lambda (x y) x) 5 6))
+  5)
+(test 'lambda-app-2
+  (ev '((lambda (x y) y) 5 6))
+  6)
+(test 'lambda-app-3
+  (ev '((lambda (x y) (cons y x)) 5 6))
+  '(6 . 5))
+(test 'lambda-app-4
+  (ev '((lambda (x) (cons (cdr x) (car x))) (cons #t #f)))
+  '(#f . #t))
+
+(test 'let-1
+  (ev '(let ((x 8)) x))
+  8)
+(test 'let-2
+  (ev '(let ((x 9)) (let ((x 20)) x)))
+  20)
+(test 'let-3
+  (ev '(let ((x 9)) (let ((y 20)) x)))
+  9)
+(test 'let-4
+  (ev '(let ((x 10) (y 4)) (let ((x 11) (y x)) y)))
+  10)
+(test 'let-5
+  (ev '(let ((x 10) (y 4)) (let ((x 11) (y x)) y)))
+  (let ((x 10) (y 4)) (let ((x 11) (y x)) y)))
+(test 'let-6
+  (ev '(let ((op (lambda (x) (car x))) (datum '(#t . #f)) (ta 'yes) (fa 'no))
+         (if (op datum) ta fa)))
+  'yes)
+(test 'let-7
+  (ev '(let ((op (lambda (x) (cdr x))) (datum '(#t . #f)) (ta 'yes) (fa 'no))
+         (if (op datum) ta fa)))
+  'no)
+(test 'let-8
+  (ev '(let ((op (lambda (x) (cdr x))) (datum '(#t . #f)) (ta 'yes) (fa 'no))
+         (if (op datum) ta fa)))
+  (let ((op (lambda (x) (cdr x))) (datum '(#t . #f)) (ta 'yes) (fa 'no))
+    (if (op datum) ta fa)))
+(test 'let-9
+  (ev '(let loop ((xs '(a b c)) (acc '()))
+         (if (null? xs) acc
+           (loop (cdr xs) (cons (car xs) acc)))))
+  '(c b a))
+
+(test 'internal-defs-1
+  (ev '(let ((x 1) (y 7) (z 33))
+         (define u 88)
+         (define z y)
+         6
+         (begin (define a 5) (define w 4))
+         z))
+  7)
+(test 'internal-defs-2
+  (ev '(let ((x 1) (y 7) (z 33))
+         (define y 88)
+         (define z y)
+         6
+         (begin (define a 5) (define w 4))
+         z))
+  88)
+(test 'internal-defs-3
+  (ev '(let ((x 1) (y 7) (z 33))
+         (define y 88)
+         (define z y)
+         6
+         (begin (define a 5) (define w 4))
+         a))
+  5)
+(test 'internal-defs-4
+  (ev '(let ((x 1) (y 7) (z 33))
+         (define y 88)
+         (define z (lambda (x) x))
+         6
+         (begin (define a 5) (define w (z y)))
+         w))
+  88)
+
+(test 'set-1
+  (ev '(let ((x 0)) (set! x 2) x))
+  2)
+(test 'set-2
+  (ev '(let ((x 0)) (define y x) (set! x 2) y))
+  0)
+
+(test 'letrec-1
+  (ev '(letrec ((w (lambda () (y)))
+                (x 32)
+                (y (lambda () x)))
+         (w)))
+  32)
+(test 'letrec-2
+  (ev '(letrec ((w (lambda () y))
+                (x 33)
+                (y x))
+         (w)))
+  33)
+
+(test 'begin-1
+  (ev '(begin 1))
+  1)
+(test 'begin-2
+  (ev '(begin 1 2))
+  2)
+(test 'begin-3
+  (ev '(let ((x 1))
+         (let ((y (begin (set! x 6) x)))
+           y)))
+  6)
+
+(test 'if-1
+  (ev '(if #t 'yes 'no))
+  'yes)
+(test 'if-2
+  (ev '(if #f 'yes 'no))
+  'no)
+(test 'if-3
+  (ev '(if 0 'yes 'no))
+  'yes)
+(test 'if-4
+  (ev '(if (car '(#t . #f)) 'yes 'no))
+  'yes)
+(test 'if-5
+  (ev '(if (cdr '(#t . #f)) 'yes 'no))
+  'no)
+
+(test 'and-1
+  (ev '(and))
+  #t)
+(test 'and-2
+  (ev '(and 1))
+  1)
+(test 'and-3
+  (ev '(and #f 2))
+  #f)
+(test 'and-4
+  (ev '(and 2 3))
+  3)
+(test 'and-5
+  (ev '(and 2 3 4))
+  4)
+(test 'and-6
+  (ev '(and 2 #f 4))
+  #f)
+
+(test 'or-1
+  (ev '(or))
+  #f)
+(test 'or-2
+  (ev '(or 1))
+  1)
+(test 'or-3
+  (ev '(or #f 2))
+  2)
+(test 'or-4
+  (ev '(or 2 3))
+  2)
+(test 'or-5
+  (ev '(or #f #f 4))
+  4)
+(test 'or-6
+  (ev '(or 2 #f 4))
+  2)
+
+(test 'when-1
+  (ev '(when 1 2))
+  2)
+(test 'when-2
+  (ev '(when #f 3))
+  #t)
+
+(test 'unless-1
+  (ev '(unless 1 2))
+  #t)
+(test 'unless-2
+  (ev '(unless #f 3))
+  3)
+
+(test 'cond-1
+  (ev '(cond (1 2)))
+  2)
+(test 'cond-2
+  (ev '(cond (#f 3)
+             (4 5)))
+  5)
+(test 'cond-3
+  (ev '(cond (#f 3)
+             (8)
+             (4 5)))
+  8)
+
+(test 'misc-1
+  (ev '((lambda (w #f x #f y . z)
+          (if (x y z '(a ... z))
+            'true
+            'false))
+        1 2 (lambda x x) 4 5 6 7))
+  'true)
+(test 'misc-2
+  (ev '((lambda (w #f x #f y . z)
+          (if (x y z '(a ... z))
+            'true
+            'false))
+        1 2 (lambda x #f) 4 5 6 7))
+  'false)
+(test 'misc-3
+  (ev '((lambda (w #f x #f y . z)
+          (if 'true
+            (x y z '(a ... z))
+            'false))
+        1 2 (lambda x x) 4 5 6 7))
+  '(5 (6 7) (a ... z)))
+
+(test 'let*-1
+  (ev '(let* ((a 1) (b (cons 2 a))) b))
+  '(2 . 1))
+(test 'let*-2
+  (ev '(let* ((a 1) (b (cons 2 a))) b))
+  (let* ((a 1) (b (cons 2 a))) b))
+
+(test 'shift/reset-1
+  (ev '(* 2 (reset (+ 1 (shift k (k 5))))))
+  12)
+(test 'shift/reset-2
+  (ev '(reset (* 2 (shift k (k (k 4))))))
+  16)
+
+(test 'fix-0
+  (ev '(let ((list (lambda xs xs))
+             (fix (lambda (f)
+                    ((lambda (d) (d d))
+                     (lambda (x) (f (lambda (a b) ((x x) a b))))))))
+         (let ((append
+                 (fix (lambda (append)
+                        (lambda (xs ys)
+                          (if (null? xs)
+                            ys
+                            (cons (car xs) (append (cdr xs) ys))))))))
+           (list (append '() '())
+                 (append '(foo) '(bar))
+                 (append '(1 2) '(3 4))))))
+  '(() (foo bar) (1 2 3 4)))
+
+(test 'fix-1
+  (ev '(let ((list (lambda xs xs))
+             (fix (lambda (f)
+                    ((lambda (d) (d d))
+                     (lambda (x) (f (lambda a (apply (x x) a))))))))
+         (let ((append
+                 (fix (lambda (append)
+                        (lambda (xs ys)
+                          (if (null? xs)
+                            ys
+                            (cons (car xs) (append (cdr xs) ys))))))))
+           (list (append '() '())
+                 (append '(foo) '(bar))
+                 (append '(1 2) '(3 4))))))
+  '(() (foo bar) (1 2 3 4)))
+
+(test 'fix-2
+  (ev '(let ((list (lambda xs xs))
+             (fix (lambda (f)
+                    ((lambda (d) (d d))
+                     (lambda (x) (f (lambda a (apply (x x) a))))))))
+         (let ((append
+                 (fix (lambda (append)
+                        (lambda (xs ys)
+                          (if (null? xs)
+                            ys
+                            (cons (car xs) (append (cdr xs) ys))))))))
+           (list (append '() '())
+                 (append '(foo) '(bar))
+                 (append '(1 2) '(3 4))))))
+  (let ((list (lambda xs xs))
+        (fix (lambda (f)
+               ((lambda (d) (d d))
+                (lambda (x) (f (lambda a (apply (x x) a))))))))
+    (let ((append
+            (fix (lambda (append)
+                   (lambda (xs ys)
+                     (if (null? xs)
+                       ys
+                       (cons (car xs) (append (cdr xs) ys))))))))
+      (list (append '() '())
+            (append '(foo) '(bar))
+            (append '(1 2) '(3 4))))))
+
+(test 'fix*-1
+  (ev '(let ((list (lambda xs xs))
+             (fix (lambda (f)
+                    ((lambda (d) (d d))
+                     (lambda (x) (f (lambda a (apply (x x) a))))))))
+         (let ((map (fix (lambda (map)
+                           (lambda (f xs)
+                             (if (null? xs)
+                               '()
+                               (cons (f (car xs)) (map f (cdr xs)))))))))
+           (let ((fix*
+                   (fix (lambda (fix*)
+                          (lambda fs
+                            (map (lambda (fi)
+                                   (lambda a
+                                     (apply (apply fi (apply fix* fs)) a)))
+                                 fs))))))
+             (let ((even&odd
+                     (fix* (lambda (even? odd?)
+                             (lambda (n) (if (null? n)
+                                           #t
+                                           (odd? (cdr n)))))
+                           (lambda (even? odd?)
+                             (lambda (n)
+                               (if (null? n)
+                                 #f
+                                 (even? (cdr n))))))))
+               (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
+                 (list (even? '())    (odd? '())
+                       (even? '(s))   (odd? '(s))
+                       (even? '(s s)) (odd? '(s s)))))))))
+  '(#t #f #f #t #t #f))
+
+(test 'fix*-2
+  (ev '(let ((list (lambda xs xs))
+             (fix (lambda (f)
+                    ((lambda (d) (d d))
+                     (lambda (x) (f (lambda a (apply (x x) a))))))))
+         (let ((map (fix (lambda (map)
+                           (lambda (f xs)
+                             (if (null? xs)
+                               '()
+                               (cons (f (car xs)) (map f (cdr xs)))))))))
+           (let ((fix*
+                   (fix (lambda (fix*)
+                          (lambda fs
+                            (map (lambda (fi)
+                                   (lambda a
+                                     (apply (apply fi (apply fix* fs)) a)))
+                                 fs))))))
+             (let ((even&odd
+                     (fix* (lambda (even? odd?)
+                             (lambda (n) (if (null? n)
+                                           #t
+                                           (odd? (cdr n)))))
+                           (lambda (even? odd?)
+                             (lambda (n)
+                               (if (null? n)
+                                 #f
+                                 (even? (cdr n))))))))
+               (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
+                 (list (even? '())    (odd? '())
+                       (even? '(s))   (odd? '(s))
+                       (even? '(s s)) (odd? '(s s)))))))))
+  (let ((list (lambda xs xs))
+        (fix (lambda (f)
+               ((lambda (d) (d d))
+                (lambda (x) (f (lambda a (apply (x x) a))))))))
+    (let ((map (fix (lambda (map)
+                      (lambda (f xs)
+                        (if (null? xs)
+                          '()
+                          (cons (f (car xs)) (map f (cdr xs)))))))))
+      (let ((fix*
+              (fix (lambda (fix*)
+                     (lambda fs
+                       (map (lambda (fi)
+                              (lambda a
+                                (apply (apply fi (apply fix* fs)) a)))
+                            fs))))))
+        (let ((even&odd
+                (fix* (lambda (even? odd?)
+                        (lambda (n) (if (null? n)
+                                      #t
+                                      (odd? (cdr n)))))
+                      (lambda (even? odd?)
+                        (lambda (n)
+                          (if (null? n)
+                            #f
+                            (even? (cdr n))))))))
+          (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
+            (list (even? '())    (odd? '())
+                  (even? '(s))   (odd? '(s))
+                  (even? '(s s)) (odd? '(s s)))))))))
+
+(test 'vector-1
+  (map ev '((vector)
+            (vector 3 1)))
+  '(#() #(3 1)))
+(test 'vector-2
+  (map ev '((vector-length (vector))
+            (vector-length (vector 3 1))))
+  '(0 2))
+(test 'vector-3
+  (map ev '((vector-ref (vector 5) 0)
+            (vector-ref (vector 3 1 2) 0)
+            (vector-ref (vector 3 1 2) 1)))
+  '(5 3 1))
+(test 'vector-4
+  (map ev '((vector? (vector))
+            (vector? (vector 3 1))
+            (vector? '(x x))
+            (vector? (lambda x x))))
+  '(#t #t #f #f))
+(test 'vector-5
+  (map ev '((vector-ref '#(1 2 3) 0)
+            (vector-ref '#(4 5 6) 2)
+            (vector-ref '#(7 8 9) 1)
+            (vector-ref (car (cdr (list 6 (vector 7 (cons 8 9) 0) 1))) 1)
+            (vector-ref (car (cdr (list 6 (vector
+                                            7 (cons 8 9) 0 (car '(10 . #f)))
+                                        1))) 3)))
+  '(1 6 8 (8 . 9) 10))
+
+(test 'list-1
+  (map ev '((list)
+            (list 6 7)))
+  '(() (6 7)))
+(test 'list-2
+  (map ev '((list? (list))
+            (list? (list 6 7))
+            (list? '(6 . 7))))
+  '(#t #t #f))
+
+(test 'pair-4
+  (ev '(pair? (vector 3 1 2)))
+  #f)
+(test 'procedure-5
+  (ev '(procedure? (vector 3 1 2)))
+  #f)
+
+(test 'equal-1
+  (ev '(map equal?
+            '(9 9 () #t #f one two)
+            '(9 8 () #t #t one one)))
+  '(#t #f #t #t #f #t #f))
+(test 'equal-2
+  (ev '(map equal?
+            '((5 6) (4 6) (5 7) #(1 2 3) #(1 8 3))
+            '((5 6) (5 6) (5 6) #(1 2 3) #(1 2 3))))
+  '(#t #f #f #t #f))
+(test 'equal-3
+  (ev '(let ((id (lambda (x) x)))
+         (map equal? (list id id) (list id (lambda (x) x)))))
+  '(#t #f))
+
 
 (test-report)
