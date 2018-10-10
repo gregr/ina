@@ -14,15 +14,17 @@
 
 ;; Primitive operations
 (define primitive-op-handlers
-  (list (cons 'mvector?        mvector?)
+  (list (cons 'procedure?      procedure?)
+        (cons 'mvector?        mvector?)
         (cons 'vector?         vector?)
         (cons 'pair?           pair?)
         (cons 'null?           null?)
+        (cons 'boolean?        boolean?)
         (cons 'string?         string?)
         (cons 'number?         number?)
         (cons 'integer?        integer?)
-        (cons 'boolean?        boolean?)
-        (cons 'procedure?      procedure?)
+        (cons 'fixnum?         fixnum?)
+        (cons 'flonum?         flonum?)
         (cons 'boolean=?       boolean=?)
         (cons 'number=?        eqv?)
         (cons 'string=?        string=?)
