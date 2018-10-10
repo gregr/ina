@@ -258,7 +258,7 @@
     (vector (lambda xs (list->vector xs)))
     (list?  (lambda (v) (or (and (pair? v) (list? (cdr v))) (null? v))))
     (list   (lambda xs xs))
-    (list*  (lambda (x . xs) (cons* x xs)))
+    (list*  (lambda (x . xs) (if (null? xs) x (cons x (apply (list* xs))))))
     (foldl  (lambda (f acc xs) (if (null? xs) acc
                                  (foldl f (f (car xs) acc) (cdr xs)))))
     (foldr  (lambda (f acc xs) (if (null? xs) acc
