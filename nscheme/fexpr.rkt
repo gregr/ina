@@ -178,40 +178,28 @@
         (#t                                  (error '"invalid syntax:" form))))
 
 (define (ref-proc p) (cons 'ref (lambda _ (plift p))))
+
 (define env:primitive
   (s->ns
     (append
-      (list (cons 'define (list (cons 'define (plift @define))))
-            (cons 'def    (list (cons 'define (plift @def))))
-            (cons 'begin (list (ref-proc @begin) (cons 'syntax? #t)
-                               (cons 'define (plift @begin/define)))))
       (map (lambda (b) (cons (car b) (list (ref-proc (cdr b))
                                            (cons 'syntax? #t))))
-           (list (cons 'quote  @quote)
-                 (cons 'set!   @set!)
-                 (cons 'if     @if)
+           (list (cons 'if     @if)
                  (cons 'reset  @reset)
                  (cons 'shift  @shift)
                  (cons 'lambda @lambda/definitions)
-                 (cons 'let    @let/definitions)
-                 (cons 'let*   @let*/definitions)
-                 (cons 'letrec @letrec/definitions)
-                 (cons 'and    @and)
-                 (cons 'or     @or)
-                 (cons 'when   @when)
-                 (cons 'unless @unless)
-                 (cons 'cond   @cond)
+                 ;; TODO: this won't work due to Racket's list-based apply.
+                 ;(cons '$ (lambda (env rator . rands)
+                            ;((eval env rator) (cons env rands))))
                  ))
+      ;; TODO: in nScheme self-interpreter, this version won't be necessary.
       (map (lambda (b) (cons (car b) (list (cons 'ref (lambda _ (cdr b)))
                                            (cons 'syntax? #t))))
            (list (cons '$ (lambda (args) ((eval (car args) (cadr args))
-                                          (cons (car args) (cddr args)))))
-                 ))
-
+                                          (cons (car args) (cddr args)))))))
       (map (lambda (b) (cons (car b) (list (ref-proc (cdr b)))))
-           (list (cons 'eval  eval)
-                 (cons 'apply @apply)
-
+           (list (cons 'eval       eval)
+                 (cons 'apply      @apply)
                  (cons 'mvector?   mvector?)
                  (cons 'vector?    vector?)
                  (cons 'pair?      pair?)
@@ -221,29 +209,23 @@
                  (cons 'integer?   integer?)
                  (cons 'boolean?   boolean?)
                  (cons 'procedure? procedure?)
-
                  (cons 'boolean=?   boolean=?)
                  (cons 'number=?    =)
                  (cons 'string=?    string=?)
                  (cons 'mvector=?   mvector=?)
                  (cons 'procedure=? procedure=?)
-
                  (cons 'string->vector string->vector)
                  (cons 'vector->string vector->string)
-
                  (cons 'cons cons)
                  (cons 'car  car)
                  (cons 'cdr  cdr)
-
                  (cons 'vector-ref    vector-ref)
                  (cons 'vector-length vector-length)
-
                  (cons 'make-mvector    make-mvector)
                  (cons 'mvector->vector mvector->vector)
                  (cons 'mvector-set!    mvector-set!)
                  (cons 'mvector-ref     mvector-ref)
                  (cons 'mvector-length  mvector-length)
-
                  (cons '=  =)
                  (cons '<= <=)
                  (cons '<  <)
@@ -251,7 +233,6 @@
                  (cons '*  *)
                  (cons '-  -)
                  (cons '/  /)
-
                  ;; TODO: these and others?
                  ;bitwise-and
                  ;bitwise-ior
@@ -261,13 +242,27 @@
                  ;bitwise-bit-field
                  ;arithmetic-shift
                  ;integer-length
-
                  ;round
                  ;quotient
                  ;remainder
                  ))
-      ;; TODO: derived base procedures?
-      )))
+      ;; These don't have to be primitive, but are provided for convenience.
+      (list (cons 'define (list (cons 'define (plift @define))))
+            (cons 'def    (list (cons 'define (plift @def))))
+            (cons 'begin (list (ref-proc @begin) (cons 'syntax? #t)
+                               (cons 'define (plift @begin/define)))))
+      (map (lambda (b) (cons (car b) (list (ref-proc (cdr b))
+                                           (cons 'syntax? #t))))
+           (list (cons 'quote  @quote)
+                 (cons 'set!   @set!)
+                 (cons 'let    @let/definitions)
+                 (cons 'let*   @let*/definitions)
+                 (cons 'letrec @letrec/definitions)
+                 (cons 'and    @and)
+                 (cons 'or     @or)
+                 (cons 'when   @when)
+                 (cons 'unless @unless)
+                 (cons 'cond   @cond))))))
 
 (define derived-ops
   '((error (lambda args ('error args)))

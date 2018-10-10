@@ -4,12 +4,28 @@
 
 ### bootstrap with only simple code
 
-* Factor out base library, including alist-ref etc.
-  * Racket bootstrap base env could include these definitions to reduce duplication
+* nscheme.rkt using fexprs
+  * update/improve how modules work
+  * replace nscheme.rkt with fexpr.rkt
 
 * Redesign for static fexpr implementation
-  * parse.scm: interpreter for producing asts
+  * throw away interpret.scm
   * eval.scm: interpreter for evaluating; written in parseable subset
+  * parse.scm: interpreter for producing asts
+
+* definition context conveniences
+  * embedded procedures in a definition context that take st as argument
+    * #(define ,(lambda (st) ...))
+  * ($define (lambda (st) ...)) to directly access state without embedded procs
+  * property manipulation shorthand
+    * (describe identifier ((property-name value) ...))
+    * `(describe* (id*) kvs)`
+    * e.g., (describe var ((set! #f))) to hide the capability to set! a variable
+  * @definitions-run to force accmulated actions to run, and reset defined names
+
+* extended syntax:
+  * case-lambda, case-let, quasiquote
+  * lambda-syntax, let[rec]-syntax, define-syntax, define-syntax/define
 
 * ditch explicit parsing, in favor of full (static) fexprs
   * make ample use of constants to give stable meanings to syntax/fexprs
