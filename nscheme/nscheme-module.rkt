@@ -8,6 +8,8 @@
   )
 
 (require
+  ;"fexpr.rkt"
+  racket/pretty
   racket/match
   racket/runtime-path
   (only-in "nscheme.rkt" import-apply)  ;; namespace-attach-module depends on this.
@@ -24,17 +26,19 @@
                   (namespace-attach-module local-ns nscheme-rkt)
                   (namespace-require/constant nscheme-rkt)
                   (current-namespace)))
-
 (define (nscm:eval form) (eval form nscm-ns))
+
+;(define (nscm:eval form) (eval env:base (s->ns form)))
 
 (define (eval/module m)
   (cons (map symbol->string (vector-ref (nsmod-required m) 0))
         (cdr (nscm:eval
-               `(import ,(vector-ref (nsmod-required m) 1)
-                  ,@(nsmod-body m)
-                  (map (lambda (enew e) (cons enew (cdr e)))
-                       ',(vector-ref (nsmod-provided m) 0)
-                       (export . ,(vector-ref (nsmod-provided m) 1))))))))
+               `(cons ',(vector-ref (nsmod-required m) 1)
+                      (lambda ,(vector-ref (nsmod-required m) 1)
+                        ,@(nsmod-body m)
+                        (list . ,(map (lambda (enew e) `(cons ',enew ,e))
+                                      (vector-ref (nsmod-provided m) 0)
+                                      (vector-ref (nsmod-provided m) 1)))))))))
 
 (define (nscheme-module body)
   (define (i->r items rrns)
@@ -58,6 +62,10 @@
                   `#(,(map cadr pd) ,(map car pd))
                   (map body-element body)))))))
 
+;(define (import-apply i env)
+  ;((cdr i) (map (lambda (name)
+                  ;(cdr (or (assoc name env)
+                           ;(error "missing argument:" name)))) (car i))))
 (define (link/module env m) (append (import-apply m env) env))
 (define (link/module* env m*) (foldl (lambda (m e) (link/module e m)) env m*))
 

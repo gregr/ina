@@ -3,6 +3,7 @@
   racket/include
   racket/list
   racket/runtime-path
+  ;(except-in "fexpr.rkt" s->ns ns->s)
   "filesystem.rkt"
   "nscheme-module.rkt"
   )
@@ -35,7 +36,8 @@
 (define env:nscheme (link/module* env:data (map cdr lib:nscheme)))
 
 (let ()
-  (map (lambda (t) (t test))
+  (map ;(lambda (t) (t (list (plift test))))
+       (lambda (t) (t test))
        (reverse (map cdr (filter (lambda (rib) (string=? "test!" (car rib)))
                                  env:nscheme))))
   (test-report))
