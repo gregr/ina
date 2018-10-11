@@ -13,7 +13,6 @@
   * eval.scm: interpreter for evaluating; written in stageable subset
   * stage.scm: interpreter for producing asts (replace base.scm with this)
     * support generalized formal parameter trees
-    * prefix with @ instead of parse:
     * @letrec in terms of definitions
     * @let/name in terms of @letrec
     * clean up uses of `@apply*`
