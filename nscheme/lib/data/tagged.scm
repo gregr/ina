@@ -1,11 +1,17 @@
 (provide tagged-vector? tagged-vector?! case/import test!)
 
+(define (import-apply i env)
+  (apply (cdr i) (map (lambda (name)
+                        (cdr (or (assoc name env)
+                                 (error '"missing argument:" name))))
+                      (car i))))
+
 (define (tagged-vector? tag field-names d)
   (define len (+ 1 (length field-names)))
   (and (vector? d) (= len (vector-length d))
        (equal? tag (vector-ref d 0))
        (map (lambda (name i) (cons name (vector-ref d i)))
-            field-names (range 1 len))))
+            field-names (cdr (range len)))))
 
 (define (tagged-vector?! tag fnames d)
   (or (tagged-vector? tag fnames d)
@@ -13,8 +19,9 @@
 
 (define (case/import d clause*)
   ((or (ormap (lambda (clause)
-                (and/let* ((env ((car clause) d)))
-                  (lambda () (import-apply (cdr clause) env)))) clause*)
+                (let ((env ((car clause) d)))
+                  (and env (lambda () (import-apply (cdr clause) env)))))
+              clause*)
        (error '"no matching case/import clause:" d))))
 
 (define (test! test)
@@ -22,8 +29,11 @@
   (define (example x y)       (vector example:tag x y))
   (define (example? d)        (tagged-vector? example:tag '(x y) d))
   (define (example?! d)       (tagged-vector?! example:tag '(x y) d))
-  (define (example-x e)       (import-apply (import (x) x) (example?! e)))
-  (define (example-x-set e x) (example?! e) (vector-set e 1 x))
+  (define (example-x e)       (import-apply (cons '(x) (lambda (x) x))
+                                            (example?! e)))
+  (define (example-y e)       (import-apply (cons '(y) (lambda (y) y))
+                                            (example?! e)))
+  (define (example-x-set e x) (example?! e) (example x (example-y e)))
 
   (define example2:tag        'example2)
   (define (example2 z)        (vector example2:tag z))
@@ -48,21 +58,26 @@
   (test 'case/import-1
     (case/import
       (example 1 2)
-      (list (cons example?       (import (x y) (list 'first x y)))
-            (cons example2?      (import (z) (list 'second z)))
-            (cons (lambda _ '()) (import () 'third))))
+      (list (cons example?       (cons '(x y) (lambda (x y)
+                                                (list 'first x y))))
+            (cons example2?      (cons '(z)   (lambda (z) (list 'second z))))
+            (cons (lambda _ '()) (cons '()    (lambda () 'third)))))
     '(first 1 2))
   (test 'case/import-2
     (case/import
       (example2 3)
-      (list (cons example?  (import (x y) (list 'first x y)))
-            (cons example2? (import (z) (list 'second z)))
-            (cons (lambda _ '()) (import () 'third))))
+      (list (cons example?       (cons '(x y) (lambda (x y)
+                                                (list 'first x y))))
+            (cons example2?      (cons '(z)   (lambda (z) (list 'second z))))
+            (cons (lambda _ '()) (cons '()    (lambda () 'third)))))
     '(second 3))
   (test 'case/import-3
     (case/import
       55
-      (list (cons example?  (import (x y) (list 'first x y)))
-            (cons example2? (import (z) (list 'second z)))
-            (cons (lambda _ '()) (import () 'third))))
-    'third))
+      (list (cons example?       (cons '(x y) (lambda (x y)
+                                                (list 'first x y))))
+            (cons example2?      (cons '(z)   (lambda (z) (list 'second z))))
+            (cons (lambda _ '()) (cons '()    (lambda () 'third)))))
+    'third)
+
+  )

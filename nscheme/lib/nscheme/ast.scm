@@ -26,7 +26,7 @@
         (cons 'fixnum?         fixnum?)
         (cons 'flonum?         flonum?)
         (cons 'boolean=?       boolean=?)
-        (cons 'number=?        eqv?)
+        (cons 'number=?        number=?)
         (cons 'string=?        string=?)
         (cons 'mvector=?       mvector=?)
         (cons 'procedure=?     procedure=?)

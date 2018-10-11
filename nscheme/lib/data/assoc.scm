@@ -22,7 +22,7 @@
 (define (assoc-filter d p?)
   (cond ((null? d)     assoc:empty)
         ((p? (caar d)) (cons (car d) (assoc-filter (cdr d) p?)))
-        (else          (assoc-filter (cdr d) p?))))
+        (#t            (assoc-filter (cdr d) p?))))
 
 (define (assoc-remove* d k*) (assoc-filter d (lambda (k) (not (member k k*)))))
 (define (assoc-remove d k)   (assoc-remove* d (list k)))
@@ -32,7 +32,7 @@
   (let loop ((d d) (k* '()))
     (cond ((null? d)            assoc:empty)
           ((member (caar d) k*) (loop (cdr d) k*))
-          (else (cons (car d) (loop (cdr d) (cons (caar d) k*)))))))
+          (#t (cons (car d) (loop (cdr d) (cons (caar d) k*)))))))
 
 (define (test! test)
   (test 'assoc-1
