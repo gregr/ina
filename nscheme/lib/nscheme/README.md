@@ -10,8 +10,14 @@
 
 * Redesign for static fexpr implementation
   * throw away interpret.scm
-  * eval.scm: interpreter for evaluating; written in parseable subset
-  * parse.scm: interpreter for producing asts
+  * eval.scm: interpreter for evaluating; written in stageable subset
+  * stage.scm: interpreter for producing asts (replace base.scm with this)
+    * support generalized formal parameter trees
+    * prefix with @ instead of parse:
+    * @letrec in terms of definitions
+    * @let/name in terms of @letrec
+    * clean up uses of `@apply*`
+    * rely less on embedding procedures in syntax
 
 * definition context conveniences
   * embedded procedures in a definition context that take st as argument
@@ -29,7 +35,7 @@
 
 * ditch explicit parsing, in favor of full (static) fexprs
   * make ample use of constants to give stable meanings to syntax/fexprs
-  * define eval via tiny applicative language (corresponding closely with ast:)
+  * define eval via tiny staged language (corresponding closely with ast:)
   * static, in contrast with Kernel's dynamic fexprs
     * I don't see a downside to the static approach; it seems just as expressive;
       yet there are modularity/encapsulation benefits, so it may be more expressive
