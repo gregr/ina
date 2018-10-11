@@ -3,13 +3,6 @@
 (require ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
          ast:reset ast:shift ast:prim primitive-op-descriptions)
 
-;; Association lists
-(define (assoc-ref xs k default) (let ((kv (assoc k xs)))
-                                   (or (and kv (cdr kv)) default)))
-(define (assoc-remove xs k) (remf (lambda (x) (equal? (car x) k)) xs))
-(define (assoc-extend* xs b*)
-  (append b* (foldl (lambda (k xs) (assoc-remove xs k)) xs (map car b*))))
-
 ;; Pattern matching
 (define (length=? len xs)  (and (list? xs) (= (length xs) len)))
 (define (length>=? len xs) (and (list? xs) (>= (length xs) len)))
@@ -21,18 +14,20 @@
 (define ctx:op   'operator)
 (define ctx:def  'definition)
 (define env:empty                      '())
-(define (env-ref env n)                (assoc-ref env n '()))
-(define (env-ref-prop env n k default) (assoc-ref (env-ref env n) k default))
+(define (env-ref env n)                (alist-ref env n '()))
+(define (env-ref-prop env n k default) (alist-ref (env-ref env n) k default))
+(define (env-extend* env b*) (append b* (alist-remove* env (map car b*))))
 (define (env-extend*/var env p*)
   (define (bind n) (cons n (list (cons ctx:var ast:var)
                                  (cons ctx:set! ast:set!))))
-  (assoc-extend* env (map bind (filter (lambda (p?) p?) p*))))
+  (env-extend* env (map bind (filter (lambda (p?) p?) p*))))
 (define (env-extend*/syntax env ctx b*)
   (define (bind b) (let ((n (car b)))
                      (cons n (cons (cons ctx (cdr b)) (env-ref env n)))))
-  (assoc-extend* env (map bind b*)))
+  (env-extend* env (map bind b*)))
 (define (env-freeze env)
-  (map (lambda (b) (cons (car b) (assoc-remove (cdr b) ctx:set!))) env))
+  (map (lambda (b) (cons (car b) (alist-remove* (cdr b) (list ctx:set!))))
+       env))
 
 ;; Parameters
 (define (param? p) (or (not p) (name? p)))
@@ -283,6 +278,7 @@
             (cond ((null? xs)    '())
                   ((p? (car xs)) (cdr xs))
                   (#t (cons (car xs) (remf p? (cdr xs)))))))
+    (remove (lambda (v xs) (remf (lambda (x) (equal? x v)) xs)))
     (length (lambda (xs) (foldl (lambda (_ l) (+ 1 l)) 0 xs)))
     (append (lambda xss (foldr (lambda (xs yss) (foldr cons yss xs)) '() xss)))
     (reverse-append (lambda (xs ys) (foldl cons ys xs)))
@@ -302,6 +298,8 @@
                                 (#t (assoc k (cdr xs))))))
     (alist-ref (lambda (rs key default) (let ((rib (assoc key rs)))
                                           (if rib (cdr rib) default))))
+    (alist-remove* (lambda (rs keys)
+                     (filter (lambda (rib) (not (member (car rib) keys))) rs)))
     (string-append (lambda ss
                      (define css (map vector->list (map string->vector ss)))
                      (vector->string (list->vector (apply append css)))))

@@ -329,6 +329,7 @@
             (cond ((null? xs)    '())
                   ((p? (car xs)) (cdr xs))
                   (#t (cons (car xs) (remf p? (cdr xs)))))))
+    (remove (lambda (v xs) (remf (lambda (x) (equal? x v)) xs)))
     (length (lambda (xs) (foldl (lambda (_ l) (+ 1 l)) 0 xs)))
     (append (lambda xss (foldr (lambda (xs yss) (foldr cons yss xs)) '() xss)))
     (reverse-append (lambda (xs ys) (foldl cons ys xs)))
@@ -348,6 +349,8 @@
                                 (#t (assoc k (cdr xs))))))
     (alist-ref (lambda (rs key default) (let ((rib (assoc key rs)))
                                           (if rib (cdr rib) default))))
+    (alist-remove* (lambda (rs keys)
+                     (filter (lambda (rib) (not (member (car rib) keys))) rs)))
     (string-append (lambda ss
                      (define css (map vector->list (map string->vector ss)))
                      (vector->string (list->vector (apply append css)))))
