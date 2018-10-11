@@ -212,7 +212,7 @@
                  (cons 'fixnum?     fixnum?)
                  (cons 'flonum?     flonum?)
                  (cons 'boolean=?   boolean=?)
-                 (cons 'number=?    =)
+                 (cons 'number=?    eqv?)
                  (cons 'string=?    string=?)
                  (cons 'mvector=?   mvector=?)
                  (cons 'procedure=? procedure=?)
@@ -231,6 +231,8 @@
                  (cons '=  =)
                  (cons '<= <=)
                  (cons '<  <)
+                 (cons '>= >=)
+                 (cons '>  >)
                  (cons '+  +)
                  (cons '*  *)
                  (cons '-  -)
@@ -269,6 +271,12 @@
 (define derived-ops
   '((error (lambda args ('error args)))
     (not (lambda (b) (if b #f #t)))
+    (caar (lambda (v) (car (car v))))
+    (cadr  (lambda (xs) (car (cdr xs))))
+    (cadar (lambda (v) (cadr (car v))))
+    (caddr (lambda (xs) (cadr (cdr xs))))
+    (list-tail (lambda (xs i) (if (= 0 i) xs (list-tail (cdr xs) (- i 1)))))
+    (list-ref  (lambda (xs i) (car (list-tail xs i))))
     (list->vector (lambda (xs)
                     (define result (make-mvector (length xs) #t))
                     (foldl (lambda (x i) (mvector-set! result i x) (+ i 1))
@@ -292,7 +300,7 @@
     (vector (lambda xs (list->vector xs)))
     (list?  (lambda (v) (or (and (pair? v) (list? (cdr v))) (null? v))))
     (list   (lambda xs xs))
-    (list*  (lambda (x . xs) (if (null? xs) x (cons x (apply (list* xs))))))
+    (list*  (lambda (x . xs) (if (null? xs) x (cons x (apply list* xs)))))
     (foldl  (lambda (f acc xs) (if (null? xs) acc
                                  (foldl f (f (car xs) acc) (cdr xs)))))
     (foldr  (lambda (f acc xs) (if (null? xs) acc
@@ -317,6 +325,10 @@
                     ((p? (car xs)) (cons (car xs) (filter p? (cdr xs))))
                     (#t (filter p? (cdr xs))))))
     (filter-not (lambda (p? xs) (filter (lambda (x) (not (p? x))) xs)))
+    (remf (lambda (p? xs)
+            (cond ((null? xs)    '())
+                  ((p? (car xs)) (cdr xs))
+                  (#t (cons (car xs) (remf p? (cdr xs)))))))
     (length (lambda (xs) (foldl (lambda (_ l) (+ 1 l)) 0 xs)))
     (append (lambda xss (foldr (lambda (xs yss) (foldr cons yss xs)) '() xss)))
     (reverse-append (lambda (xs ys) (foldl cons ys xs)))
@@ -331,15 +343,15 @@
                                ((? (car xs)) xs)
                                (#t (memf ? (cdr xs))))))
     (member (lambda (v xs) (memf (lambda (x) (equal? x v)) xs)))
-    (caar (lambda (v) (car (car v))))
     (assoc (lambda (k xs) (cond ((null? xs) #f)
                                 ((equal? k (caar xs)) (car xs))
                                 (#t (assoc k (cdr xs))))))
-    (remove-duplicates
-      (lambda (xs)
-        (define (ucons x acc) (if (member x acc) acc (cons x acc)))
-        (reverse (foldl ucons '() xs)))))
-  )
+    (alist-ref (lambda (rs key default) (let ((rib (assoc key rs)))
+                                          (if rib (cdr rib) default))))
+    (string-append (lambda ss
+                     (define css (map vector->list (map string->vector ss)))
+                     (vector->string (list->vector (apply append css)))))
+    ))
 
 (define env:base
   (eval env:primitive
