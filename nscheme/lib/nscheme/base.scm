@@ -1,4 +1,4 @@
-(provide lang:base parse env-reify)
+(provide lang:base parse)
 
 (require ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
          ast:reset ast:shift ast:prim primitive-op-descriptions)
@@ -140,16 +140,6 @@
 (define (parse:or2 env e $rest)
   (define body (let (($tmp (ast:var 'tmp))) (ast:if $tmp $tmp $rest)))
   (ast:apply* (ast:lambda (list 'tmp) body) (list (parse env e))))
-
-(define (env-reify env)
-  (define (cons-caps b renv)
-    (define b@ (assoc-ref (cdr b) ctx:var #f))
-    (define b! (assoc-ref (cdr b) ctx:set! #f))
-    (define get (ast:lambda '()  (if b@ (b@ (car b)) ast:true)))
-    (define set (ast:lambda '(v) (if b! (b! (car b) (ast:var 'v)) ast:true)))
-    (if (not (or b@ b!)) renv
-      (cons (ast:cons (ast:quote (car b)) (ast:cons get set)) renv)))
-  (ast:vector (apply ast:list (foldr cons-caps '() env)) (ast:quote env)))
 
 ,(
 ;; Parsers for primitive syntax (no var dependencies)

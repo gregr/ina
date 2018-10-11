@@ -1,6 +1,6 @@
 (provide test!)
 
-(require ast-eval lang:base env-reify)
+(require ast-eval lang:base)
 
 (define (ev form) (ast-eval (lang:base form)))
 
@@ -477,12 +477,4 @@
     (ev '(let ((id (lambda (x) x)))
            (map equal? (list id id) (list id (lambda (x) x)))))
     '(#t #f))
-
-  (test 'reify-1
-    (ev (list
-          '(lambda (env)
-             (((car (cdr (assoc 'vector (vector-ref env 0)))))
-              1 2 3))
-          env-reify))
-    '#(1 2 3))
   )
