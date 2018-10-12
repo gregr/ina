@@ -16,6 +16,7 @@
   take
   drop
   remf
+  for-each
   string->vector
   vector->string
   vector-set
@@ -53,6 +54,8 @@
 
 ;; TODO:
 ;; Support for #f parameters in define, lambda, let, etc.
+
+(define (for-each . args) (apply map args) #t)
 
 (define (alist-ref rs key default)
   (define rib (assoc key rs))

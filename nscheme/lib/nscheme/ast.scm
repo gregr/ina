@@ -2,15 +2,15 @@
          ast:reset ast:shift ast:prim ast-eval test!)
 (require type-predicates primitive-op-descriptions)
 
-(define (ast:quote datum)      (vector 'quote  datum))
-(define (ast:var address)      (vector 'var    address))
-(define (ast:set! addr value)  (vector 'set!   addr value))
-(define (ast:if c t f)         (vector 'if     c t f))
-(define (ast:apply proc arg)   (vector 'apply  proc arg))
-(define (ast:reset body)       (vector 'reset  body))
-(define (ast:shift proc)       (vector 'shift  proc))
-(define (ast:lambda ~p?* body) (vector 'lambda ~p?* body))
-(define (ast:prim name a*)     (vector 'prim   name a*))
+(define (ast:quote datum)       (vector 'quote  datum))
+(define (ast:var address)       (vector 'var    address))
+(define (ast:set! param arg)    (vector 'set!   param arg))
+(define (ast:if c t f)          (vector 'if     c t f))
+(define (ast:apply proc arg)    (vector 'apply  proc arg))
+(define (ast:reset body)        (vector 'reset  body))
+(define (ast:shift proc)        (vector 'shift  proc))
+(define (ast:lambda param body) (vector 'lambda param body))
+(define (ast:prim name a*)      (vector 'prim   name a*))
 
 ;; Primitive operations
 (define primitive-op-handlers
@@ -101,8 +101,10 @@
      (if (procedure? ast) ast
        (cond ((? 'quote)  (let ((datum (@ 1))) (lambda (env) datum)))
              ((? 'var)    (let ((n (@ 1)))     (lambda (env) (env-ref env n))))
-             ((? 'set!)   (let ((n (@ 1)) (v (ev (@ 2))))
-                            (lambda (env) (env-set! env n (v env)))))
+             ((? 'set!)   (let ((param (@ 1)) (arg (ev (@ 2))))
+                            (lambda (env)
+                              (define (! b) (env-set! env (car b) (cdr b)))
+                              (for-each ! (param-bind param (arg env))))))
              ((? 'if)     (let ((c (ev (@ 1))) (t (ev (@ 2))) (f (ev (@ 3))))
                             (lambda (env) (if (c env) (t env) (f env)))))
              ((? 'apply)  (let ((proc (ev (@ 1))) (arg (ev (@ 2))))

@@ -312,6 +312,7 @@
            (cond ((null? xs) '())
                  (#t (cons (apply f (car xs) (map1 car xss))
                            (apply map f (cdr xs) (map1 cdr xss)))))))
+    (for-each (lambda args (apply map args) #t))
     (andmap (lambda (f xs . xss)
               (let loop ((last #t) (xs xs) (xss xss))
                 (and last (if (null? xs) last
