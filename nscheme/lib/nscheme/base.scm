@@ -1,20 +1,11 @@
 (provide lang:base stage)
 
-(require ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
+(require length=? length>=? ctx:var ctx:set! ctx:op ctx:def
+         env:empty env-ref env-ref-prop
+         param? bpair*?! ncons param-names
+         ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
          ast:reset ast:shift ast:prim primitive-op-descriptions)
 
-;; Pattern matching
-(define (length=? len xs)  (and (list? xs) (= (length xs) len)))
-(define (length>=? len xs) (and (list? xs) (>= (length xs) len)))
-
-;; Syntactic environments
-(define ctx:var  'ref)
-(define ctx:set! 'set!)
-(define ctx:op   'syntax?)
-(define ctx:def  'define)
-(define env:empty                      '())
-(define (env-ref env n)                (alist-ref env n '()))
-(define (env-ref-prop env n k default) (alist-ref (env-ref env n) k default))
 (define (env-extend*/var env n*)
   (define (bind n) (cons n (list (cons ctx:var  (lambda ()  (ast:var n)))
                                  (cons ctx:set! (lambda (v) (ast:set! n v))))))
@@ -26,24 +17,6 @@
 (define (env-freeze env)
   (map (lambda (b) (cons (car b) (alist-remove* (cdr b) (list ctx:set!))))
        env))
-
-;; Formal parameters
-(define (param? p) (or (not p) (string? p)))
-(define (bpair*?! b*)
-  (define (? b) (and (length=? 2 b) (param? (car b))))
-  (unless (and (list? b*) (andmap ? b*)) (error '"invalid binding list:" b*)))
-;; TODO: import from interpret.scm ?
-(define (ncons name names)
-  (when (member name names) (error '"duplicate name:" name names))
-  (cons name names))
-(define (param-names param)
-  (let loop ((p param) (ns '()))
-    (cond ((pair? p)   (loop (cdr p) (loop (car p) ns)))
-          ((vector? p) (loop (vector->list p) ns))
-          ((string? p) (ncons p ns))
-          ((null? p)   ns)
-          ((not p)     ns)
-          (else (error '"invalid parameter:" p param)))))
 
 ;; High-level AST construction
 (define ast:null        (ast:quote '()))

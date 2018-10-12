@@ -6,10 +6,9 @@
 
 * nscheme.rkt using fexprs
   * update/improve how modules work
-  * replace nscheme.rkt with fexpr.rkt
+  * replace nscheme.rkt with eval.rkt
 
 * Redesign for static fexpr implementation
-  * interpret.scm: common utilities for stage and eval? call this common.scm instead?
   * eval.scm: interpreter for evaluating; written in stageable subset
   * stage.scm: interpreter for producing asts (replace base.scm with this)
     * @letrec in terms of definitions

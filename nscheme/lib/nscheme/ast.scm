@@ -1,6 +1,6 @@
 (provide ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
          ast:reset ast:shift ast:prim ast-eval test!)
-(require type-predicates primitive-op-descriptions)
+(require type-predicates primitive-op-descriptions param-bind)
 
 (define (ast:quote datum)       (vector 'quote  datum))
 (define (ast:var address)       (vector 'var    address))
@@ -82,18 +82,6 @@
   (if rib (cdr rib) (error '"unbound address:" addr)))
 (define (env-ref env addr)    ((car (env-ref-capabilities env addr))))
 (define (env-set! env addr v) ((cdr (env-ref-capabilities env addr)) v))
-
-;; TODO: import from interpreter.scm
-(define (param-bind param arg)
-  (let loop ((p param) (a arg))
-    (cond ((and (pair? p) (pair? a)) (append (loop (car p) (car a))
-                                             (loop (cdr p) (cdr a))))
-          ((and (vector? p) (vector? a))
-           (loop (vector->list p) (vector->list a)))
-          ((string? p)               (list (cons p a)))
-          ((and (null? p) (null? a)) '())
-          ((not p)                   '())
-          (else (error '"parameter/argument mismatch:" param arg p a)))))
 
 (define (ast-eval ast)
   ((let ev ((ast ast))
