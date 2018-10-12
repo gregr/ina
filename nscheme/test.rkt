@@ -3,7 +3,7 @@
   racket/include
   racket/list
   racket/runtime-path
-  ;(except-in "fexpr.rkt" s->ns ns->s)
+  ;(except-in "eval.rkt" s->ns ns->s)
   "filesystem.rkt"
   "nscheme-module.rkt"
   )

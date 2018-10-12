@@ -15,7 +15,7 @@
     * @let/name in terms of @letrec
     * clean up uses of `@apply*`
     * rely less on embedding procedures in syntax
-    * check for syntax errors in fexpr.rkt
+    * check for syntax errors in eval.rkt
 
 * definition context conveniences
   * embedded procedures in a definition context that take st as argument
