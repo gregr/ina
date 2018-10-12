@@ -12,9 +12,6 @@
   * eval.scm: interpreter for evaluating; written in stageable subset
   * stage.scm: interpreter for producing asts (replace base.scm with this)
     * @letrec in terms of definitions
-    * @let/name in terms of @letrec
-    * clean up uses of `@apply*`
-    * rely less on embedding procedures in syntax
     * check for syntax errors in eval.rkt
 
 * definition context conveniences
