@@ -33,6 +33,18 @@
     (ev '((lambda lambda lambda) 'ok))
     '(ok))
 
+  (test 'lambda-1  ;; Formal parameters are generalized to arbitrary trees.
+    (ev '((lambda (() a (b)) (cons a b))
+          '() 1 '(2)))
+    '(1 . 2))
+  (test 'lambda-2  ;; Formal parameters are generalized to arbitrary trees.
+    (ev '((lambda (() a #(b c)) (cons a (cons b (cons c '()))))
+          '() 1 '#(2 3)))
+    '(1 2 3))
+  (test 'lambda-3
+    (ev '((lambda (#f x #f) x) 1 2 3))
+    2)
+
   (test 'lambda-app-1
     (ev '((lambda (x y) x) 5 6))
     5)

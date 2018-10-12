@@ -9,14 +9,14 @@
   * replace nscheme.rkt with fexpr.rkt
 
 * Redesign for static fexpr implementation
-  * throw away interpret.scm
+  * interpret.scm: common utilities for stage and eval? call this common.scm instead?
   * eval.scm: interpreter for evaluating; written in stageable subset
   * stage.scm: interpreter for producing asts (replace base.scm with this)
-    * support generalized formal parameter trees
     * @letrec in terms of definitions
     * @let/name in terms of @letrec
     * clean up uses of `@apply*`
     * rely less on embedding procedures in syntax
+    * check for syntax errors in fexpr.rkt
 
 * definition context conveniences
   * embedded procedures in a definition context that take st as argument
