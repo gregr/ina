@@ -2,13 +2,12 @@
 
 (require length=? length>=? ctx:var ctx:set! ctx:op ctx:def
          env:empty env-ref env-ref-prop
-         param? bpair*?! ncons param-names
+         param? bpair*?! ncons param-map param-names
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
          ast:reset ast:shift ast:prim primitive-op-descriptions)
 
 (define (env-extend*/var env n*)
-  (define (bind n) (cons n (list (cons ctx:var  (lambda ()  (ast:var n)))
-                                 (cons ctx:set! (lambda (v) (ast:set! n v))))))
+  (define (bind n) (cons n (list (cons ctx:var n) (cons ctx:set! n))))
   (append (map bind n*) env))
 (define (env-extend*/syntax env ctx b*)
   (define (bind b) (let ((n (car b)))
@@ -44,8 +43,8 @@
          (let ((p (car form)) (a* (cdr form)))
            (let ((op (and (string? p) (env-ref-prop env p ctx:op #f))))
              (if op (op env a*) (@apply* env p a*)))))
-        ((string? form) ((or (env-ref-prop env form ctx:var #f)
-                             (error '"unbound variable:" form))))
+        ((string? form) (ast:var (or (env-ref-prop env form ctx:var #f)
+                                     (error '"unbound variable:" form))))
         ((or (boolean? form) (number? form)) (ast:quote form))
         ((procedure? form)                   (form env))
         (#t                                  (error '"invalid syntax:" form))))
@@ -62,6 +61,10 @@
     (ast:begin (map (lambda (p v) (if p (ast:set! p v) v)) p?* (stage* env e*))
                (@let env p?* p?* body*)))
   (@let env p?* (map (lambda (_) #t) p?*) (list continue)))
+(define (@set! env param arg)
+  (define (setter n) (or (env-ref-prop env n ctx:set! #f)
+                         (error '"cannot set! variable:" n)))
+  (ast:set! (param-map setter param) (stage env arg)))
 
 (define (defst:empty env) (vector env '()))
 (define (defst-env st)    (vector-ref st 0))
@@ -112,9 +115,7 @@
     (quote ((length=? 1 tail) (ast:quote (@ 0))))
     (if    ((length=? 3 tail) (ast:if (loop (@ 0)) (loop (@ 1)) (loop (@ 2)))))
     ;; TODO: support generalized parameters.
-    (set!  ((and (length=? 2 tail) (string? (@ 0)))
-            ((or (env-ref-prop env (@ 0) ctx:set! #f)
-                 (error '"cannot set! variable:" (@ 0))) (loop (@ 1)))))
+    (set!  ((length=? 2 tail) (@set! env (@ 0) (@ 1))))
     (reset ((length>=? 1 tail) (ast:reset (@body* env tail))))
     (shift ((length>=? 2 tail)
             (ast:shift (@lambda env (list (@ 0)) (@. 1)))))

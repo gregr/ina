@@ -1,6 +1,6 @@
 (provide length=? length>=? ctx:var ctx:set! ctx:op ctx:def
          env:empty env-ref env-ref-prop
-         param? bpair*?! ncons param-names param-bind
+         param? bpair*?! ncons param-map param-names param-bind
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add)
 
@@ -27,6 +27,13 @@
 (define (ncons name names)
   (when (member name names) (error '"duplicate name:" name names))
   (cons name names))
+(define (param-map f p)
+  (cond ((pair? p)   (cons (param-map f (cdr p)) (param-map f (car p))))
+        ((vector? p) (list->vector (param-map f (vector->list p))))
+        ((string? p) (f p))
+        ((null? p)   '())
+        ((not p)     #f)
+        (else (error '"invalid parameter:" p param))))
 (define (param-names param)
   (let loop ((p param) (ns '()))
     (cond ((pair? p)   (loop (cdr p) (loop (car p) ns)))
