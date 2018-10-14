@@ -85,7 +85,7 @@
   (bpair*?! b*)
   (let loop ((b* b*) (env env))
     (if (null? b*) (@body* env body)
-      (@let env (list (car b*)) (lambda (env) (loop (cdr b*) env))))))
+      (@let/ env (list (car b*)) (lambda (env) (loop (cdr b*) env))))))
 (define (@and env . args)
   (define ra* (reverse (cons #t args)))
   (foldl (lambda (a rest) (@if env a (lambda (_) rest) #f))
@@ -131,6 +131,7 @@
 (define (@body* env body*)
   (defstate-run (apply @begin/define (defstate:empty env) body*)))
 
+;; Primitive language definition
 (define (stager:primitive-syntax name proc arity exact?)
   (cons name (lambda (env . tail)
                (unless ((if exact? length=? length>=?) arity tail)
