@@ -11,7 +11,6 @@
 * Redesign for static fexpr implementation
   * eval.scm: interpreter for evaluating; written in stageable subset
   * stage.scm: interpreter for producing asts (replace base.scm with this)
-    * @letrec in terms of definitions
     * check for syntax errors in eval.rkt
 
 * definition context conveniences
@@ -23,6 +22,7 @@
     * `(describe* (id*) kvs)`
     * e.g., (describe var ((set! #f))) to hide the capability to set! a variable
   * @definitions-run to force accmulated actions to run, and reset defined names
+    * for staging support, defstate needs a continuation stack
 
 * extended syntax:
   * case-lambda, case-let, quasiquote

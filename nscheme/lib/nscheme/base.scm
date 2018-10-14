@@ -4,7 +4,9 @@
          env:empty env-ref env-ref-prop
          param? bpair*?! ncons param-map param-names
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:reset ast:shift ast:prim primitive-op-descriptions)
+         ast:reset ast:shift ast:prim primitive-op-descriptions
+         defstate:empty defstate-env defstate-names defstate-actions
+         defstate-env-set defstate-names-add defstate-actions-add)
 
 (define (env-extend*/var env n*)
   (define (bind n) (cons n (list (cons ctx:var n) (cons ctx:set! n))))
@@ -103,39 +105,31 @@
 (define (@when env c . body)   (@if env c (lambda (env) (@body* env body)) #t))
 (define (@unless env c . body) (@if env c #t (lambda (env) (@body* env body))))
 
-(define (defst:empty env) (vector env '()))
-(define (defst-env st)    (vector-ref st 0))
-(define (defst-rdef* st)  (vector-ref st 1))
-(define (@@define st n def-body)
-  (vector (defst-env st) (cons (cons n def-body) (defst-rdef* st))))
-;; TODO: $define-syntax ?
-(define (@definition* st form*)
+(define (defstate-actions-add-expr st form)
+  (defstate-actions-add st (lambda (env) (stage env form))))
+(define (defstate-run st)
+  (let ((actions (reverse (defstate-actions st)))
+        (env (defstate-env st)) (names (defstate-names st)))
+    (ast:let names (map (lambda (_) ast:true) names)
+             (ast:begin (map (lambda (act) (act env)) actions)))))
+(define (@begin/define st . forms)
   (foldl (lambda (form st)
            (let* ((n (and (pair? form) (string? (car form)) (car form)))
-                  ($define (and n (env-ref-prop (defst-env st) n ctx:def #f))))
-             (cond ($define ($define st (cdr form)))
-                   (#t (@@define st #f form))))) st form*))
-(define (@begin/define st tail)
-  (cond ((list? tail) (@definition* st tail))
-        (#t           (error '"invalid begin:" tail))))
-(define (@define st tail)
-  (define (@ i) (list-ref tail i)) (define (@. i) (list-tail tail i))
-  (cond ((and (length=? 2 tail) (param? (@ 0))) (@@define st (@ 0) (@ 1)))
-        ((and (length>=? 2 tail) (pair? (@ 0)) (string? (car (@ 0))))
-         (define (edef env) (apply @lambda env (cdr (@ 0)) (@. 1)))
-         (@@define st (car (@ 0)) edef))
-        (#t (error '"invalid define:" tail))))
-
+                  ($def (and n (env-ref-prop (defstate-env st) n ctx:def #f))))
+             (if $def (apply $def st (cdr form))
+               (defstate-actions-add-expr st form)))) st forms))
+(define (@def st param arg)
+  (define names (param-names param))
+  (define env (env-extend*/var (alist-remove* (defstate-env st) names) names))
+  (defstate-actions-add (defstate-env-set (defstate-names-add st names) env)
+                        (lambda (env) (@set! env param arg))))
+(define (@define st param . body)
+  (if (pair? param)
+    (@define st (car param)
+             (lambda (env) (apply @lambda env (cdr param) body)))
+    (apply @def st param body)))
 (define (@body* env body*)
-  (unless (list? body*) (error '"body must be a list:" body*))
-  (define rdef* (defst-rdef* (@definition* (defst:empty env) body*)))
-  (when (null? rdef*) (error '"body cannot be empty:" body*))
-  (define p?e* (reverse (cdr rdef*)))
-  (define final-def (car rdef*))
-  (define body-final (cdr final-def))
-  (when (car final-def) (error '"body cannot end with a definition:" body*))
-  (if (null? p?e*) (stage env body-final)
-    (@letrec env (map (lambda (b) (list (car b) (cdr b))) p?e*) body-final)))
+  (defstate-run (apply @begin/define (defstate:empty env) body*)))
 
 (define (stager:primitive-syntax name proc arity exact?)
   (cons name (lambda (env . tail)
@@ -172,7 +166,9 @@
 (define env:primitive
   (env-extend*/syntax
     (env-extend*/syntax env:empty ctx:op primitive-syntax-bindings)
-    ctx:def (list (cons 'begin @begin/define) (cons 'define @define))))
+    ctx:def (list (cons 'begin/define @begin/define)
+                  (cons 'define       @define)
+                  (cons 'def          @def))))
 (define (lang:primitive form) (stage env:primitive form))
 
 ;; Base language definition
