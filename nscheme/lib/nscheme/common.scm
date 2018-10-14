@@ -1,29 +1,17 @@
 (provide length=? length>=? ctx:var ctx:set! ctx:op ctx:def
          env:empty env-ref env-ref-prop
-         param? bpair*?! ncons param-map param-names param-bind
+         bpair*?! ncons param-map param-names param-bind
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add)
 
 ;; Pattern matching
 (define (length=? len xs)  (and (list? xs) (= (length xs) len)))
 (define (length>=? len xs) (and (list? xs) (>= (length xs) len)))
-
-;; Syntactic environments
-(define ctx:var  'ref)
-(define ctx:set! 'set!)
-(define ctx:op   'syntax?)
-(define ctx:def  'define)
-(define env:empty                      '())
-(define (env-ref env n)                (alist-ref env n '()))
-(define (env-ref-prop env n k default) (alist-ref (env-ref env n) k default))
+(define (bpair*?! b*)
+  (define (? b) (and (length=? 2 b) (param-names (car b))))
+  (unless (and (list? b*) (andmap ? b*)) (error '"invalid binding list:" b*)))
 
 ;; Formal parameters
-;; TODO: get rid of param?
-(define (param? p) (or (not p) (string? p)))
-(define (bpair*?! b*)
-  ;; TODO: replace param? with param-names.
-  (define (? b) (and (length=? 2 b) (param? (car b))))
-  (unless (and (list? b*) (andmap ? b*)) (error '"invalid binding list:" b*)))
 (define (ncons name names)
   (when (member name names) (error '"duplicate name:" name names))
   (cons name names))
@@ -52,6 +40,15 @@
           ((and (null? p) (null? a)) '())
           ((not p)                   '())
           (else (error '"parameter/argument mismatch:" param arg p a)))))
+
+;; Syntactic environments
+(define ctx:var  'ref)
+(define ctx:set! 'set!)
+(define ctx:op   'syntax?)
+(define ctx:def  'define)
+(define env:empty                      '())
+(define (env-ref env n)                (alist-ref env n '()))
+(define (env-ref-prop env n k default) (alist-ref (env-ref env n) k default))
 
 ;; Definition contexts
 (define (defstate:empty env)  (vector env '() '()))

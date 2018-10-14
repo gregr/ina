@@ -2,7 +2,7 @@
 
 (require length=? length>=? ctx:var ctx:set! ctx:op ctx:def
          env:empty env-ref env-ref-prop
-         param? bpair*?! ncons param-map param-names
+         bpair*?! ncons param-map param-names
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
          ast:reset ast:shift ast:prim primitive-op-descriptions
          defstate:empty defstate-env defstate-names defstate-actions
@@ -33,7 +33,7 @@
            (ast:begin (append (map ! (range (length xs)) xs)
                               (list (ast:prim 'mvector->vector (list $mv)))))))
 (define (ast:apply* $proc $a*) (ast:apply $proc (apply ast:list $a*)))
-(define (ast:let p* v* body)  (ast:apply* (ast:lambda p* body) v*))
+(define (ast:let p* v* body)   (ast:apply* (ast:lambda p* body) v*))
 (define (ast:begin a*)
   (define ra* (reverse (cons ast:true a*)))
   (foldl (lambda (a rest) (ast:let '(#f) (list a) rest)) (car ra*) (cdr ra*)))
