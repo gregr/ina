@@ -145,6 +145,8 @@
                  (cons 'mvector-set!    mvector-set!)
                  (cons 'mvector-ref     mvector-ref)
                  (cons 'mvector-length  mvector-length)
+                 (cons 'string<?        string<?)
+                 (cons 'string>?        string>?)
                  (cons '=  =)
                  (cons '<= <=)
                  (cons '<  <)

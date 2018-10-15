@@ -38,10 +38,15 @@
             (mvector-ref     (mvector? fixnum?)    #f)
             (mvector-length  (mvector?)            fixnum?)
 
+            ;; TODO: derive these.
+            (string<? (string? string?) boolean?)
+            (string>? (string? string?) boolean?)
             ;; TODO: flonum variants.
             (=  (number? number?) boolean?)
             (<= (number? number?) boolean?)
             (<  (number? number?) boolean?)
+            (>= (number? number?) boolean?)
+            (>  (number? number?) boolean?)
             (+  (number? number?) number?)
             (*  (number? number?) number?)
             (-  (number? number?) number?)
