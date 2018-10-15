@@ -20,4 +20,4 @@
          ((string? d)  hash-string)
          ((pair? d)    hash-pair)
          ((vector? d)  hash-vector)
-         (else (error '"cannot hash:" d))) d))
+         (#t (error '"cannot hash:" d))) d))

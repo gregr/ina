@@ -21,7 +21,7 @@
         ((string? p) (f p))
         ((null? p)   '())
         ((not p)     #f)
-        (else (error '"invalid parameter:" p param))))
+        (#t (error '"invalid parameter:" p))))
 (define (param-names param)
   (let loop ((p param) (ns '()))
     (cond ((pair? p)   (loop (cdr p) (loop (car p) ns)))
@@ -29,7 +29,7 @@
           ((string? p) (ncons p ns))
           ((null? p)   ns)
           ((not p)     ns)
-          (else (error '"invalid parameter:" p param)))))
+          (#t (error '"invalid parameter:" p param)))))
 (define (param-bind param arg)
   (let loop ((p param) (a arg))
     (cond ((and (pair? p) (pair? a)) (append (loop (car p) (car a))
@@ -39,7 +39,7 @@
           ((string? p)               (list (cons p a)))
           ((and (null? p) (null? a)) '())
           ((not p)                   '())
-          (else (error '"parameter/argument mismatch:" param arg p a)))))
+          (#t (error '"parameter/argument mismatch:" param arg p a)))))
 
 ;; Syntactic environments
 (define ctx:var  'ref)
