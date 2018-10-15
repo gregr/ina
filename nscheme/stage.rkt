@@ -140,15 +140,15 @@
 
 (define (ast-eval ast)
   ;; Runtime environments
+  (define env:empty (hash))
   (define (env-extend* env b*)
     (foldl (lambda (b e)
              (define cell    (make-mvector 1 (cdr b)))
              (define (get)   (mvector-ref  cell 0))
              (define (set v) (mvector-set! cell 0 v))
-             (cons (cons (car b) (cons get set)) e)) env b*))
+             (hash-set e (car b) (cons get set))) env b*))
   (define (env-ref-capabilities env addr)
-    (define rib (assoc addr env))
-    (if rib (cdr rib) (error '"unbound address:" addr)))
+    (or (hash-ref env addr #f) (error '"unbound address:" addr)))
   (define (env-ref env addr)    ((car (env-ref-capabilities env addr))))
   (define (env-set! env addr v) ((cdr (env-ref-capabilities env addr)) v))
   ((let ev ((ast ast))
@@ -177,7 +177,7 @@
                             (define op (or (alist-ref primitive-ops name #f)
                                            (error '"invalid primitive:" name)))
                             (lambda (env) (op (map (lambda (a) (a env)) a*)))))
-             (#t          (error '"unknown ast:" ast))))) '()))
+             (#t          (error '"unknown ast:" ast))))) env:empty))
 
 (define (env-extend*/var env n*)
   (define (bind n) (cons n (list (cons ctx:var n) (cons ctx:set! n))))
