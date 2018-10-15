@@ -167,9 +167,9 @@
 (define env:primitive
   (env-extend*/syntax
     (env-extend*/syntax env:empty ctx:op primitive-syntax-bindings)
-    ctx:def (list (cons 'begin/define @begin/define)
-                  (cons 'define       @define)
-                  (cons 'def          @def))))
+    ctx:def (list (cons 'begin  @begin/define)
+                  (cons 'define @define)
+                  (cons 'def    @def))))
 (define (lang:primitive form) (stage env:primitive form))
 
 ;; Base language definition

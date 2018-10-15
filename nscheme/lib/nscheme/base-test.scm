@@ -97,7 +97,7 @@
            (define u 88)
            (define z y)
            6
-           (begin/define (define a 5) (define w 4))
+           (begin (define a 5) (define w 4))
            z))
     7)
   (test 'internal-defs-2
@@ -105,7 +105,7 @@
            (define y 88)
            (define z y)
            6
-           (begin/define (define a 5) (define w 4))
+           (begin (define a 5) (define w 4))
            z))
     88)
   (test 'internal-defs-3
@@ -113,7 +113,7 @@
            (define y 88)
            (define z y)
            6
-           (begin/define (define a 5) (define w 4))
+           (begin (define a 5) (define w 4))
            a))
     5)
   (test 'internal-defs-4
@@ -121,7 +121,7 @@
            (define y 88)
            (define (z x) x)
            6
-           (begin/define (define a 5) (define w (z y)))
+           (begin (define a 5) (define w (z y)))
            w))
     88)
 
