@@ -1,6 +1,6 @@
 #lang racket/base
 (provide eval env:base s->ns ns->s plift)
-(require "common.rkt" racket/bool racket/control racket/list)
+(require "common.rkt" racket/bool racket/control racket/list racket/pretty)
 
 (define type-predicates
   (list (cons 'procedure? procedure?)
@@ -178,6 +178,68 @@
                                            (error '"invalid primitive:" name)))
                             (lambda (env) (op (map (lambda (a) (a env)) a*)))))
              (#t          (error '"unknown ast:" ast))))) env:empty))
+
+(define (ast->racket ast)
+  (define prelude
+    '((define (plift racket-proc) (lambda (a) (apply racket-proc a)))
+      (define (procedure=? m n)   (eq? m n))
+      (define (number=? m n)      (eqv? m n))
+      (struct mvector (v) #:transparent)
+      (define (make-mvector k d)      (mvector (make-vector k d)))
+      (define (mvector=? m n)         (eq? m n))
+      (define (mvector-length mv)     (vector-length (mvector-v mv)))
+      (define (mvector-ref mv i)      (vector-ref (mvector-v mv) i))
+      (define (mvector-set! mv i new) (vector-set! (mvector-v mv) i new) #t)
+      (define (mvector->vector mv)    (vector-copy (mvector-v mv)))
+      (define (string->vector s)
+        (list->vector (map char->integer (string->list s))))
+      (define (vector->string v)
+        (list->string (map integer->char (vector->list v))))))
+  (define (name->var n) (string-append 'v. n))
+  (define (param-set! param)
+    `(let ((set!.fail (lambda (p a) (error '"parameter/argument mismatch:"
+                                           p a ',param set!.arg))))
+       ,(let loop ((p param))
+          (cond ((pair? p)
+                 `(and (or (pair? set!.arg) (set!.fail 'pair? set!.arg))
+                       (let ((set!.arg (car set!.arg))) ,(loop (car p)))
+                       (let ((set!.arg (cdr set!.arg))) ,(loop (cdr p)))))
+                ((vector? p)
+                 `(and (or (vector? set!.arg) (set!.fail 'vector? set!.arg))
+                       (let ((set!.arg (vector->list set!.arg)))
+                         ,(loop (vector->list p)))))
+                ((string? p) `(set! ,(name->var p) set!.arg))
+                ((null? p)   `(or (null? set!.arg)
+                                  (set!.fail 'null? set!.arg)))
+                ((not p)     #t)
+                (#t (error '"invalid parameter:" p))))))
+  (define code
+    (let ev ((ast ast))
+      (define (@ i) (vector-ref ast i)) (define (? tag) (equal? (@ 0) tag))
+      (if (procedure? ast) ast
+        (cond ((? 'quote)  (let ((datum (@ 1))) `(quote ,datum)))
+              ((? 'var)    (let ((n (@ 1)))     (name->var n)))
+              ((? 'set!)   (let ((param (@ 1)) (arg (ev (@ 2))))
+                             `(let ((set!.arg ,arg)) ,(param-set! param))))
+              ((? 'if)     (let ((c (ev (@ 1))) (t (ev (@ 2))) (f (ev (@ 3))))
+                             `(if ,c ,t ,f)))
+              ((? 'apply)  (let ((proc (ev (@ 1))) (arg (ev (@ 2))))
+                             `(,proc ,arg)))
+              ((? 'lambda) (let ((param (@ 1)) (body (ev (@ 2))))
+                             `(lambda (set!.arg)
+                                (let ,(map (lambda (n) (list (name->var n) #t))
+                                           (param-names param))
+                                  ,(param-set! param) ,body))))
+              ((? 'reset)  (let ((body (ev (@ 1)))) `(reset ,body)))
+              ((? 'shift)  (let ((proc (ev (@ 1))))
+                             `(shift k (,proc (plift k)))))
+              ((? 'prim)   (let ((name (@ 1)) (a* (map ev (@ 2))))
+                             `(,name . ,a*)))
+              (#t          (error '"unknown ast:" ast))))))
+  (apply string-append '"#lang racket\n"
+         (map (lambda (v)
+                (string-append (pretty-format v 200 #:mode (ns->s 'write)) '"\n"))
+              (ns->s (append prelude (list code))))))
 
 (define (env-extend*/var env n*)
   (define (bind n) (cons n (list (cons ctx:var n) (cons ctx:set! n))))
@@ -455,6 +517,44 @@
 (define env:base '())
 
 (define (eval env form) (ast-eval (lang:base form)))
+
+(define (test-ast->racket filename form)
+  (define ast (lang:base form))
+  (define racket (ast->racket ast))
+  (call-with-output-file filename (lambda (out) (displayln racket out))))
+
+(test-ast->racket
+  "racket-output.rkt"
+  '(let ((list (lambda xs xs))
+         (fix (lambda (f)
+                ((lambda (d) (d d))
+                 (lambda (x) (f (lambda a (apply (x x) a))))))))
+     (let ((map (fix (lambda (map)
+                       (lambda (f xs)
+                         (if (null? xs)
+                           '()
+                           (cons (f (car xs)) (map f (cdr xs)))))))))
+       (let ((fix*
+               (fix (lambda (fix*)
+                      (lambda fs
+                        (map (lambda (fi)
+                               (lambda a
+                                 (apply (apply fi (apply fix* fs)) a)))
+                             fs))))))
+         (let ((even&odd
+                 (fix* (lambda (even? odd?)
+                         (lambda (n) (if (null? n)
+                                       #t
+                                       (odd? (cdr n)))))
+                       (lambda (even? odd?)
+                         (lambda (n)
+                           (if (null? n)
+                             #f
+                             (even? (cdr n))))))))
+           (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
+             (list (even? '())    (odd? '())
+                   (even? '(s))   (odd? '(s))
+                   (even? '(s s)) (odd? '(s s)))))))))
 
 ;; Tests:
 (define tests-total 0)
