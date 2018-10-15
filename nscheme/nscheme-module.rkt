@@ -8,11 +8,10 @@
   )
 
 (require
-  ;"eval.rkt"
+  "stage.rkt"
   racket/pretty
   racket/match
   racket/runtime-path
-  (only-in "nscheme.rkt" import-apply)  ;; namespace-attach-module depends on this.
   )
 
 (define (nsmod required provided body) (vector required provided body))
@@ -20,15 +19,7 @@
 (define (nsmod-provided m)             (vector-ref m 1))
 (define (nsmod-body m)                 (vector-ref m 2))
 
-(define local-ns (current-namespace))
-(define-runtime-module-path nscheme-rkt "nscheme.rkt")
-(define nscm-ns (parameterize ((current-namespace (make-base-namespace)))
-                  (namespace-attach-module local-ns nscheme-rkt)
-                  (namespace-require/constant nscheme-rkt)
-                  (current-namespace)))
-(define (nscm:eval form) (eval form nscm-ns))
-
-;(define (nscm:eval form) (eval env:base (s->ns form)))
+(define (nscm:eval form) (eval env:base (s->ns form)))
 
 (define (eval/module m)
   (cons (map symbol->string (vector-ref (nsmod-required m) 0))
@@ -62,10 +53,10 @@
                   `#(,(map cadr pd) ,(map car pd))
                   (map body-element body)))))))
 
-;(define (import-apply i env)
-  ;((cdr i) (map (lambda (name)
-                  ;(cdr (or (assoc name env)
-                           ;(error "missing argument:" name)))) (car i))))
+(define (import-apply i env)
+  ((cdr i) (map (lambda (name)
+                  (cdr (or (assoc name env)
+                           (error "missing argument:" name)))) (car i))))
 (define (link/module env m) (append (import-apply m env) env))
 (define (link/module* env m*) (foldl (lambda (m e) (link/module e m)) env m*))
 
