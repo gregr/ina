@@ -1,5 +1,28 @@
 # nScheme
 
+## Static approach to fexprs
+
+* referring to this approach as "static"; referring to Kernel's fexprs as "dynamic"
+  * in Kernel, applicative behavior is a dynamic property of values via wrap/unwrap
+  * in this approach, applicative behavior is a static property of bound names
+    * syntactically apparent, determined by how a name is bound
+      * e.g., given the form `(f . X)` where `f` is a symbol
+        * `f` is bound as operative: apply `f` to `current-env` and literal `X`
+        * `f` is bound as applicative: apply `f` to list of evaluated elements of `X`
+      * non-symbol heads are treated as applicative
+    * any procedure may behave as an applicative or operative without modification
+      * all procedures are lambdas without caveats or additional feature complexity
+      * e.g., `(apply lambda an-env-that-binds-+ '(x) (list (list '+ 'x n)))`
+        dynamically produces a `(lambda (x) (+ x n))` for some runtime value `n`
+    * seems both more convenient and easier to reason about than applicative wrappers
+    * seems just as expressive as the dynamic approach
+* static approach simplifies encapsulation where desired
+  * e.g., in the dynamic approach, an operative (called `f`) passed to a higher order
+    procedure (such as `map`) will observe the procedure's implementation details; to
+    prevent this, `map` would have to runtime-assert that `f` is wrapped (applicative)
+  * in the static approach, `map` can bind `f` as applicative, guaranteeing
+    the security of its source code without additional checks
+
 ## TODO
 
 ### compiler

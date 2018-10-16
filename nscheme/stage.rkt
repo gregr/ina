@@ -138,6 +138,8 @@
              (error '"primitive op type error:" name arg-sig a*)))
          (cons name full-op)) primitive-op-descriptions))
 
+;(define ast-count 0)
+
 (define (ast-eval ast)
   ;; Runtime environments
   (define env:empty (hash))
@@ -215,6 +217,7 @@
                 (#t (error '"invalid parameter:" p))))))
   (define code
     (let ev ((ast ast))
+      ;(set! ast-count (+ ast-count 1))
       (define (@ i) (vector-ref ast i)) (define (? tag) (equal? (@ 0) tag))
       (if (procedure? ast) ast
         (cond ((? 'quote)  (let ((datum (@ 1))) `(quote ,datum)))
@@ -523,38 +526,48 @@
   (define racket (ast->racket ast))
   (call-with-output-file filename (lambda (out) (displayln racket out))))
 
-(test-ast->racket
-  "racket-output.rkt"
-  '(let ((list (lambda xs xs))
-         (fix (lambda (f)
-                ((lambda (d) (d d))
-                 (lambda (x) (f (lambda a (apply (x x) a))))))))
-     (let ((map (fix (lambda (map)
-                       (lambda (f xs)
-                         (if (null? xs)
-                           '()
-                           (cons (f (car xs)) (map f (cdr xs)))))))))
-       (let ((fix*
-               (fix (lambda (fix*)
-                      (lambda fs
-                        (map (lambda (fi)
-                               (lambda a
-                                 (apply (apply fi (apply fix* fs)) a)))
-                             fs))))))
-         (let ((even&odd
-                 (fix* (lambda (even? odd?)
-                         (lambda (n) (if (null? n)
-                                       #t
-                                       (odd? (cdr n)))))
-                       (lambda (even? odd?)
-                         (lambda (n)
-                           (if (null? n)
-                             #f
-                             (even? (cdr n))))))))
-           (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
-             (list (even? '())    (odd? '())
-                   (even? '(s))   (odd? '(s))
-                   (even? '(s s)) (odd? '(s s)))))))))
+;; ast-count: 2818
+;; racket lines (200 columns): 8485
+;(test-ast->racket
+  ;"racket-output.rkt"
+  ;5)
+
+;; ast-count: 3193
+;; racket lines (200 columns): 10216
+;(test-ast->racket
+  ;"racket-output.rkt"
+  ;'(let ((list (lambda xs xs))
+         ;(fix (lambda (f)
+                ;((lambda (d) (d d))
+                 ;(lambda (x) (f (lambda a (apply (x x) a))))))))
+     ;(let ((map (fix (lambda (map)
+                       ;(lambda (f xs)
+                         ;(if (null? xs)
+                           ;'()
+                           ;(cons (f (car xs)) (map f (cdr xs)))))))))
+       ;(let ((fix*
+               ;(fix (lambda (fix*)
+                      ;(lambda fs
+                        ;(map (lambda (fi)
+                               ;(lambda a
+                                 ;(apply (apply fi (apply fix* fs)) a)))
+                             ;fs))))))
+         ;(let ((even&odd
+                 ;(fix* (lambda (even? odd?)
+                         ;(lambda (n) (if (null? n)
+                                       ;#t
+                                       ;(odd? (cdr n)))))
+                       ;(lambda (even? odd?)
+                         ;(lambda (n)
+                           ;(if (null? n)
+                             ;#f
+                             ;(even? (cdr n))))))))
+           ;(let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
+             ;(list (even? '())    (odd? '())
+                   ;(even? '(s))   (odd? '(s))
+                   ;(even? '(s s)) (odd? '(s s)))))))))
+
+;(displayln `(ast-count: ,ast-count))
 
 ;; Tests:
 (define tests-total 0)
