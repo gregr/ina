@@ -16,7 +16,7 @@
   (when (member name names) (error '"duplicate name:" name names))
   (cons name names))
 (define (param-map f p)
-  (cond ((pair? p)   (cons (param-map f (cdr p)) (param-map f (car p))))
+  (cond ((pair? p)   (cons (param-map f (car p)) (param-map f (cdr p))))
         ((vector? p) (list->vector (param-map f (vector->list p))))
         ((string? p) (f p))
         ((null? p)   '())
