@@ -4,9 +4,9 @@
   mvector? make-mvector mvector=? mvector-length mvector-ref mvector-set!
   mvector->vector string->vector vector->string
   alist-ref alist-remove* alist-at list-at
-  length=? length>=? bpair*?!
+  length=? length>=? param?! bpair*?!
   ctx:var ctx:set! ctx:op ctx:def
-  env:empty env-ref env-ref-prop
+  env:empty env-ref env-ref-prop env-pre-extend* env-extend*
   ncons param-map param-names param-bind
   defstate:empty defstate-env defstate-names defstate-actions
   defstate-env-set defstate-names-add defstate-actions-add
@@ -132,6 +132,8 @@
 (define env:empty                      '())
 (define (env-ref env n)                (alist-ref env n '()))
 (define (env-ref-prop env n k default) (alist-ref (env-ref env n) k default))
+(define (env-pre-extend* env n*)       (alist-remove* env n*))
+(define (env-extend* env b*)           (append b* env))
 
 (define (defstate:empty env)  (vector env '() '()))
 (define (defstate-env st)     (vector-ref st 0))
