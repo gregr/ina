@@ -1,5 +1,5 @@
 (provide length=? length>=? ctx:var ctx:set! ctx:op ctx:def
-         env:empty env-ref env-ref-prop
+         env:empty env-ref env-ref-prop env-pre-extend* env-extend*
          bpair*?! ncons param-map param-names param-bind
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add)
@@ -49,6 +49,8 @@
 (define env:empty                      '())
 (define (env-ref env n)                (alist-ref env n '()))
 (define (env-ref-prop env n k default) (alist-ref (env-ref env n) k default))
+(define (env-pre-extend* env n*)       (alist-remove* env n*))
+(define (env-extend* env b*)           (append b* env))
 
 ;; Definition contexts
 (define (defstate:empty env)  (vector env '() '()))

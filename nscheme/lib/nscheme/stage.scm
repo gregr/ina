@@ -1,7 +1,7 @@
 (provide lang:base stage)
 
 (require length=? length>=? ctx:var ctx:set! ctx:op ctx:def
-         env:empty env-ref env-ref-prop
+         env:empty env-ref env-ref-prop env-pre-extend* env-extend*
          bpair*?! ncons param-map param-names
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
          ast:reset ast:shift ast:prim primitive-op-descriptions
@@ -10,11 +10,11 @@
 
 (define (env-extend*/var env n*)
   (define (bind n) (cons n (list (cons ctx:var n) (cons ctx:set! n))))
-  (append (map bind n*) env))
+  (env-extend* (env-pre-extend* env n*) (map bind n*)))
 (define (env-extend*/syntax env ctx b*)
   (define (bind b) (let ((n (car b)))
                      (cons n (cons (cons ctx (cdr b)) (env-ref env n)))))
-  (append (map bind b*) (alist-remove* env (map car b*))))
+  (env-extend* (env-pre-extend* env (map car b*)) (map bind b*)))
 (define (env-freeze env)
   (map (lambda (b) (cons (car b) (alist-remove* (cdr b) (list ctx:set!))))
        env))
@@ -62,8 +62,7 @@
   (ast:set! (param-map setter param) (stage env arg)))
 (define (@if env c t f) (ast:if (stage env c) (stage env t) (stage env f)))
 (define (@lambda env param . body)
-  (let* ((n* (param-names param)) (env (alist-remove* env n*)))
-    (ast:lambda param (@body* (env-extend*/var env n*) body))))
+  (ast:lambda param (@body* (env-extend*/var env (param-names param)) body)))
 (define (@let/ env b* . body)
   (bpair*?! b*)
   (ast:apply* (apply @lambda env (map car b*) body)
@@ -120,7 +119,7 @@
                (defstate-actions-add-expr st form)))) st forms))
 (define (@def st param arg)
   (define names (param-names param))
-  (define env (env-extend*/var (alist-remove* (defstate-env st) names) names))
+  (define env (env-extend*/var (defstate-env st) names))
   (defstate-actions-add (defstate-env-set (defstate-names-add st names) env)
                         (lambda (env) (@set! env param arg))))
 (define (@define st param . body)
