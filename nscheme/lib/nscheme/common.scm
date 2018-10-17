@@ -1,14 +1,16 @@
 (provide length=? length>=? ctx:var ctx:set! ctx:op ctx:def
          env:empty env-ref env-ref-prop env-pre-extend* env-extend*
-         bpair*?! ncons param-map param-names param-bind
+         param?! bpair*?! ncons param-map param-names param-bind
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add)
 
 ;; Pattern matching
 (define (length=? len xs)  (and (list? xs) (= (length xs) len)))
 (define (length>=? len xs) (and (list? xs) (>= (length xs) len)))
+(define (param?! param) (unless (andmap string? (param-names param))
+                          (error '"invalid parameters:" param)))
 (define (bpair*?! b*)
-  (define (? b) (and (length=? 2 b) (param-names (car b))))
+  (define (? b) (and (length=? 2 b) (param?! (car b))))
   (unless (and (list? b*) (andmap ? b*)) (error '"invalid binding list:" b*)))
 
 ;; Formal parameters
@@ -18,27 +20,25 @@
 (define (param-map f p)
   (cond ((pair? p)   (cons (param-map f (car p)) (param-map f (cdr p))))
         ((vector? p) (list->vector (param-map f (vector->list p))))
-        ((string? p) (f p))
         ((null? p)   '())
         ((not p)     #f)
-        (#t (error '"invalid parameter:" p))))
+        (#t          (f p))))
 (define (param-names param)
   (let loop ((p param) (ns '()))
     (cond ((pair? p)   (loop (cdr p) (loop (car p) ns)))
           ((vector? p) (loop (vector->list p) ns))
-          ((string? p) (ncons p ns))
           ((null? p)   ns)
           ((not p)     ns)
-          (#t (error '"invalid parameter:" p param)))))
+          (#t          (ncons p ns)))))
 (define (param-bind param arg)
   (let loop ((p param) (a arg))
     (cond ((and (pair? p) (pair? a)) (append (loop (car p) (car a))
                                              (loop (cdr p) (cdr a))))
           ((and (vector? p) (vector? a))
            (loop (vector->list p) (vector->list a)))
-          ((string? p)               (list (cons p a)))
           ((and (null? p) (null? a)) '())
           ((not p)                   '())
+          ((not (or (pair? p) (vector? p) (null? p))) (list (cons p a)))
           (#t (error '"parameter/argument mismatch:" param arg p a)))))
 
 ;; Syntactic environments

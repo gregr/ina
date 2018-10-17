@@ -4,8 +4,6 @@
 
 ### bootstrap with only simple code
 
-* rename variables uniquely while staging (to support aliasing, etc.)
-
 * stage base library separately from program (i.e., get rid of the shift/reset hack)
   * produce lambda of one arg (the program) that applies arg to the base bindings
   * should speed up staged eval of small programs (like those in base-tests)

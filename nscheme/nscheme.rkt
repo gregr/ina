@@ -2,13 +2,15 @@
 (provide
   shift
   reset
+  equal?
+  assoc
+  member
   alist-ref
   alist-remove*
   list-at
   alist-at
   reverse-append
   remove-duplicates
-  assoc
   boolean=?
   number=?
   filter-not
@@ -37,7 +39,6 @@
   import-apply
   import->lambda
   (rename-out
-    (new-equal? equal?)
     (new-read read)
     (new-write write)
     (new-quote quote)
@@ -91,21 +92,22 @@
 
 (define (number=? a b) (eqv? a b))
 
-(define (new-equal? a b)
+(define (equal? a b)
   (or (eqv? a b)
       (and (string? a) (string? b) (string=? a b))
       (and (pair? a) (pair? b)
-           (new-equal? (car a) (car b))
-           (new-equal? (cdr a) (cdr b)))
+           (equal? (car a) (car b))
+           (equal? (cdr a) (cdr b)))
       (and (vector? a) (vector? b)
-           (new-equal? (vector->list a) (vector->list b)))))
+           (equal? (vector->list a) (vector->list b)))))
 
 (define (new-read . args) (s->ns (apply read args)))
 
 (define (new-write d . args) (apply write (ns->s/write d) args))
 
+(define (member v xs) (memf (lambda (x) (equal? x v)) xs))
 (define (assoc k xs) (cond ((null? xs) #f)
-                           ((new-equal? k (caar xs)) (car xs))
+                           ((equal? k (caar xs)) (car xs))
                            (else (assoc k (cdr xs)))))
 
 (define-syntax (new-quote stx)
@@ -140,12 +142,12 @@
   (syntax-rules (else)
     ((_ x)                          (error "no matching case:" x))
     ((_ x (else body ...))          (let () body ...))
-    ((_ x ((d ...) body ...) c ...) (if (or (new-equal? x (new-quote d)) ...)
+    ((_ x ((d ...) body ...) c ...) (if (or (equal? x (new-quote d)) ...)
                                       (let () body ...)
                                       (case-etc x c ...)))))
 
 (define-syntax match
-  (syntax-rules () ((_ body ...) (match/=? new-equal? body ...))))
+  (syntax-rules () ((_ body ...) (match/=? equal? body ...))))
 
 (define-syntax match/=?
   (syntax-rules ()

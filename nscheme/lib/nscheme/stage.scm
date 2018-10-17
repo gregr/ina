@@ -2,14 +2,17 @@
 
 (require length=? length>=? ctx:var ctx:set! ctx:op ctx:def
          env:empty env-ref env-ref-prop env-pre-extend* env-extend*
-         bpair*?! ncons param-map param-names
+         param?! bpair*?! ncons param-map param-names
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
          ast:reset ast:shift ast:prim primitive-op-descriptions
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add)
 
 (define (env-extend*/var env n*)
-  (define (bind n) (cons n (list (cons ctx:var n) (cons ctx:set! n))))
+  (param?! n*)
+  (define (bind n)
+    (define rn (make-mvector 1 n))
+    (cons n (list (cons ctx:var rn) (cons ctx:set! rn))))
   (env-extend* (env-pre-extend* env n*) (map bind n*)))
 (define (env-extend*/syntax env ctx b*)
   (define (bind b) (let ((n (car b)))
@@ -18,6 +21,8 @@
 (define (env-freeze env)
   (map (lambda (b) (cons (car b) (alist-remove* (cdr b) (list ctx:set!))))
        env))
+(define (param/renamings env param)
+  (param-map (lambda (n) (env-ref-prop env n ctx:var #f)) param))
 
 ;; High-level AST construction
 (define ast:null        (ast:quote '()))
@@ -62,7 +67,8 @@
   (ast:set! (param-map setter param) (stage env arg)))
 (define (@if env c t f) (ast:if (stage env c) (stage env t) (stage env f)))
 (define (@lambda env param . body)
-  (ast:lambda param (@body* (env-extend*/var env (param-names param)) body)))
+  (define benv (env-extend*/var env (param-names param)))
+  (ast:lambda (param/renamings benv param) (@body* benv body)))
 (define (@let/ env b* . body)
   (bpair*?! b*)
   (ast:apply* (apply @lambda env (map car b*) body)
@@ -109,7 +115,7 @@
 (define (defstate-run st)
   (let ((actions (reverse (defstate-actions st)))
         (env (defstate-env st)) (names (defstate-names st)))
-    (ast:let names (map (lambda (_) ast:true) names)
+    (ast:let (param/renamings env names) (map (lambda (_) ast:true) names)
              (ast:begin (map (lambda (act) (act env)) actions)))))
 (define (@begin/define st . forms)
   (foldl (lambda (form st)
