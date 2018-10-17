@@ -4,8 +4,6 @@
 
 ### bootstrap with only simple code
 
-* rename base.scm to stage.scm
-
 * rename variables uniquely while staging (to support aliasing, etc.)
 
 * stage base library separately from program (i.e., get rid of the shift/reset hack)
