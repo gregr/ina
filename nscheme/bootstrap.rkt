@@ -1,30 +1,9 @@
 #lang racket/base
 (require
-  racket/include
   "filesystem.rkt"
-  "nscheme-module.rkt"
+  "module.rkt"
+  racket/include
   )
-
-(define db:lib
-  (for/list ((src '((data box tagged symbol assoc compare)
-                    (nscheme data common ast stage base-test))))
-    (define library-name (car src))
-    `(,library-name
-       . ,(for/list ((module-name (cdr src)))
-            (call-with-input-file
-              (local-path
-                (build-path "lib" (symbol->string library-name)
-                            (string-append (symbol->string module-name)
-                                           ".scm")))
-              (lambda (in)
-                (let loop ((rbody '()))
-                  (define datum (ns->s (read in)))
-                  (if (eof-object? datum)
-                    `(,module-name . ,(nscheme-module (reverse rbody)))
-                    (loop (cons datum rbody))))))))))
-
-(call-with-output-file db:lib-path
-                       (lambda (out) (write (ns->s/write db:lib) out)))
 
 ;; TODO: do something like this:
 

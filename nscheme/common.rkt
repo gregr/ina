@@ -13,7 +13,7 @@
   equal? assoc member
   (rename-out (new-quote quote) (new-quasiquote quasiquote)))
 
-(require racket/vector (for-syntax racket/base))
+(require "filesystem.rkt" racket/vector (for-syntax racket/base))
 
 (define (equal? a b)
   (or (eqv? a b)
@@ -51,16 +51,6 @@
     ((_ lvl (a . d))                   (cons (new-qq lvl a) (new-qq lvl d)))
     ((_ lvl #(d ...))                  (list->vector (new-qq lvl (d ...))))
     ((_ lvl d)                         (new-quote d))))
-(define (s->ns d)
-  (cond ((symbol? d) (symbol->string d))
-        ((pair? d)   (cons (s->ns (car d)) (s->ns (cdr d))))
-        ((vector? d) (vector-map s->ns d))
-        (else        d)))
-(define (ns->s d)
-  (cond ((string? d) (string->symbol d))
-        ((pair? d)   (cons (ns->s (car d)) (ns->s (cdr d))))
-        ((vector? d) (vector-map ns->s d))
-        (else        d)))
 (define (plift racket-proc) (lambda (a) (apply racket-proc a)))
 (define (procedure=? m n)   (eq? m n))
 (define (number=? m n)      (eqv? m n))

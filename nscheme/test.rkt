@@ -1,11 +1,10 @@
 #lang racket/base
 (require
+  "filesystem.rkt"
+  "module.rkt"
   racket/include
   racket/list
   racket/runtime-path
-  (except-in "stage.rkt" s->ns ns->s)
-  "filesystem.rkt"
-  "nscheme-module.rkt"
   )
 
 (define tests-total 0)
@@ -28,16 +27,20 @@
                       expected actual)
               (set! test-failures (cons name test-failures)))))
 
-(define db:lib (with-input-from-file db:lib-path read))
-(define lib:data    (library-get db:lib 'data))
-(define lib:nscheme (library-get db:lib 'nscheme))
+(define (library-modules library-name module-names)
+  (map (lambda (module-name)
+         (eval/module (nscheme-module
+                        (read/file (library-path library-name module-name)))))
+       module-names))
+(define env:data
+  (link/module*
+    '() (library-modules 'data '(box tagged symbol assoc compare))))
+(define env:nscheme
+  (link/module*
+    env:data (library-modules 'nscheme '(data common ast stage base-test))))
 
-(define env:data    (link/module* '() (map cdr lib:data)))
-(define env:nscheme (link/module* env:data (map cdr lib:nscheme)))
-
-(let ()
-  (map (lambda (t) (t (list (plift test))))
-       ;(lambda (t) (t test))
-       (reverse (map cdr (filter (lambda (rib) (string=? "test!" (car rib)))
-                                 env:nscheme))))
-  (test-report))
+(define (plift racket-proc) (lambda (a) (apply racket-proc a)))
+(for-each (lambda (t) (t (list (plift test))))
+          (reverse (map cdr (filter (lambda (rib) (string=? "test!" (car rib)))
+                                    env:nscheme))))
+(test-report)

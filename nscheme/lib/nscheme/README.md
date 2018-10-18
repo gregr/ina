@@ -13,6 +13,7 @@
   * stage.rkt running stage.scm vs. stage.rkt running eval.scm (latter may be faster?)
 
 * try bootstrapping the interpreter for self-hosting:
+  * move Racket code generation out of stage.rkt
   * improve module manipulation and testing to make this easier?
   * stage.rkt running stage.scm on both stage.scm and eval.scm; compile ast to Racket
   * compare compiled Racket performance on tests
