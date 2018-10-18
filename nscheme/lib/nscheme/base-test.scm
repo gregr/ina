@@ -1,8 +1,9 @@
 (provide test!)
 
-(require ast-eval lang:base)
+(require ast-eval base:library base:program)
 
-(define (ev form) (ast-eval (lang:base form)))
+(define library (ast-eval base:library))
+(define (ev form) (library (ast-eval (base:program form))))
 
 (define (test! test)
   (test 'literals

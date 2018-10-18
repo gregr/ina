@@ -1,4 +1,4 @@
-(provide lang:base stage)
+(provide stage env:primitive base:stage base:library base:program)
 
 (require length=? length>=? ctx:var ctx:set! ctx:op ctx:def
          env:empty env-ref env-ref-prop env-pre-extend* env-extend*
@@ -175,9 +175,8 @@
     ctx:def (list (cons 'begin  @begin/define)
                   (cons 'define @define)
                   (cons 'def    @def))))
-(define (lang:primitive form) (stage env:primitive form))
 
-;; Base language definition
+;; Base library definition
 (define primitive-op-procs
   (map (lambda (po-desc)
          (define (x i) (vector-ref '#(x0 x1 x2 x3 x4) i))
@@ -273,14 +272,23 @@
                      (vector->string (list->vector (apply append css)))))
     ))
 
-(define base-code
-  (list 'let primitive-op-procs
-        (list 'let '((apply (lambda (f arg . args)
-                              (define (cons* x xs)
-                                (if (null? xs) x
-                                  (cons x (cons* (car xs) (cdr xs)))))
-                              (apply f (cons* arg args)))))
-              (list 'letrec derived-op-procs
-                    (lambda (env) (let ((env:base (env-freeze env)))
-                                    (stage env:base (shift k k))))))))
-(define lang:base (reset (lang:primitive base-code)))
+(define base:library-names #t)
+(define (base:linker env)
+  (set! base:library-names
+    (map car (filter (lambda (rib) (alist-ref (cdr rib) ctx:var #f)) env)))
+  (@lambda env '(f) (cons 'f base:library-names)))
+(define base:library
+  (stage env:primitive
+         (list 'let primitive-op-procs
+               (list 'let '((apply (lambda (f arg . args)
+                                     (define (cons* x xs)
+                                       (if (null? xs) x
+                                         (cons x (cons* (car xs) (cdr xs)))))
+                                     (apply f (cons* arg args)))))
+                     (list 'letrec derived-op-procs base:linker)))))
+
+;; Program construction
+(define (base:program form)
+  (@lambda env:primitive base:library-names
+           (lambda (env) (stage (env-freeze env) form))))
+(define (base:stage form) (ast:apply* base:library (list (base:program form))))

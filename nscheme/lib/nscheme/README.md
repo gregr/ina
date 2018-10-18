@@ -4,11 +4,6 @@
 
 ### bootstrap with only simple code
 
-* stage base library separately from program (i.e., get rid of the shift/reset hack)
-  * produce lambda of one arg (the program) that applies arg to the base bindings
-  * should speed up staged eval of small programs (like those in base-tests)
-  * could allow separately generating compiled Racket, to be linked later
-
 * create eval.scm: interpreter for evaluating; written in stageable subset
   * note: it may perform better on small tests than stage.scm
   * add syntax error checking in eval.rkt, then port it to nScheme as eval.scm
