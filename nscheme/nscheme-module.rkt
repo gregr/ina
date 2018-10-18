@@ -19,7 +19,7 @@
 (define (nsmod-provided m)             (vector-ref m 1))
 (define (nsmod-body m)                 (vector-ref m 2))
 
-(define (nscm:eval form) (eval env:base (s->ns form)))
+(define (nscm:eval form) (eval (s->ns form)))
 
 (define (eval/module m)
   (cons (map symbol->string (vector-ref (nsmod-required m) 0))

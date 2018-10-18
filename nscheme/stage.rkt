@@ -1,5 +1,5 @@
 #lang racket/base
-(provide eval env:base s->ns ns->s plift)
+(provide eval s->ns ns->s plift)
 (require "common.rkt" racket/bool racket/control racket/list racket/pretty)
 
 (define type-predicates
@@ -197,7 +197,15 @@
         (list->vector (map char->integer (string->list s))))
       (define (vector->string v)
         (list->string (map integer->char (vector->list v))))))
-  (define (name->var n) (string-append 'v. n))
+  (define name->var
+    (let ((i 0))
+      (lambda (n)
+        (define name (mvector-ref n 0))
+        (unless (pair? name)
+          (mvector-set!
+            n 0 (cons (string-append 'v (number->string i) '|.| name) name))
+          (set! i (+ i 1)))
+        (car (mvector-ref n 0)))))
   (define (param-set! param)
     `(let ((set!.fail (lambda (p a) (error '"parameter/argument mismatch:"
                                            p a ',param set!.arg))))
@@ -210,11 +218,10 @@
                  `(and (or (vector? set!.arg) (set!.fail 'vector? set!.arg))
                        (let ((set!.arg (vector->list set!.arg)))
                          ,(loop (vector->list p)))))
-                ((string? p) `(set! ,(name->var p) set!.arg))
                 ((null? p)   `(or (null? set!.arg)
                                   (set!.fail 'null? set!.arg)))
                 ((not p)     #t)
-                (#t (error '"invalid parameter:" p))))))
+                (#t `(set! ,(name->var p) set!.arg))))))
   (define code
     (let ev ((ast ast))
       ;(set! ast-count (+ ast-count 1))
@@ -414,7 +421,7 @@
                   (cons 'def    @def))))
 (define (lang:primitive form) (stage env:primitive form))
 
-;; Base language definition
+;; Base library definition
 (define primitive-op-procs
   (map (lambda (po-desc)
          (define (x i) (vector-ref '#(x0 x1 x2 x3 x4) i))
@@ -510,35 +517,52 @@
                      (vector->string (list->vector (apply append css)))))
     ))
 
-(define base-code
-  (list 'let primitive-op-procs
-        (list 'let '((apply (lambda (f arg . args)
-                              (define (cons* x xs)
-                                (if (null? xs) x
-                                  (cons x (cons* (car xs) (cdr xs)))))
-                              (apply f (cons* arg args)))))
-              (list 'letrec derived-op-procs
-                    (lambda (env) (let ((env (env-freeze env)))
-                                    (stage env (shift k k))))))))
-(define lang:base (reset (lang:primitive base-code)))
 
-(define env:base '())
+(define base:library-names #t)
+(define (base:linker env)
+  (set! base:library-names
+    (map car (filter (lambda (rib) (alist-ref (cdr rib) ctx:var #f)) env)))
+  (@lambda env '(f) (cons 'f base:library-names)))
+(define base:library
+  (stage env:primitive
+         (list 'let primitive-op-procs
+               (list 'let '((apply (lambda (f arg . args)
+                                     (define (cons* x xs)
+                                       (if (null? xs) x
+                                         (cons x (cons* (car xs) (cdr xs)))))
+                                     (apply f (cons* arg args)))))
+                     (list 'letrec derived-op-procs base:linker)))))
 
-(define (eval env form) (ast-eval (lang:base form)))
+;; Program construction
+(define (base:program form)
+  (@lambda env:primitive base:library-names
+           (lambda (env) (stage (env-freeze env) form))))
+(define (base:stage form) (ast:apply* base:library (list (base:program form))))
+
+(define library (ast-eval base:library))
+(define (eval form) (library (list (ast-eval (base:program form)))))
 
 (define (test-ast->racket filename form)
-  (define ast (lang:base form))
+  (define ast (base:stage form))
   (define racket (ast->racket ast))
   (call-with-output-file filename (lambda (out) (displayln racket out))))
 
-;; ast-count: 2818
-;; racket lines (200 columns): 8485
+;; base:library
+;; ast-count: 2985
+;; racket lines (200 columns): 9183
+
+;; combined ast-count: 2818
+;; separate ast-count: 10
+;; combined racket lines (200 columns): 8485
+;; separate racket lines (200 columns): 978
 ;(test-ast->racket
   ;"racket-output.rkt"
   ;5)
 
-;; ast-count: 3193
-;; racket lines (200 columns): 10216
+;; combined ast-count: 3193
+;; separate ast-count: 385
+;; combined racket lines (200 columns): 10216
+;; separate racket lines (200 columns): 1411
 ;(test-ast->racket
   ;"racket-output.rkt"
   ;'(let ((list (lambda xs xs))
@@ -595,7 +619,7 @@
                       expected actual)
               (set! test-failures (cons name test-failures)))))
 
-(define (ev code) (eval env:base code))
+(define (ev code) (eval code))
 
 (test 'lambda-1  ;; Formal parameter lists are generalized to arbitrary trees.
   (ev '((lambda (() a (b)) (cons a b))
