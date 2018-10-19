@@ -3,7 +3,7 @@
   s->ns ns->s plift $apply procedure=? number=?
   mvector? make-mvector mvector=? mvector-length mvector-ref mvector-set!
   mvector->vector string->vector vector->string
-  alist-ref alist-remove* alist-at list-at
+  alist-get alist-remove* alist-at list-at
   length=? length>=? param?! bpair*?!
   ctx:var ctx:set! ctx:op ctx:def
   env:empty env-ref env-ref-prop env-pre-extend* env-extend*
@@ -67,7 +67,7 @@
 (define (vector->string v) (list->string (map integer->char (vector->list v))))
 (define ($apply proc arg) (proc arg))
 
-(define (alist-ref rs key default)
+(define (alist-get rs key default)
   (define rib (assoc key rs))
   (if rib (cdr rib) default))
 (define (alist-remove* rs keys)
@@ -120,8 +120,8 @@
 (define ctx:op   '"syntax?")
 (define ctx:def  '"define")
 (define env:empty                      '())
-(define (env-ref env n)                (alist-ref env n '()))
-(define (env-ref-prop env n k default) (alist-ref (env-ref env n) k default))
+(define (env-ref env n)                (alist-get env n '()))
+(define (env-ref-prop env n k default) (alist-get (env-ref env n) k default))
 (define (env-pre-extend* env n*)       (alist-remove* env n*))
 (define (env-extend* env b*)           (append b* env))
 

@@ -268,7 +268,7 @@
     (assoc (lambda (k xs) (cond ((null? xs) #f)
                                 ((equal? k (caar xs)) (car xs))
                                 (#t (assoc k (cdr xs))))))
-    (alist-ref (lambda (rs key default) (let ((rib (assoc key rs)))
+    (alist-get (lambda (rs key default) (let ((rib (assoc key rs)))
                                           (if rib (cdr rib) default))))
     (alist-remove* (lambda (rs keys)
                      (filter (lambda (rib) (not (member (car rib) keys))) rs)))

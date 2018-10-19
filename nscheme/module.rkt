@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  alist-ref
   alist-ref*
   module-apply
   eval/module
@@ -28,8 +29,9 @@
                  (eval (s->ns `(lambda ,required-private
                                  ,@body (list . ,provided-private)))))))))
 
-(define (alist-ref* alist k*)
-  (map (lambda (k) (cdr (or (assoc k alist) (error "missing key:" k)))) k*))
+(define (alist-ref alist k)
+  (cdr (or (assoc k alist) (error "alist-ref of non-existent key:" k alist))))
+(define (alist-ref* alist k*) (map (lambda (k) (alist-ref alist k)) k*))
 (define (module-apply m env)
   (define imports (alist-ref* env (vector-ref m 0)))
   (map cons (vector-ref m 1) ((vector-ref m 2) imports)))

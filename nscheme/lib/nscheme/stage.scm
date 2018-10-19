@@ -263,7 +263,7 @@
     (assoc (lambda (k xs) (cond ((null? xs) #f)
                                 ((equal? k (caar xs)) (car xs))
                                 (#t (assoc k (cdr xs))))))
-    (alist-ref (lambda (rs key default) (let ((rib (assoc key rs)))
+    (alist-get (lambda (rs key default) (let ((rib (assoc key rs)))
                                           (if rib (cdr rib) default))))
     (alist-remove* (lambda (rs keys)
                      (filter (lambda (rib) (not (member (car rib) keys))) rs)))
@@ -275,7 +275,7 @@
 (define base:library-names #t)
 (define (base:linker env)
   (set! base:library-names
-    (map car (filter (lambda (rib) (alist-ref (cdr rib) ctx:var #f)) env)))
+    (map car (filter (lambda (rib) (alist-get (cdr rib) ctx:var #f)) env)))
   (@lambda env '(f) (cons 'f base:library-names)))
 (define base:library
   (stage env:primitive

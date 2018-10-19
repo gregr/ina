@@ -176,7 +176,7 @@
                             (lambda (env)
                               (shift k ($apply (proc env) (list (plift k)))))))
              ((? 'prim)   (let ((name (@ 1)) (a* (map ev (@ 2))))
-                            (define op (or (alist-ref primitive-ops name #f)
+                            (define op (or (alist-get primitive-ops name #f)
                                            (error '"invalid primitive:" name)))
                             (lambda (env) (op (map (lambda (a) (a env)) a*)))))
              (#t          (error '"unknown ast:" ast))))) env:empty))
@@ -508,7 +508,7 @@
     (assoc (lambda (k xs) (cond ((null? xs) #f)
                                 ((equal? k (caar xs)) (car xs))
                                 (#t (assoc k (cdr xs))))))
-    (alist-ref (lambda (rs key default) (let ((rib (assoc key rs)))
+    (alist-get (lambda (rs key default) (let ((rib (assoc key rs)))
                                           (if rib (cdr rib) default))))
     (alist-remove* (lambda (rs keys)
                      (filter (lambda (rib) (not (member (car rib) keys))) rs)))
@@ -521,7 +521,7 @@
 (define base:library-names #t)
 (define (base:linker env)
   (set! base:library-names
-    (map car (filter (lambda (rib) (alist-ref (cdr rib) ctx:var #f)) env)))
+    (map car (filter (lambda (rib) (alist-get (cdr rib) ctx:var #f)) env)))
   (@lambda env '(f) (cons 'f base:library-names)))
 (define base:library
   (stage env:primitive

@@ -110,7 +110,7 @@
              ((? 'shift)  (let ((proc (ev (@ 1))))
                             (lambda (env) (shift k ((proc env) k)))))
              ((? 'prim)   (let ((name (@ 1)) (a* (map ev (@ 2))))
-                            (define op (or (alist-ref primitive-ops name #f)
+                            (define op (or (alist-get primitive-ops name #f)
                                            (error '"invalid primitive:" name)))
                             (lambda (env) (op (map (lambda (a) (a env)) a*)))))
              (#t          (error '"unknown ast:" ast))))) env:empty))

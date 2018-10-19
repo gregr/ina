@@ -47,8 +47,8 @@
 (define ctx:op   'syntax?)
 (define ctx:def  'define)
 (define env:empty                      '())
-(define (env-ref env n)                (alist-ref env n '()))
-(define (env-ref-prop env n k default) (alist-ref (env-ref env n) k default))
+(define (env-ref env n)                (alist-get env n '()))
+(define (env-ref-prop env n k default) (alist-get (env-ref env n) k default))
 (define (env-pre-extend* env n*)       (alist-remove* env n*))
 (define (env-extend* env b*)           (append b* env))
 
