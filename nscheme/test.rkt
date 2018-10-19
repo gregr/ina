@@ -36,10 +36,11 @@
     '() (library-modules 'data '(box tagged symbol assoc compare))))
 (define env:nscheme
   (link/module*
-    env:data (library-modules 'nscheme '(data common ast stage base-test))))
+    env:data (library-modules
+               'nscheme '(data common ast stage eval base-test))))
 
 (define (plift racket-proc) (lambda (a) (apply racket-proc a)))
-(for-each (lambda (t) (t (list (plift test))))
+(for-each (lambda (t) (time (t (list (plift test)))))
           (reverse (map cdr (filter (lambda (rib) (eq? 'test! (car rib)))
                                     env:nscheme))))
 (test-report)

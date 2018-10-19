@@ -4,20 +4,15 @@
 
 ### bootstrap with only simple code
 
-* create eval.scm: interpreter for evaluating; written in stageable subset
-  * note: it may perform better on small tests than stage.scm
-  * add syntax error checking in eval.rkt, then port it to nScheme as eval.scm
-  * allow base-test.scm to work with both stage.scm and eval.scm
-
-* compare performance on tests
-  * stage.rkt running stage.scm vs. stage.rkt running eval.scm (latter may be faster?)
+* backend-racket
+  * move Racket code generation out of stage.rkt
 
 * try bootstrapping the interpreter for self-hosting:
-  * move Racket code generation out of stage.rkt
-  * improve module manipulation and testing to make this easier?
   * stage.rkt running stage.scm on both stage.scm and eval.scm; compile ast to Racket
   * compare compiled Racket performance on tests
   * if successful, start porting module construction and testing to nScheme
+
+* add syntax error checking in eval.rkt, then port it to nScheme as eval.scm
 
 * possible pre-bootstrap ast improvement
   * generated Racket code is currently enormous, partly due to base library
@@ -74,6 +69,8 @@
     * branching w/ logic variables tracking condition properties
     * rollback with generalization
 
+
+* replace shift/reset with abort/unabort
 
 * parallel processing: spawn, (mvector-cas! mv i expected new) => boolean?
 

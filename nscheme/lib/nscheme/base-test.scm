@@ -1,11 +1,22 @@
-(provide test!)
+(provide test-eval test!)
 
-(require ast-eval base:library base:program)
-
-(define library (ast-eval base:library))
-(define (ev form) (library (ast-eval (base:program form))))
+(require ast-eval base:library base:program eval env:base)
 
 (define (test! test)
+  (test 'testing-eval/stage #t #t)
+  (test-eval/stage test)
+  (test 'testing-eval/eval #t #t)
+  (test-eval/eval test))
+
+(define (test-eval/stage test)
+  (define library (ast-eval base:library))
+  (define (eval form) (library (ast-eval (base:program form))))
+  (test-eval eval test))
+
+(define (test-eval/eval test)
+  (test-eval (lambda (form) (eval env:base form)) test))
+
+(define (test-eval ev test)
   (test 'literals
     (map ev (list '(quote ()) '#t '4))
     '(() #t 4))
@@ -45,6 +56,29 @@
   (test 'lambda-3
     (ev '((lambda (#f x #f) x) 1 2 3))
     2)
+
+  (test 'define-1
+    (ev '((lambda (() a #(b c))
+            (define x (lambda () (+ (+ c y) z)))
+            (define y b)
+            (define z a)
+            (x))
+          '() 1 '#(2 3)))
+    6)
+  (test 'define-2
+    (ev '((lambda (() a #(b c))
+            (begin (define x (lambda () (+ (+ c y) z)))
+                   (define y b))
+            (define z a)
+            (x))
+          '() 1 '#(2 3)))
+    6)
+  (test 'define-3
+    (ev '((lambda (() a #(b c))
+            (define ((f w) x y) (list w x y))
+            ((f a) b c))
+          '() 1 '#(2 3)))
+    '(1 2 3))
 
   (test 'lambda-app-1
     (ev '((lambda (x y) x) 5 6))

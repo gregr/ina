@@ -1,12 +1,12 @@
 (provide stage env:primitive base:stage base:library base:program)
 
-(require length=? length>=? ctx:var ctx:set! ctx:op ctx:def
+(require length=? length>=? param?! bpair*?! param-map param-names
+         ctx:var ctx:set! ctx:op ctx:def
          env:empty env-ref env-ref-prop env-pre-extend* env-extend*
-         param?! bpair*?! ncons param-map param-names
-         ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:reset ast:shift ast:prim primitive-op-descriptions
          defstate:empty defstate-env defstate-names defstate-actions
-         defstate-env-set defstate-names-add defstate-actions-add)
+         defstate-env-set defstate-names-add defstate-actions-add
+         ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
+         ast:reset ast:shift ast:prim primitive-op-descriptions)
 
 (define (env-extend*/var env n*)
   (param?! n*)
@@ -189,6 +189,7 @@
     (not (lambda (b) (if b #f #t)))
     (caar (lambda (v) (car (car v))))
     (cadr  (lambda (xs) (car (cdr xs))))
+    (cdar (lambda (v) (cdr (car v))))
     (cadar (lambda (v) (cadr (car v))))
     (caddr (lambda (xs) (cadr (cdr xs))))
     (list-tail (lambda (xs i) (if (= 0 i) xs (list-tail (cdr xs) (- i 1)))))

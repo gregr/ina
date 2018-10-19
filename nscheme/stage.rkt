@@ -434,6 +434,7 @@
     (not (lambda (b) (if b #f #t)))
     (caar (lambda (v) (car (car v))))
     (cadr  (lambda (xs) (car (cdr xs))))
+    (cdar (lambda (v) (cdr (car v))))
     (cadar (lambda (v) (cadr (car v))))
     (caddr (lambda (xs) (cadr (cdr xs))))
     (list-tail (lambda (xs i) (if (= 0 i) xs (list-tail (cdr xs) (- i 1)))))
