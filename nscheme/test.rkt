@@ -28,10 +28,9 @@
               (set! test-failures (cons name test-failures)))))
 
 (define (library-modules library-name module-names)
-  (map (lambda (module-name)
-         (eval/module (nscheme-module
-                        (read/file (library-path library-name module-name)))))
-       module-names))
+  (define (libmod module-name)
+    (eval/module (read/file (library-path library-name module-name))))
+  (map libmod module-names))
 (define env:data
   (link/module*
     '() (library-modules 'data '(box tagged symbol assoc compare))))
@@ -41,6 +40,6 @@
 
 (define (plift racket-proc) (lambda (a) (apply racket-proc a)))
 (for-each (lambda (t) (t (list (plift test))))
-          (reverse (map cdr (filter (lambda (rib) (string=? "test!" (car rib)))
+          (reverse (map cdr (filter (lambda (rib) (eq? 'test! (car rib)))
                                     env:nscheme))))
 (test-report)
