@@ -2,7 +2,7 @@
 
 (require length>=? param?! bpair*?! param-names param-bind
          ctx:var ctx:set! ctx:op ctx:def
-         env-ref-prop env-pre-extend* env-extend*
+         env-get-prop env-pre-extend* env-extend*
          defstate:empty defstate-env defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add)
 
@@ -19,9 +19,9 @@
 (define (eval env form)
   (cond ((pair? form)
          (let* ((p (car form)) (a* (cdr form)) (proc (eval env p)))
-           (if (and (string? p) (env-ref-prop env p ctx:op #f))
+           (if (and (string? p) (env-get-prop env p ctx:op #f))
              (apply proc env a*) (apply proc (eval* env a*)))))
-        ((string? form) ((or (env-ref-prop env form ctx:var #f)
+        ((string? form) ((or (env-get-prop env form ctx:var #f)
                              (error '"unbound variable:" form))))
         ((or (boolean? form) (number? form)) form)
         ((procedure? form)                   (form env))
@@ -37,7 +37,7 @@
 (define (@shift env p . body)
   (shift k (apply @let env (list (list p (lambda (_) k))) body)))
 (define (@set! env param arg)
-  (for-each (lambda (b) ((or (env-ref-prop env (car b) ctx:set! #f)
+  (for-each (lambda (b) ((or (env-get-prop env (car b) ctx:set! #f)
                              (error '"identifier cannot be set!:" (car b)))
                          (cdr b)))
             (param-bind param (eval env arg))) #t)
@@ -80,7 +80,7 @@
 (define (@begin/define st . forms)
   (foldl (lambda (form st)
            (let* ((n (and (pair? form) (string? (car form)) (car form)))
-                  ($def (and n (env-ref-prop (defstate-env st) n ctx:def #f))))
+                  ($def (and n (env-get-prop (defstate-env st) n ctx:def #f))))
              (if $def (apply $def st (cdr form))
                (defstate-actions-add-expr st form)))) st forms))
 (define (@def st param arg)

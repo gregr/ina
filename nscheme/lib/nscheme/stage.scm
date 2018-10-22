@@ -2,7 +2,7 @@
 
 (require length=? length>=? param?! bpair*?! param-map param-names
          ctx:var ctx:set! ctx:op ctx:def
-         env:empty env-ref env-ref-prop env-pre-extend* env-extend*
+         env:empty env-ref env-get-prop env-pre-extend* env-extend*
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
@@ -22,7 +22,7 @@
   (map (lambda (b) (cons (car b) (alist-remove* (cdr b) (list ctx:set!))))
        env))
 (define (param/renamings env param)
-  (param-map (lambda (n) (env-ref-prop env n ctx:var #f)) param))
+  (param-map (lambda (n) (env-get-prop env n ctx:var #f)) param))
 
 ;; High-level AST construction
 (define ast:null        (ast:quote '()))
@@ -47,10 +47,10 @@
 (define (stage env form)
   (cond ((pair? form)
          (let ((p (car form)) (a* (cdr form)))
-           (let ((op (and (string? p) (env-ref-prop env p ctx:op #f))))
+           (let ((op (and (string? p) (env-get-prop env p ctx:op #f))))
              (if op (apply op env a*)
                (ast:apply* (stage env p) (stage* env a*))))))
-        ((string? form) (ast:var (or (env-ref-prop env form ctx:var #f)
+        ((string? form) (ast:var (or (env-get-prop env form ctx:var #f)
                                      (error '"unbound variable:" form))))
         ((or (boolean? form) (number? form)) (ast:quote form))
         ((procedure? form)                   (form env))
@@ -62,7 +62,7 @@
 (define (@reset env . body)   (ast:reset (@body* env body)))
 (define (@shift env k . body) (ast:shift (apply @lambda env (list k) body)))
 (define (@set! env param arg)
-  (define (setter n) (or (env-ref-prop env n ctx:set! #f)
+  (define (setter n) (or (env-get-prop env n ctx:set! #f)
                          (error '"cannot set! variable:" n)))
   (ast:set! (param-map setter param) (stage env arg)))
 (define (@if env c t f) (ast:if (stage env c) (stage env t) (stage env f)))
@@ -120,7 +120,7 @@
 (define (@begin/define st . forms)
   (foldl (lambda (form st)
            (let* ((n (and (pair? form) (string? (car form)) (car form)))
-                  ($def (and n (env-ref-prop (defstate-env st) n ctx:def #f))))
+                  ($def (and n (env-get-prop (defstate-env st) n ctx:def #f))))
              (if $def (apply $def st (cdr form))
                (defstate-actions-add-expr st form)))) st forms))
 (define (@def st param arg)
