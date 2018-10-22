@@ -25,9 +25,10 @@
       (_ (define rd (reverse rrequired)) (define pd (reverse rprovided))
          (define required (map car rd)) (define required-private (map cadr rd))
          (define provided (map cadr pd)) (define provided-private (map car pd))
+         (define ($list _) (stage env:primitive (s->ns '(lambda x x))))
          (vector required provided
                  (eval (s->ns `(lambda ,required-private
-                                 ,@body (list . ,provided-private)))))))))
+                                 ,@body (,$list . ,provided-private)))))))))
 
 (define (alist-ref alist k)
   (cdr (or (assoc k alist) (error "alist-ref of non-existent key:" k alist))))
