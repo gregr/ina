@@ -4,8 +4,59 @@
 
 ### bootstrap with only simple code
 
+* improve bootstrap performance: provide more racket procedures in base library
+  * e.g., equal?, vector, append, string-append, alist-get, etc.
+  * this may eliminate performance issues with string manipulation
+  * this may also allow eval.rkt to be as fast as stage.rkt
+
+* what do we want the terminal platform to be like?
+  * an image (is full persistence worth it just for bootstrapping?)
+    * the filesystem isn't special; it's just another network-like data service
+    * pull data into the image
+    * allow serialization of the image as a racket program that can be run to restart it
+      * or should this be in some other executable form? executable+data would be nice
+    * what processes/state does an image actually persist?
+      * real devices can't persist; their drivers involve external processes
+      * virtual devices can be persisted; restarting image hooks them up to real devices
+        * Racket platform should present a virtual hardware interface
+      * restarting image begins with procedure for attaching to Racket virtual hardware
+    * what virtual devices?
+      * initially, just an atypical REPL (atypical in that you don't have top-level define)
+        * support an (enter!) command that reboots the REPL into another environment
+          * e.g., (let () (define x ...) (define y ...) (enter!))  ;; REPL can access x and y
+        * evaluating expressions subsumes many activities:
+          * manipulate data and operate devices
+          * reboot (should reboot automatically snapshot the pre-reboot state by default?)
+            * reboot REPL w/ new environment via (enter!)
+            * reboot into something that isn't the REPL; via exit? (exit START-NEW-PROCESS)
+            * halt (reboot with a terminating procedure?)
+              * how do you avoid trashing the image if you aren't taking snapshots?
+              * halting leaves image in a state where it will restart with a REPL?
+      * maybe something like a terminal-compatible gui canvas, or real gui windows
+
 * backend-racket
   * move Racket code generation out of stage.rkt
+  * issues:
+    * want to minimize hand-written Racket (currently used for boilerplate, such as prelude)
+    * generating Racket code as monolithic strings performs poorly
+      * probably due to slow string operations
+      * maybe use a decorated sexpr encoding for Racket-specific data
+        strings vs. symbols, characters, keywords, etc.
+      * still need to be able to serialize to file, but support going direct to a racket-eval
+    * what capabilities should Racket platform provide?
+      * what storage or filesystem; what representation of it
+        * just lib? arbitrary access to host filesystem?
+    * how is linking organized? image-manipulating REPL?
+  * ahead-of-time compilation:
+    * file i/o
+    * prepend Racket prelude
+  * runtime compilation with immediate execution:
+    * foreign procedures for integrating directly with Racket eval and namespaces
+      * want to minimize the surface area; ideally something like:
+        (racket-eval racket-sexpr)
+  * ultimately, a platform should abstract away its native language for normal use
+    * publicly provide just eval, not racket-eval directly
+      * internally, it would compose the frontend with racket-eval
 
 * try bootstrapping the interpreter for self-hosting:
   * stage.rkt running stage.scm on both stage.scm and eval.scm; compile ast to Racket
@@ -13,6 +64,7 @@
   * if successful, start porting module construction and testing to nScheme
 
 * add syntax error checking in eval.rkt, then port it to nScheme as eval.scm
+  * cover all corner cases to self-host a REPL that can recover from any error
 
 * possible pre-bootstrap ast improvement
   * generated Racket code is currently enormous, partly due to base library
@@ -70,11 +122,25 @@
     * rollback with generalization
 
 
+* define ports, read, write
+
 * replace shift/reset with abort/unabort
 
-* parallel processing: spawn, (mvector-cas! mv i expected new) => boolean?
+* higher level continuation interface
+  * support restartable error handlers (particularly important for REPL support)
+  * aborting w/ specific tags
+  * parameterize
+  * dynamic-wind (but be wary of spurious exit/re-enter cycling
+    * should forward dynamic parameters, to avoid exit/re-enter for parent lookup
+      * what other kinds of aborts should/can be pre-empted by dynamic-wind in this way?
+  * what does Racket really do?
+    * exceptions/errors, break (and other interrupts)
 
-* define ports, read, write
+* parallel processing: spawn, (mvector-cas! mv i expected new) => boolean?
+  * Is spawn necessary for equational reasoning with multiple processes?  If not, we can
+    just expose a threading interface via procedures.  Would such an interface have to be
+    platform-specific?  Racket efficiently supports interruption features that JS can't.
+
 
 * throw away dead Racket support code
   * replace as much Racket as possible for module building, testing, repl
