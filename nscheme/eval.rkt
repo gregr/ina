@@ -1,6 +1,7 @@
 #lang racket/base
 (provide eval env:base s->ns ns->s plift)
-(require "common.rkt" racket/bool racket/control)
+(require "common.rkt" racket/bool racket/control racket/pretty
+         readline readline/pread)
 
 (define (env-extend*/var env b*)
   (param?! (map car b*))
@@ -99,6 +100,17 @@
 ;; Base environment construction
 (define (ref-proc p) (cons ctx:var (lambda _ (plift p))))
 
+(define (test-repl env)
+  (reset (let loop ()
+           (define datum (s->ns (parameterize ((readline-prompt #"nscm> ")) (read))))
+           (unless (eof-object? datum)
+             (define result (ns->s (eval env datum)))
+             (pretty-print result)
+             (loop)))))
+
+(define (@enter! env) (test-repl env))
+
+
 (define env:primitive
   (s->ns
     (append
@@ -108,6 +120,7 @@
                  (cons 'reset  @reset)
                  (cons 'shift  @shift)
                  (cons 'lambda @lambda)
+                 (cons 'enter! @enter!)
                  ;; TODO: this won't work due to Racket's list-based apply.
                  ;(cons '$ (lambda (env rator . rands)
                             ;((eval env rator) (cons env rands))))
@@ -190,6 +203,7 @@
 
 (define derived-ops
   '((error (lambda args ('error args)))
+    (@     (lambda (f . args) (apply f args)))
     (not (lambda (b) (if b #f #t)))
     (caar (lambda (v) (car (car v))))
     (cadr  (lambda (xs) (car (cdr xs))))
@@ -845,4 +859,5 @@
   '(#t #f))
 
 
-(test-report)
+;(test-report)
+(test-repl env:base)
