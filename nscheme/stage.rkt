@@ -53,6 +53,8 @@
             (-  (number? number?) number?)
             (/  (number? number?) number?)
 
+            (truncate (number?) integer?)
+
             ;bitwise-and
             ;bitwise-ior
             ;bitwise-xor
@@ -61,10 +63,6 @@
             ;bitwise-bit-field
             ;arithmetic-shift
             ;integer-length
-
-            ;round
-            ;quotient
-            ;remainder
             )))
 
 (define (ast:quote datum)       (vector 'quote  datum))
@@ -117,7 +115,8 @@
         (cons '+               +)
         (cons '*               *)
         (cons '-               -)
-        (cons '/               /)))
+        (cons '/               /)
+        (cons 'truncate        truncate)))
 
 (unless (= (length primitive-op-descriptions) (length primitive-op-handlers))
   (error '"mismatching primitive op handlers:"

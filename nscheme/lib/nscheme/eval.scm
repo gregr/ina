@@ -153,6 +153,8 @@
                (cons '*  *)
                (cons '-  -)
                (cons '/  /)
+               (cons 'truncate truncate)
+
                ;; TODO: these and others?
                ;bitwise-and
                ;bitwise-ior
@@ -162,9 +164,6 @@
                ;bitwise-bit-field
                ;arithmetic-shift
                ;integer-length
-               ;round
-               ;quotient
-               ;remainder
                ))
     ;; These don't have to be primitive, but are provided for convenience.
     (list (cons 'define (list (cons 'define @define)))

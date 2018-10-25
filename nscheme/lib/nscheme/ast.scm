@@ -52,7 +52,8 @@
         (cons '+               +)
         (cons '*               *)
         (cons '-               -)
-        (cons '/               /)))
+        (cons '/               /)
+        (cons 'truncate        truncate)))
 
 (unless (= (length primitive-op-descriptions) (length primitive-op-handlers))
   (error '"mismatching primitive op handlers:"

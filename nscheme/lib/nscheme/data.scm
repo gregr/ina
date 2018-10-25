@@ -52,6 +52,8 @@
             (-  (number? number?) number?)
             (/  (number? number?) number?)
 
+            (truncate (number?) integer?)
+
             ;bitwise-and
             ;bitwise-ior
             ;bitwise-xor
@@ -60,10 +62,6 @@
             ;bitwise-bit-field
             ;arithmetic-shift
             ;integer-length
-
-            ;round
-            ;quotient
-            ;remainder
             )))
 
 ;; Sanity check primitive-op-descriptions.
