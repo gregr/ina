@@ -3,6 +3,8 @@
   alist-ref
   alist-ref*
   module-apply
+  parse/module
+  stage/module
   eval/module
   link/module*
   )
@@ -12,7 +14,7 @@
   racket/match
   )
 
-(define (eval/module body)
+(define (parse/module body)
   (define (i->r items rrns) (for/fold ((rrns rrns)) ((item items))
                               (match item
                                 (`(rename . ,rns) (append (reverse rns) rrns))
@@ -25,10 +27,19 @@
       (_ (define rd (reverse rrequired)) (define pd (reverse rprovided))
          (define required (map car rd)) (define required-private (map cadr rd))
          (define provided (map cadr pd)) (define provided-private (map car pd))
-         (define ($list _) (stage env:primitive (s->ns '(lambda x x))))
-         (vector required provided
-                 (eval (s->ns `(lambda ,required-private
-                                 ,@body (,$list . ,provided-private)))))))))
+         (vector required provided required-private provided-private body)))))
+
+(define (stage/module body)
+  (define mod (parse/module body))
+  (define ($list _) (stage env:primitive (s->ns '(lambda x x))))
+  (define code `(lambda ,(vector-ref mod 2) ,@(vector-ref mod 4)
+                  (,$list . ,(vector-ref mod 3))))
+  (vector (vector-ref mod 0) (vector-ref mod 1) (base:stage (s->ns code))))
+
+(define (eval/module body)
+  (define staged (stage/module body))
+  (vector (vector-ref staged 0) (vector-ref staged 1)
+          (ast-eval (vector-ref staged 2))))
 
 (define (alist-ref alist k)
   (cdr (or (assoc k alist) (error "alist-ref of non-existent key:" k alist))))

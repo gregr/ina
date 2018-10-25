@@ -1,5 +1,6 @@
 #lang racket/base
-(provide eval stage env:primitive s->ns ns->s plift)
+(provide eval ast-eval stage base:stage base:program base:library env:primitive
+         s->ns ns->s plift)
 (require "common.rkt" racket/bool racket/control racket/list racket/pretty)
 
 (define type-predicates
