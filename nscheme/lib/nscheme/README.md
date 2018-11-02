@@ -57,6 +57,10 @@
   * ultimately, a platform should abstract away its native language for normal use
     * publicly provide just eval, not racket-eval directly
       * internally, it would compose the frontend with racket-eval
+  * an alternative to Racket code generation is to only generate ASTs and run via
+    ast.rkt (implementing ast-eval); no need for the full stage.rkt in this case
+    * if delimited control is omitted, Chez Scheme could easily implement ast-eval
+    * also a shortcut for inefficient, early versions of other backends, like JS
 
 * try bootstrapping the interpreter for self-hosting:
   * stage.rkt running stage.scm on both stage.scm and eval.scm; compile ast to Racket
@@ -124,17 +128,33 @@
 
 * define ports, read, write
 
-* replace shift/reset with abort/unabort
-
-* higher level continuation interface
-  * support restartable error handlers (particularly important for REPL support)
-  * aborting w/ specific tags
-  * parameterize
-  * dynamic-wind (but be wary of spurious exit/re-enter cycling
-    * should forward dynamic parameters, to avoid exit/re-enter for parent lookup
-      * what other kinds of aborts should/can be pre-empted by dynamic-wind in this way?
-  * what does Racket really do?
-    * exceptions/errors, break (and other interrupts)
+* delimited control:
+  * programs not making use of delimited control should incur no additional overhead
+  * for more precise resource control, replace shift/reset with: prompt0, control0, abort
+    * should dynamic-put, dynamic-get be primitives for tail call efficient parameterize?
+    * maybe exclude delimited control from base language, and implement via CPS-ing
+      embedded interpreter; aggressive inlining can recover native stack-like efficiency
+  * higher level continuation interface
+    * support restartable error handlers (particularly important for REPL support)
+    * aborting w/ specific tags
+    * parameterize
+    * dynamic-wind (but be wary of spurious exit/re-enter cycling
+      * should forward dynamic parameters, to avoid exit/re-enter for parent lookup
+        * what other kinds of aborts should/can be pre-empted by dynamic-wind in this way?
+    * what does Racket really do?
+      * exceptions/errors, break (and other interrupts)
+        * asynchronous exceptions, like break, don't really make sense
+          * Interrupts make more sense in terms of parallel processing, and should be
+            designed for explicitly.  An interrupted program that does not explicitly
+            ask to handle interrupts should terminate, not raise an exception in an
+            arbitrary thread.
+          * concepts like "break" belong to the meta-level, not in object-level programs
+            * e.g., a main meta-level program (such as an IDE or debugger) is evaluating
+              an object-level program when a "break" is signaled.  The interrupt handling
+              behaves like a separate thread which communicates a break message to the
+              main program thread.  The main program has been designed as an event loop
+              that listens for interrupt messages such as "break", and responds by
+              suspending its evaluation of the object-level program.
 
 * parallel processing: spawn, (mvector-cas! mv i expected new) => boolean?
   * Is spawn necessary for equational reasoning with multiple processes?  If not, we can
