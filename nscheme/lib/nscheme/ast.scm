@@ -1,16 +1,20 @@
 (provide ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:reset ast:shift ast:prim ast-eval test!)
+         ast:prim ast:context ast-eval test!)
 (require type-predicates primitive-op-descriptions param-bind)
 
-(define (ast:quote datum)       (vector 'quote  datum))
-(define (ast:var address)       (vector 'var    address))
-(define (ast:set! param arg)    (vector 'set!   param arg))
-(define (ast:if c t f)          (vector 'if     c t f))
-(define (ast:apply proc arg)    (vector 'apply  proc arg))
-(define (ast:reset body)        (vector 'reset  body))
-(define (ast:shift proc)        (vector 'shift  proc))
-(define (ast:lambda param body) (vector 'lambda param body))
-(define (ast:prim name a*)      (vector 'prim   name a*))
+(define (ast:quote datum)       (vector 'quote   datum))
+(define (ast:var address)       (vector 'var     address))
+(define (ast:set! param arg)    (vector 'set!    param arg))
+(define (ast:if c t f)          (vector 'if      c t f))
+(define (ast:apply proc arg)    (vector 'apply   proc arg))
+(define (ast:lambda param body) (vector 'lambda  param body))
+(define (ast:prim name a*)      (vector 'prim    name a*))
+(define (ast:context name a*)   (vector 'context name a*))
+
+;; Dynamic context operations
+(define context-ops
+  (list (cons 'reset (lambda (proc) (reset (proc))))
+        (cons 'shift (lambda (proc) (shift k (proc k))))))
 
 ;; Primitive operations
 (define primitive-op-handlers
@@ -106,14 +110,15 @@
                             (lambda (env) (lambda arg
                                             (define b* (param-bind param arg))
                                             (body (env-extend* env b*))))))
-             ((? 'reset)  (let ((body (ev (@ 1))))
-                            (lambda (env) (reset (body env)))))
-             ((? 'shift)  (let ((proc (ev (@ 1))))
-                            (lambda (env) (shift k ((proc env) k)))))
              ((? 'prim)   (let ((name (@ 1)) (a* (map ev (@ 2))))
                             (define op (or (alist-get primitive-ops name #f)
                                            (error '"invalid primitive:" name)))
                             (lambda (env) (op (map (lambda (a) (a env)) a*)))))
+             ((? 'context)
+              (let ((name (@ 1)) (a* (map ev (@ 2))))
+                (define op (or (alist-get context-ops name #f)
+                               (error '"invalid context op:" name)))
+                (lambda (env) (apply op (map (lambda (a) (a env)) a*)))))
              (#t          (error '"unknown ast:" ast))))) env:empty))
 
 (define (test! test)

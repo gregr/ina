@@ -6,7 +6,7 @@
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:reset ast:shift ast:prim primitive-op-descriptions)
+         ast:prim ast:context primitive-op-descriptions)
 
 (define (env-extend*/var env n*)
   (param?! n*)
@@ -42,6 +42,8 @@
 (define (ast:begin a*)
   (define ra* (reverse (cons ast:true a*)))
   (foldl (lambda (a rest) (ast:let '(#f) (list a) rest)) (car ra*) (cdr ra*)))
+(define (ast:shift proc) (ast:context 'shift (list proc)))
+(define (ast:reset body) (ast:context 'reset (list (ast:lambda '() body))))
 
 ;; Staging
 (define (stage env form)
