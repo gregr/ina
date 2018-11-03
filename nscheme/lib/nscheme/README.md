@@ -4,11 +4,6 @@
 
 ### bootstrap with only simple code
 
-* improve bootstrap performance: provide more racket procedures in base library
-  * e.g., equal?, vector, append, string-append, alist-get, etc.
-  * this may eliminate performance issues with string manipulation
-  * this may also allow eval.rkt to be as fast as stage.rkt
-
 * what do we want the terminal platform to be like?
   * an image (is full persistence worth it just for bootstrapping?)
     * the filesystem isn't special; it's just another network-like data service

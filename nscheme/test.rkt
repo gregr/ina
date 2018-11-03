@@ -2,7 +2,7 @@
 (require
   "filesystem.rkt"
   "module.rkt"
-  "stage.rkt"
+  ;"stage.rkt"
   racket/include
   racket/list
   racket/pretty
