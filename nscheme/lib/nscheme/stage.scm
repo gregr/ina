@@ -1,4 +1,4 @@
-(provide stage env:primitive base:stage base:library base:program)
+(provide stage env:initial env:primitive base:stage base:library base:program)
 
 (require length=? length>=? param?! bpair*?! param-map param-names
          ctx:var ctx:set! ctx:op ctx:def
@@ -138,45 +138,48 @@
 (define (@body* env body*)
   (defstate-run (apply @begin/define (defstate:empty env) body*)))
 
-;; Primitive language definition
-(define (stager:primitive-syntax name proc arity exact?)
+;; Initial language definition
+(define (stager:initial-syntax name proc arity exact?)
   (cons name (lambda (env . tail)
                (unless ((if exact? length=? length>=?) arity tail)
                  (error '"invalid syntax arity:" arity (cons name tail)))
                (apply proc env tail))))
-(define primitive-syntax-bindings
-  (append
-    (map (lambda (desc) (apply stager:primitive-syntax desc))
-         (list (list 'apply  @apply  2 #t)
-               (list 'quote  @quote  1 #t)
-               (list 'if     @if     3 #t)
-               (list 'set!   @set!   2 #t)
-               (list 'reset  @reset  0 #f)
-               (list 'shift  @shift  1 #f)
-               (list 'lambda @lambda 1 #f)
-               (list 'letrec @letrec 1 #f)
-               (list 'let    @let    1 #f)
-               (list 'let*   @let*   1 #f)
-               (list 'begin  @begin  0 #f)
-               (list 'cond   @cond   0 #f)
-               (list 'and    @and    0 #f)
-               (list 'or     @or     0 #f)
-               (list 'when   @when   1 #f)
-               (list 'unless @unless 1 #f)))
-    (map (lambda (po-desc)
-           (cons (car po-desc)
-                 (lambda (env . tail)
-                   (unless (length=? (length (cadr po-desc)) tail)
-                     (error '"invalid primitive op:" po-desc tail))
-                   (ast:prim (car po-desc) (stage* env tail)))))
-         primitive-op-descriptions)))
-
-(define env:primitive
+(define initial-syntax-bindings
+  (map (lambda (desc) (apply stager:initial-syntax desc))
+       (list (list 'apply  @apply  2 #t)
+             (list 'quote  @quote  1 #t)
+             (list 'if     @if     3 #t)
+             (list 'set!   @set!   2 #t)
+             (list 'reset  @reset  0 #f)
+             (list 'shift  @shift  1 #f)
+             (list 'lambda @lambda 1 #f)
+             (list 'letrec @letrec 1 #f)
+             (list 'let    @let    1 #f)
+             (list 'let*   @let*   1 #f)
+             (list 'begin  @begin  0 #f)
+             (list 'cond   @cond   0 #f)
+             (list 'and    @and    0 #f)
+             (list 'or     @or     0 #f)
+             (list 'when   @when   1 #f)
+             (list 'unless @unless 1 #f))))
+(define env:initial
   (env-extend*/syntax
-    (env-extend*/syntax env:empty ctx:op primitive-syntax-bindings)
+    (env-extend*/syntax env:empty ctx:op initial-syntax-bindings)
     ctx:def (list (cons 'begin  @begin/define)
                   (cons 'define @define)
                   (cons 'def    @def))))
+
+;; Primitive language definition
+(define primitive-syntax-bindings
+  (map (lambda (po-desc)
+         (cons (car po-desc)
+               (lambda (env . tail)
+                 (unless (length=? (length (cadr po-desc)) tail)
+                   (error '"invalid primitive op:" po-desc tail))
+                 (ast:prim (car po-desc) (stage* env tail)))))
+       primitive-op-descriptions))
+(define env:primitive
+  (env-extend*/syntax env:initial ctx:op primitive-syntax-bindings))
 
 ;; Base library definition
 (define primitive-op-procs
@@ -293,6 +296,6 @@
 
 ;; Program construction
 (define (base:program form)
-  (@lambda env:primitive base:library-names
+  (@lambda env:initial base:library-names
            (lambda (env) (stage (env-freeze env) form))))
 (define (base:stage form) (ast:apply* base:library (list (base:program form))))
