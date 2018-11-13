@@ -65,7 +65,9 @@
 (define (mvector->vector mv)        (vector-copy (mvector-v mv)))
 (define (string->vector s) (list->vector (map char->integer (string->list s))))
 (define (vector->string v) (list->string (map integer->char (vector->list v))))
-(define ($apply proc arg) (proc arg))
+(define ($apply proc arg . args)
+  (define (cons* x xs) (if (null? xs) x (cons x (cons* (car xs) (cdr xs)))))
+  (proc (cons* arg args)))
 
 (define (alist-get rs key default)
   (define rib (assoc key rs))

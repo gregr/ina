@@ -1,4 +1,5 @@
-(provide stage env:initial env:primitive base:stage base:library base:program)
+(provide stage env:initial env:primitive
+         base:names base:link base:program base:program:linked)
 
 (require length=? length>=? param?! bpair*?! param-map param-names
          ctx:var ctx:set! ctx:op ctx:def
@@ -181,7 +182,21 @@
 (define env:primitive
   (env-extend*/syntax env:initial ctx:op primitive-syntax-bindings))
 
-;; Base library definition
+;; Library and program construction
+(define (library binding-groups)
+  (define library:names
+    (foldl append '() (map (lambda (grp) (map car (cdr grp))) binding-groups)))
+  (define (linker env) (@lambda env '(f) (cons 'f library:names)))
+  (define library:form
+    (foldr (lambda (grp body) (list (car grp) (cdr grp) body))
+           linker binding-groups))
+  (list library:names (stage env:primitive library:form)))
+
+(define (program library:names form)
+  (@lambda env:initial library:names
+           (lambda (env) (stage (env-freeze env) form))))
+
+;; Base library and program definition
 (define primitive-op-procs
   (map (lambda (po-desc)
          (define (x i) (vector-ref '#(x0 x1 x2 x3 x4) i))
@@ -279,23 +294,14 @@
                      (vector->string (list->vector (apply append css)))))
     ))
 
-(define base:library-names #t)
-(define (base:linker env)
-  (set! base:library-names
-    (map car (filter (lambda (rib) (alist-get (cdr rib) ctx:var #f)) env)))
-  (@lambda env '(f) (cons 'f base:library-names)))
-(define base:library
-  (stage env:primitive
-         (list 'let primitive-op-procs
-               (list 'let '((apply (lambda (f arg . args)
-                                     (define (cons* x xs)
-                                       (if (null? xs) x
-                                         (cons x (cons* (car xs) (cdr xs)))))
-                                     (apply f (cons* arg args)))))
-                     (list 'letrec derived-op-procs base:linker)))))
-
-;; Program construction
-(define (base:program form)
-  (@lambda env:initial base:library-names
-           (lambda (env) (stage (env-freeze env) form))))
-(define (base:stage form) (ast:apply* base:library (list (base:program form))))
+(def (base:names base:link)
+     (library (list (cons 'let primitive-op-procs)
+                    '(let (apply (lambda (f arg . args)
+                                   (define (cons* x xs)
+                                     (if (null? xs) x
+                                       (cons x (cons* (car xs) (cdr xs)))))
+                                   (apply f (cons* arg args)))))
+                    (cons 'letrec derived-op-procs))))
+(define (base:program form) (program base:names form))
+(define (base:program:linked form)
+  (ast:apply* base:link (list (base:program form))))

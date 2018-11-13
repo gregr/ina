@@ -102,7 +102,7 @@
 ;; Base environment construction
 (define (ref-proc p) (cons ctx:var (lambda () p)))
 
-(define env:primitive
+(define env:base
   (append
     (map (lambda (b) (cons (car b) (list (ref-proc (cdr b))
                                          (cons ctx:op #t))))
@@ -205,10 +205,10 @@
                (cons 'memf          memf)
                ))
     ;; These don't have to be primitive, but are provided for convenience.
-    (list (cons 'define (list (cons 'define @define)))
-          (cons 'def    (list (cons 'define @def)))
+    (list (cons 'define (list (cons ctx:def @define)))
+          (cons 'def    (list (cons ctx:def @def)))
           (cons 'begin  (list (ref-proc @begin) (cons ctx:op #t)
-                              (cons 'define @begin/define))))
+                              (cons ctx:def @begin/define))))
     (map (lambda (b) (cons (car b) (list (ref-proc (cdr b)) (cons ctx:op #t))))
          (list (cons 'quote  @quote)
                (cons 'set!   @set!)
@@ -220,17 +220,6 @@
                (cons 'when   @when)
                (cons 'unless @unless)
                (cons 'cond   @cond)))))
-
-(define derived-ops '())
-
-(define env:base
-  (eval env:primitive
-        (list 'let '((apply (lambda (f arg . args)
-                              (define (cons* x xs)
-                                (if (null? xs) x
-                                  (cons x (cons* (car xs) (cdr xs)))))
-                              (apply f (cons* arg args)))))
-              (list 'letrec derived-ops '($ (lambda (env) env))))))
 
 (define (test! test)
   (define (ev code) (eval env:base code))

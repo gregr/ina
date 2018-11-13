@@ -115,7 +115,7 @@
 (define (unlift proc)      (lambda arg (proc arg)))
 (define (unlift-arg0 proc) (lambda (f . args) (apply proc (unlift f) args)))
 
-(define env:primitive
+(define env:base
   (s->ns
     (append
       (map (lambda (b) (cons (car b) (list (ref-proc (cdr b))
@@ -187,6 +187,7 @@
                  ;arithmetic-shift
                  ;integer-length
                  ;; derivable ops imported as primitives for efficiency
+                 (cons 'error         (lambda args (error "error:" args)))
                  (cons 'not           not)
                  (cons 'caar          caar)
                  (cons 'cadr          cadr)
@@ -226,10 +227,10 @@
                  (cons 'memf          (unlift-arg0 memf))
                  ))
       ;; These don't have to be primitive, but are provided for convenience.
-      (list (cons 'define (list (cons 'define (plift @define))))
-            (cons 'def    (list (cons 'define (plift @def))))
+      (list (cons 'define (list (cons ctx:def (plift @define))))
+            (cons 'def    (list (cons ctx:def (plift @def))))
             (cons 'begin  (list (ref-proc @begin) (cons ctx:op #t)
-                                (cons 'define (plift @begin/define)))))
+                                (cons ctx:def (plift @begin/define)))))
       (map (lambda (b) (cons (car b) (list (ref-proc (cdr b))
                                            (cons ctx:op #t))))
            (list (cons 'quote  @quote)
@@ -242,17 +243,6 @@
                  (cons 'when   @when)
                  (cons 'unless @unless)
                  (cons 'cond   @cond))))))
-
-(define derived-ops '((error (lambda args ('error args)))))
-
-(define env:base
-  (eval env:primitive
-        (s->ns `(let ((apply (lambda (f arg . args)
-                               (define (cons* x xs)
-                                 (if (null? xs) x
-                                   (cons x (cons* (car xs) (cdr xs)))))
-                               (apply f (cons* arg args)))))
-                  (letrec ,derived-ops ($ (lambda (env) env)))))))
 
 ;; Tests:
 (define tests-total 0)

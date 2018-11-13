@@ -1,6 +1,6 @@
 (provide test-eval test!)
 
-(require ast-eval base:library base:program eval env:base)
+(require ast-eval base:link base:program eval env:base)
 
 (define (test! test)
   (test 'testing-eval/stage #t #t)
@@ -9,8 +9,8 @@
   (test-eval/eval test))
 
 (define (test-eval/stage test)
-  (define library (ast-eval base:library))
-  (define (eval form) (library (ast-eval (base:program form))))
+  (define link (ast-eval base:link))
+  (define (eval form) (link (ast-eval (base:program form))))
   (test-eval eval test))
 
 (define (test-eval/eval test)
