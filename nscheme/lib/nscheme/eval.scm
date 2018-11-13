@@ -2,18 +2,20 @@
 
 (require length>=? param?! bpair*?! param-names param-bind
          ctx:var ctx:set! ctx:op ctx:def
-         env-get-prop env-pre-extend* env-extend*
+         env-get-prop env-remove* env-add* env-extend*
          defstate:empty defstate-env defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add)
 
-(define (env-extend*/var env b*)
+(define (env-add*/var env b*)
   (param?! (map car b*))
   (define (b->rib b)
     (let* ((cell (make-mvector 1 (cdr b)))
            (get (lambda ()  (mvector-ref  cell 0)))
            (set (lambda (v) (mvector-set! cell 0 v))))
       (cons (car b) (list (cons ctx:var get) (cons ctx:set! set)))))
-  (env-extend* (map b->rib b*) env))
+  (env-add* (map b->rib b*) env))
+(define (env-extend*/var env b*)
+  (env-add*/var (env-remove* env (map car b*)) b*))
 
 ;; Evaluation
 (define (eval env form)
@@ -29,8 +31,8 @@
 (define (eval* env form*) (map (lambda (f) (eval env f)) form*))
 
 (define (@lambda env param . body)
-  (let ((cenv (env-pre-extend* env (param-names param))))
-    (lambda a (@body* (env-extend*/var cenv (param-bind param a)) body))))
+  (let ((cenv (env-remove* env (param-names param))))
+    (lambda a (@body* (env-add*/var cenv (param-bind param a)) body))))
 (define (@quote env d) d)
 (define (@if env c t f) (if (eval env c) (eval env t) (eval env f)))
 (define (@reset env . body) (reset (@body* env body)))
@@ -88,8 +90,7 @@
   (defstate-actions-add
     (defstate-env-set
       (defstate-names-add st names)
-      (env-extend*/var (env-pre-extend* (defstate-env st) names)
-                       (map (lambda (n) (cons n #t)) names)))
+      (env-extend*/var (defstate-env st) (map (lambda (n) (cons n #t)) names)))
     (lambda (env) (@set! env param arg))))
 (define (@define st param . body)
   (if (pair? param)

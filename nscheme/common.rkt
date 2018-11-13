@@ -6,7 +6,7 @@
   alist-get alist-remove* alist-at list-at
   length=? length>=? param?! bpair*?!
   ctx:var ctx:set! ctx:op ctx:def
-  env:empty env-ref env-get-prop env-pre-extend* env-extend*
+  env:empty env-ref env-get-prop env-remove* env-add* env-extend*
   ncons param-map param-names param-bind
   defstate:empty defstate-env defstate-names defstate-actions
   defstate-env-set defstate-names-add defstate-actions-add
@@ -122,8 +122,9 @@
 (define env:empty                      '())
 (define (env-ref env n)                (alist-get env n '()))
 (define (env-get-prop env n k default) (alist-get (env-ref env n) k default))
-(define (env-pre-extend* env n*)       (alist-remove* env n*))
-(define (env-extend* env b*)           (append b* env))
+(define (env-remove* env n*)           (alist-remove* env n*))
+(define (env-add* env b*)              (append b* env))
+(define (env-extend* env b*) (env-add* (env-remove* env (map car b*)) b*))
 
 (define (defstate:empty env)  (vector env '() '()))
 (define (defstate-env st)     (vector-ref st 0))

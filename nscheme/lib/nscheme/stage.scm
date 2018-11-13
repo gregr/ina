@@ -2,7 +2,7 @@
 
 (require length=? length>=? param?! bpair*?! param-map param-names
          ctx:var ctx:set! ctx:op ctx:def
-         env:empty env-ref env-get-prop env-pre-extend* env-extend*
+         env:empty env-ref env-get-prop env-extend*
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
@@ -13,11 +13,11 @@
   (define (bind n)
     (define rn (make-mvector 1 n))
     (cons n (list (cons ctx:var rn) (cons ctx:set! rn))))
-  (env-extend* (env-pre-extend* env n*) (map bind n*)))
+  (env-extend* env (map bind n*)))
 (define (env-extend*/syntax env ctx b*)
   (define (bind b) (let ((n (car b)))
                      (cons n (cons (cons ctx (cdr b)) (env-ref env n)))))
-  (env-extend* (env-pre-extend* env (map car b*)) (map bind b*)))
+  (env-extend* env (map bind b*)))
 (define (env-freeze env)
   (map (lambda (b) (cons (car b) (alist-remove* (cdr b) (list ctx:set!))))
        env))
