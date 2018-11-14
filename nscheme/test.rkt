@@ -2,6 +2,7 @@
 (require
   "filesystem.rkt"
   "module.rkt"
+  "interop.rkt"
   ;"stage.rkt"
   racket/include
   racket/list
@@ -49,7 +50,7 @@
     ;(define prelude
       ;(string-join
         ;'("#lang racket"
-          ;"(define (plift racket-proc) (lambda (a) (apply racket-proc a)))"
+          ;"(define (lift racket-proc) (lambda (a) (apply racket-proc a)))"
           ;"(define (procedure=? m n)   (eq? m n))"
           ;"(define (number=? m n)      (eqv? m n))"
           ;"(struct mvector (v) #:transparent)"
@@ -106,8 +107,7 @@
 ;(displayln `(racket: ,(string-join code (s->ns '"\n"))))
 
 
-(define (plift racket-proc) (lambda (a) (apply racket-proc a)))
-(for-each (lambda (t) (time (t (list (plift test)))))
+(for-each (lambda (t) (time (t (list (lift test)))))
           (reverse (map cdr (filter (lambda (rib) (eq? 'test! (car rib)))
                                     env:nscheme))))
 (test-report)

@@ -47,7 +47,7 @@
   (list-join
     '"\n"
     '("#lang racket"
-      "(define (plift racket-proc) (lambda (a) (apply racket-proc a)))"
+      "(define (lift racket-proc) (lambda (a) (apply racket-proc a)))"
       "(define (procedure=? m n)   (eq? m n))"
       "(define (number=? m n)      (eqv? m n))"
       "(struct mvector (v) #:transparent)"
@@ -113,7 +113,7 @@
                                          (param-set! param) body))))
               ((? 'reset)  (let ((body (ev (@ 1)))) (list 'reset body)))
               ((? 'shift)  (let ((proc (ev (@ 1))))
-                             (list 'shift 'k (list proc '(plift k)))))
+                             (list 'shift 'k (list proc '(lift k)))))
               ((? 'prim)   (let ((name (@ 1)) (a* (map ev (@ 2))))
                              (cons name a*)))
               (#t          (error '"unknown ast:" ast))))))

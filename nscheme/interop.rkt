@@ -1,0 +1,147 @@
+#lang racket/base
+(provide
+  s->ns ns->s lift lower lower-arg0 $apply
+  mvector? make-mvector mvector=? mvector-length mvector-ref mvector-set!
+  mvector->vector string->vector vector->string procedure=? number=?
+  alist-get alist-remove* alist-at list-at
+  length=? length>=? param?! bpair*?!
+  ncons param-map param-names param-bind
+  ctx:var ctx:set! ctx:op ctx:def
+  env:empty env-ref env-get-prop env-remove* env-add* env-extend*
+  defstate:empty defstate-env defstate-names defstate-actions
+  defstate-env-set defstate-names-add defstate-actions-add
+  nscm-quote nscm-quasiquote
+  (rename-out (equal? nscm-equal?) (member nscm-member) (assoc nscm-assoc)))
+
+(require "filesystem.rkt" racket/vector (for-syntax racket/base))
+
+;; For safe interop, provided definitions must not override Racket names.
+(define (equal? a b)
+  (or (eqv? a b)
+      (and (string? a) (string? b) (string=? a b))
+      (and (pair? a) (pair? b)
+           (equal? (car a) (car b))
+           (equal? (cdr a) (cdr b)))
+      (and (vector? a) (vector? b)
+           (equal? (vector->list a) (vector->list b)))))
+(define (member v xs) (memf (lambda (x) (equal? x v)) xs))
+(define (assoc k xs) (cond ((null? xs) #f)
+                           ((equal? k (caar xs)) (car xs))
+                           (else (assoc k (cdr xs)))))
+
+(define (lift racket-proc)   (lambda (a) (apply racket-proc a)))
+(define (lower nscheme-proc) (lambda a   (nscheme-proc a)))
+(define (lower-arg0 proc)    (lambda (f . args) (apply proc (lower f) args)))
+(define ($apply proc arg . args)
+  (define (cons* x xs) (if (null? xs) x (cons x (cons* (car xs) (cdr xs)))))
+  (proc (cons* arg args)))
+
+(struct mvector (v) #:transparent)
+(define (make-mvector k d)          (mvector (make-vector k d)))
+(define (mvector=? m n)             (eq? m n))
+(define (mvector-length mv)         (vector-length (mvector-v mv)))
+(define (mvector-ref mv i)          (vector-ref (mvector-v mv) i))
+(define (mvector-set! mv i new)     (vector-set! (mvector-v mv) i new) #t)
+;; TODO: update Racket to use this.
+;(define (mvector-cas! mv i old new) (vector-cas! (mvector-v mv) i old new))
+(define (mvector->vector mv)        (vector-copy (mvector-v mv)))
+(define (string->vector s) (list->vector (map char->integer (string->list s))))
+(define (vector->string v) (list->string (map integer->char (vector->list v))))
+(define (procedure=? m n) (eq? m n))
+(define (number=? m n)    (eqv? m n))
+
+(define (alist-get rs key default)
+  (define rib (assoc key rs))
+  (if rib (cdr rib) default))
+(define (alist-remove* rs keys)
+  (filter (lambda (rib) (not (member (car rib) keys))) rs))
+(define (list-at xs ?)  ;; produce a zipper referencing the desired location
+  (let loop ((suffix xs) (prefix '()))
+    (if (or (null? suffix) (? (car suffix))) (cons suffix prefix)
+      (loop (cdr suffix) (cons (car suffix) prefix)))))
+(define (alist-at rs key) (list-at rs (lambda (kv) (equal? (car kv) key))))
+
+;; Pattern matching
+(define (length=? n xs)  (and (list? xs) (= (length xs) n)))
+(define (length>=? n xs) (and (list? xs) (>= (length xs) n)))
+(define (param?! param) (unless (andmap string? (param-names param))
+                          (error '"invalid parameters:" param)))
+(define (bpair*?! b*)
+  (define (? b) (and (length=? 2 b) (param?! (car b))))
+  (unless (and (list? b*) (andmap ? b*)) (error '"invalid binding list:" b*)))
+
+;; Formal parameters
+(define (ncons name names)
+  (when (member name names) (error '"duplicate name:" name names))
+  (cons name names))
+(define (param-map f p)
+  (cond ((pair? p)   (cons (param-map f (car p)) (param-map f (cdr p))))
+        ((vector? p) (list->vector (param-map f (vector->list p))))
+        ((null? p)   '())
+        ((not p)     #f)
+        (#t          (f p))))
+(define (param-names param)
+  (let loop ((p param) (ns '()))
+    (cond ((pair? p)   (loop (cdr p) (loop (car p) ns)))
+          ((vector? p) (loop (vector->list p) ns))
+          ((null? p)   ns)
+          ((not p)     ns)
+          (#t          (ncons p ns)))))
+(define (param-bind param arg)
+  (let loop ((p param) (a arg))
+    (cond ((and (pair? p) (pair? a)) (append (loop (car p) (car a))
+                                             (loop (cdr p) (cdr a))))
+          ((and (vector? p) (vector? a))
+           (loop (vector->list p) (vector->list a)))
+          ((and (null? p) (null? a)) '())
+          ((not p)                   '())
+          ((not (or (pair? p) (vector? p) (null? p))) (list (cons p a)))
+          (#t (error '"parameter/argument mismatch:" param arg p a)))))
+
+(define ctx:var  '"ref")
+(define ctx:set! '"set!")
+(define ctx:op   '"syntax?")
+(define ctx:def  '"define")
+(define env:empty                      '())
+(define (env-ref env n)                (alist-get env n '()))
+(define (env-get-prop env n k default) (alist-get (env-ref env n) k default))
+(define (env-remove* env n*)           (alist-remove* env n*))
+(define (env-add* env b*)              (append b* env))
+(define (env-extend* env b*) (env-add* (env-remove* env (map car b*)) b*))
+
+(define (defstate:empty env)  (vector env '() '()))
+(define (defstate-env st)     (vector-ref st 0))
+(define (defstate-names st)   (vector-ref st 1))
+(define (defstate-actions st) (vector-ref st 2))
+(define (defstate-env-set st env)
+  (vector env (defstate-names st) (defstate-actions st)))
+(define (defstate-names-add st names)
+  (define new (foldl ncons (defstate-names st) names))
+  (vector (defstate-env st) new (defstate-actions st)))
+(define (defstate-actions-add st act)
+  (define new (cons act (defstate-actions st)))
+  (vector (defstate-env st) (defstate-names st) new))
+
+(define-syntax (nscm-quote stx)
+  (syntax-case stx ()
+    ((_ id)       (identifier? #'id)
+                  #`(nscm-quote #,(symbol->string (syntax->datum #'id))))
+    ((_ (a . d))  #'(cons (nscm-quote a) (nscm-quote d)))
+    ((_ #(d ...)) #'(vector (nscm-quote d) ...))
+    ((_ d)        #'(quote d))))
+(define-syntax nscm-quasiquote (syntax-rules () ((_ d) (nscm-qq () d))))
+(define-syntax nscm-qq
+  (syntax-rules (nscm-quasiquote unquote unquote-splicing)
+    ((_ lvl (nscm-quasiquote d))
+     (list (nscm-quote quasiquote)       (nscm-qq (s . lvl) d)))
+    ((_ (s . p) (unquote e))
+     (list (nscm-quote unquote)          (nscm-qq p e)))
+    ((_ (s . p) (unquote-splicing e))
+     (list (nscm-quote unquote-splicing) (nscm-qq p (unquote-splicing e))))
+    ((_ () (unquote e))                e)
+    ((_ () ((unquote-splicing e) . d)) (append e (nscm-qq () d)))
+    ((_ lvl unquote)                   (error "invalid unquote"))
+    ((_ lvl unquote-splicing)          (error "invalid unquote-splicing"))
+    ((_ lvl (a . d))                   (cons (nscm-qq lvl a) (nscm-qq lvl d)))
+    ((_ lvl #(d ...))                  (list->vector (nscm-qq lvl (d ...))))
+    ((_ lvl d)                         (nscm-quote d))))

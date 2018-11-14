@@ -1,6 +1,5 @@
 #lang racket/base
-(provide eval ast-eval stage base:stage base:program base:library env:primitive
-         s->ns ns->s plift)
+(provide eval ast-eval stage base:stage base:program base:library env:primitive)
 (require "common.rkt" racket/bool racket/control racket/list racket/pretty)
 
 (define type-predicates
@@ -79,7 +78,7 @@
 (define context-ops
   (list (cons 'reset (lambda (proc) (reset ($apply proc '()))))
         (cons 'shift (lambda (proc)
-                       (shift k ($apply proc (list (plift k))))))))
+                       (shift k ($apply proc (list (lift k))))))))
 
 ;; Primitive operations
 (define primitive-op-handlers
@@ -188,7 +187,7 @@
 
 (define (ast->racket ast)
   (define prelude
-    '((define (plift racket-proc) (lambda (a) (apply racket-proc a)))
+    '((define (lift racket-proc) (lambda (a) (apply racket-proc a)))
       (define (procedure=? m n)   (eq? m n))
       (define (number=? m n)      (eqv? m n))
       (struct mvector (v) #:transparent)
@@ -247,7 +246,7 @@
                                   ,(param-set! param) ,body))))
               ((? 'reset)  (let ((body (ev (@ 1)))) `(reset ,body)))
               ((? 'shift)  (let ((proc (ev (@ 1))))
-                             `(shift k (,proc (plift k)))))
+                             `(shift k (,proc (lift k)))))
               ((? 'prim)   (let ((name (@ 1)) (a* (map ev (@ 2))))
                              `(,name . ,a*)))
               (#t          (error '"unknown ast:" ast))))))

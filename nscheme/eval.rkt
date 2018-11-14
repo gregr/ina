@@ -1,5 +1,5 @@
 #lang racket/base
-(provide eval env:base s->ns ns->s plift)
+(provide eval env:base)
 (require "common.rkt" racket/bool racket/control racket/list racket/pretty
          readline readline/pread)
 
@@ -7,8 +7,8 @@
   (param?! (map car b*))
   (define (b->rib b)
     (let* ((cell (make-mvector 1 (cdr b)))
-           (get (plift (lambda ()  (mvector-ref  cell 0))))
-           (set (plift (lambda (v) (mvector-set! cell 0 v)))))
+           (get (lift (lambda ()  (mvector-ref  cell 0))))
+           (set (lift (lambda (v) (mvector-set! cell 0 v)))))
       (cons (car b) (list (cons ctx:var get) (cons ctx:set! set)))))
   (env-add* (map b->rib b*) env))
 (define (env-extend*/var env b*)
@@ -34,7 +34,7 @@
 (define (@if env c t f) (if (eval env c) (eval env t) (eval env f)))
 (define (@reset env . body) (reset (@body* env body)))
 (define (@shift env p . body)
-  (shift k (apply @let env (list (list p (lambda (_) (plift k)))) body)))
+  (shift k (apply @let env (list (list p (lambda (_) (lift k)))) body)))
 (define (@set! env param arg)
   (for-each (lambda (b)
               ($apply (or (env-get-prop env (car b) ctx:set! #f)
@@ -45,16 +45,16 @@
   (bpair*?! b*)
   (define (k env) (begin (for-each (lambda (b) (apply @set! env b)) b*)
                          (apply @let env '() body)))
-  (@let env (map (lambda (b) (list (car b) #t)) b*) (plift k)))
+  (@let env (map (lambda (b) (list (car b) #t)) b*) (lift k)))
 (define (@let/ env b* . body)
   ($apply (apply @lambda env (map car b*) body) (eval* env (map cadr b*))))
 (define (@let/name env name b* . body)
-  (define p (plift (lambda (env) (apply @lambda env (map car b*) body))))
+  (define p (lift (lambda (env) (apply @lambda env (map car b*) body))))
   ($apply (@letrec env (list (list name p)) name) (eval* env (map cadr b*))))
 (define (@let* env b* . body)
   (let loop ((b* b*) (env env))
     (if (null? b*) (@body* env body)
-      (@let/ env (list (car b*)) (plift (lambda (env) (loop (cdr b*) env)))))))
+      (@let/ env (list (car b*)) (lift (lambda (env) (loop (cdr b*) env)))))))
 (define (@let env . tail)
   (cond ((and (length>=? 2 tail) (string? (car tail)) (bpair*?! (cadr tail)))
          (apply @let/name env tail))
@@ -94,13 +94,13 @@
 (define (@define st param . body)
   (if (pair? param)
     (@define st (car param)
-             (plift (lambda (env) (apply @lambda env (cdr param) body))))
+             (lift (lambda (env) (apply @lambda env (cdr param) body))))
     (@def st param (car body))))
 (define (@body* env body)
   (defstate-run (apply @begin/define (defstate:empty env) body)))
 
 ;; Base environment construction
-(define (ref-proc p) (cons ctx:var (lambda _ (plift p))))
+(define (ref-proc p) (cons ctx:var (lambda _ (lift p))))
 
 (define (test-repl env)
   (reset (let loop ()
@@ -111,9 +111,6 @@
              (loop)))))
 
 (define (@enter! env) (test-repl env))
-
-(define (unlift proc)      (lambda arg (proc arg)))
-(define (unlift-arg0 proc) (lambda (f . args) (apply proc (unlift f) args)))
 
 (define env:base
   (s->ns
@@ -215,22 +212,22 @@
                  (cons 'alist-get     alist-get)
                  (cons 'alist-remove* alist-remove*)
                  (cons 'string-append string-append)
-                 (cons 'foldl         (unlift-arg0 foldl))
-                 (cons 'foldr         (unlift-arg0 foldr))
-                 (cons 'map           (unlift-arg0 map))
-                 (cons 'for-each      (unlift-arg0 for-each))
-                 (cons 'andmap        (unlift-arg0 andmap))
-                 (cons 'ormap         (unlift-arg0 ormap))
-                 (cons 'filter        (unlift-arg0 filter))
-                 (cons 'filter-not    (unlift-arg0 filter-not))
-                 (cons 'remf          (unlift-arg0 remf))
-                 (cons 'memf          (unlift-arg0 memf))
+                 (cons 'foldl         (lower-arg0 foldl))
+                 (cons 'foldr         (lower-arg0 foldr))
+                 (cons 'map           (lower-arg0 map))
+                 (cons 'for-each      (lower-arg0 for-each))
+                 (cons 'andmap        (lower-arg0 andmap))
+                 (cons 'ormap         (lower-arg0 ormap))
+                 (cons 'filter        (lower-arg0 filter))
+                 (cons 'filter-not    (lower-arg0 filter-not))
+                 (cons 'remf          (lower-arg0 remf))
+                 (cons 'memf          (lower-arg0 memf))
                  ))
       ;; These don't have to be primitive, but are provided for convenience.
-      (list (cons 'define (list (cons ctx:def (plift @define))))
-            (cons 'def    (list (cons ctx:def (plift @def))))
+      (list (cons 'define (list (cons ctx:def (lift @define))))
+            (cons 'def    (list (cons ctx:def (lift @def))))
             (cons 'begin  (list (ref-proc @begin) (cons ctx:op #t)
-                                (cons ctx:def (plift @begin/define)))))
+                                (cons ctx:def (lift @begin/define)))))
       (map (lambda (b) (cons (car b) (list (ref-proc (cdr b))
                                            (cons ctx:op #t))))
            (list (cons 'quote  @quote)
@@ -317,7 +314,12 @@
                             '(_ 5)))))  ;; quote is unbound
   5)
 (test 'apply-lambda-2
-  (ev `((apply lambda (cons ,(plift (lambda (env) env))  ;; spliced evaluator
+    (ev (list (list 'apply 'lambda
+                    (list 'cons (lift (lambda (env) env)) ;; spliced evaluator
+                          ''(_ '5)))))                     ;; quote is bound
+    5)
+(test 'apply-lambda-2-again
+  (ev `((apply lambda (cons ,(lift (lambda (env) env))  ;; spliced evaluator
                             '(_ '5)))))                  ;; quote is bound
   5)
 (test 'apply-lambda-3

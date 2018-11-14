@@ -12,6 +12,7 @@
 (require
   ;"stage.rkt"
   "eval.rkt"
+  "interop.rkt"
   racket/match
   )
 
