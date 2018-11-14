@@ -1,5 +1,5 @@
 (provide stage env:initial env:primitive
-         base:names base:link base:program base:program:linked)
+         base:names base:values base:program)
 
 (require length=? length>=? param?! bpair*?! param-map param-names
          ctx:var ctx:set! ctx:op ctx:def
@@ -186,15 +186,12 @@
 (define (library binding-groups)
   (define library:names
     (foldl append '() (map (lambda (grp) (map car (cdr grp))) binding-groups)))
-  (define (linker env) (@lambda env '(f) (cons 'f library:names)))
+  (define body (cons (lambda (env) (@lambda env 'xs 'xs)) library:names))
   (define library:form
     (foldr (lambda (grp body) (list (car grp) (cdr grp) body))
-           linker binding-groups))
-  (list library:names (stage env:primitive library:form)))
-
-(define (program library:names form)
-  (@lambda env:initial library:names
-           (lambda (env) (stage (env-freeze env) form))))
+           body binding-groups))
+  (vector library:names (stage env:primitive library:form)))
+(define (program library:names form) (@lambda env:initial library:names form))
 
 ;; Base library and program definition
 (define primitive-op-procs
@@ -294,7 +291,7 @@
                      (vector->string (list->vector (apply append css)))))
     ))
 
-(def (base:names base:link)
+(def #(base:names base:values)
      (library (list (cons 'let primitive-op-procs)
                     '(let (apply (lambda (f arg . args)
                                    (define (cons* x xs)
@@ -303,5 +300,3 @@
                                    (apply f (cons* arg args)))))
                     (cons 'letrec derived-op-procs))))
 (define (base:program form) (program base:names form))
-(define (base:program:linked form)
-  (ast:apply* base:link (list (base:program form))))
