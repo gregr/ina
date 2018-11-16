@@ -4,66 +4,23 @@
 
 ### bootstrap with only simple code
 
-* what do we want the terminal platform to be like?
-  * an image (is full persistence worth it just for bootstrapping?)
-    * the filesystem isn't special; it's just another network-like data service
-    * pull data into the image
-    * allow serialization of the image as a racket program that can be run to restart it
-      * or should this be in some other executable form? executable+data would be nice
-    * what processes/state does an image actually persist?
-      * real devices can't persist; their drivers involve external processes
-      * virtual devices can be persisted; restarting image hooks them up to real devices
-        * Racket platform should present a virtual hardware interface
-      * restarting image begins with procedure for attaching to Racket virtual hardware
-    * what virtual devices?
-      * initially, just an atypical REPL (atypical in that you don't have top-level define)
-        * support an (enter!) command that reboots the REPL into another environment
-          * e.g., (let () (define x ...) (define y ...) (enter!))  ;; REPL can access x and y
-        * evaluating expressions subsumes many activities:
-          * manipulate data and operate devices
-          * reboot (should reboot automatically snapshot the pre-reboot state by default?)
-            * reboot REPL w/ new environment via (enter!)
-            * reboot into something that isn't the REPL; via exit? (exit START-NEW-PROCESS)
-            * halt (reboot with a terminating procedure?)
-              * how do you avoid trashing the image if you aren't taking snapshots?
-              * halting leaves image in a state where it will restart with a REPL?
-      * maybe something like a terminal-compatible gui canvas, or real gui windows
+* gradually translate test.rkt and module.rkt into nscheme
 
-* backend-racket
-  * move Racket code generation out of stage.rkt
-  * issues:
-    * want to minimize hand-written Racket (currently used for boilerplate, such as prelude)
-    * generating Racket code as monolithic strings performs poorly
-      * probably due to slow string operations
-      * maybe use a decorated sexpr encoding for Racket-specific data
-        strings vs. symbols, characters, keywords, etc.
-      * still need to be able to serialize to file, but support going direct to a racket-eval
-    * what capabilities should Racket platform provide?
-      * what storage or filesystem; what representation of it
-        * just lib? arbitrary access to host filesystem?
-    * how is linking organized? image-manipulating REPL?
-  * ahead-of-time compilation:
-    * file i/o
-    * prepend Racket prelude
-  * runtime compilation with immediate execution:
-    * foreign procedures for integrating directly with Racket eval and namespaces
-      * want to minimize the surface area; ideally something like:
-        (racket-eval racket-sexpr)
-  * ultimately, a platform should abstract away its native language for normal use
-    * publicly provide just eval, not racket-eval directly
-      * internally, it would compose the frontend with racket-eval
-  * an alternative to Racket code generation is to only generate ASTs and run via
-    ast.rkt (implementing ast-eval); no need for the full stage.rkt in this case
-    * if delimited control is omitted, Chez Scheme could easily implement ast-eval
-    * also a shortcut for inefficient, early versions of other backends, like JS
+* backend-racket code generation
+  * use a decorated sexpr encoding for Racket-specific data
+    strings vs. symbols, characters, keywords, etc.
+  * delegate to Racket what to do with the generated code
+    * code could be written to file or immediately evaluated by a racket-eval
 
 * try bootstrapping the interpreter for self-hosting:
   * stage.rkt running stage.scm on both stage.scm and eval.scm; compile ast to Racket
   * compare compiled Racket performance on tests
-  * if successful, start porting module construction and testing to nScheme
 
-* add syntax error checking in eval.rkt, then port it to nScheme as eval.scm
-  * cover all corner cases to self-host a REPL that can recover from any error
+* remove stage.rkt, maybe replacing it with ast.rkt? ideally won't even need ast.rkt
+  * an alternative to Racket code generation is to only generate ASTs and run via
+    ast.rkt (implementing ast-eval); no need for the full stage.rkt in this case
+    * if delimited control is omitted, Chez Scheme could easily implement ast-eval
+    * also a shortcut for inefficient, early versions of other backends, like JS
 
 * possible pre-bootstrap ast improvement
   * generated Racket code is currently enormous, partly due to base library
@@ -121,7 +78,73 @@
     * rollback with generalization
 
 
+### Racket platform and integration
+
 * define ports, read, write
+  * include non-device (aka string/byte buffer) ports
+    * for when you want a port interface to string-like data
+  * prefer dealing with bytes/words, not strings
+
+* provide host system capabilities to a program via lambda
+  * (lambda (host) ... program ...)
+  * host object can be queried for (virtual) hardware capabilities
+    * spectrum of capability granting outcomes and other feedback:
+      * no-grant to full-unconditional-grant
+      * capability may or may not be recognized
+        * host recognizes device, but refuses to grant access
+        * host unable to grant because it doesn't understand what you want
+
+* example (virtual) devices
+  * timers
+  * network
+  * storage: typical filesystem vs. something else?
+  * speakers, mic, camera
+  * keyboard, mouse, other input devices
+  * display: terminal, canvas, html, gui widgets, etc.
+  * gui sub-windows/frames: multiplexed access to many of the above devices
+    * another level of virtualization
+
+* persistent images
+  * is full persistence worth it just for bootstrapping?
+  * serialize snapshots as racket programs that resume from the snapshot point
+    * or should this be in some other executable form? executable+data would be nice
+  * what processes/state does an image actually persist?
+    * all state and processes, except for real devices (or external virtual hardware)
+      * real devices can't persist; their drivers involve external processes
+    * internal virtual device states and driver processes can be persisted
+      * image restart begins with a (boot) process that hooks them up to real devices
+
+* evaluating expressions in a REPL subsumes many activities
+  * manipulate data, operate devices, launch and manage concurrent processes
+    * read in data, write out data (including taking image snapshots)
+  * start a sub-REPL in a new environment via (enter!)
+  * reboot into something that isn't the REPL: (exit! START-NEW-PROCESS)
+  * halt as a special case of rebooting: exit! with a terminating process
+
+* exammple text interfaces to try
+  * rudimentary REPL using stdin/stdout
+  * REPL with persistent state/history (less-style scrolling?)
+  * terminal hijacked by ncurses-style UI (with mouse support)
+
+* backend-racket platform integration
+  * runtime compilation with option for immediate execution
+    * foreign procedures (capabilities) for using Racket eval and namespaces
+      * minimize the surface area; ideally something like: (racket-eval racket-sexpr)
+  * ultimately, a platform should abstract away its native language for normal use
+    * publicly provide just eval, not racket-eval directly
+      * internally, it would compose the frontend with racket-eval
+
+
+### control extensions
+
+* implement tag-aware delimited continuation operators in base language
+  * e.g., reset/tag, shift/tag, abort/tag
+
+* syntax error checking that covers all corner cases and supports containment
+  * in eval.rkt, eval.scm, and even stage.scm (stage.rkt is probably going away)
+  * don't use base error procedure
+    * specialize error procedures by use: one for eval, one for stage
+    * implement with reset/tag and shift/tag so that errors are catchable
 
 * delimited control:
   * programs not making use of delimited control should incur no additional overhead
@@ -155,24 +178,8 @@
   * Is spawn necessary for equational reasoning with multiple processes?  If not, we can
     just expose a threading interface via procedures.  Would such an interface have to be
     platform-specific?  Racket efficiently supports interruption features that JS can't.
-
-
-* throw away dead Racket support code
-  * replace as much Racket as possible for module building, testing, repl
-    * still need Racket to provide filesystem/IO interface
-    * see ../../README.md on Racket platform
-  * eliminate unused bootstrap primitives from nscheme.rkt
-    * import/export, `and/let*`, case, quasiquote, match, read/write
-    * throw away nscheme.rkt entirely if possible
-
-* small-step evaluation with transparent values
-  * for interleaving evaluation and compilation
-    * guarantees serializability of residual programs
-    * e.g., transformations such as inlining, staged compilation
-    * flexible syntactic extension
-      * parsers can safely produce code containing computed values
-        * the computed values will be serializable, amenable to analysis
-  * eventually also for resource control: budgeting time, memory usage
+  * high level synchronizable actions interface
+    * as in Concurrent ML, or Racket synchronizable events
 
 
 ### syntax extensions
@@ -208,8 +215,23 @@
     (define-vector-type name field ...)
 
 
-### compiler backend targeting Racket
+### interpreter for guest programs (program execution states as data)
 
-* procedure representation supporting non-list apply
+* small-step evaluation with transparent values
+  * guarantees serializability of residual programs
+  * supports transformations such as inlining, staged compilation
 
-* fully self-host
+* flexible syntactic extension
+  * parsers can safely produce code containing computed values
+    * the computed values will be serializable, amenable to analysis
+
+* virtualization
+  * resource control
+    * budget time and memory, throttle/suspend/resume/rewind/terminate
+    * replicate and distribute
+  * failure isolation: optional recovery/repair and resumption
+  * incremental/adaptive computation
+  * observe a program's internal state while it's running
+  * modify a program while it's running
+  * symbolic profiling, time-travel debugging, provenance
+    * and other forms of analysis and immediate feedback
