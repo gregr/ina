@@ -2,69 +2,6 @@
 (provide eval ast-eval stage base:stage base:program base:library env:primitive)
 (require "common.rkt" racket/bool racket/control racket/list racket/pretty)
 
-(define type-predicates
-  (list (cons 'procedure? procedure?)
-        (cons 'mvector?   mvector?)
-        (cons 'vector?    vector?)
-        (cons 'pair?      pair?)
-        (cons 'null?      null?)
-        (cons 'boolean?   boolean?)
-        (cons 'string?    string?)
-        (cons 'number?    number?)
-        (cons 'integer?   integer?)
-        (cons 'fixnum?    fixnum?)
-        (cons 'flonum?    flonum?)))
-
-(define primitive-op-descriptions
-  (append (map (lambda (tp) (cons (car tp) '((#f) boolean?))) type-predicates)
-          '((boolean=?   (boolean? boolean?)     boolean?)
-            (number=?    (number? number?)       boolean?)
-            (string=?    (string? string?)       boolean?)
-            (mvector=?   (mvector? mvector?)     boolean?)
-            (procedure=? (procedure? procedure?) boolean?)
-
-            (string->vector (string?)  vector?)
-            (vector->string (vector?)  string?)
-
-            (cons (#f #f) pair?)
-            (car  (pair?) #f)
-            (cdr  (pair?) #f)
-
-            (vector-ref    (vector? fixnum?) #f)
-            (vector-length (vector?)         fixnum?)
-
-            (make-mvector    (fixnum? #f)          mvector?)
-            (mvector->vector (mvector?)            vector?)
-            (mvector-set!    (mvector? fixnum? #f) #t)
-            (mvector-ref     (mvector? fixnum?)    #f)
-            (mvector-length  (mvector?)            fixnum?)
-
-            ;; TODO: derive these.
-            (string<? (string? string?) boolean?)
-            (string>? (string? string?) boolean?)
-            ;; TODO: flonum variants.
-            (=  (number? number?) boolean?)
-            (<= (number? number?) boolean?)
-            (<  (number? number?) boolean?)
-            (>= (number? number?) boolean?)
-            (>  (number? number?) boolean?)
-            (+  (number? number?) number?)
-            (*  (number? number?) number?)
-            (-  (number? number?) number?)
-            (/  (number? number?) number?)
-
-            (truncate (number?) integer?)
-
-            ;bitwise-and
-            ;bitwise-ior
-            ;bitwise-xor
-            ;bitwise-not
-            ;bitwise-bit-set?
-            ;bitwise-bit-field
-            ;arithmetic-shift
-            ;integer-length
-            )))
-
 (define (ast:quote datum)       (vector 'quote   datum))
 (define (ast:var address)       (vector 'var     address))
 (define (ast:set! param arg)    (vector 'set!    param arg))
@@ -81,66 +18,106 @@
                        (shift k ($apply proc (list (lift k))))))))
 
 ;; Primitive operations
-(define primitive-op-handlers
-  (list (cons 'procedure?      procedure?)
-        (cons 'mvector?        mvector?)
-        (cons 'vector?         vector?)
-        (cons 'pair?           pair?)
-        (cons 'null?           null?)
-        (cons 'boolean?        boolean?)
-        (cons 'string?         string?)
-        (cons 'number?         number?)
-        (cons 'integer?        integer?)
-        (cons 'fixnum?         fixnum?)
-        (cons 'flonum?         flonum?)
-        (cons 'boolean=?       boolean=?)
-        (cons 'number=?        number=?)
-        (cons 'string=?        string=?)
-        (cons 'mvector=?       mvector=?)
-        (cons 'procedure=?     procedure=?)
-        (cons 'string->vector  string->vector)
-        (cons 'vector->string  vector->string)
-        (cons 'cons            cons)
-        (cons 'car             car)
-        (cons 'cdr             cdr)
-        (cons 'vector-ref      vector-ref)
-        (cons 'vector-length   vector-length)
-        (cons 'make-mvector    make-mvector)
-        (cons 'mvector->vector mvector->vector)
-        (cons 'mvector-set!    mvector-set!)
-        (cons 'mvector-ref     mvector-ref)
-        (cons 'mvector-length  mvector-length)
-        (cons 'string<?        string<?)
-        (cons 'string>?        string>?)
-        (cons '=               =)
-        (cons '<=              <=)
-        (cons '<               <)
-        (cons '>=              >=)
-        (cons '>               >)
-        (cons '+               +)
-        (cons '*               *)
-        (cons '-               -)
-        (cons '/               /)
-        (cons 'truncate        truncate)))
+(define type-predicates
+  (list (cons 'procedure? procedure?)
+        (cons 'mvector?   mvector?)
+        (cons 'vector?    vector?)
+        (cons 'pair?      pair?)
+        (cons 'null?      null?)
+        (cons 'boolean?   boolean?)
+        (cons 'string?    string?)
+        (cons 'number?    number?)
+        (cons 'integer?   integer?)
+        (cons 'fixnum?    fixnum?)
+        (cons 'flonum?    flonum?)))
 
-(unless (= (length primitive-op-descriptions) (length primitive-op-handlers))
-  (error '"mismatching primitive op handlers:"
-         (map car primitive-op-handlers) (map car primitive-op-descriptions)))
+(define primitive-op-descriptions
+  (append
+    (map (lambda (tp) (list (car tp) (cdr tp) '((#f) boolean?)))
+         type-predicates)
+    (list
+      (list 'boolean=?   boolean=?   '((boolean? boolean?)     boolean?))
+      (list 'number=?    number=?    '((number? number?)       boolean?))
+      (list 'string=?    string=?    '((string? string?)       boolean?))
+      (list 'mvector=?   mvector=?   '((mvector? mvector?)     boolean?))
+      (list 'procedure=? procedure=? '((procedure? procedure?) boolean?))
+
+      (list 'string->vector string->vector '((string?) vector?))
+      (list 'vector->string vector->string '((vector?) string?))
+
+      (list 'cons cons '((#f #f) pair?))
+      (list 'car  car  '((pair?) #f))
+      (list 'cdr  cdr  '((pair?) #f))
+
+      (list 'vector-ref    vector-ref    '((vector? fixnum?) #f))
+      (list 'vector-length vector-length '((vector?)         fixnum?))
+
+      (list 'make-mvector    make-mvector    '((fixnum? #f)          mvector?))
+      (list 'mvector->vector mvector->vector '((mvector?)            vector?))
+      (list 'mvector-set!    mvector-set!    '((mvector? fixnum? #f) #t))
+      (list 'mvector-ref     mvector-ref     '((mvector? fixnum?)    #f))
+      (list 'mvector-length  mvector-length  '((mvector?)            fixnum?))
+
+      ;; TODO: derive these.
+      (list 'string<? string<? '((string? string?) boolean?))
+      (list 'string>? string>? '((string? string?) boolean?))
+      ;; TODO: flonum variants.
+      (list '=     =  '((number? number?) boolean?))
+      (list '<=    <= '((number? number?) boolean?))
+      (list '<     <  '((number? number?) boolean?))
+      (list '>=    >= '((number? number?) boolean?))
+      (list '>     >  '((number? number?) boolean?))
+      (list '+     +  '((number? number?) number?))
+      (list '*     *  '((number? number?) number?))
+      (list '-     -  '((number? number?) number?))
+      (list '/     /  '((number? number?) number?))
+
+      (list 'truncate truncate '((number?) integer?))
+
+      ;bitwise-and
+      ;bitwise-ior
+      ;bitwise-xor
+      ;bitwise-not
+      ;bitwise-bit-set?
+      ;bitwise-bit-field
+      ;arithmetic-shift
+      ;integer-length
+      )))
+
+(define (primitive-op-handler        po-desc) (cadr po-desc))
+(define (primitive-op-type-signature po-desc) (caddr po-desc))
+
+;; Sanity check primitive-op-descriptions.
+(let ()
+  (define (valid-type-signature? ts)
+    (define (valid-type? t)
+      (or (equal? #t t) (not t) (assoc t type-predicates)))
+    (and (list? ts) (= 2 (length ts)) (list? (car ts))
+         (andmap valid-type? (car ts)) (valid-type? (cadr ts))))
+  (define (valid-primop? op)
+    (and (list? op) (= 3 (length op)) (string? (car op))
+         (procedure? (primitive-op-handler op))
+         (valid-type-signature? (primitive-op-type-signature op))))
+  (define malformed (filter-not valid-primop? primitive-op-descriptions))
+  (unless (null? malformed)
+    (error '"malformed primitive-op-descriptions:" malformed)))
 
 (define primitive-ops
-  (map (lambda (po-desc)
-         (define name (car po-desc))
-         (define arg-sig (cadr po-desc))
-         (define return-sig (caddr po-desc))  ;; TODO: validate return type?
-         (define op (cdr (assoc name primitive-op-handlers)))
-         (define (valid? a*)
-           (andmap (lambda (ty? a)
-                     (or (not ty?) ((cdr (assoc ty? type-predicates)) a)))
-                   arg-sig a*))
-         (define (full-op a*)
-           (if (valid? a*) (apply op a*)
-             (error '"primitive op type error:" name arg-sig a*)))
-         (cons name full-op)) primitive-op-descriptions))
+  (map
+    (lambda (po-desc)
+      (define name (car po-desc))
+      (define sig (primitive-op-type-signature po-desc))
+      (define arg-sig (car sig))
+      (define return-sig (cadr sig))  ;; TODO: validate return type?
+      (define op (primitive-op-handler (assoc name primitive-op-descriptions)))
+      (define (valid? a*)
+        (andmap (lambda (ty? a)
+                  (or (not ty?) ((cdr (assoc ty? type-predicates)) a)))
+                arg-sig a*))
+      (define (full-op a*)
+        (if (valid? a*) (apply op a*)
+          (error '"primitive op type error:" name arg-sig a*)))
+      (cons name full-op)) primitive-op-descriptions))
 
 ;(define ast-count 0)
 
@@ -414,7 +391,8 @@
     (map (lambda (po-desc)
            (cons (car po-desc)
                  (lambda (env . tail)
-                   (unless (length=? (length (cadr po-desc)) tail)
+                   (define type-sig (primitive-op-type-signature po-desc))
+                   (unless (length=? (length (car type-sig)) tail)
                      (error '"invalid primitive op:" po-desc tail))
                    (ast:prim (car po-desc) (stage* env tail)))))
          primitive-op-descriptions)))
@@ -431,7 +409,8 @@
 (define primitive-op-procs
   (map (lambda (po-desc)
          (define (x i) (vector-ref '#(x0 x1 x2 x3 x4) i))
-         (define p* (map x (range (length (cadr po-desc)))))
+         (define type-sig (primitive-op-type-signature po-desc))
+         (define p* (map x (range (length (car type-sig)))))
          (list (car po-desc) (list 'lambda p* (cons (car po-desc) p*))))
        primitive-op-descriptions))
 

@@ -41,7 +41,7 @@
 (define env:nscheme
   (link/module*
     env:data (library-modules
-               'nscheme '(data common ast stage eval base-test backend-racket))))
+               'nscheme '(common ast stage eval base-test backend-racket))))
 
 ;; Work in progress towards self-hosting.
 ;(call-with-output-file

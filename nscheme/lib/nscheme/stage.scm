@@ -7,7 +7,8 @@
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:prim ast:context primitive-op-descriptions)
+         ast:prim ast:context
+         primitive-op-descriptions primitive-op-type-signature)
 
 (define (env-extend*/var env n*)
   (param?! n*)
@@ -175,7 +176,8 @@
   (map (lambda (po-desc)
          (cons (car po-desc)
                (lambda (env . tail)
-                 (unless (length=? (length (cadr po-desc)) tail)
+                 (define type-sig (primitive-op-type-signature po-desc))
+                 (unless (length=? (length (car type-sig)) tail)
                    (error '"invalid primitive op:" po-desc tail))
                  (ast:prim (car po-desc) (stage* env tail)))))
        primitive-op-descriptions))
@@ -197,7 +199,8 @@
 (define primitive-op-procs
   (map (lambda (po-desc)
          (define (x i) (vector-ref '#(x0 x1 x2 x3 x4) i))
-         (define p* (map x (range (length (cadr po-desc)))))
+         (define type-sig (primitive-op-type-signature po-desc))
+         (define p* (map x (range (length (car type-sig)))))
          (list (car po-desc) (list 'lambda p* (cons (car po-desc) p*))))
        primitive-op-descriptions))
 
