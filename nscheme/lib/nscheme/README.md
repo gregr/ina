@@ -4,7 +4,13 @@
 
 ### bootstrap with only simple code
 
-* gradually translate test.rkt and module.rkt into nscheme
+* reconsider stage.rkt performance using pre-built base library with more ast:prims
+
+* reduce dependency on Racket in test.rkt
+  * continue using Racket to load files and parse modules (i.e., module.rkt)
+    * in order to bootstrap, Racket will need to be able to do these things anyway
+  * port module evaluation and migrate actual test runs to nscm
+    * Racket still needs to be able to evaluate modules for bootstrapping
 
 * backend-racket code generation
   * use a decorated sexpr encoding for Racket-specific data
@@ -26,7 +32,7 @@
   * generated Racket code is currently enormous, partly due to base library
   * try bootstrapping eval.scm/stage.scm first to see how bad it will really be
   * augmented ast
-    * vector (for vectorizing apply), begin, let, maybe letrec (for lambdas only)
+    * vectorized `lambda*` and `apply*`, begin, let, letrec for lambdas (aka labels)
     * variable refcounts, mutability, escape status
     * crude termination/effect status
       * expr always evaluate to a value without observable effects? yes/no
@@ -43,13 +49,13 @@
         * param tree manipulation is elaborated, leaving only single-arg lambdas
         * single-arg, always-inlineable "wrapper" lambdas call multi-arg workers
           * workers must be named and lifted out, to avoid recursive inlining forever
-        * e.g., (lambda (x . y) _) => (let ((f (lambda #(x y) _)))
+        * e.g., (lambda (x . y) _) => (let ((f (lambda* (x y) _)))
                                         (lambda a  ;; inlined as often as possible
                                           (assert (pair? a))
                                           (let ((a.1 (car a)) (a.2 (cdr a)))
-                                            (apply f (vector a.1 a.2)))))
+                                            (apply* f a.1 a.2))))
       * (apply (lambda x _) a) => (let ((x a)) _)
-      * (apply (lambda #(x ...) _) (vector a ...)) => (let ((x a) ...) _)
+      * (apply* (lambda* (x ...) _) a ...) => (let ((x a) ...) _)
       * (let ((#f X) _ ...) Y) => (begin X (let (_ ...) Y))
       * lift lets everywhere while preserving effect order; e.g., let in let binding:
         (let (X ... ((v (let (A ...) B))) Y ...) _) =>  ;; assumes unique var names
@@ -140,12 +146,6 @@
 * implement tag-aware delimited continuation operators in base language
   * e.g., reset/tag, shift/tag, abort/tag
 
-* syntax error checking that covers all corner cases and supports containment
-  * in eval.rkt, eval.scm, and even stage.scm (stage.rkt is probably going away)
-  * don't use base error procedure
-    * specialize error procedures by use: one for eval, one for stage
-    * implement with reset/tag and shift/tag so that errors are catchable
-
 * delimited control:
   * programs not making use of delimited control should incur no additional overhead
   * for more precise resource control, replace shift/reset with: prompt0, control0, abort
@@ -215,9 +215,13 @@
     (define-vector-type name field ...)
 
 
-### interpreter for guest programs (program execution states as data)
+### compiling/evaluating guest programs (program execution states as data)
 
-* small-step evaluation with transparent values
+* stage.scm syntax error checking that covers all corner cases and contains failure
+  * could implement with reset/tag and shift/tag so that errors are catchable
+  * could also embed errors within a result, providing more context for better feedback
+
+* small-step evaluation (of AST) with transparent values
   * guarantees serializability of residual programs
   * supports transformations such as inlining, staged compilation
 
