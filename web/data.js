@@ -99,11 +99,11 @@ function unique_insert(compare, xs, value) {
 
 var tag_count = 0;
 var nil_tag = tag_count++;
-var pair_tag = tag_count++;
+var cons_tag = tag_count++;
 var set_tag = tag_count++;
 
 var nil = {'tag': nil_tag};
-function pair(hd, tl) { return {'tag': pair_tag, 'head': hd, 'tail': tl}; }
+function cons(a, d) { return {'tag': cons_tag, 'car': a, 'cdr': d}; }
 function set(elements) { return {'tag': set_tag, 'elements': elements}; }
 var set_empty = set([]);
 
@@ -111,8 +111,8 @@ function is_boolean(term) { return typeof term === 'boolean'; }
 function is_number(term) { return typeof term === 'number'; }
 function is_text(term) { return typeof term === 'string'; }
 function is_nil(term) { term === nil; }
-function is_pair(term) {
-  return (typeof term === 'object') && term.tag === pair_tag;
+function is_cons(term) {
+  return (typeof term === 'object') && term.tag === cons_tag;
 }
 function is_set(term) {
   return (typeof term === 'object') && term.tag === set_tag;
@@ -124,9 +124,9 @@ function compare_number_asc(n0, n1) { return n0 - n1; }
 function compare_number_desc(n0, n1) { return n1 - n0; }
 function compare_text_asc(t0, t1) { return t0 === t1 ? 0 : t0 < t1 ? -1 : 1; }
 function compare_text_desc(t0, t1) { return t1 === t0 ? 0 : t1 < t0 ? -1 : 1; }
-function compare_pair_asc(p0, p1) {
-  var c0 = compare_poly_asc(p0.head, p1.head);
-  return c0 !== 0 ? c0 : compare_poly_asc(p0.tail, p1.tail);
+function compare_cons_asc(p0, p1) {
+  var c0 = compare_poly_asc(p0.car, p1.car);
+  return c0 !== 0 ? c0 : compare_poly_asc(p0.cdr, p1.cdr);
 }
 function compare_set_asc(s0, s1) {
   var xs0 = s0.elements; l0 = xs0.length;
@@ -143,7 +143,7 @@ function compare_poly_asc(x0, x1) {
   if (x0 === x1) { return 0; }
   var t0 = typeof x0;
   var t1 = typeof x1;
-  // boolean < number < string < nil(unique object) < pair < set
+  // boolean < number < string < nil(unique object) < cons < set
   if (t0 !== t1) {
     return t0 === 'object' ? 1 : t1 === 'object' ? -1 : t0 < t1 ? -1 : 1;
   }
@@ -154,14 +154,14 @@ function compare_poly_asc(x0, x1) {
     case 'object':
       t0 = x0.tag; t1 = x1.tag;
       if (t0 !== t1) { return t0 < t1 ? -1 : 1; }
-      if (t0 === pair_tag) { return compare_pair_asc(x0, x1); }
+      if (t0 === cons_tag) { return compare_cons_asc(x0, x1); }
       if (t0 === set_tag) { return compare_set_asc(x0, x1); }
   }
 }
 
-function dotted_list_from_array(xs, tail) {
-  var result = tail;
-  for (var i = xs.length - 1; i >= 0; --i) { result = pair(xs[i], result); }
+function dotted_list_from_array(xs, cdr) {
+  var result = cdr;
+  for (var i = xs.length - 1; i >= 0; --i) { result = cons(xs[i], result); }
   return result;
 }
 function list_from_array(xs) { return dotted_list_from_array(xs, nil); }
@@ -352,11 +352,11 @@ function read(ss) {
           ++ss.pos; ++ss.col;
           var elements = read_sequence(ss);
           i = ss.pos;
-          var tail = nil;
+          var cdr = nil;
           if (token_dot(src, i, len)) {
             ++i; ++ss.pos; ++ss.col;
-            tail = read(ss);
-            if (tail === undefined || read(ss) !== undefined) {
+            cdr = read(ss);
+            if (cdr === undefined || read(ss) !== undefined) {
               ss.msg = 'exactly one element must follow `.` in sequence';
               return;
             }
@@ -364,8 +364,8 @@ function read(ss) {
           i = ss.pos;
           if (i < len && src.charAt(i) === delim) {
             ++ss.pos; ++ss.col;
-            elements = dotted_list_from_array(elements, tail);
-            if (prefix !== undefined) { elements = pair(prefix, elements); }
+            elements = dotted_list_from_array(elements, cdr);
+            if (prefix !== undefined) { elements = cons(prefix, elements); }
             return elements;
           }
           return stream_expected(ss, delim);
@@ -499,10 +499,10 @@ function text_quoted(text) {
 }
 
 function write(datum) {
-  if (is_pair(datum)) {
+  if (is_cons(datum)) {
     var elements = ['('];
-    do { elements.push(write(datum.head), ' '); datum = datum.tail; }
-    while(is_pair(datum));
+    do { elements.push(write(datum.car), ' '); datum = datum.cdr; }
+    while(is_cons(datum));
     if (datum !== nil) { elements.push('. ', write(datum), ' '); }
     elements[elements.length - 1] = ')';
     return elements.join('');
