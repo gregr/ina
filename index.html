@@ -121,17 +121,17 @@ var initial_text = "\
 '((+ 3 2) is equal to (+ 4 1) (they are both 5))\n\
 `(,(+ 3 2) is equal to ,(+ 4 1) (they are both 5))\n\
 \n\
-(pair (nil? '()) (pair? '()))\n\
-(if (head '(#t . #f)) 'yes 'no)\n\
-(if (tail '(#t . #f)) 'yes 'no)\n\
+(cons (null? '()) (pair? '()))\n\
+(if (car '(#t . #f)) 'yes 'no)\n\
+(if (cdr '(#t . #f)) 'yes 'no)\n\
 \n\
 ((lambda (x) `(,x ',x))\n\
  '(lambda (x) `(,x ',x)))\n\
 \n\
 ((lambda (x)\n\
-   (pair x (pair (pair 'quote (pair x '())) '())))\n\
+   (cons x (cons (cons 'quote (cons x '())) '())))\n\
  '(lambda (x)\n\
-    (pair x (pair (pair 'quote (pair x '())) '()))))\n\
+    (cons x (cons (cons 'quote (cons x '())) '()))))\n\
 \n\
 (let ((square (lambda (n) (* n n))))\n\
   `(,(square -3) ,(square 4)))\n\
@@ -280,9 +280,9 @@ function uri_query_decode(uq) {
 }
 
 var nil = null;
-function pair(hd, tl) { return [hd, tl]; }
-function head(pr) { return pr[0]; }
-function tail(pr) { return pr[1]; }
+function cons(a, d) { return [a, d]; }
+function car(pr) { return pr[0]; }
+function cdr(pr) { return pr[1]; }
 
 function is_nil(datum) { return datum === null; }
 function is_closure(datum) { return typeof datum === 'function'; }
@@ -292,7 +292,7 @@ function is_number(datum) { return typeof datum === 'number'; }
 function is_int32(datum) {
   return (typeof datum === 'number') && (datum === (datum | 0));
 }
-function is_pair(datum) {
+function is_cons(datum) {
   return (typeof datum === 'object') && (datum !== null);
 }
 
@@ -321,21 +321,21 @@ function env_lookup(env, name, stx) {
 
 function syntax_list_of_length(len, xs, err) {
   var result = [];
-  xs = tail(xs);
+  xs = cdr(xs);
   for (; len > 0; --len) {
-    if (!is_pair(xs)) { throw err; }
-    result.push(head(xs));
-    xs = tail(tail(xs));
+    if (!is_cons(xs)) { throw err; }
+    result.push(car(xs));
+    xs = cdr(cdr(xs));
   }
   if (!is_nil(xs)) { throw err; }
   return result;
 }
 function syntax_list(xs, err) {
   var result = [];
-  xs = tail(xs);
-  while (is_pair(xs)) {
-    result.push(head(xs));
-    xs = tail(tail(xs));
+  xs = cdr(xs);
+  while (is_cons(xs)) {
+    result.push(car(xs));
+    xs = cdr(cdr(xs));
   }
   if (!is_nil(xs)) { throw err; }
   return result;
@@ -344,7 +344,7 @@ function array_to_list_dotted(annotate, suffix, xs) {
   var i = xs.length - 1;
   var result = suffix;
   for (; i >= 0; --i) {
-    result = pair(xs[i], result);
+    result = cons(xs[i], result);
     if (annotate !== false) { result = annotate(xs[i], result); }
   }
   return result;
@@ -642,9 +642,9 @@ function annotation(ss) {
   var src;
   if (ss === false) { src = null; }
   else { src = array_to_list([ss.token++]); }
-  return pair('syntax', src);
+  return cons('syntax', src);
 }
-function annotated(ss, datum) { return pair(annotation(ss), datum); }
+function annotated(ss, datum) { return cons(annotation(ss), datum); }
 
 function read_stream_sequence(ss, delim) {
   var len = ss.src.length, elements = [], element;
@@ -672,9 +672,9 @@ function read_stream_bracketed(prefix, delim, ss) {
     ++ss.pos; ++ss.col;
     elements = array_to_list_dotted(annotate, suffix, elements);
     if (prefix !== undefined) {
-      elements = annotate(prefix, pair(prefix, elements));
+      elements = annotate(prefix, cons(prefix, elements));
     }
-    return tail(elements);
+    return cdr(elements);
   } else { return stream_expected(ss, delim); }
 }
 
@@ -682,7 +682,7 @@ function read_stream_quoted(prefix_name, prefix, ss) {
   var datum = read_stream(ss);
   if (datum !== undefined) {
     var annotate = function(ex, datum){ return annotated(ss, datum); }
-    return tail(array_to_list_annotated(annotate, [prefix, datum]));
+    return cdr(array_to_list_annotated(annotate, [prefix, datum]));
   }
   else { return stream_error(ss, 'expected one argument to '+prefix_name); }
 }
@@ -703,7 +703,7 @@ function read_stream_expecting(ss, delim) {
           case '[': delim = ']'; prefix = '[]'; break;
           case '{': delim = '}'; prefix = '{}'; break;
         }
-        if (prefix !== undefined) { prefix = pair(ann, prefix); }
+        if (prefix !== undefined) { prefix = cons(ann, prefix); }
         ++ss.pos; ++ss.col; result = read_stream_bracketed(prefix, delim, ss);
         not_done = false; break;
       case ')': case ']': case '}':
@@ -721,7 +721,7 @@ function read_stream_expecting(ss, delim) {
             break;
         }
         ++ss.pos; ++ss.col;
-        result = read_stream_quoted(prefix, pair(ann, prefix), ss);
+        result = read_stream_quoted(prefix, cons(ann, prefix), ss);
         not_done = false; break;
       case ';':
         for (; i < len; ++i) {
@@ -744,7 +744,7 @@ function read_stream_expecting(ss, delim) {
               case '[': delim = ']'; prefix = '#[]'; break;
               case '{': delim = '}'; prefix = '#{}'; break;
             }
-            if (prefix !== undefined) { prefix = pair(ann, prefix); }
+            if (prefix !== undefined) { prefix = cons(ann, prefix); }
             ++ss.pos; ++ss.col;
             result = read_stream_bracketed(prefix, delim, ss);
             not_done = false; break;
@@ -760,7 +760,7 @@ function read_stream_expecting(ss, delim) {
                 break;
             }
             ++ss.pos; ++ss.col;
-            result = read_stream_quoted(prefix, pair(ann, prefix), ss);
+            result = read_stream_quoted(prefix, cons(ann, prefix), ss);
             not_done = false; break;
           case 'x': case 'd': case 'o': case 'b':
             var base;
@@ -807,7 +807,7 @@ function read_stream_expecting(ss, delim) {
         not_done = false;
     }
   }
-  if (result !== undefined) { return pair(ann, result); }
+  if (result !== undefined) { return cons(ann, result); }
 }
 
 function read_all(str) {
@@ -822,26 +822,26 @@ function read_all(str) {
 }
 
 function strip_metadata(stx) {
-  var datum = tail(stx);
-  if (is_pair(datum)) {
-    return pair(strip_metadata(head(datum)), strip_metadata(tail(datum)));
+  var datum = cdr(stx);
+  if (is_cons(datum)) {
+    return cons(strip_metadata(car(datum)), strip_metadata(cdr(datum)));
   } else { return datum; }
 }
-function to_syntax0(datum) { return pair(annotation(false), datum); }
+function to_syntax0(datum) { return cons(annotation(false), datum); }
 function to_syntax(datum) {
-  if (is_pair(datum)) {
-    datum = pair(to_syntax(head(datum)), to_syntax(tail(datum)));
+  if (is_cons(datum)) {
+    datum = cons(to_syntax(car(datum)), to_syntax(cdr(datum)));
   }
   return to_syntax0(datum);
 }
 
 function write_raw(datum, write_closure) {
-  if (is_pair(datum)) {
+  if (is_cons(datum)) {
     var elements = ['('];
     do {
-      elements.push(write_raw(head(datum), write_closure), ' ');
-      datum = tail(datum);
-    } while(is_pair(datum));
+      elements.push(write_raw(car(datum), write_closure), ' ');
+      datum = cdr(datum);
+    } while(is_cons(datum));
     if (!is_nil(datum)) {
       elements.push('. ', write_raw(datum, write_closure), ' ');
     }
@@ -878,19 +878,19 @@ function html_atom(datum) {
           + html_encode(write(datum))
           + '</span></div>');
 }
-function html_pair(datum, suffix) {
+function html_cons(datum, suffix) {
   // TODO: pretty width
   var elements = [];
-  while(is_pair(datum) && !is_nil(tail(datum))) {
-    elements.push(html_datum(head(datum))); datum = tail(datum);
+  while(is_cons(datum) && !is_nil(cdr(datum))) {
+    elements.push(html_datum(car(datum))); datum = cdr(datum);
   }
-  if (!is_pair(datum)) { elements.push(html_text('.')); }
-  else { datum = head(datum); }
+  if (!is_cons(datum)) { elements.push(html_text('.')); }
+  else { datum = car(datum); }
   elements.push(html_datum_suffix(datum, suffix));
   return '<div class="hframe pair"><div class="hcell"></div><div class="hcell">' + elements.join('') + '</div></div>';
 }
 function html_datum_suffix(datum, suffix) {
-  if (is_pair(datum)) { return html_pair(datum, suffix); }
+  if (is_cons(datum)) { return html_cons(datum, suffix); }
   else { return '<div class="hframe">' + html_atom(datum) + suffix + '</div>'; }
 }
 function html_datum(datum) { return html_datum_suffix(datum, ''); }
@@ -952,23 +952,23 @@ function evaluate(stx) {
     return function() { return unwind(datum); };
   }
   function denote_var(senv, stx) {
-    var name = tail(stx);
+    var name = cdr(stx);
     var index = env_find_name(senv, name, stx);
     if (env_ref(senv, index)[1] !== false) { throw ['invalid syntax', stx]; }
     return function() { return unwind(env_ref(env, index)); };
   }
 
   function build_app(senv, dp, mas) {
-    var as = tail(mas);
+    var as = cdr(mas);
     if (is_nil(as)) { return dp; }
-    var da = denote(senv, head(as));
+    var da = denote(senv, car(as));
     var dapp = function(){
       var kenv = env;
       ks.push(function(){
         var proc = result;
         if (!is_closure(proc)) {
           throw ['cannot apply non-procedure',
-                 to_syntax0(pair(to_syntax0(proc), mas))];
+                 to_syntax0(cons(to_syntax0(proc), mas))];
         }
         ks.push(function() { return proc(result); });
         env = kenv;
@@ -976,26 +976,26 @@ function evaluate(stx) {
       });
       return dp;
     };
-    return build_app(senv, dapp, tail(as));
+    return build_app(senv, dapp, cdr(as));
   }
   function denote_app(senv, stx) {
     var err = ['invalid application', stx];
-    var datum = tail(stx);
-    if (!is_pair(datum)) { throw err; }
-    syntax_list(tail(datum), err);
-    return build_app(senv, denote(senv, head(datum)), tail(datum));
+    var datum = cdr(stx);
+    if (!is_cons(datum)) { throw err; }
+    syntax_list(cdr(datum), err);
+    return build_app(senv, denote(senv, car(datum)), cdr(datum));
   }
 
   function denote(senv, stx) {
-    var datum = tail(stx);
+    var datum = cdr(stx);
     if (is_nil(datum) || is_boolean(datum) || is_number(datum)) {
       return denote_literal(datum);
     } else if (is_text(datum)) {
       return denote_var(senv, stx);
-    } else if (is_pair(datum)) {
-      var dh = tail(head(datum));
+    } else if (is_cons(datum)) {
+      var dh = cdr(car(datum));
       if (is_text(dh)) {
-        var special = env_lookup(senv, dh, head(datum));
+        var special = env_lookup(senv, dh, car(datum));
         if (typeof special === 'function') {
           return special(senv, stx);
         }
@@ -1006,8 +1006,8 @@ function evaluate(stx) {
 
   function build_lambda(senv, params, body) {
     if (is_nil(params)) { return denote(senv, body); }
-    senv = env_extend(senv, [tail(head(params)), false]);
-    var dl = build_lambda(senv, tail(params), body);
+    senv = env_extend(senv, [cdr(car(params)), false]);
+    var dl = build_lambda(senv, cdr(params), body);
     return function() {
       var clo_env = env;
       return unwind(function(arg) {
@@ -1020,9 +1020,9 @@ function evaluate(stx) {
     var err = ['invalid lambda', stx];
     stx = syntax_list_of_length(3, stx, err);
     var params = stx[1], body = stx[2];
-    if (!is_pair(tail(params))) { throw err; }
+    if (!is_cons(cdr(params))) { throw err; }
     params = syntax_list(params, err);
-    array_map(function(p){ if (!is_text(tail(p))) { throw err; } }, params);
+    array_map(function(p){ if (!is_text(cdr(p))) { throw err; } }, params);
     return build_lambda(senv, array_to_list(params), body);
   }
   function denote_if(senv, stx) {
@@ -1049,26 +1049,26 @@ function evaluate(stx) {
     return denote_literal(stx[1]);
   }
   function build_qq(senv, stx, should_strip) {
-    var datum = tail(stx);
-    if (is_pair(datum)) {
-      var hd = head(datum), tl = tail(datum);
+    var datum = cdr(stx);
+    if (is_cons(datum)) {
+      var hd = car(datum), tl = cdr(datum);
       var undo;
       if (should_strip) { undo = 'unquote'; }
       else { undo = 'unsyntax'; }
-      if (tail(hd) === undo) {
+      if (cdr(hd) === undo) {
         tl = syntax_list_of_length(1, tl, ['invalid ' + undo, stx])[0];
         return denote(senv, tl);
       } else {
         var dh = build_qq(senv, hd, should_strip),
             dt = build_qq(senv, tl, should_strip),
-            metadata = head(stx);
+            metadata = car(stx);
         return function() {
           var kenv = env;
           ks.push(function() {
             var ph = result;
             ks.push(function() {
-              if (should_strip) { return unwind(pair(ph, result)); }
-              else { return unwind(pair(metadata, pair(ph, result))); }
+              if (should_strip) { return unwind(cons(ph, result)); }
+              else { return unwind(cons(metadata, cons(ph, result))); }
               });
             env = kenv;
             return dt;
@@ -1095,12 +1095,12 @@ function evaluate(stx) {
       return syntax_list_of_length(2, b, err);
     }, syntax_list(stx[1], err));
     var params = array_map(function(b) {
-      if (!is_text(tail(b[0]))) { throw err; } return b[0];
+      if (!is_text(cdr(b[0]))) { throw err; } return b[0];
     }, bindings);
     var args = array_map(function(b) { return b[1]; }, bindings);
     var body = stx[2];
     var dp = build_lambda(senv, array_to_list(params), body);
-    var annotate = function(ex, datum){ return pair(head(datum), datum); };
+    var annotate = function(ex, datum){ return cons(car(datum), datum); };
     return build_app(senv, dp, array_to_list_annotated(annotate, args));
   }
 
@@ -1119,8 +1119,8 @@ function evaluate(stx) {
   function native_boolean_huh(datum) {
     return unwind(is_boolean(datum));
   }
-  function native_pair_huh(datum) { return unwind(is_pair(datum)); }
-  function native_nil_huh(datum) { return unwind(is_nil(datum)); }
+  function native_pair_huh(datum) { return unwind(is_cons(datum)); }
+  function native_null_huh(datum) { return unwind(is_nil(datum)); }
   function native_text_huh(datum) { return unwind(is_text(datum)); }
   function native_number_huh(datum) { return unwind(is_number(datum)); }
   function native_int32_huh(datum) { return unwind(is_int32(datum)); }
@@ -1152,15 +1152,15 @@ function evaluate(stx) {
   var native_text_lt = make_lt('text<?', is_text);
   var native_number_lt = make_lt('number<?', is_number);
   var native_int32_lt = make_lt('int32<?', is_int32);
-  function native_pair(h) {
+  function native_cons(h) {
     return unwind(function(t) { return unwind([h, t]); });
   }
-  function native_pair_head(p) {
-    if (!is_pair(p)) { throw ['cannot take head of non-pair', to_syntax0(p)]; }
+  function native_cons_car(p) {
+    if (!is_cons(p)) { throw ['cannot take car of non-pair', to_syntax0(p)]; }
     return unwind(p[0]);
   }
-  function native_pair_tail(p) {
-    if (!is_pair(p)) { throw ['cannot take tail of non-pair', to_syntax0(p)]; }
+  function native_cons_cdr(p) {
+    if (!is_cons(p)) { throw ['cannot take cdr of non-pair', to_syntax0(p)]; }
     return unwind(p[1]);
   }
 
@@ -1229,7 +1229,7 @@ function evaluate(stx) {
   var applicatives = [
     ['procedure?', native_procedure_huh],
     ['pair?', native_pair_huh],
-    ['nil?', native_nil_huh],
+    ['null?', native_null_huh],
     ['boolean?', native_boolean_huh],
     ['text?', native_text_huh],
     ['number?', native_number_huh],
@@ -1240,9 +1240,9 @@ function evaluate(stx) {
     ['number<?', native_number_lt],
     ['int32=?', native_int32_eq],
     ['int32<?', native_int32_lt],
-    ['pair', native_pair],
-    ['head', native_pair_head],
-    ['tail', native_pair_tail],
+    ['cons', native_cons],
+    ['car', native_cons_car],
+    ['cdr', native_cons_cdr],
     ['text-concat', native_text_concat],
     ['text->chars', native_text_to_chars],
     ['char->code', native_char_to_code],
@@ -1274,7 +1274,7 @@ function deep_equal(a, b) {
   if (is_closure(a) || is_closure(b)) {
     throw ['procedure equality checking is not supported', a, b];
   }
-  if (is_pair(a) && is_pair(b)) {
+  if (is_cons(a) && is_cons(b)) {
     return deep_equal(a[0], b[0]) && deep_equal(a[1], b[1]);
   }
   return false;
@@ -1340,13 +1340,13 @@ function test() {
       read_eval('((lambda (x y) y) 5 6)'),
       6);
   check_equal('lambda app 3',
-      read_eval('((lambda (x y) (pair y x)) 5 6)'),
+      read_eval('((lambda (x y) (cons y x)) 5 6)'),
       [6, 5]);
   check_equal('if 1',
-      read_eval("(if (head '(#t . #f)) 'yes 'no)"),
+      read_eval("(if (car '(#t . #f)) 'yes 'no)"),
       'yes');
   check_equal('if 2',
-      read_eval("(if (tail '(#t . #f)) 'yes 'no)"),
+      read_eval("(if (cdr '(#t . #f)) 'yes 'no)"),
       'no');
   check_equal('let 1',
       read_eval('(let ((x 8)) x)'),
@@ -1365,7 +1365,7 @@ function test() {
         array_to_list(['a', 1]),
         array_to_list(['b', 2])]));
   check_equal('qq 3',
-      read_eval("`((a 1) ,(pair 'b `(3)))"),
+      read_eval("`((a 1) ,(cons 'b `(3)))"),
       array_to_list([
         array_to_list(['a', 1]),
         array_to_list(['b', 3])]));
@@ -1377,10 +1377,10 @@ function test() {
         "              (lambda (x) (f (lambda (a) (x x a))))))))"+
         "  (let ((concat "+
         "          (fix (lambda (concat xs ys)"+
-        "                 (if (nil? xs)"+
+        "                 (if (null? xs)"+
         "                   ys"+
-        "                   (pair (head xs)"+
-        "                         (concat (tail xs) ys)))))))"+
+        "                   (cons (car xs)"+
+        "                         (concat (cdr xs) ys)))))))"+
         "    `(,(concat '() '())"+
         "      ,(concat '(foo) '(bar))"+
         "      ,(concat '(1 2) '(3 4)))))"),
@@ -1392,28 +1392,28 @@ function test() {
         "             ((lambda (d) (d d))"+
         "              (lambda (x) (f (lambda (a) (x x a))))))))"+
         "  (let ((map (fix (lambda (map f xs)"+
-        "                    (if (nil? xs)"+
+        "                    (if (null? xs)"+
         "                      '()"+
-        "                      (pair (f (head xs)) (map f (tail xs)))))))"+
+        "                      (cons (f (car xs)) (map f (cdr xs)))))))"+
         "        (apply (fix (lambda (apply f args)"+
-        "                      (if (nil? args)"+
+        "                      (if (null? args)"+
         "                        f"+
-        "                        (apply (f (head args)) (tail args)))))))"+
+        "                        (apply (f (car args)) (cdr args)))))))"+
         "    (let ((fix*"+
         "            (fix (lambda (self fs)"+
         "                   (map (lambda (fi x)"+
         "                          ((apply fi (self fs)) x)) fs)))))"+
         "      (let ((even&odd"+
-        "              (fix* (pair (lambda (even? odd? n)"+
-        "                            (if (nil? n)"+
+        "              (fix* (cons (lambda (even? odd? n)"+
+        "                            (if (null? n)"+
         "                              #t"+
-        "                              (odd? (tail n))))"+
-        "                    (pair (lambda (even? odd? n)"+
-        "                            (if (nil? n)"+
+        "                              (odd? (cdr n))))"+
+        "                    (cons (lambda (even? odd? n)"+
+        "                            (if (null? n)"+
         "                              #f"+
-        "                              (even? (tail n))))"+
+        "                              (even? (cdr n))))"+
         "                      '())))))"+
-        "        (let ((even? (head even&odd)) (odd? (head (tail even&odd))))"+
+        "        (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))"+
         "          `(,(even? '())    ,(odd? '())"+
         "            ,(even? '(s))   ,(odd? '(s))"+
         "            ,(even? '(s s)) ,(odd? '(s s))))))))"),
