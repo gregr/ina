@@ -4,8 +4,6 @@
 
 ### bootstrap with only simple code
 
-* reconsider stage.rkt performance using pre-built base library with more ast:prims
-
 * reduce dependency on Racket in test.rkt
   * continue using Racket to load files and parse modules (i.e., module.rkt)
     * in order to bootstrap, Racket will need to be able to do these things anyway
