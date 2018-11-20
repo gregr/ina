@@ -1,5 +1,6 @@
 #lang racket/base
-(provide eval ast-eval stage base:stage base:program base:library env:primitive)
+(provide ast-eval stage @lambda env:initial
+         base:names base:values base:program)
 (require "common.rkt" racket/bool racket/control racket/list racket/pretty)
 
 (define (ast:quote datum)       (vector 'quote   datum))
@@ -73,15 +74,6 @@
       (list '/     /  '((number? number?) number?))
 
       (list 'truncate truncate '((number?) integer?))
-
-      ;bitwise-and
-      ;bitwise-ior
-      ;bitwise-xor
-      ;bitwise-not
-      ;bitwise-bit-set?
-      ;bitwise-bit-field
-      ;arithmetic-shift
-      ;integer-length
       )))
 
 (define (primitive-op-handler        po-desc) (cadr po-desc))
@@ -118,8 +110,6 @@
         (if (valid? a*) (apply op a*)
           (error '"primitive op type error:" name arg-sig a*)))
       (cons name full-op)) primitive-op-descriptions))
-
-;(define ast-count 0)
 
 (define (ast-eval ast)
   ;; Runtime environments
@@ -162,76 +152,6 @@
                 (lambda (env) (apply op (map (lambda (a) (a env)) a*)))))
              (#t          (error '"unknown ast:" ast))))) env:empty))
 
-(define (ast->racket ast)
-  (define prelude
-    '((define (lift racket-proc) (lambda (a) (apply racket-proc a)))
-      (define (procedure=? m n)   (eq? m n))
-      (define (number=? m n)      (eqv? m n))
-      (struct mvector (v) #:transparent)
-      (define (make-mvector k d)      (mvector (make-vector k d)))
-      (define (mvector=? m n)         (eq? m n))
-      (define (mvector-length mv)     (vector-length (mvector-v mv)))
-      (define (mvector-ref mv i)      (vector-ref (mvector-v mv) i))
-      (define (mvector-set! mv i new) (vector-set! (mvector-v mv) i new) #t)
-      (define (mvector->vector mv)    (vector-copy (mvector-v mv)))
-      (define (string->vector s)
-        (list->vector (map char->integer (string->list s))))
-      (define (vector->string v)
-        (list->string (map integer->char (vector->list v))))))
-  (define name->var
-    (let ((i 0))
-      (lambda (n)
-        (define name (mvector-ref n 0))
-        (unless (pair? name)
-          (mvector-set!
-            n 0 (cons (string-append 'v (number->string i) '|.| name) name))
-          (set! i (+ i 1)))
-        (car (mvector-ref n 0)))))
-  (define (param-set! param)
-    `(let ((set!.fail (lambda (p a) (error '"parameter/argument mismatch:"
-                                           p a ',param set!.arg))))
-       ,(let loop ((p param))
-          (cond ((pair? p)
-                 `(and (or (pair? set!.arg) (set!.fail 'pair? set!.arg))
-                       (let ((set!.arg (car set!.arg))) ,(loop (car p)))
-                       (let ((set!.arg (cdr set!.arg))) ,(loop (cdr p)))))
-                ((vector? p)
-                 `(and (or (vector? set!.arg) (set!.fail 'vector? set!.arg))
-                       (let ((set!.arg (vector->list set!.arg)))
-                         ,(loop (vector->list p)))))
-                ((null? p)   `(or (null? set!.arg)
-                                  (set!.fail 'null? set!.arg)))
-                ((not p)     #t)
-                (#t `(set! ,(name->var p) set!.arg))))))
-  (define code
-    (let ev ((ast ast))
-      ;(set! ast-count (+ ast-count 1))
-      (define (@ i) (vector-ref ast i)) (define (? tag) (equal? (@ 0) tag))
-      (if (procedure? ast) ast
-        (cond ((? 'quote)  (let ((datum (@ 1))) `(quote ,datum)))
-              ((? 'var)    (let ((n (@ 1)))     (name->var n)))
-              ((? 'set!)   (let ((param (@ 1)) (arg (ev (@ 2))))
-                             `(let ((set!.arg ,arg)) ,(param-set! param))))
-              ((? 'if)     (let ((c (ev (@ 1))) (t (ev (@ 2))) (f (ev (@ 3))))
-                             `(if ,c ,t ,f)))
-              ((? 'apply)  (let ((proc (ev (@ 1))) (arg (ev (@ 2))))
-                             `(,proc ,arg)))
-              ((? 'lambda) (let ((param (@ 1)) (body (ev (@ 2))))
-                             `(lambda (set!.arg)
-                                (let ,(map (lambda (n) (list (name->var n) #t))
-                                           (param-names param))
-                                  ,(param-set! param) ,body))))
-              ((? 'reset)  (let ((body (ev (@ 1)))) `(reset ,body)))
-              ((? 'shift)  (let ((proc (ev (@ 1))))
-                             `(shift k (,proc (lift k)))))
-              ((? 'prim)   (let ((name (@ 1)) (a* (map ev (@ 2))))
-                             `(,name . ,a*)))
-              (#t          (error '"unknown ast:" ast))))))
-  (apply string-append '"#lang racket\n"
-         (map (lambda (v)
-                (string-append (pretty-format v 200 #:mode (ns->s 'write)) '"\n"))
-              (ns->s (append prelude (list code))))))
-
 (define (env-extend*/var env n*)
   (param?! n*)
   (define (bind n)
@@ -254,13 +174,6 @@
 (define ast:false       (ast:quote #f))
 (define (ast:cons a d)  (ast:prim 'cons (list a d)))
 (define (ast:list . xs) (foldr ast:cons ast:null xs))
-(define (ast:vector . xs)
-  (define vargs (list (ast:quote (length xs)) ast:true))
-  (define $mv (ast:var 'mv))
-  (define (! i x) (ast:prim 'mvector-set! (list $mv (ast:quote i) x)))
-  (ast:let '(mv) (list (ast:prim 'make-mvector vargs))
-           (ast:begin (append (map ! (range (length xs)) xs)
-                              (list (ast:prim 'mvector->vector (list $mv)))))))
 (define (ast:apply* $proc $a*) (ast:apply $proc (apply ast:list $a*)))
 (define (ast:let p* v* body)   (ast:apply* (ast:lambda p* body) v*))
 (define (ast:begin a*)
@@ -363,227 +276,126 @@
 (define (@body* env body*)
   (defstate-run (apply @begin/define (defstate:empty env) body*)))
 
-;; Primitive language definition
-(define (stager:primitive-syntax name proc arity exact?)
+;; Initial language definition
+(define (stager:initial-syntax name proc arity exact?)
   (cons name (lambda (env . tail)
                (unless ((if exact? length=? length>=?) arity tail)
                  (error '"invalid syntax arity:" arity (cons name tail)))
                (apply proc env tail))))
-(define primitive-syntax-bindings
-  (append
-    (map (lambda (desc) (apply stager:primitive-syntax desc))
-         (list (list 'apply  @apply  2 #t)
-               (list 'quote  @quote  1 #t)
-               (list 'if     @if     3 #t)
-               (list 'set!   @set!   2 #t)
-               (list 'reset  @reset  0 #f)
-               (list 'shift  @shift  1 #f)
-               (list 'lambda @lambda 1 #f)
-               (list 'letrec @letrec 1 #f)
-               (list 'let    @let    1 #f)
-               (list 'let*   @let*   1 #f)
-               (list 'begin  @begin  0 #f)
-               (list 'cond   @cond   0 #f)
-               (list 'and    @and    0 #f)
-               (list 'or     @or     0 #f)
-               (list 'when   @when   1 #f)
-               (list 'unless @unless 1 #f)))
-    (map (lambda (po-desc)
-           (cons (car po-desc)
-                 (lambda (env . tail)
-                   (define type-sig (primitive-op-type-signature po-desc))
-                   (unless (length=? (length (car type-sig)) tail)
-                     (error '"invalid primitive op:" po-desc tail))
-                   (ast:prim (car po-desc) (stage* env tail)))))
-         primitive-op-descriptions)))
-
-(define env:primitive
+(define initial-syntax-bindings
+  (map (lambda (desc) (apply stager:initial-syntax desc))
+       (list (list 'apply  @apply  2 #t)
+             (list 'quote  @quote  1 #t)
+             (list 'if     @if     3 #t)
+             (list 'set!   @set!   2 #t)
+             (list 'reset  @reset  0 #f)
+             (list 'shift  @shift  1 #f)
+             (list 'lambda @lambda 1 #f)
+             (list 'letrec @letrec 1 #f)
+             (list 'let    @let    1 #f)
+             (list 'let*   @let*   1 #f)
+             (list 'begin  @begin  0 #f)
+             (list 'cond   @cond   0 #f)
+             (list 'and    @and    0 #f)
+             (list 'or     @or     0 #f)
+             (list 'when   @when   1 #f)
+             (list 'unless @unless 1 #f))))
+(define env:initial
   (env-extend*/syntax
-    (env-extend*/syntax env:empty ctx:op primitive-syntax-bindings)
+    (env-extend*/syntax env:empty ctx:op initial-syntax-bindings)
     ctx:def (list (cons 'begin  @begin/define)
                   (cons 'define @define)
                   (cons 'def    @def))))
-(define (lang:primitive form) (stage env:primitive form))
 
-;; Base library definition
-(define primitive-op-procs
-  (map (lambda (po-desc)
-         (define (x i) (vector-ref '#(x0 x1 x2 x3 x4) i))
-         (define type-sig (primitive-op-type-signature po-desc))
-         (define p* (map x (range (length (car type-sig)))))
-         (list (car po-desc) (list 'lambda p* (cons (car po-desc) p*))))
-       primitive-op-descriptions))
+;; Base library and program definition
+(define base:bindings
+  (map (lambda (b) (cons (car b) (lift (cdr b))))
+       (list (cons 'procedure?      procedure?)
+             (cons 'mvector?        mvector?)
+             (cons 'vector?         vector?)
+             (cons 'pair?           pair?)
+             (cons 'null?           null?)
+             (cons 'boolean?        boolean?)
+             (cons 'string?         string?)
+             (cons 'number?         number?)
+             (cons 'integer?        integer?)
+             (cons 'fixnum?         fixnum?)
+             (cons 'flonum?         flonum?)
+             (cons 'boolean=?       boolean=?)
+             (cons 'number=?        number=?)
+             (cons 'string=?        string=?)
+             (cons 'mvector=?       mvector=?)
+             (cons 'procedure=?     procedure=?)
+             (cons 'string->vector  string->vector)
+             (cons 'vector->string  vector->string)
+             (cons 'cons            cons)
+             (cons 'car             car)
+             (cons 'cdr             cdr)
+             (cons 'vector-ref      vector-ref)
+             (cons 'vector-length   vector-length)
+             (cons 'make-mvector    make-mvector)
+             (cons 'mvector->vector mvector->vector)
+             (cons 'mvector-set!    mvector-set!)
+             (cons 'mvector-ref     mvector-ref)
+             (cons 'mvector-length  mvector-length)
+             (cons 'string<?        string<?)
+             (cons 'string>?        string>?)
+             (cons '=               =)
+             (cons '<=              <=)
+             (cons '<               <)
+             (cons '>=              >=)
+             (cons '>               >)
+             (cons '+               +)
+             (cons '*               *)
+             (cons '-               -)
+             (cons '/               /)
+             (cons 'truncate        truncate)
 
-(define derived-op-procs
-  '((error (lambda args ('error args)))
-    (not (lambda (b) (if b #f #t)))
-    (caar (lambda (v) (car (car v))))
-    (cadr  (lambda (xs) (car (cdr xs))))
-    (cdar (lambda (v) (cdr (car v))))
-    (cadar (lambda (v) (cadr (car v))))
-    (caddr (lambda (xs) (cadr (cdr xs))))
-    (list-tail (lambda (xs i) (if (= 0 i) xs (list-tail (cdr xs) (- i 1)))))
-    (list-ref  (lambda (xs i) (car (list-tail xs i))))
-    (list->vector (lambda (xs)
-                    (define result (make-mvector (length xs) #t))
-                    (foldl (lambda (x i) (mvector-set! result i x) (+ i 1))
-                           0 xs)
-                    (mvector->vector result)))
-    (vector->list (lambda (v)
-                    (let loop ((i (- (vector-length v) 1)) (xs '()))
-                      (if (< i 0) xs
-                        (loop (- i 1) (cons (vector-ref v i) xs))))))
-    (equal? (lambda (a b)
-              (cond ((pair? a)   (and (pair? b) (equal? (car a) (car b))
-                                      (equal? (cdr a) (cdr b))))
-                    ((vector? a) (and (vector? b) (equal? (vector->list a)
-                                                          (vector->list b))))
-                    ((boolean? a)   (and (boolean? b)   (boolean=? a b)))
-                    ((string?  a)   (and (string?  b)   (string=?  a b)))
-                    ((number?  a)   (and (number?  b)   (number=?  a b)))
-                    ((mvector? a)   (and (mvector? b)   (mvector=? a b)))
-                    ((procedure? a) (and (procedure? b) (procedure=? a b)))
-                    ((null? a)      (null? b)))))
-    (vector (lambda xs (list->vector xs)))
-    (list?  (lambda (v) (or (and (pair? v) (list? (cdr v))) (null? v))))
-    (list   (lambda xs xs))
-    (list*  (lambda (x . xs) (if (null? xs) x (cons x (apply list* xs)))))
-    ;; TODO: n-ary versions of foldl, foldr.
-    (foldl  (lambda (f acc xs) (if (null? xs) acc
-                                 (foldl f (f (car xs) acc) (cdr xs)))))
-    (foldr  (lambda (f acc xs) (if (null? xs) acc
-                                 (f (car xs) (foldr f acc (cdr xs))))))
-    (map (lambda (f xs . xss)
-           (define (map1 f xs) (if (null? xs) '()
-                                 (cons (f (car xs)) (map1 f (cdr xs)))))
-           (cond ((null? xs) '())
-                 (#t (cons (apply f (car xs) (map1 car xss))
-                           (apply map f (cdr xs) (map1 cdr xss)))))))
-    (for-each (lambda args (apply map args) #t))
-    (andmap (lambda (f xs . xss)
-              (let loop ((last #t) (xs xs) (xss xss))
-                (and last (if (null? xs) last
-                            (loop (apply f (car xs) (map car xss))
-                                  (cdr xs) (map cdr xss)))))))
-    (ormap (lambda (f xs . xss)
-             (cond ((null? xs) #f)
-                   ((apply f (car xs) (map car xss)))
-                   (#t (apply ormap f (cdr xs) (map cdr xss))))))
-    (filter (lambda (p? xs)
-              (cond ((null? xs) '())
-                    ((p? (car xs)) (cons (car xs) (filter p? (cdr xs))))
-                    (#t (filter p? (cdr xs))))))
-    (filter-not (lambda (p? xs) (filter (lambda (x) (not (p? x))) xs)))
-    (remf (lambda (p? xs)
-            (cond ((null? xs)    '())
-                  ((p? (car xs)) (cdr xs))
-                  (#t (cons (car xs) (remf p? (cdr xs)))))))
-    (remove (lambda (v xs) (remf (lambda (x) (equal? x v)) xs)))
-    (length (lambda (xs) (foldl (lambda (_ l) (+ 1 l)) 0 xs)))
-    (append (lambda xss (foldr (lambda (xs yss) (foldr cons yss xs)) '() xss)))
-    (reverse-append (lambda (xs ys) (foldl cons ys xs)))
-    (reverse (lambda (xs) (reverse-append xs '())))
-    (range (lambda (n)
-             (let loop ((i 0)) (if (= i n) '() (cons i (loop (+ i 1)))))))
-    (take (lambda (xs n) (if (= 0 n) '()
-                           (cons (car xs) (take (cdr xs) (- n 1))))))
-    (drop (lambda (xs n) (if (= 0 n) xs (drop (cdr xs) (- n 1)))))
-    (memf (lambda (? xs) (cond ((null? xs) #f)
-                               ((? (car xs)) xs)
-                               (#t (memf ? (cdr xs))))))
-    (member (lambda (v xs) (memf (lambda (x) (equal? x v)) xs)))
-    (assoc (lambda (k xs) (cond ((null? xs) #f)
-                                ((equal? k (caar xs)) (car xs))
-                                (#t (assoc k (cdr xs))))))
-    (alist-get (lambda (rs key default) (let ((rib (assoc key rs)))
-                                          (if rib (cdr rib) default))))
-    (alist-remove* (lambda (rs keys)
-                     (filter (lambda (rib) (not (member (car rib) keys))) rs)))
-    (string-append (lambda ss
-                     (define css (map vector->list (map string->vector ss)))
-                     (vector->string (list->vector (apply append css)))))
-    ))
+             (cons 'apply         $apply)
+             (cons 'error         (lambda args (error "error:" args)))
+             (cons 'not           not)
+             (cons 'caar          caar)
+             (cons 'cadr          cadr)
+             (cons 'cdar          cdar)
+             (cons 'cadar         cadar)
+             (cons 'caddr         caddr)
+             (cons 'list-tail     list-tail)
+             (cons 'list-ref      list-ref)
+             (cons 'list->vector  list->vector)
+             (cons 'vector->list  vector->list)
+             (cons 'equal?        equal?)
+             (cons 'vector        vector)
+             (cons 'list?         list?)
+             (cons 'list          list)
+             (cons 'list*         list*)
+             (cons 'remove        remove)
+             (cons 'length        length)
+             (cons 'append        append)
+             (cons 'reverse       reverse)
+             (cons 'range         range)
+             (cons 'take          take)
+             (cons 'drop          drop)
+             (cons 'member        member)
+             (cons 'assoc         assoc)
+             (cons 'alist-get     alist-get)
+             (cons 'alist-remove* alist-remove*)
+             (cons 'string-append string-append)
+             (cons 'foldl         (lower-arg0 foldl))
+             (cons 'foldr         (lower-arg0 foldr))
+             (cons 'map           (lower-arg0 map))
+             (cons 'for-each      (lower-arg0 for-each))
+             (cons 'andmap        (lower-arg0 andmap))
+             (cons 'ormap         (lower-arg0 ormap))
+             (cons 'filter        (lower-arg0 filter))
+             (cons 'filter-not    (lower-arg0 filter-not))
+             (cons 'remf          (lower-arg0 remf))
+             (cons 'memf          (lower-arg0 memf))
+             )))
 
+(define base:names          (map car base:bindings))
+(define base:values         (map cdr base:bindings))
+(define (base:program form) (@lambda env:initial base:names form))
 
-(define base:library-names #t)
-(define (base:linker env)
-  (set! base:library-names
-    (map car (filter (lambda (rib) (alist-get (cdr rib) ctx:var #f)) env)))
-  (@lambda env '(f) (cons 'f base:library-names)))
-(define base:library
-  (stage env:primitive
-         (list 'let primitive-op-procs
-               (list 'let '((apply (lambda (f arg . args)
-                                     (define (cons* x xs)
-                                       (if (null? xs) x
-                                         (cons x (cons* (car xs) (cdr xs)))))
-                                     (apply f (cons* arg args)))))
-                     (list 'letrec derived-op-procs base:linker)))))
-
-;; Program construction
-(define (base:program form)
-  (@lambda env:primitive base:library-names
-           (lambda (env) (stage (env-freeze env) form))))
-(define (base:stage form) (ast:apply* base:library (list (base:program form))))
-
-(define library (ast-eval base:library))
-(define (eval form) (library (list (ast-eval (base:program form)))))
-
-(define (test-ast->racket filename form)
-  (define ast (base:stage form))
-  (define racket (ast->racket ast))
-  (call-with-output-file filename (lambda (out) (displayln racket out))))
-
-;; base:library
-;; ast-count: 2985
-;; racket lines (200 columns): 9183
-
-;; combined ast-count: 2818
-;; separate ast-count: 10
-;; combined racket lines (200 columns): 8485
-;; separate racket lines (200 columns): 978
-;(test-ast->racket
-  ;"racket-output.rkt"
-  ;5)
-
-;; combined ast-count: 3193
-;; separate ast-count: 385
-;; combined racket lines (200 columns): 10216
-;; separate racket lines (200 columns): 1411
-;(test-ast->racket
-  ;"racket-output.rkt"
-  ;'(let ((list (lambda xs xs))
-         ;(fix (lambda (f)
-                ;((lambda (d) (d d))
-                 ;(lambda (x) (f (lambda a (apply (x x) a))))))))
-     ;(let ((map (fix (lambda (map)
-                       ;(lambda (f xs)
-                         ;(if (null? xs)
-                           ;'()
-                           ;(cons (f (car xs)) (map f (cdr xs)))))))))
-       ;(let ((fix*
-               ;(fix (lambda (fix*)
-                      ;(lambda fs
-                        ;(map (lambda (fi)
-                               ;(lambda a
-                                 ;(apply (apply fi (apply fix* fs)) a)))
-                             ;fs))))))
-         ;(let ((even&odd
-                 ;(fix* (lambda (even? odd?)
-                         ;(lambda (n) (if (null? n)
-                                       ;#t
-                                       ;(odd? (cdr n)))))
-                       ;(lambda (even? odd?)
-                         ;(lambda (n)
-                           ;(if (null? n)
-                             ;#f
-                             ;(even? (cdr n))))))))
-           ;(let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
-             ;(list (even? '())    (odd? '())
-                   ;(even? '(s))   (odd? '(s))
-                   ;(even? '(s s)) (odd? '(s s)))))))))
-
-;(displayln `(ast-count: ,ast-count))
 
 ;; Tests:
 (define tests-total 0)
@@ -606,7 +418,7 @@
                       expected actual)
               (set! test-failures (cons name test-failures)))))
 
-(define (ev code) (eval code))
+(define (ev form) ($apply (ast-eval (base:program form)) base:values))
 
 (test 'lambda-1  ;; Formal parameter lists are generalized to arbitrary trees.
   (ev '((lambda (() a (b)) (cons a b))
