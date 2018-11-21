@@ -4,7 +4,6 @@
   alist-ref*
   module-apply
   parse/module
-  ;stage/module
   eval/module
   link/module*
   )

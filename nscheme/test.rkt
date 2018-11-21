@@ -1,8 +1,7 @@
 #lang racket/base
 (require
-  "filesystem.rkt"
-  "module.rkt"
   "interop.rkt"
+  "module.rkt"
   ;"stage.rkt"
   racket/include
   racket/list
