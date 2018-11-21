@@ -5,6 +5,5 @@ here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 while cd "$here" && inotifywait -e modify lib/*/*.scm; do
   date
-  racket bootstrap.rkt || true
-  time racket test.rkt || true
+  time racket bootstrap.rkt || true
 done

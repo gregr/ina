@@ -4,27 +4,15 @@
 
 ### bootstrap with only simple code
 
-* reduce dependency on Racket in test.rkt
-  * continue using Racket to load files and parse modules (i.e., module.rkt)
-    * in order to bootstrap, Racket will need to be able to do these things anyway
-  * port module evaluation and migrate actual test runs to nscm
-    * Racket still needs to be able to evaluate modules for bootstrapping
+* bootstrap.rkt should be a driver giving capabilities to embedded nscm programs
+  * nscm parses modules, runs tests, and eventually compiles a base system to Racket
 
 * backend-racket code generation
-  * use a decorated sexpr encoding for Racket-specific data
-    strings vs. symbols, characters, keywords, etc.
-  * delegate to Racket what to do with the generated code
-    * code could be written to file or immediately evaluated by a racket-eval
-
-* try bootstrapping the interpreter for self-hosting:
-  * stage.rkt running stage.scm on both stage.scm and eval.scm; compile ast to Racket
-  * compare compiled Racket performance on tests
-
-* remove stage.rkt, maybe replacing it with ast.rkt? ideally won't even need ast.rkt
-  * an alternative to Racket code generation is to only generate ASTs and run via
-    ast.rkt (implementing ast-eval); no need for the full stage.rkt in this case
-    * if delimited control is omitted, Chez Scheme could easily implement ast-eval
-    * also a shortcut for inefficient, early versions of other backends, like JS
+  * define a target AST for any Racket-specific simplification/optimization
+  * define an encoding for Racket s-exprs
+    * strings vs. symbols, characters, keywords, etc.
+    * target ASTs will be converted to Racket s-exprs for output
+  * use Racket-provided capabilities to output or evaluate generated code
 
 * possible pre-bootstrap ast improvement
   * generated Racket code is currently enormous, partly due to base library
@@ -80,6 +68,11 @@
       * should first lower set!-able variables to mvectors
     * branching w/ logic variables tracking condition properties
     * rollback with generalization
+
+* drop most of lib?
+  * ideally, most nScheme would not be written as text at all
+
+* move most of this README.md into a more appropriate location
 
 
 ### Racket platform and integration
