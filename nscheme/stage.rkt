@@ -1,7 +1,11 @@
 #lang racket/base
 (provide ast-eval stage @lambda env:initial
          base:names base:values base:program)
-(require "common.rkt" racket/bool racket/control racket/list racket/pretty)
+(require
+  (rename-in "interop.rkt"
+             (nscm-equal? equal?) (nscm-member member) (nscm-assoc assoc)
+             (nscm-quote quote) (nscm-quasiquote quasiquote))
+  racket/bool racket/control racket/list racket/pretty)
 
 (define ast-env:empty (hasheqv))  ;; eqv assumes mvector keys
 (define (ast-env-extend* env b*)

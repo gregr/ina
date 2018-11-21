@@ -1,7 +1,11 @@
 #lang racket/base
 (provide eval env:base)
-(require "common.rkt" racket/bool racket/control racket/list racket/pretty
-         readline readline/pread)
+(require
+  (rename-in "interop.rkt"
+             (nscm-equal? equal?) (nscm-member member) (nscm-assoc assoc)
+             (nscm-quote quote) (nscm-quasiquote quasiquote))
+  racket/bool racket/control racket/list racket/pretty
+  readline readline/pread)
 
 (define (env-add*/var env b*)
   (param?! (map car b*))
