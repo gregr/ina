@@ -8,9 +8,6 @@
 
 * backend-racket code generation
   * define a target AST for any Racket-specific simplification/optimization
-  * define an encoding for Racket s-exprs
-    * strings vs. symbols, characters, keywords, etc.
-    * target ASTs will be converted to Racket s-exprs for output
   * use Racket-provided capabilities to output or evaluate generated code
 
 * bootstrapped base system can be a straightforward command-line compiler

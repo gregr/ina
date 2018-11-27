@@ -1,9 +1,10 @@
 #lang racket/base
-(provide (all-from-out 'interop) (all-from-out 'common) interop-eval)
+(provide (all-from-out 'interop) (all-from-out 'common)
+         interop-eval racket-eval)
 
 (module interop racket/base
   (provide
-    local-path library-path s->ns ns->s read/file write/file
+    local-path library-path s->ns ns->s read/file write/file racket-datum
     lift lower lower-arg0 $apply
     mvector? make-mvector mvector=? mvector-length mvector-ref mvector-set!
     mvector->vector string->vector vector->string procedure=? number=?
@@ -11,7 +12,7 @@
     nscm-quote nscm-quasiquote
     (rename-out (equal? nscm-equal?) (member nscm-member) (assoc nscm-assoc)))
 
-  (require racket/path racket/vector (for-syntax racket/base))
+  (require racket/path racket/port racket/vector (for-syntax racket/base))
 
   (define (local-path rpath)
     (build-path (path-only (path->complete-path (find-system-path 'run-file)))
@@ -48,6 +49,20 @@
                             (loop (cons datum rbody)))))))
   (define (write/file path d)
     (call-with-output-file path (lambda (out) (write (ns->s/write d) out))))
+
+  (define (racket-datum form)
+    (define (? tag) (eq? (vector-ref form 0) tag))
+    (cond ((pair? form) (cons (racket-datum (car form))
+                              (racket-datum (cdr form))))
+          ((not (vector? form)) form)
+          ((? 'quote)   (vector-ref form 1))
+          ((? 'vector)  (vector-map racket-datum (vector-ref form 1)))
+          ((? 'symbol)  (string->symbol (vector-ref form 1)))
+          ((? 'keyword) (string->keyword (vector-ref form 1)))
+          ((? 'char)    (call-with-input-string
+                          (string-append "#\\" (vector-ref form 1))
+                          (lambda (in) (read in))))
+          (#t (error "invalid racket-datum form:" form))))
 
   ;; For safe interop, provided definitions must not override Racket names.
   (define (equal? a b)
@@ -201,4 +216,7 @@
     (namespace-attach-module local-ns interop-mod)
     (namespace-require/constant interop-mod)
     (namespace-set-variable-value! 'interop-eval interop-eval)
+    (namespace-set-variable-value! 'racket-eval racket-eval)
     (eval form)))
+
+(define (racket-eval rkt-datum) (interop-eval (racket-datum rkt-datum)))
