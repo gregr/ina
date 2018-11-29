@@ -200,9 +200,12 @@
     (set! public-renames (param/renamings env public-names))
     (set! all-renames (append private-renames public-renames))
     (apply ast:list (map ast:var all-renames)))
-  (define ast:values
-    (stage env (foldr (lambda (grp body) (list (car grp) (cdr grp) body))
-                      body binding-groups)))
+  (define (bind-group group body)
+    (define @bind (cond ((equal? (car group) 'let)    @let/)
+                        ((equal? (car group) 'letrec) @letrec)
+                        (#t (error '"invalid binding group:" group))))
+    (lambda (env) (@bind env (cdr group) body)))
+  (define ast:values (stage env (foldr bind-group body binding-groups)))
   (define bindings:syntax (renamings->bindings:syntax all-names all-renames))
   (define (stager env body)
     (define env:language
