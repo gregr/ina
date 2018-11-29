@@ -1,5 +1,4 @@
-(provide stage env:initial env:primitive
-         base:names base:values base:program)
+(provide stage env:initial env:primitive language base:stage base:ast:values)
 
 (require length=? length>=? param?! bpair*?! param-map param-names
          ctx:var ctx:set! ctx:op ctx:def
@@ -186,16 +185,32 @@
 (define env:primitive
   (env-extend*/syntax #t env:initial primitive-syntax-bindings))
 
-;; Library and program construction
-(define (library binding-groups)
-  (define library:names
+;; Language construction
+(define (language env public-names? binding-groups renamings->bindings:syntax)
+  (define all-names
     (foldl append '() (map (lambda (grp) (map car (cdr grp))) binding-groups)))
-  (define body (cons (lambda (env) (@lambda env 'xs 'xs)) library:names))
-  (define library:form
-    (foldr (lambda (grp body) (list (car grp) (cdr grp) body))
-           body binding-groups))
-  (vector library:names (stage env:primitive library:form)))
-(define (program library:names form) (@lambda env:initial library:names form))
+  (define public-names (or public-names? all-names))
+  (define private-names
+    (if public-names?
+      (filter (lambda (n) (not (member n public-names))) all-names) '()))
+  (define public-renames #t)
+  (define all-renames #t)
+  (define (body env)
+    (define private-renames (param/renamings env private-names))
+    (set! public-renames (param/renamings env public-names))
+    (set! all-renames (append private-renames public-renames))
+    (apply ast:list (map ast:var all-renames)))
+  (define ast:values
+    (stage env (foldr (lambda (grp body) (list (car grp) (cdr grp) body))
+                      body binding-groups)))
+  (define bindings:syntax (renamings->bindings:syntax all-names all-renames))
+  (define (stager env body)
+    (define env:language
+      (env-extend*/syntax
+        #t (env-extend* env (map binding:var public-names public-renames))
+        bindings:syntax))
+    (ast:lambda all-renames (stage env:language body)))
+  (vector stager ast:values))
 
 ;; Base library and program definition
 (define primitive-op-procs
@@ -296,12 +311,13 @@
                      (vector->string (list->vector (apply append css)))))
     ))
 
-(def #(base:names base:values)
-     (library (list (cons 'let primitive-op-procs)
-                    '(let (apply (lambda (f arg . args)
-                                   (define (cons* x xs)
-                                     (if (null? xs) x
-                                       (cons x (cons* (car xs) (cdr xs)))))
-                                   (apply f (cons* arg args)))))
-                    (cons 'letrec derived-op-procs))))
-(define (base:program form) (program base:names form))
+(def #(base:stage base:ast:values)
+     (language env:primitive #f
+               (list (cons 'let primitive-op-procs)
+                     '(let (apply (lambda (f arg . args)
+                                    (define (cons* x xs)
+                                      (if (null? xs) x
+                                        (cons x (cons* (car xs) (cdr xs)))))
+                                    (apply f (cons* arg args)))))
+                     (cons 'letrec derived-op-procs))
+               (lambda _ '())))

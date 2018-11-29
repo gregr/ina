@@ -1,6 +1,6 @@
 (provide test-eval test!)
 
-(require ast-eval base:values base:program eval env:base)
+(require ast-eval env:initial base:stage base:ast:values eval env:base)
 
 (define (test! test)
   (test 'testing-eval/stage #t #t)
@@ -9,8 +9,8 @@
   (test-eval/eval test))
 
 (define (test-eval/stage test)
-  (define vs (ast-eval base:values))
-  (define (eval form) (apply (ast-eval (base:program form)) vs))
+  (define vs (ast-eval base:ast:values))
+  (define (eval form) (apply (ast-eval (base:stage env:initial form)) vs))
   (test-eval eval test))
 
 (define (test-eval/eval test)
