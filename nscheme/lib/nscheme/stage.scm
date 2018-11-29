@@ -10,15 +10,15 @@
          ast:prim ast:context
          primitive-op-descriptions primitive-op-type-signature)
 
+(define (binding:var n r) (cons n (list (cons ctx:var r) (cons ctx:set! r))))
+(define (binding:syntax n ctx proc) (cons n (list (cons ctx proc))))
 (define (env-extend*/var env n*)
   (param?! n*)
-  (define (bind n)
-    (define rn (make-mvector 1 n))
-    (cons n (list (cons ctx:var rn) (cons ctx:set! rn))))
-  (env-extend* env (map bind n*)))
-(define (env-extend*/syntax env ctx b*)
-  (define (bind b) (let ((n (car b)))
-                     (cons n (cons (cons ctx (cdr b)) (env-ref env n)))))
+  (env-extend* env (map (lambda (n) (binding:var n (make-mvector 1 n))) n*)))
+(define (env-extend*/syntax replace? env b*)
+  (define (bind b)
+    (let ((n (car b)) (props (cdr b)))
+      (cons n (if replace? props (append props (env-ref env n))))))
   (env-extend* env (map bind b*)))
 (define (env-freeze env)
   (map (lambda (b) (cons (car b) (alist-remove* (cdr b) (list ctx:set!))))
@@ -142,10 +142,11 @@
 
 ;; Initial language definition
 (define (stager:initial-syntax name proc arity exact?)
-  (cons name (lambda (env . tail)
-               (unless ((if exact? length=? length>=?) arity tail)
-                 (error '"invalid syntax arity:" arity (cons name tail)))
-               (apply proc env tail))))
+  (binding:syntax
+    name ctx:op (lambda (env . tail)
+                  (unless ((if exact? length=? length>=?) arity tail)
+                    (error '"invalid syntax arity:" arity (cons name tail)))
+                  (apply proc env tail))))
 (define initial-syntax-bindings
   (map (lambda (desc) (apply stager:initial-syntax desc))
        (list (list 'apply  @apply  2 #t)
@@ -166,23 +167,24 @@
              (list 'unless @unless 1 #f))))
 (define env:initial
   (env-extend*/syntax
-    (env-extend*/syntax env:empty ctx:op initial-syntax-bindings)
-    ctx:def (list (cons 'begin  @begin/define)
-                  (cons 'define @define)
-                  (cons 'def    @def))))
+    #f (env-extend*/syntax #t env:empty initial-syntax-bindings)
+    (list (binding:syntax 'begin  ctx:def @begin/define)
+          (binding:syntax 'define ctx:def @define)
+          (binding:syntax 'def    ctx:def @def))))
 
 ;; Primitive language definition
 (define primitive-syntax-bindings
   (map (lambda (po-desc)
-         (cons (car po-desc)
-               (lambda (env . tail)
-                 (define type-sig (primitive-op-type-signature po-desc))
-                 (unless (length=? (length (car type-sig)) tail)
-                   (error '"invalid primitive op:" po-desc tail))
-                 (ast:prim (car po-desc) (stage* env tail)))))
+         (binding:syntax
+           (car po-desc) ctx:op
+           (lambda (env . tail)
+             (define type-sig (primitive-op-type-signature po-desc))
+             (unless (length=? (length (car type-sig)) tail)
+               (error '"invalid primitive op:" po-desc tail))
+             (ast:prim (car po-desc) (stage* env tail)))))
        primitive-op-descriptions))
 (define env:primitive
-  (env-extend*/syntax env:initial ctx:op primitive-syntax-bindings))
+  (env-extend*/syntax #t env:initial primitive-syntax-bindings))
 
 ;; Library and program construction
 (define (library binding-groups)
