@@ -176,7 +176,8 @@
 (define env:primitive (env-extend* env:initial primitive-syntax-bindings))
 
 ;; Language construction
-(define (language env public-names? binding-groups renamings->bindings:syntax)
+(define (language stage0 env
+                  public-names? binding-groups renamings->bindings:syntax)
   (define all-names
     (foldl append '() (map (lambda (grp) (map car (cdr grp))) binding-groups)))
   (define public-names (or public-names? all-names))
@@ -195,13 +196,15 @@
                         ((equal? (car group) 'letrec) @letrec)
                         (#t (error '"invalid binding group:" group))))
     (lambda (env) (@bind env (cdr group) body)))
-  (define ast:values (stage env (foldr bind-group body binding-groups)))
+  (define ast:values (stage0 env (foldr bind-group body binding-groups)))
   (define bindings:syntax
     (renamings->bindings:syntax (map cons all-names all-renames)))
   (define (stager env body)
-    (define env:language
-      (env-update*
-        (env-extend* env (map binding:var public-names public-renames))
-        bindings:syntax))
-    (ast:lambda all-renames (stage env:language body)))
+    (define (form env)
+      (define env:language
+        (env-update*
+          (env-extend* env (map binding:var public-names public-renames))
+          bindings:syntax))
+      (ast:lambda all-renames (stage env:language body)))
+    (stage0 env form))
   (vector stager ast:values))

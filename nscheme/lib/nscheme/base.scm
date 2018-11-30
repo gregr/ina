@@ -1,6 +1,6 @@
 (provide base:stage base:ast:values)
 
-(require env:primitive language
+(require stage env:primitive language
          primitive-op-descriptions primitive-op-type-signature)
 
 (define primitive-op-procs
@@ -102,7 +102,7 @@
     ))
 
 (def #(base:stage base:ast:values)
-     (language env:primitive #f
+     (language stage env:primitive #f
                (list (cons 'let primitive-op-procs)
                      '(let (apply (lambda (f arg . args)
                                     (define (cons* x xs)
