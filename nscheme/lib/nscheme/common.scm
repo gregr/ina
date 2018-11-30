@@ -1,5 +1,6 @@
 (provide length=? length>=? ctx:var ctx:set! ctx:op ctx:def
-         env:empty env-ref env-get-prop env-remove* env-add* env-extend*
+         env:empty env-ref env-get-prop
+         env-remove* env-add* env-extend* env-update*
          param?! bpair*?! ncons param-map param-names param-bind
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add)
@@ -52,6 +53,9 @@
 (define (env-remove* env n*)           (alist-remove* env n*))
 (define (env-add* env b*)              (append b* env))
 (define (env-extend* env b*) (env-add* (env-remove* env (map car b*)) b*))
+(define (env-update* env b*)
+  (define (update b) (cons (car b) (append (cdr b) (env-ref env (car b)))))
+  (env-extend* env (map update b*)))
 
 ;; Definition contexts
 (define (defstate:empty env)  (vector env '() '()))

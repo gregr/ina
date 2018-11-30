@@ -1,8 +1,8 @@
-(provide stage env:initial env:primitive language)
+(provide stage env:initial env:primitive binding:syntax/validation language)
 
 (require length=? length>=? param?! bpair*?! param-map param-names
          ctx:var ctx:set! ctx:op ctx:def
-         env:empty env-ref env-get-prop env-extend*
+         env:empty env-ref env-get-prop env-extend* env-update*
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
@@ -10,18 +10,10 @@
          primitive-op-descriptions primitive-op-type-signature)
 
 (define (binding:var n r) (cons n (list (cons ctx:var r) (cons ctx:set! r))))
-(define (binding:syntax n ctx proc) (cons n (list (cons ctx proc))))
+(define (binding:syntax ctx n proc) (cons n (list (cons ctx proc))))
 (define (env-extend*/var env n*)
   (param?! n*)
   (env-extend* env (map (lambda (n) (binding:var n (make-mvector 1 n))) n*)))
-(define (env-extend*/syntax replace? env b*)
-  (define (bind b)
-    (let ((n (car b)) (props (cdr b)))
-      (cons n (if replace? props (append props (env-ref env n))))))
-  (env-extend* env (map bind b*)))
-(define (env-freeze env)
-  (map (lambda (b) (cons (car b) (alist-remove* (cdr b) (list ctx:set!))))
-       env))
 (define (param/renamings env param)
   (param-map (lambda (n) (env-get-prop env n ctx:var #f)) param))
 
@@ -140,14 +132,14 @@
   (defstate-run (apply @begin/define (defstate:empty env) body*)))
 
 ;; Initial environment definition
-(define (stager:initial-syntax name proc arity exact?)
+(define (binding:syntax/validation ctx name proc arity exact?)
   (binding:syntax
-    name ctx:op (lambda (env . tail)
-                  (unless ((if exact? length=? length>=?) arity tail)
-                    (error '"invalid syntax arity:" arity (cons name tail)))
-                  (apply proc env tail))))
+    ctx name (lambda (env . tail)
+               (unless ((if exact? length=? length>=?) arity tail)
+                 (error '"invalid syntax arity:" arity (cons name tail)))
+               (apply proc env tail))))
 (define initial-syntax-bindings
-  (map (lambda (desc) (apply stager:initial-syntax desc))
+  (map (lambda (desc) (apply binding:syntax/validation (cons ctx:op desc)))
        (list (list 'apply  @apply  2 #t)
              (list 'quote  @quote  1 #t)
              (list 'if     @if     3 #t)
@@ -165,25 +157,23 @@
              (list 'when   @when   1 #f)
              (list 'unless @unless 1 #f))))
 (define env:initial
-  (env-extend*/syntax
-    #f (env-extend*/syntax #t env:empty initial-syntax-bindings)
-    (list (binding:syntax 'begin  ctx:def @begin/define)
-          (binding:syntax 'define ctx:def @define)
-          (binding:syntax 'def    ctx:def @def))))
+  (env-update* (env-extend* env:empty initial-syntax-bindings)
+               (list (binding:syntax ctx:def 'begin  @begin/define)
+                     (binding:syntax ctx:def 'define @define)
+                     (binding:syntax ctx:def 'def    @def))))
 
 ;; Primitive environment definition
 (define primitive-syntax-bindings
   (map (lambda (po-desc)
          (binding:syntax
-           (car po-desc) ctx:op
+           ctx:op (car po-desc)
            (lambda (env . tail)
              (define type-sig (primitive-op-type-signature po-desc))
              (unless (length=? (length (car type-sig)) tail)
                (error '"invalid primitive op:" po-desc tail))
              (ast:prim (car po-desc) (stage* env tail)))))
        primitive-op-descriptions))
-(define env:primitive
-  (env-extend*/syntax #t env:initial primitive-syntax-bindings))
+(define env:primitive (env-extend* env:initial primitive-syntax-bindings))
 
 ;; Language construction
 (define (language env public-names? binding-groups renamings->bindings:syntax)
@@ -206,11 +196,12 @@
                         (#t (error '"invalid binding group:" group))))
     (lambda (env) (@bind env (cdr group) body)))
   (define ast:values (stage env (foldr bind-group body binding-groups)))
-  (define bindings:syntax (renamings->bindings:syntax all-names all-renames))
+  (define bindings:syntax
+    (renamings->bindings:syntax (map cons all-names all-renames)))
   (define (stager env body)
     (define env:language
-      (env-extend*/syntax
-        #t (env-extend* env (map binding:var public-names public-renames))
+      (env-update*
+        (env-extend* env (map binding:var public-names public-renames))
         bindings:syntax))
     (ast:lambda all-renames (stage env:language body)))
   (vector stager ast:values))
