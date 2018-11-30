@@ -83,7 +83,9 @@
 (define env:nscheme
   (link/module*
     env:data (library-modules
-               'nscheme '(common ast stage base eval base-test backend-racket))))
+               'nscheme '(common ast stage eval
+                                 base base-test extended extended-test
+                                 backend-racket))))
 
 (for-each (lambda (t) (time (t (list (lift test)))))
           (reverse (map cdr (filter (lambda (rib) (eq? 'test! (car rib)))

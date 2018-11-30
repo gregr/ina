@@ -1,4 +1,7 @@
-(provide stage env:initial env:primitive binding:syntax/validation language)
+(provide stage env:initial env:primitive binding:syntax/validation language
+         ast:null ast:true ast:false ast:cons ast:list ast:vector
+         ast:apply* ast:let ast:begin ast:shift ast:reset
+         @or @body*)
 
 (require length=? length>=? param?! bpair*?! param-map param-names
          ctx:var ctx:set! ctx:op ctx:def
