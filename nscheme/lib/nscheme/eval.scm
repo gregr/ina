@@ -69,10 +69,8 @@
 (define (@when env c . body)   (if (eval env c) (@body* env body) #t))
 (define (@unless env c . body) (if (eval env c) #t (@body* env body)))
 (define (@cond env . clauses)
-  (if (null? clauses) #t
-    (let ((? (eval env (caar clauses))))
-      (if ? (if (null? (cdar clauses)) ? (@body* env (cdar clauses)))
-        (apply @cond env (cdr clauses))))))
+  (or (null? clauses) (if (eval env (caar clauses)) (@body* env (cdar clauses))
+                        (apply @cond env (cdr clauses)))))
 
 (define (defstate-actions-add-expr st form)
   (defstate-actions-add st (lambda (env) (eval env form))))

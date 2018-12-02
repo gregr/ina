@@ -10,6 +10,11 @@
     (apply (apply (ast-eval (extended:stage env:initial form)) base:values)
            extended:values))
 
+  (test 'cond-3
+    (ev '(cond (#f 3)
+               (8)
+               (4 5)))
+    8)
   (test 'cond-4
     (ev '(cond (#f 3)
                ((car '(#f 4)) 5)

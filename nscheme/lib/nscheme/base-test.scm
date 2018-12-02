@@ -267,11 +267,6 @@
     (ev '(cond (#f 3)
                (4 5)))
     5)
-  (test 'cond-3
-    (ev '(cond (#f 3)
-               (8)
-               (4 5)))
-    8)
 
   (test 'misc-1
     (ev '((lambda (w #f x #f y . z)

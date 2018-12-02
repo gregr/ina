@@ -124,9 +124,8 @@
 (define (@cond env . clauses)
   (foldr (lambda (c rest)
            (unless (length>=? 1 c) (error '"invalid cond clause:" c))
-           (if (null? (cdr c)) (@or env (car c) (lambda (_) rest))
-             (@if env (car c) (lambda (env) (@body* env (cdr c)))
-                  (lambda (_) rest)))) ast:true clauses))
+           (ast:if (stage env (car c)) (@body* env (cdr c)) rest))
+         ast:true clauses))
 (define (@begin env . body)    (ast:begin (stage* env body)))
 (define (@when env c . body)   (@if env c (lambda (env) (@body* env body)) #t))
 (define (@unless env c . body) (@if env c #t (lambda (env) (@body* env body))))
@@ -550,11 +549,6 @@
   (ev '(cond (#f 3)
              (4 5)))
   5)
-(test 'cond-3
-  (ev '(cond (#f 3)
-             (8)
-             (4 5)))
-  8)
 
 (test 'misc-1
   (ev '((lambda (w #f x #f y . z)
