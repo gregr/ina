@@ -1,17 +1,22 @@
 # nScheme
 
+## Test the bootstrap interpreter
+
+`raco test *.rkt`
+
+## Bootstrap the compiler (nscheme.scm.rkt)
+
+`racket bootstrap.rkt`
+
 ## TODO
 
 ### bootstrap with only simple code
-* bootstrap.rkt should be a driver giving capabilities to embedded nscm programs
-  * nscm parses modules, runs tests, and eventually compiles a base system to Racket
-
 * backend-racket code generation
   * define a target AST for any Racket-specific simplification/optimization
   * use Racket-provided capabilities to output or evaluate generated code
 
 * bootstrapped base system can be a straightforward command-line compiler
-  * compile nScheme programs (expecting bootstrap capabilities) to Racket
+  * compile nScheme programs (expecting host capabilities) to Racket
     * file-io/compilation/linking defined by running nScheme script given as input
     * suggests base system is really an interpreter providing compiler capabilities
   * should be able to compile itself and run with equivalent behavior
@@ -20,6 +25,12 @@
     * threads/places/futures, timers, exception/break/interrupt handling
       * uncaught-exception-handler, call-with-exception-handler, exn:break?
     * cmdline/shell/env/subprocesses, racket-eval
+
+* throw away eval.rkt
+* move stage.rkt into bootstrap.rkt
+* Shrink and reorganize interop.rkt
+  * common can be moved to stage.rkt (which will be in bootstrap.rkt)
+  * racket-eval is not really in the right place
 
 ### Racket platform
 * define ports, read, write
