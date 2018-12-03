@@ -1,11 +1,9 @@
 #lang racket/base
-(provide (all-from-out 'interop) (all-from-out 'common)
-         interop-eval racket-eval)
+(provide (all-from-out 'interop) interop-eval racket-eval)
 
 (module interop racket/base
   (provide
-    local-path library-path s->ns ns->s
-    read/port read/file write/port write/file racket-datum
+    s->ns ns->s read/port read/file write/port write/file racket-datum
     lift lower lower-arg0 $apply
     mvector? make-mvector mvector=? mvector-length mvector-ref mvector-set!
     mvector->vector string->vector vector->string procedure=? number=?
@@ -14,14 +12,6 @@
     (rename-out (equal? nscm-equal?) (member nscm-member) (assoc nscm-assoc)))
 
   (require racket/path racket/port racket/vector (for-syntax racket/base))
-
-  (define (local-path rpath)
-    (build-path (path-only (path->complete-path (find-system-path 'run-file)))
-                rpath))
-  (define (library-path library-name module-name)
-    (local-path
-      (build-path "lib" (symbol->string library-name)
-                  (string-append (symbol->string module-name) ".scm"))))
 
   (define (s->ns d)
     (cond ((symbol? d) (symbol->string d))
@@ -137,78 +127,7 @@
       ((_ lvl #(d ...))         (list->vector (nscm-qq lvl (d ...))))
       ((_ lvl d)                (nscm-quote d)))))
 
-(module common racket/base
-  (provide length=? length>=? param?! bpair*?!
-           ncons param-map param-names param-bind
-           ctx:var ctx:set! ctx:op ctx:def
-           env:empty env-ref env-get-prop env-remove* env-add* env-extend*
-           defstate:empty defstate-env defstate-names defstate-actions
-           defstate-env-set defstate-names-add defstate-actions-add)
-  (require (submod ".." interop))
-
-  ;; Pattern matching
-  (define (length=? n xs)  (and (list? xs) (= (length xs) n)))
-  (define (length>=? n xs) (and (list? xs) (>= (length xs) n)))
-  (define (param?! param) (unless (andmap string? (param-names param))
-                            (error '"invalid parameters:" param)))
-  (define (bpair*?! b*)
-    (define (? b) (and (length=? 2 b) (param?! (car b))))
-    (unless (and (list? b*) (andmap ? b*))
-      (error '"invalid binding list:" b*)))
-
-  ;; Formal parameters
-  (define (ncons name names)
-    (when (member name names) (error '"duplicate name:" name names))
-    (cons name names))
-  (define (param-map f p)
-    (cond ((pair? p)   (cons (param-map f (car p)) (param-map f (cdr p))))
-          ((vector? p) (list->vector (param-map f (vector->list p))))
-          ((null? p)   '())
-          ((not p)     #f)
-          (#t          (f p))))
-  (define (param-names param)
-    (let loop ((p param) (ns '()))
-      (cond ((pair? p)   (loop (cdr p) (loop (car p) ns)))
-            ((vector? p) (loop (vector->list p) ns))
-            ((null? p)   ns)
-            ((not p)     ns)
-            (#t          (ncons p ns)))))
-  (define (param-bind param arg)
-    (let loop ((p param) (a arg))
-      (cond ((and (pair? p) (pair? a)) (append (loop (car p) (car a))
-                                               (loop (cdr p) (cdr a))))
-            ((and (vector? p) (vector? a))
-             (loop (vector->list p) (vector->list a)))
-            ((and (null? p) (null? a)) '())
-            ((not p)                   '())
-            ((not (or (pair? p) (vector? p) (null? p))) (list (cons p a)))
-            (#t (error '"parameter/argument mismatch:" param arg p a)))))
-
-  (define ctx:var  '"ref")
-  (define ctx:set! '"set!")
-  (define ctx:op   '"syntax?")
-  (define ctx:def  '"define")
-  (define env:empty                      '())
-  (define (env-ref env n)                (alist-get env n '()))
-  (define (env-get-prop env n k default) (alist-get (env-ref env n) k default))
-  (define (env-remove* env n*)           (alist-remove* env n*))
-  (define (env-add* env b*)              (append b* env))
-  (define (env-extend* env b*) (env-add* (env-remove* env (map car b*)) b*))
-
-  (define (defstate:empty env)  (vector env '() '()))
-  (define (defstate-env st)     (vector-ref st 0))
-  (define (defstate-names st)   (vector-ref st 1))
-  (define (defstate-actions st) (vector-ref st 2))
-  (define (defstate-env-set st env)
-    (vector env (defstate-names st) (defstate-actions st)))
-  (define (defstate-names-add st names)
-    (define new (foldl ncons (defstate-names st) names))
-    (vector (defstate-env st) new (defstate-actions st)))
-  (define (defstate-actions-add st act)
-    (define new (cons act (defstate-actions st)))
-    (vector (defstate-env st) (defstate-names st) new)))
-
-(require racket/runtime-path 'interop 'common)
+(require racket/runtime-path 'interop)
 (define-runtime-module-path interop-mod (submod "." interop))
 
 (define (interop-eval form)

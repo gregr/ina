@@ -26,10 +26,7 @@
       * uncaught-exception-handler, call-with-exception-handler, exn:break?
     * cmdline/shell/env/subprocesses, racket-eval
 
-* throw away eval.rkt
-* move stage.rkt into bootstrap.rkt
 * Shrink and reorganize interop.rkt
-  * common can be moved to stage.rkt (which will be in bootstrap.rkt)
   * racket-eval is not really in the right place
 
 ### Racket platform
