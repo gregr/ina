@@ -26,9 +26,6 @@
       * uncaught-exception-handler, call-with-exception-handler, exn:break?
     * cmdline/shell/env/subprocesses, racket-eval
 
-* Shrink and reorganize interop.rkt
-  * racket-eval is not really in the right place
-
 ### Racket platform
 * define ports, read, write
   * include non-device (aka string/byte buffer) ports

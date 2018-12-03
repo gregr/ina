@@ -8,6 +8,12 @@
                (nscm-quote quote) (nscm-quasiquote quasiquote))
     racket/bool racket/control racket/list racket/pretty)
 
+  (define (alist-get rs key default)
+    (define rib (assoc key rs))
+    (if rib (cdr rib) default))
+  (define (alist-remove* rs keys)
+    (filter (lambda (rib) (not (member (car rib) keys))) rs))
+
   ;; Pattern matching
   (define (length=? n xs)  (and (list? xs) (= (length xs) n)))
   (define (length>=? n xs) (and (list? xs) (>= (length xs) n)))
@@ -889,7 +895,6 @@
   (define nscheme.scm.rkt
     (time ($apply (base:eval bootstrap.scm) (list capabilities))))
   ;; TODO:
-  ;(call-with-output-file
-    ;(build-path here "nscheme.scm.rkt")
-    ;(lambda (out) (write (racket-datum nscheme.scm.rkt) out)))
+  ;(write/file (build-path here "nscheme.scm.rkt")
+              ;(racket-datum nscheme.scm.rkt))
   )

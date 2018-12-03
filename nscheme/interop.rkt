@@ -3,13 +3,11 @@
 
 (module interop racket/base
   (provide
-    s->ns ns->s read/port read/file write/port write/file racket-datum
-    lift lower lower-arg0 $apply
+    s->ns ns->s writeable?! read/port read/file write/port write/file
+    racket-datum lift lower lower-arg0 $apply
     mvector? make-mvector mvector=? mvector-length mvector-ref mvector-set!
     mvector->vector string->vector vector->string procedure=? number=?
-    alist-get alist-remove* alist-at list-at
-    nscm-quote nscm-quasiquote
-    (rename-out (equal? nscm-equal?) (member nscm-member) (assoc nscm-assoc)))
+    nscm-quote nscm-quasiquote nscm-equal? nscm-member nscm-assoc)
 
   (require racket/path racket/port racket/vector (for-syntax racket/base))
 
@@ -17,8 +15,9 @@
     (cond ((symbol? d) (symbol->string d))
           ((pair? d) (cons (s->ns (car d)) (s->ns (cdr d))))
           ((vector? d) (vector-map s->ns d))
-          ((or (char? d) (keyword? d)) (error "invalid nscheme datum:" d))
-          (else d)))
+          ((or (boolean? d) (null? d) (number? d) (string? d) (procedure? d)
+               (mvector? d)) d)
+          (else (error "invalid nscheme datum:" d))))
 
   (define (ns->s d)
     (cond ((string? d) (string->symbol d))
@@ -26,23 +25,23 @@
           ((vector? d) (vector-map ns->s d))
           (else d)))
 
-  (define (ns->s/write d)
-    (cond ((string? d) (string->symbol d))
-          ((pair? d) (cons (ns->s (car d)) (ns->s (cdr d))))
-          ((vector? d) (vector-map ns->s d))
-          ((or (boolean? d) (null? d) (number? d)) d)
+  (define (writeable?! d)
+    (cond ((pair? d) (writeable?! (car d)) (writeable?! (cdr d)))
+          ((vector? d) (writeable?! (vector->list d)))
+          ((or (boolean? d) (null? d) (number? d) (string? d)
+               (symbol? d) (char? d) (keyword? d)) #t)
           (else (error "cannot write:" d))))
 
   (define (read/port in)
     (let loop ((rbody '()))
-      (define datum (ns->s (read in)))
+      (define datum (read in))
       (if (eof-object? datum) (reverse rbody) (loop (cons datum rbody)))))
   (define (read/file path)    (call-with-input-file path read/port))
-  (define (write/port out d)  (write (ns->s/write d) out))
+  (define (write/port out d)  (writeable?! d) (write d out))
   (define (write/file path d) (call-with-output-file path write/port))
 
   (define (racket-datum form)
-    (define (? tag) (equal? (vector-ref form 0) tag))
+    (define (? tag) (nscm-equal? (vector-ref form 0) tag))
     (cond ((pair? form) (cons (racket-datum (car form))
                               (racket-datum (cdr form))))
           ((not (vector? form)) form)
@@ -54,20 +53,6 @@
                            (string-append "#\\" (vector-ref form 1))
                            (lambda (in) (read in))))
           (#t (error "invalid racket-datum form:" form))))
-
-  ;; For safe interop, provided definitions must not override Racket names.
-  (define (equal? a b)
-    (or (eqv? a b)
-        (and (string? a) (string? b) (string=? a b))
-        (and (pair? a) (pair? b)
-             (equal? (car a) (car b))
-             (equal? (cdr a) (cdr b)))
-        (and (vector? a) (vector? b)
-             (equal? (vector->list a) (vector->list b)))))
-  (define (member v xs) (memf (lambda (x) (equal? x v)) xs))
-  (define (assoc k xs) (cond ((null? xs) #f)
-                             ((equal? k (caar xs)) (car xs))
-                             (else (assoc k (cdr xs)))))
 
   (define (lift racket-proc)   (lambda (a) (apply racket-proc a)))
   (define (lower nscheme-proc) (lambda a   (nscheme-proc a)))
@@ -92,16 +77,19 @@
   (define (procedure=? m n) (eq? m n))
   (define (number=? m n)    (eqv? m n))
 
-  (define (alist-get rs key default)
-    (define rib (assoc key rs))
-    (if rib (cdr rib) default))
-  (define (alist-remove* rs keys)
-    (filter (lambda (rib) (not (member (car rib) keys))) rs))
-  (define (list-at xs ?)  ;; produce a zipper referencing the desired location
-    (let loop ((suffix xs) (prefix '()))
-      (if (or (null? suffix) (? (car suffix))) (cons suffix prefix)
-        (loop (cdr suffix) (cons (car suffix) prefix)))))
-  (define (alist-at rs key) (list-at rs (lambda (kv) (equal? (car kv) key))))
+  ;; For safe interop, provided definitions must not override Racket names.
+  (define (nscm-equal? a b)
+    (or (eqv? a b)
+        (and (string? a) (string? b) (string=? a b))
+        (and (pair? a) (pair? b)
+             (nscm-equal? (car a) (car b))
+             (nscm-equal? (cdr a) (cdr b)))
+        (and (vector? a) (vector? b)
+             (nscm-equal? (vector->list a) (vector->list b)))))
+  (define (nscm-member v xs) (memf (lambda (x) (nscm-equal? x v)) xs))
+  (define (nscm-assoc k xs) (cond ((null? xs) #f)
+                                  ((nscm-equal? k (caar xs)) (car xs))
+                                  (else (nscm-assoc k (cdr xs)))))
 
   (define-syntax (nscm-quote stx)
     (syntax-case stx ()
@@ -135,8 +123,6 @@
   (parameterize ((current-namespace (make-base-namespace)))
     (namespace-attach-module local-ns interop-mod)
     (namespace-require/constant interop-mod)
-    (namespace-set-variable-value! 'interop-eval interop-eval)
-    (namespace-set-variable-value! 'racket-eval racket-eval)
     (eval form)))
 
 (define (racket-eval rkt-datum) (interop-eval (racket-datum rkt-datum)))
