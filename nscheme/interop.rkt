@@ -4,7 +4,8 @@
 
 (module interop racket/base
   (provide
-    local-path library-path s->ns ns->s read/file write/file racket-datum
+    local-path library-path s->ns ns->s
+    read/port read/file write/port write/file racket-datum
     lift lower lower-arg0 $apply
     mvector? make-mvector mvector=? mvector-length mvector-ref mvector-set!
     mvector->vector string->vector vector->string procedure=? number=?
@@ -26,6 +27,7 @@
     (cond ((symbol? d) (symbol->string d))
           ((pair? d) (cons (s->ns (car d)) (s->ns (cdr d))))
           ((vector? d) (vector-map s->ns d))
+          ((or (char? d) (keyword? d)) (error "invalid nscheme datum:" d))
           (else d)))
 
   (define (ns->s d)
@@ -41,27 +43,26 @@
           ((or (boolean? d) (null? d) (number? d)) d)
           (else (error "cannot write:" d))))
 
-  (define (read/file path)
-    (call-with-input-file
-      path (lambda (in) (let loop ((rbody '()))
-                          (define datum (ns->s (read in)))
-                          (if (eof-object? datum) (reverse rbody)
-                            (loop (cons datum rbody)))))))
-  (define (write/file path d)
-    (call-with-output-file path (lambda (out) (write (ns->s/write d) out))))
+  (define (read/port in)
+    (let loop ((rbody '()))
+      (define datum (ns->s (read in)))
+      (if (eof-object? datum) (reverse rbody) (loop (cons datum rbody)))))
+  (define (read/file path)    (call-with-input-file path read/port))
+  (define (write/port out d)  (write (ns->s/write d) out))
+  (define (write/file path d) (call-with-output-file path write/port))
 
   (define (racket-datum form)
-    (define (? tag) (eq? (vector-ref form 0) tag))
+    (define (? tag) (equal? (vector-ref form 0) tag))
     (cond ((pair? form) (cons (racket-datum (car form))
                               (racket-datum (cdr form))))
           ((not (vector? form)) form)
-          ((? 'quote)   (vector-ref form 1))
-          ((? 'vector)  (vector-map racket-datum (vector-ref form 1)))
-          ((? 'symbol)  (string->symbol (vector-ref form 1)))
-          ((? 'keyword) (string->keyword (vector-ref form 1)))
-          ((? 'char)    (call-with-input-string
-                          (string-append "#\\" (vector-ref form 1))
-                          (lambda (in) (read in))))
+          ((? "quote")   (vector-ref form 1))
+          ((? "vector")  (vector-map racket-datum (vector-ref form 1)))
+          ((? "symbol")  (string->symbol (vector-ref form 1)))
+          ((? "keyword") (string->keyword (vector-ref form 1)))
+          ((? "char")    (call-with-input-string
+                           (string-append "#\\" (vector-ref form 1))
+                           (lambda (in) (read in))))
           (#t (error "invalid racket-datum form:" form))))
 
   ;; For safe interop, provided definitions must not override Racket names.
