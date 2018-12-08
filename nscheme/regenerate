@@ -3,7 +3,7 @@ set -euo pipefail
 
 here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-while cd "$here" && inotifywait -e modify lib/*/*.scm; do
+while cd "$here" && inotifywait -e modify lib/*.scm; do
   date
   time racket bootstrap.rkt || true
 done

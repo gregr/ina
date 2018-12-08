@@ -1,10 +1,14 @@
-# Data library
+# nScheme language implementation library
+
+Ideally, most nScheme would not be written as text at all.
+
+## Data library
 
 Avoid leaky abstractions: implement libraries that don't make strong assumptions and so don't have to compromise.  Users should get to decide all important tradeoffs.
 
 For example, don't implement a one-size-fits-all dictionary.  Instead, implement specific data structures that could be used as dictionaries.
 
-## TODO
+### TODO
 
 * `ordered-assoc.scm`
 * `array-mapped-trie.scm`

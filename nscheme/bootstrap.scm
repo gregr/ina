@@ -41,7 +41,7 @@
                                  (list (cons 'list (vector-ref parsed 3))))))
     (vector (vector-ref parsed 0) (vector-ref parsed 1) (eval code)))
   (define (libmod name)
-    (eval/module (read/file (string-append '"lib/nscheme/" name '".scm"))))
+    (eval/module (read/file (string-append '"lib/" name '".scm"))))
 
   (define modules
     '(common ast stage base eval base-test extended extended-test))
