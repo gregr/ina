@@ -135,6 +135,7 @@
 (define (env-set! env addr v) ((cdr (env-ref-capabilities env addr)) v))
 
 (define (ast-eval ast)
+  (define (ex* env c*) (map (lambda (c) (c env)) c*))
   ((let ev ((ast ast))
      (define (@ i) (vector-ref ast i)) (define (? tag) (equal? (@ 0) tag))
      (if (procedure? ast) ast
@@ -146,7 +147,10 @@
                               (for-each ! (param-bind param (arg env))))))
              ((? 'if)     (let ((c (ev (@ 1))) (t (ev (@ 2))) (f (ev (@ 3))))
                             (lambda (env) (if (c env) (t env) (f env)))))
-             ((? 'apply)  (let ((proc (ev (@ 1))) (arg (ev (@ 2))))
+             ((? 'apply)  (let ((proc (ev (@ 1)))
+                                (arg (if (vector? (@ 2)) (ev (@ 2))
+                                       (let ((a* (map ev (@ 2))))
+                                         (lambda (env) (ex* env a*))))))
                             (lambda (env) (apply (proc env) (arg env)))))
              ((? 'lambda) (let ((param (@ 1)) (body (ev (@ 2))))
                             (lambda (env) (lambda arg
@@ -155,7 +159,7 @@
              ((? 'prim)   (let ((name (@ 1)) (a* (map ev (@ 2))))
                             (define op (or (alist-get primitive-ops name #f)
                                            (error '"invalid primitive:" name)))
-                            (lambda (env) (op (map (lambda (a) (a env)) a*)))))
+                            (lambda (env) (op (ex* env a*)))))
              ((? 'context)
               (let ((name (@ 1)) (a* (map ev (@ 2))))
                 (define op (or (alist-get context-ops name #f)
