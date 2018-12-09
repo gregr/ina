@@ -1,9 +1,10 @@
 (provide primitive-op-descriptions
          primitive-op-type-signature primitive-op-handler
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:prim ast:context ast-eval test!)
+         ast:prim ast:context ast:let ast:letrec ast:begin ast-eval test!)
 (require param-bind)
 
+;; Basic AST
 (define (ast:quote datum)       (vector 'quote   datum))
 (define (ast:var address)       (vector 'var     address))
 (define (ast:set! param arg)    (vector 'set!    param arg))
@@ -12,6 +13,11 @@
 (define (ast:lambda param body) (vector 'lambda  param body))
 (define (ast:prim name a*)      (vector 'prim    name a*))
 (define (ast:context name a*)   (vector 'context name a*))
+
+;; Extended AST
+(define (ast:let n* a* body)    (vector 'let    n* a* body))
+(define (ast:letrec n* l* body) (vector 'letrec n* l* body))
+(define (ast:begin e* final)    (vector 'begin  e* final))
 
 ;; Dynamic context operations
 (define context-ops
@@ -165,7 +171,17 @@
                 (define op (or (alist-get context-ops name #f)
                                (error '"invalid context op:" name)))
                 (lambda (env) (apply op (map (lambda (a) (a env)) a*)))))
-             (#t          (error '"unknown ast:" ast))))) env:empty))
+             ((? 'let)
+              (let ((n* (@ 1)) (a* (map ev (@ 2))) (body (ev (@ 3))))
+                (lambda (env)
+                  (body (env-extend* env (param-bind n* (ex* env a*)))))))
+             ((? 'letrec)
+              (let ((n* (@ 1)) (l* (@ 2)) (body (@ 3)))
+                (ev (ast:let n* (map (lambda #f (ast:quote #t)) n*)
+                             (ast:begin (map ast:set! n* l*) body)))))
+             ((? 'begin) (let ((e* (map ev (@ 1))) (final (ev (@ 2))))
+                           (lambda (env) (ex* env e*) (final env))))
+             (#t (error '"unknown ast:" ast))))) env:empty))
 
 (define (test! test)
   (test 'quote
@@ -177,3 +193,4 @@
   (test 'if-2
     (ast-eval '#(if #(quote #f) #(quote 1) #(quote 2)))
     2))
+

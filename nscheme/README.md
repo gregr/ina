@@ -108,7 +108,6 @@ Real-world (effect) interaction/reaction:
 * generated Racket code is currently enormous, partly due to base library
 * try bootstrapping eval.scm/stage.scm first to see how bad it will really be
 * augmented ast
-  * vectorized `lambda*` and `apply*`, begin, let, letrec for lambdas (aka labels)
   * variable refcounts, mutability, escape status
   * crude termination/effect status
     * expr always evaluate to a value without observable effects? yes/no
