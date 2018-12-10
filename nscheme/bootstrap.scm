@@ -44,7 +44,8 @@
     (eval/module (read/file (string-append '"lib/" name '".scm"))))
 
   (define modules
-    '(common ast stage base eval base-test extended extended-test racket))
+    '(common ast stage base eval base-test extended extended-test
+             backend-racket))
   (define env:nscheme (link/module* '() (map libmod modules)))
 
   (define tests-total 0)

@@ -1,8 +1,9 @@
 (provide primitive-op-descriptions
          primitive-op-type-signature primitive-op-handler
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:prim ast:context ast:let ast:letrec ast:begin ast-eval test!)
-(require param-bind)
+         ast:prim ast:context ast:let ast:letrec ast:begin ast-eval test!
+         ast-elaborate)
+(require param-map param-bind)
 
 ;; Basic AST
 (define (ast:quote datum)       (vector 'quote   datum))
@@ -194,3 +195,75 @@
     (ast-eval '#(if #(quote #f) #(quote 1) #(quote 2)))
     2))
 
+(define (natural->string/digits digits n)
+  (define base (vector-length digits))
+  (if (= n 0) (vector-ref digits 0)
+    (let loop ((n n))
+      (if (= n 0) '""
+        (let ((quotient (truncate (/ n base))))
+          (string-append (loop quotient)
+                         (vector-ref digits (- n (* base quotient)))))))))
+
+(define (natural->string n)
+  (natural->string/digits '#("0" "1" "2" "3" "4" "5" "6" "7" "8" "9") n))
+
+(define (ast-elaborate ast)
+  (define name->id
+    (let ((i 0)) (lambda (n)
+                   (define name (mvector-ref n 0))
+                   (unless (pair? name)
+                     (define id (string-append (natural->string i) '"." name))
+                     (set! i (+ i 1)) (mvector-set! n 0 (cons id name)))
+                   (car (mvector-ref n 0)))))
+  (define (param-elaborate bind param/names arg rest)
+    (define param (param-map name->id param/names))
+    (define nid (let ((i -1)) (lambda () (set! i (+ i 1))
+                                (string-append 'p. (natural->string i)))))
+    (define (fail p a) (ast:apply (ast:var 'fail) (list (ast:quote p) a)))
+    (define ast:fail
+      (ast:lambda
+        (list 'p 'a)
+        (ast:apply (ast:quote '"parameter/argument mismatch:")
+                   (list (ast:quote param) arg (ast:var 'p) (ast:var 'a)))))
+    (ast:let
+      (list 'fail) (list ast:fail)
+      (let loop ((p param) (a arg) (rest rest))
+        (define (prim name)   (ast:prim name (list a)))
+        (define (test ? body) (ast:if ? body (fail p a)))
+        (cond ((pair? p)
+               (let ((icar (nid)) (icdr (nid)))
+                 (test (prim 'pair?)
+                   (ast:let (list icar icdr) (list (prim 'car) (prim 'cdr))
+                            (loop (car p) (ast:var icar)
+                                  (loop (cdr p) (ast:var icdr) rest))))))
+              ((vector? p)
+               (let ((ivl (nid)))
+                 (test (prim 'vector?)
+                   (ast:let (list ivl) (list (prim 'vector->list))
+                            (loop (vector->list p) (ast:var ivl) rest)))))
+              ((null? p) (test (prim 'null?) rest))
+              ((not p)   rest)
+              (#t        (bind p a rest))))))
+  (let ev ((ast ast))
+    (define (@ i) (vector-ref ast i)) (define (? tag) (equal? (@ 0) tag))
+    (cond ((? 'var    ) (ast:var (name->id (@ 1))))
+          ((? 'set!   ) (ast:let (list 'a.set!) (list (ev (@ 2)))
+                                 (param-elaborate
+                                   (lambda (p a rest)
+                                     (ast:begin (list (ast:set! p a)) rest))
+                                   (@ 1) (ast:var 'a.set!) (ast:quote #t))))
+          ((? 'if     ) (ast:if (ev (@ 1)) (ev (@ 2)) (ev (@ 3))))
+          ((? 'apply  ) (ast:apply (ev (@ 1)) (list (ev (@ 2)))))
+          ((? 'lambda ) (ast:lambda (list 'a.lambda)
+                                    (param-elaborate
+                                      (lambda (p a rest)
+                                        (ast:let (list p) (list a) rest))
+                                      (@ 1) (ast:var 'a.lambda) (ev (@ 2)))))
+          ((? 'prim   ) (ast:prim    (@ 1) (map ev (@ 2))))
+          ((? 'context) (ast:context (@ 1) (map ev (@ 2))))
+          ((? 'begin  ) (ast:begin (map ev (@ 1)) (ev (@ 2))))
+          ((? 'let    ) (ast:let
+                          (map name->id (@ 1)) (map ev (@ 2)) (ev (@ 3))))
+          ((? 'letrec ) (ast:letrec
+                          (map name->id (@ 1)) (map ev (@ 2)) (ev (@ 3))))
+          (#t           ast))))

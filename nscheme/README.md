@@ -12,7 +12,6 @@
 
 ### bootstrap with only simple code
 * backend-racket code generation
-  * update to use racket.scm ASTs
   * use Racket-provided capabilities to output or evaluate generated code
 
 * bootstrapped base system can be a straightforward command-line compiler
