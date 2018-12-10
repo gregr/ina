@@ -37,7 +37,8 @@
       (if (eof-object? datum) (reverse rbody) (loop (cons datum rbody)))))
   (define (read/file path)    (call-with-input-file path read/port))
   (define (write/port out d)  (writeable?! d) (write d out))
-  (define (write/file path d) (call-with-output-file path write/port))
+  (define (write/file path d)
+    (call-with-output-file path (lambda (out) (write/port out d))))
 
   (define (racket-datum form)
     (define (? tag) (nscm-equal? (vector-ref form 0) tag))
