@@ -6,7 +6,7 @@
     (rename-in "interop.rkt"
                (nscm-equal? equal?) (nscm-member member) (nscm-assoc assoc)
                (nscm-quote quote) (nscm-quasiquote quasiquote))
-    racket/bool racket/control racket/list racket/pretty)
+    racket/control racket/list racket/pretty)
 
   (define (alist-get rs key default)
     (define rib (assoc key rs))

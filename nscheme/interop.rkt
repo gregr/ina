@@ -2,14 +2,13 @@
 (provide (all-from-out 'interop) interop-eval racket-eval)
 
 (module interop racket/base
-  (provide
-    s->ns ns->s writeable?! read/port read/file write/port write/file
-    racket-datum lift lower lower-arg0 $apply
-    mvector? make-mvector mvector=? mvector-length mvector-ref mvector-set!
-    mvector->vector string->vector vector->string procedure=? number=?
-    nscm-quote nscm-quasiquote nscm-equal? nscm-member nscm-assoc)
+  (provide (all-from-out "prim.rkt")
+           s->ns ns->s writeable?! read/port read/file write/port write/file
+           racket-datum lift lower lower-arg0 $apply
+           nscm-quote nscm-quasiquote nscm-equal? nscm-member nscm-assoc)
 
-  (require racket/path racket/port racket/vector (for-syntax racket/base))
+  (require
+    "prim.rkt" racket/path racket/port racket/vector (for-syntax racket/base))
 
   (define (s->ns d)
     (cond ((symbol? d) (symbol->string d))
@@ -60,22 +59,6 @@
   (define ($apply proc arg . args)
     (define (cons* x xs) (if (null? xs) x (cons x (cons* (car xs) (cdr xs)))))
     (proc (cons* arg args)))
-
-  (struct mvector (v) #:transparent)
-  (define (make-mvector k d)          (mvector (make-vector k d)))
-  (define (mvector=? m n)             (eq? m n))
-  (define (mvector-length mv)         (vector-length (mvector-v mv)))
-  (define (mvector-ref mv i)          (vector-ref (mvector-v mv) i))
-  (define (mvector-set! mv i new)     (vector-set! (mvector-v mv) i new) #t)
-  ;; TODO: update Racket to use this.
-  ;(define (mvector-cas! mv i old new) (vector-cas! (mvector-v mv) i old new))
-  (define (mvector->vector mv)        (vector-copy (mvector-v mv)))
-  (define (string->vector s)
-    (list->vector (map char->integer (string->list s))))
-  (define (vector->string v)
-    (list->string (map integer->char (vector->list v))))
-  (define (procedure=? m n) (eq? m n))
-  (define (number=? m n)    (eqv? m n))
 
   ;; For safe interop, provided definitions must not override Racket names.
   (define (nscm-equal? a b)
