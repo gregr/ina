@@ -6,7 +6,7 @@
     (rename-in "interop.rkt"
                (nscm-equal? equal?) (nscm-member member) (nscm-assoc assoc)
                (nscm-quote quote) (nscm-quasiquote quasiquote))
-    racket/control racket/list racket/pretty)
+    racket/list racket/pretty)
 
   (define (alist-get rs key default)
     (define rib (assoc key rs))
@@ -127,11 +127,10 @@
   (define (ast:begin a*)
     (define ra* (reverse (cons ast:true a*)))
     (foldl (lambda (a rst) (ast:let '(#f) (list a) rst)) (car ra*) (cdr ra*)))
-  (define (ast:shift proc)
-    (lambda (env) (shift k ($apply (proc env) (list (lift k))))))
+  (define (ast:shift proc) (lambda (env) (shift (proc env))))
   (define (ast:reset body)
     (define proc (ast:lambda '() body))
-    (lambda (env) (reset ($apply (proc env) '()))) )
+    (lambda (env) (reset (proc env))))
 
   ;; Staging
   (define (stage env form)

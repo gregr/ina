@@ -10,9 +10,13 @@
   string<? string>?
   = <= < >= > + * - / truncate
   bitwise-and bitwise-ior bitwise-xor bitwise-not
-  bitwise-bit-set? bitwise-bit-field arithmetic-shift integer-length)
+  bitwise-bit-set? bitwise-bit-field arithmetic-shift integer-length
+  (rename-out (nscm-shift shift) (nscm-reset reset)))
 
-(require racket/bool racket/vector)
+(require racket/bool racket/control racket/vector)
+
+(define (lift racket-proc)   (lambda (a) (apply racket-proc a)))
+(define (lower nscheme-proc) (lambda a   (nscheme-proc a)))
 
 (struct mvector (v) #:transparent)
 (define (make-mvector k d)          (mvector (make-vector k d)))
@@ -29,3 +33,6 @@
   (list->string (map integer->char (vector->list v))))
 (define (procedure=? m n) (eq? m n))
 (define (number=? m n)    (eqv? m n))
+
+(define (nscm-shift proc) (shift k ((lower proc) (lift k))))
+(define (nscm-reset proc) (reset   ((lower proc))))

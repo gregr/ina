@@ -11,10 +11,6 @@
 ## TODO
 
 ### bootstrap with only simple code
-* merge ast:context with ast:prim for simplicity
-  * classify primitives? some ops will still need special analysis
-    * some possibilities: simple; allocation; mutable-read/write; context
-
 * backend-racket code generation
   * use Racket-provided capabilities to output or evaluate generated code
 
