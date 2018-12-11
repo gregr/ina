@@ -1,7 +1,7 @@
 (provide primitive-op-descriptions
          primitive-op-type-signature primitive-op-handler
          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-         ast:prim ast:let ast:letrec ast:begin ast-eval test!
+         ast:prim astx:let astx:letrec astx:begin ast-eval test!
          ast-elaborate)
 (require param-map param-bind)
 
@@ -15,9 +15,9 @@
 (define (ast:prim name a*)      (vector 'prim    name a*))
 
 ;; Extended AST
-(define (ast:let n* a* body)    (vector 'let    n* a* body))
-(define (ast:letrec n* l* body) (vector 'letrec n* l* body))
-(define (ast:begin e* final)    (vector 'begin  e* final))
+(define (astx:let n* a* body)    (vector 'let    n* a* body))
+(define (astx:letrec n* l* body) (vector 'letrec n* l* body))
+(define (astx:begin e* final)    (vector 'begin  e* final))
 
 ;; Dynamic context operations
 (define context-ops
@@ -175,8 +175,8 @@
                   (body (env-extend* env (param-bind n* (ex* env a*)))))))
              ((? 'letrec)
               (let ((n* (@ 1)) (l* (@ 2)) (body (@ 3)))
-                (ev (ast:let n* (map (lambda #f (ast:quote #t)) n*)
-                             (ast:begin (map ast:set! n* l*) body)))))
+                (ev (astx:let n* (map (lambda #f (ast:quote #t)) n*)
+                              (astx:begin (map ast:set! n* l*) body)))))
              ((? 'begin) (let ((e* (map ev (@ 1))) (final (ev (@ 2))))
                            (lambda (env) (ex* env e*) (final env))))
              (#t (error '"unknown ast:" ast))))) env:empty))
@@ -222,7 +222,7 @@
         (list 'p 'a)
         (ast:apply (ast:quote '"parameter/argument mismatch:")
                    (list (ast:quote param) arg (ast:var 'p) (ast:var 'a)))))
-    (ast:let
+    (astx:let
       (list 'fail) (list ast:fail)
       (let loop ((p param) (a arg) (rest rest))
         (define (prim name)   (ast:prim name (list a)))
@@ -230,36 +230,36 @@
         (cond ((pair? p)
                (let ((icar (nid)) (icdr (nid)))
                  (test (prim 'pair?)
-                   (ast:let (list icar icdr) (list (prim 'car) (prim 'cdr))
-                            (loop (car p) (ast:var icar)
-                                  (loop (cdr p) (ast:var icdr) rest))))))
+                   (astx:let (list icar icdr) (list (prim 'car) (prim 'cdr))
+                             (loop (car p) (ast:var icar)
+                                   (loop (cdr p) (ast:var icdr) rest))))))
               ((vector? p)
                (let ((ivl (nid)))
                  (test (prim 'vector?)
-                   (ast:let (list ivl) (list (prim 'vector->list))
-                            (loop (vector->list p) (ast:var ivl) rest)))))
+                   (astx:let (list ivl) (list (prim 'vector->list))
+                             (loop (vector->list p) (ast:var ivl) rest)))))
               ((null? p) (test (prim 'null?) rest))
               ((not p)   rest)
               (#t        (bind p a rest))))))
   (let ev ((ast ast))
     (define (@ i) (vector-ref ast i)) (define (? tag) (equal? (@ 0) tag))
     (cond ((? 'var    ) (ast:var (name->id (@ 1))))
-          ((? 'set!   ) (ast:let (list 'a.set!) (list (ev (@ 2)))
-                                 (param-elaborate
-                                   (lambda (p a rest)
-                                     (ast:begin (list (ast:set! p a)) rest))
-                                   (@ 1) (ast:var 'a.set!) (ast:quote #t))))
+          ((? 'set!   ) (astx:let (list 'a.set!) (list (ev (@ 2)))
+                                  (param-elaborate
+                                    (lambda (p a rest)
+                                      (astx:begin (list (ast:set! p a)) rest))
+                                    (@ 1) (ast:var 'a.set!) (ast:quote #t))))
           ((? 'if     ) (ast:if (ev (@ 1)) (ev (@ 2)) (ev (@ 3))))
           ((? 'apply  ) (ast:apply (ev (@ 1)) (list (ev (@ 2)))))
           ((? 'lambda ) (ast:lambda (list 'a.lambda)
                                     (param-elaborate
                                       (lambda (p a rest)
-                                        (ast:let (list p) (list a) rest))
+                                        (astx:let (list p) (list a) rest))
                                       (@ 1) (ast:var 'a.lambda) (ev (@ 2)))))
           ((? 'prim   ) (ast:prim    (@ 1) (map ev (@ 2))))
-          ((? 'begin  ) (ast:begin (map ev (@ 1)) (ev (@ 2))))
-          ((? 'let    ) (ast:let
+          ((? 'begin  ) (astx:begin (map ev (@ 1)) (ev (@ 2))))
+          ((? 'let    ) (astx:let
                           (map name->id (@ 1)) (map ev (@ 2)) (ev (@ 3))))
-          ((? 'letrec ) (ast:letrec
+          ((? 'letrec ) (astx:letrec
                           (map name->id (@ 1)) (map ev (@ 2)) (ev (@ 3))))
           (#t           ast))))
