@@ -1,17 +1,20 @@
-(provide ast->racket-datum)
+(provide ast->racket-datum
+         rkt:compile rkt:define rkt:provide rkt:require rkt:module/main)
+
+(require ast-elaborate)
 
 (define (~map f ~xs)
   (cond ((pair? ~xs) (cons (f (car ~xs)) (~map f (cdr ~xs))))
         ((null? ~xs) '())
         (#t (f ~xs))))
+(define (sym s)  (vector 'symbol s))
+(define (vsym p) (sym (string-append 'v. p)))
 
 (define (ast->racket-datum ast)
   (define alen          (- (vector-length ast) 1))
   (define (@ i)         (vector-ref ast i))
   (define (@^ i)        (ast->racket-datum (@ i)))
   (define (? tag)       (equal? tag (@ 0)))
-  (define (sym s)       (vector 'symbol s))
-  (define (vsym p)      (sym (string-append 'v. p)))
   (define (binding n a) (list (vsym n) (ast->racket-datum a)))
   (define (body e)      (if (and (pair? e) (equal? '#(symbol begin) (car e)))
                           (cdr e) (list e)))
@@ -29,3 +32,13 @@
         ((or (? 'let) (? 'letrec))
          (list* (sym (@ 0)) (map binding (@ 1) (@ 2)) (body (@^ 3))))
         (#t (error '"unknown ast:" ast))))
+
+(define (rkt:compile ast)      (ast->racket-datum (ast-elaborate ast)))
+(define (rkt:define spec rkt*) (list* (sym 'define) (~map sym spec) rkt*))
+(define (rkt:provide names)    (cons (sym 'provide) (map sym names)))
+(define (rkt:require names)    (cons (sym 'require) names))
+(define (rkt:module/main reqs rkt*)
+  (list (sym 'module) (sym '_) (sym 'racket/base)
+        (rkt:provide '(main)) (rkt:require (cons 'prim.rkt reqs))
+        (rkt:define '(main) rkt*)
+        (list (sym 'module+) (sym 'main) (list (sym 'main)))))
