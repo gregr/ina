@@ -886,15 +886,17 @@
 (module+ main
   (define-runtime-path here ".")
   (define target-path (build-path here "nscheme.scm.rkt"))
-  (define (read/file:nscm path) (s->ns (read/file (build-path here path))))
-  (define capabilities (s->ns `((printf    . ,(lift printf))
-                                (read/file . ,(lift read/file:nscm))
-                                (eval      . ,(lift base:eval)))))
+  (define simple-path (path->string (simplify-path target-path)))
+  (when (file-exists? target-path)
+    (printf "~s already exists; remove it to rebuild it.\n" simple-path))
+  (define (nscm:read*/file path) (s->ns (read*/file (build-path here path))))
+  (define capabilities (s->ns `((printf     . ,(lift printf))
+                                (read*/file . ,(lift nscm:read*/file))
+                                (eval       . ,(lift base:eval)))))
   (define bootstrap.scm
-    (s->ns `(let () ,@(read/file (build-path here "bootstrap.scm")))))
+    (s->ns `(let () ,@(read*/file (build-path here "bootstrap.scm")))))
   (define nscheme.scm.rkt
     (time ((lower (base:eval bootstrap.scm)) capabilities)))
-  (if (file-exists? target-path)
-    (printf "~s already exists; remove it to rebuild it.\n"
-            (path->string (simplify-path target-path)))
-    (write/file target-path (racket-datum nscheme.scm.rkt))))
+  (unless (file-exists? target-path)
+    (write/file target-path (racket-datum nscheme.scm.rkt))
+    (printf "Finished building: ~s\n" simple-path)))

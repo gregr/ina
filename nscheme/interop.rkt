@@ -3,7 +3,7 @@
 
 (module interop racket/base
   (provide (all-from-out "prim.rkt")
-           s->ns ns->s writeable?! read/port read/file write/port write/file
+           s->ns ns->s writeable?! read* read*/file write/file
            racket-datum lift lower lower-arg0 $apply
            nscm-quote nscm-quasiquote nscm-equal? nscm-member nscm-assoc)
 
@@ -31,14 +31,13 @@
                (symbol? d) (char? d) (keyword? d)) #t)
           (else (error "cannot write:" d))))
 
-  (define (read/port in)
+  (define (read* in)
     (let loop ((rbody '()))
       (define datum (read in))
       (if (eof-object? datum) (reverse rbody) (loop (cons datum rbody)))))
-  (define (read/file path)    (call-with-input-file path read/port))
-  (define (write/port out d)  (writeable?! d) (write d out))
+  (define (read*/file path)   (call-with-input-file path read*))
   (define (write/file path d)
-    (call-with-output-file path (lambda (out) (write/port out d))))
+    (call-with-output-file path (lambda (out) (writeable?! d) (write d out))))
 
   (define (racket-datum form)
     (define (? tag) (nscm-equal? (vector-ref form 0) tag))
