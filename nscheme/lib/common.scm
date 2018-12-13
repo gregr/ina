@@ -1,6 +1,6 @@
 (provide length=? length>=? ctx:var ctx:set! ctx:op ctx:def
          env:empty env-ref env-get-prop
-         env-remove* env-add* env-extend* env-update*
+         env-remove* env-add* env-extend* env-update* name->string
          param?! bpair*?! ncons param-map param-names param-bind
          defstate:empty defstate-env defstate-names defstate-actions
          defstate-env-set defstate-names-add defstate-actions-add)
@@ -8,7 +8,10 @@
 ;; Pattern matching
 (define (length=? len xs)  (and (list? xs) (= (length xs) len)))
 (define (length>=? len xs) (and (list? xs) (>= (length xs) len)))
-(define (param?! param) (unless (andmap string? (param-names param))
+(define (name->string n) (if (mvector? n) (mvector-ref n 0) n))
+(define (name? p) (and (or (not (mvector? p)) (= (mvector-length p) 1))
+                       (string? (name->string p))))
+(define (param?! param) (unless (andmap name? (param-names param))
                           (error '"invalid parameters:" param)))
 (define (bpair*?! b*)
   (define (? b) (and (length=? 2 b) (param?! (car b))))

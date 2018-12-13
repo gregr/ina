@@ -3,7 +3,7 @@
          ast:apply* ast:let ast:begin ast:shift ast:reset
          @or @body*)
 
-(require length=? length>=? param?! bpair*?! param-map param-names
+(require length=? length>=? param?! bpair*?! param-map param-names name->string
          ctx:var ctx:set! ctx:op ctx:def
          env:empty env-ref env-get-prop env-extend* env-update*
          defstate:empty defstate-env defstate-names defstate-actions
@@ -13,9 +13,10 @@
 
 (define (binding:var n r) (cons n (list (cons ctx:var r) (cons ctx:set! r))))
 (define (binding:syntax ctx n proc) (cons n (list (cons ctx proc))))
+(define (rename n) (make-mvector 1 (name->string n)))
 (define (env-extend*/var env n*)
   (param?! n*)
-  (env-extend* env (map (lambda (n) (binding:var n (make-mvector 1 n))) n*)))
+  (env-extend* env (map (lambda (n) (binding:var n (rename n))) n*)))
 (define (param/renamings env param)
   (param-map (lambda (n) (env-get-prop env n ctx:var #f)) param))
 
@@ -27,9 +28,9 @@
 (define (ast:list . xs) (foldr ast:cons ast:null xs))
 (define (ast:vector . xs)
   (define vargs (list (ast:quote (length xs)) ast:true))
-  (define $mv (ast:var 'mv))
+  (define mv (make-mvector 1 'mv)) (define $mv (ast:var mv))
   (define (! i x) (ast:prim 'mvector-set! (list $mv (ast:quote i) x)))
-  (ast:let '(mv) (list (ast:prim 'make-mvector vargs))
+  (ast:let (list mv) (list (ast:prim 'make-mvector vargs))
            (ast:begin (append (map ! (range (length xs)) xs)
                               (list (ast:prim 'mvector->vector (list $mv)))))))
 (define (ast:apply* $proc $a*) (ast:apply $proc (apply ast:list $a*)))
