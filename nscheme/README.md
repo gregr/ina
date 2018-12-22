@@ -11,25 +11,121 @@
 ## TODO
 
 ### bootstrap with only simple code
-* backend-racket code generation
-  * use Racket-provided capabilities to output or evaluate generated code
+* reorganize lib/
+  * README.md
+  * link.scm
+  * test.scm
+  * modules/
+  * eventually cache results?: linked.sdata or linked.bdata
 
-* bootstrapped base system can be a straightforward command-line compiler
-  * compile nScheme programs (expecting host capabilities) to Racket
-    * file-io/compilation/linking defined by running nScheme script given as input
-    * suggests base system is really an interpreter providing compiler capabilities
-  * should be able to compile itself and run with equivalent behavior
-  * provide enough capabilities to eventually build the Racket platform system
-    * stdin/stdout/stderr, stty, filesystem, network sockets, gui
-    * threads/places/futures, timers, exception/break/interrupt handling
-      * uncaught-exception-handler, call-with-exception-handler, exn:break?
-    * cmdline/shell/env/subprocesses, racket-eval
+* single-form module headers:
+  ```
+  (LANGUAGE-NAME
+   (provide ...)
+   (require ...)
+   ...)
+  body ...
+  ```
 
-### Racket platform
+* module.scm: module construction/composition
+  * module repr: ast, require/provide, extra prims, extra foreign code (prefix/suffix)
+  * construct a unit module:
+    * spec: require/provide public/private, body s-expr, language (extra reqs, env, body transformer)
+      * can load these from a file (probably have to parse)
+    * unit may have `#f` provisions (return normal result of lambda); prevents downstream linking
+      * such a unit is "program-like"
+  * compose two modules: add or become the downstream module
+    * unsatisfied requirements accumulate; can be renamed; duplicate names are fine
+    * provisions either accumulate (add) or are replaced (become); can be renamed; no duplicates
+  * attach a table describing new ast:prim names (e.g., for host capabilities)
+    * name may be attached multiple times as long as attributes match?
+  * attach arbitrary foreign code (e.g., require modules that define ast:prim names, like prim.rkt)
+    * annotate with foreign language name; supports code generation for multiple languages
+
+* module-racket.scm: generating rkt-module for one or more nscm modules
+  * associate a name with the final result of each module
+  * attach arbitrary other rkt code (prefix/suffix), like a submodule for "test", "main"
+    * either via racket-datum or raw strings
+
+* module construction and linking in more detail:
+  * typical units:
+    * source files are parsed into specs w/: language, provided(pub/priv), required(pub/priv), body
+    * languages describe:
+      * implicit additional requirements(pub/priv)
+      * the env to use when building the ast
+      * a body syntax transformer
+        * e.g., set up 3d syntax needed to produce env:extended, parameterized over required names)
+          ```
+          (lambda (body)
+            (lambda (env)
+              renamings-for-vars = (env-ref env private-name) for each private req (e.g., append, equal?, list->vector)
+              env-with-syntax-etc = ... add syntax bindings based on accessed req renamings
+              (stage env-with-syntax-etc body)))
+          ```
+      * some languages:
+        * empty:          env is env:empty,     wrapper is `(lambda (x) x)`
+        * initial:        env is env:initial,   wrapper is `(lambda (x) x)`
+        * primitive:      env is env:primitive, wrapper is `(lambda (x) x)`
+        * base-primitive: like initial,        but with additional reqs
+        * base:           like base/primitive, but with even more additional reqs
+        * extended:       like base, but with a few duplicated reqs and a more serious wrapper
+    * constructing a module repr from spec:
+      * where spec has: provide-public, provide-private, require-public, require-private, body, language
+      * where language has: implicit-require-public, implicit-require-private, env, transform
+      * ast is built via:
+        ```
+        (@lambda env (append implicit-require-private require-private)
+          (transform (append body (list (cons $list provide-private)))))
+        ```
+      * require is: `(append implicit-require-public require-public)`
+      * provide is: `provide-public`
+      * extra prims and foreign code are empty
+  * typical composite C from A followed by B:
+    * where A, B, or C as X has: X:require, X:provide, X:ast, X:extra-prims, X:foreign-prefix, X:foreign-suffix
+    * C:require        = (append (subtract B:require A:provide) A:require)
+    * C:provide        = (append B:provide A:provide)
+    * C:extra-prims    = (append B:extra-prims A:extra-prims)
+    * C:foreign-prefix = (append A:foreign-prefix B:foreign-prefix)
+    * C:foreign-suffix = (append B:foreign-suffix A:foreign-suffix)
+    * C:ast ~=
+      * add:
+        ```
+        (lambda C:require
+          (let ((A:provide (apply A:ast A:require)))
+            (append (apply B:ast B:require) A:provide))
+        ```
+      * become:
+        ```
+        (lambda C:require
+          (let ((A:provide (apply A:ast A:require)))
+            (apply B:ast B:require)))
+        ```
+
+* nscheme.scm: evaluates one input file as a program (optional command line arguments)
+  * provide entire "lib" namespace, some host capabilities, and command line arguments
+  * convenient relative path loading: provide input file directory as "local-directory"
+
+* bootstrap.rkt: behave like a limited nscheme.scm, hardcoded to produce nscheme.scm.rkt
+  * run "lib" tests
+  * run build-rkt-nscheme.scm to produce nscheme.scm.rkt
+  * diff nscheme.scm.rkt with output of running build-rkt-nscheme.scm via nscheme.scm.rkt
+
+* host.rkt capabilities:
+  * stdin/stdout/stderr, stty, filesystem, network sockets, gui
+  * threads/places/futures, timers, exception/break/interrupt handling
+    * uncaught-exception-handler, call-with-exception-handler, exn:break?
+  * cmdline/shell/env/subprocesses, racket-eval
+
 * define ports, read, write
+  * start with high level ops for now, then reimplement in terms of lower level ops
+    * open-input-file, open-output-file, close-input-port, close-output-port, flush-output
+    * high level: eof?, printf, write-string, write, read-string, read
+    * low level: peek-bytes!, read-bytes!, write-bytes, file-position (via `*` version for safety)
+      * store bytes in mvectors; support consolidation into vector of unicode chars
   * include non-device (aka string/byte buffer) ports
     * for when you want a port interface to string-like data
-  * prefer dealing with bytes/words, not strings
+
+### Racket platform
 * provide host system capabilities to a program via lambda
   * (lambda (host) ... program ...)
   * host object can be queried for (virtual) hardware capabilities
