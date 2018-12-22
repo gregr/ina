@@ -20,7 +20,7 @@
 
 * single-form module headers:
   ```
-  (LANGUAGE-NAME
+  ((language ...)
    (provide ...)
    (require ...)
    ...)
@@ -30,7 +30,7 @@
 * module.scm: module construction/composition
   * module repr: ast, require/provide, extra prims, extra foreign code (prefix/suffix)
   * construct a unit module:
-    * spec: require/provide public/private, body s-expr, language (extra reqs, env, body transformer)
+    * spec: require/provide public/private, body s-expr, language (extra reqs, syntax bindings in terms of reqs)
       * can load these from a file (probably have to parse)
     * unit may have `#f` provisions (return normal result of lambda); prevents downstream linking
       * such a unit is "program-like"
@@ -51,31 +51,28 @@
   * typical units:
     * source files are parsed into specs w/: language, provided(pub/priv), required(pub/priv), body
     * languages describe:
-      * implicit additional requirements(pub/priv)
-      * the env to use when building the ast
-      * a body syntax transformer
-        * e.g., set up 3d syntax needed to produce env:extended, parameterized over required names)
-          ```
-          (lambda (body)
-            (lambda (env)
-              renamings-for-vars = (env-ref env private-name) for each private req (e.g., append, equal?, list->vector)
-              env-with-syntax-etc = ... add syntax bindings based on accessed req renamings
-              (stage env-with-syntax-etc body)))
-          ```
+      * implicit additional requirements
+      * renamed->bindings
+        * i.e., bindings are parameterized on implicit requirements (renamed by the eventual @lambda)
+          * e.g., extended language syntax (case, quasiquote) depends on: append, equal?, list->vector
       * some languages:
-        * empty:          env is env:empty,     wrapper is `(lambda (x) x)`
-        * initial:        env is env:initial,   wrapper is `(lambda (x) x)`
-        * primitive:      env is env:primitive, wrapper is `(lambda (x) x)`
+        * empty:          no implicits, env:empty bindings
+        * initial:        no implicits, env:initial bindings
+        * primitive:      no implicits, env:primitive bindings
         * base-primitive: like initial,        but with additional reqs
         * base:           like base/primitive, but with even more additional reqs
-        * extended:       like base, but with a few duplicated reqs and a more serious wrapper
+        * extended:       like base, but with a few duplicated reqs and more serious syntax bindings
     * constructing a module repr from spec:
       * where spec has: provide-public, provide-private, require-public, require-private, body, language
-      * where language has: implicit-require-public, implicit-require-private, env, transform
+      * where language has: implicit-require-public, implicit-require-private, renamed->bindings
       * ast is built via:
         ```
         (@lambda env (append implicit-require-private require-private)
-          (transform (append body (list (cons $list provide-private)))))
+          (lambda (env)
+            (define renamed (map (lambda (n) (env-get-prop env n ctx:var #f))
+                                 implicit-require-private))
+            (stage (env-update* env (renamed->bindings renamed))
+                   (append body (list (cons $list provide-private))))))
         ```
       * require is: `(append implicit-require-public require-public)`
       * provide is: `provide-public`
