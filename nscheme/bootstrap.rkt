@@ -896,23 +896,26 @@
 (define (link/module env m) (append (module-apply-provide m env) env))
 (define (link/module* env m*)
   (foldl (lambda (m e) (link/module e m)) env m*))
-;; TODO: single form module header, including language (ignore and assume base)
 (define (nscm:module-spec body)
   (define (i->r items rrns)
     (foldl (lambda (item rrns)
              (if (and (pair? item) (equal? (car item) 'rename))
                (append (reverse (cdr item)) rrns)
                (cons (list item item) rrns))) rrns items))
-  (let loop ((body body) (rrequired '()) (rprovided '()))
-    (define next (and (pair? body) (pair? (car body)) (car body)))
-    (cond ((equal? (car next) 'require)
-           (loop (cdr body) (i->r (cdr next) rrequired) rprovided))
-          ((equal? (car next) 'provide)
-           (loop (cdr body) rrequired (i->r (cdr next) rprovided)))
-          (#t (define rd (reverse rrequired)) (define pd (reverse rprovided))
+  (let loop ((header (car body)) (rrequired '()) (rprovided '()))
+    (define next (and (pair? header) (car header)))
+    (cond ((null? header)
+           (define rd (reverse rrequired)) (define pd (reverse rprovided))
            (define required (map car rd)) (define required-priv (map cadr rd))
            (define provided (map cadr pd)) (define provided-priv (map car pd))
-           (vector required provided required-priv provided-priv body)))))
+           (vector required provided required-priv provided-priv (cdr body)))
+          ((equal? (car next) 'require)
+           (loop (cdr header) (i->r (cdr next) rrequired) rprovided))
+          ((equal? (car next) 'provide)
+           (loop (cdr header) rrequired (i->r (cdr next) rprovided)))
+          ((equal? (car next) 'language)  ;; Ignore and assume base language.
+           (loop (cdr header) rrequired rprovided))
+          (#t (error "invalid module header:" (car body) header)))))
 
 (define (nscm:module body)
   (define ($list _) (stage env:initial (s->ns '(lambda xs xs))))
@@ -922,7 +925,7 @@
                                (list (cons $list (vector-ref mspec 3))))))
   (vector (vector-ref mspec 0) (vector-ref mspec 1) (base:eval (s->ns code))))
 
-(define (build-nscheme)
+(define (build-nscheme-lib)
   ;; TODO: incorporate base library as a module and throw away base:eval.
   (define (libmod name)
     (define file-name (string-append "lib/" (symbol->string name) ".scm"))
@@ -941,7 +944,7 @@
 (module+ test
   (printf "~a\n" "Testing bootstrap.rkt stage:")
   (run-tests (list stage:test!))
-  (void (build-nscheme)))
+  (void (build-nscheme-lib)))
 
 (module+ main
   (define-runtime-path here ".")
@@ -956,7 +959,7 @@
   ;; e.g., at the very least, make use of racket-datum for more control.
   (define (nscm:read*/file path)   (s->ns (read*/file (path:s->ns path))))
   (define (nscm:write/file path d) (write/file (path:ns->s path) (ns->s d)))
-  (define env:nscheme (build-nscheme))
+  (define env:nscheme (build-nscheme-lib))
   (define env:full
     (append `((program-path           . ,(path:s->ns simple-path))
               (command-line-arguments . #())

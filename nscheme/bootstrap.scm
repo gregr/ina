@@ -23,17 +23,21 @@
                  (if (and (pair? item) (equal? (car item) 'rename))
                    (append (reverse (cdr item)) rrns)
                    (cons (list item item) rrns))) rrns items))
-      (let loop ((body body) (rrequired '()) (rprovided '()))
-        (define next (and (pair? body) (pair? (car body)) (car body)))
-        (cond
-          ((equal? (car next) 'require)
-           (loop (cdr body) (i->r (cdr next) rrequired) rprovided))
-          ((equal? (car next) 'provide)
-           (loop (cdr body) rrequired (i->r (cdr next) rprovided)))
-          (#t (define rd (reverse rrequired)) (define pd (reverse rprovided))
-           (define required (map car rd)) (define required-priv (map cadr rd))
-           (define provided (map cadr pd)) (define provided-priv (map car pd))
-           (vector required provided required-priv provided-priv body)))))))
+      (let loop ((header (car body)) (rrequired '()) (rprovided '()))
+        (define next (and (pair? header) (car header)))
+        (cond ((null? header)
+               (define rd (reverse rrequired)) (define pd (reverse rprovided))
+               (define required (map car rd)) (define required-priv (map cadr rd))
+               (define provided (map cadr pd)) (define provided-priv (map car pd))
+               (vector required provided required-priv provided-priv (cdr body)))
+              ((equal? (car next) 'require)
+               (loop (cdr header) (i->r (cdr next) rrequired) rprovided))
+              ((equal? (car next) 'provide)
+               (loop (cdr header) rrequired (i->r (cdr next) rprovided)))
+              ((equal? (car next) 'language)  ;; TODO: accumulate these.
+               (loop (cdr header) rrequired rprovided))
+              (#t (error '"invalid module header:" (car body) header)))))
+    ))
 
 (define nscheme.scm:main
   '(

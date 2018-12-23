@@ -1,10 +1,9 @@
-(provide extended:stage extended:ast:values)
-
-(require length=? length>=? env-get-prop env-update* ctx:op
-         ast:var ast:quote ast:if
-         ast:null ast:true ast:false ast:cons ast:apply* ast:let
-         @or @body*
-         binding:syntax/validation stage env:initial language base:stage)
+((provide extended:stage extended:ast:values)
+ (require length=? length>=? env-get-prop env-update* ctx:op
+          ast:var ast:quote ast:if
+          ast:null ast:true ast:false ast:cons ast:apply* ast:let
+          @or @body*
+          binding:syntax/validation stage env:initial language base:stage))
 
 (define keyword-bindings
   '((quasiquote       (keyword:quasiquote . quasiquote))

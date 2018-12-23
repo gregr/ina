@@ -1,14 +1,5 @@
-(provide
-  assoc:empty
-  assoc-ref
-  assoc-set
-  assoc-set/remove
-  assoc-filter
-  assoc-remove
-  assoc-remove*
-  assoc-keep*
-  assoc-simplify
-  test!)
+((provide assoc:empty assoc-ref assoc-set assoc-set/remove assoc-filter
+          assoc-remove assoc-remove* assoc-keep* assoc-simplify test!))
 
 (define assoc:empty '())
 

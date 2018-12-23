@@ -1,7 +1,6 @@
-(provide base:stage base:ast:values)
-
-(require stage env:primitive language
-         primitive-op-descriptions primitive-op-type-signature)
+((provide base:stage base:ast:values)
+ (require stage env:primitive language
+          primitive-op-descriptions primitive-op-type-signature))
 
 (define primitive-op-procs
   (map (lambda (po-desc)

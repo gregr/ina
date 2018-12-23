@@ -1,4 +1,4 @@
-(provide hash)
+((provide hash))
 
 ;; TODO: define general and maybe rolling hash functions.
 ;; For simplicity start with FNV-1a.

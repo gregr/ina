@@ -1,6 +1,5 @@
-(provide test-eval test!)
-
-(require ast-eval env:initial base:stage base:ast:values eval env:base)
+((provide test-eval test!)
+ (require ast-eval env:initial base:stage base:ast:values eval env:base))
 
 (define (test! test)
   (test 'testing-eval/stage #t #t)

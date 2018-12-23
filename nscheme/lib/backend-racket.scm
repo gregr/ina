@@ -1,6 +1,5 @@
-(provide ast->racket-datum rkt:compile rkt:module/main)
-
-(require ast-elaborate)
+((provide ast->racket-datum rkt:compile rkt:module/main)
+ (require ast-elaborate))
 
 (define (~map f ~xs)
   (cond ((pair? ~xs) (cons (f (car ~xs)) (~map f (cdr ~xs))))

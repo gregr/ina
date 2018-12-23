@@ -18,15 +18,6 @@
   * modules/
   * eventually cache results?: linked.sdata or linked.bdata
 
-* single-form module headers:
-  ```
-  ((language ...)
-   (provide ...)
-   (require ...)
-   ...)
-  body ...
-  ```
-
 * module.scm: module construction/composition
   * module repr: ast, require/provide, extra prims, extra foreign code (prefix/suffix)
   * construct a unit module:

@@ -1,4 +1,4 @@
-(provide merge-sort)
+((provide merge-sort))
 
 (define (list-odds xs)
   (cond ((null? xs)       '())

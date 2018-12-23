@@ -1,4 +1,4 @@
-(require program-path printf file-exists? write/file)
+((require program-path printf file-exists? write/file))
 
 (define out-path
   (reverse (cons 'nscheme.scm.rkt (cdr (reverse program-path)))))

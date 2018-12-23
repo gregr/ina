@@ -1,4 +1,4 @@
-(provide tagged-vector? tagged-vector?! case/import test!)
+((provide tagged-vector? tagged-vector?! case/import test!))
 
 (define (import-apply i env)
   (apply (cdr i) (map (lambda (name)

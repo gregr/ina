@@ -1,7 +1,6 @@
-(provide test!)
-
-(require ast-eval env:initial
-         base:ast:values extended:stage extended:ast:values)
+((provide test!)
+ (require ast-eval env:initial
+          base:ast:values extended:stage extended:ast:values))
 
 (define (test! test)
   (define base:values     (ast-eval base:ast:values))

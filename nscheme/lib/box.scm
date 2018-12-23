@@ -1,8 +1,4 @@
-(provide
-  box
-  box?
-  unbox
-  set-box!)
+((provide box box? unbox set-box!))
 
 (define (box d)         (make-mvector 1 d))
 (define (box? d)        (and (mvector? d) (= 1 (mvector-length d))))

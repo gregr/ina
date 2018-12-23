@@ -1,8 +1,4 @@
-(provide
-  compare
-  max/any
-  min/any
-  test!)
+((provide compare max/any min/any test!))
 
 (define (typecode d)
   (cond ((null? d)      0)
