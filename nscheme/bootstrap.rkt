@@ -951,6 +951,7 @@
     (map (lambda (p) (string-trim (path->string p) "/"))
          (explode-path (simplify-path path))))
   (define (path:ns->s path) (string-join path "/"))
+  (define (nscm:file-exists? path) (file-exists? (path:ns->s path)))
   ;; TODO: eventually replace these with lower level file capabilities.
   ;; e.g., at the very least, make use of racket-datum for more control.
   (define (nscm:read*/file path)   (s->ns (read*/file (path:s->ns path))))
@@ -960,14 +961,10 @@
     (append `((program-path           . ,(path:s->ns simple-path))
               (command-line-arguments . #())
               (printf                 . ,(lift printf))
+              (file-exists?           . ,(lift nscm:file-exists?))
               (read*/file             . ,(lift nscm:read*/file))
               (write/file             . ,(lift nscm:write/file)))
             env:nscheme))
-  ;; TODO: move these warnings into build-rkt-nscheme.scm itself.
-  (when (file-exists? target-path)
-    (printf "~s already exists; remove it to rebuild it.\n" simple-path))
   (define build-rkt-nscheme.scm
     (read*/file (build-path here "build-rkt-nscheme.scm")))
-  (unless (file-exists? target-path)
-    (time (link/module env:full (nscm:module build-rkt-nscheme.scm)))
-    (printf "Finished building: ~s\n" simple-path)))
+  (time (void (link/module env:full (nscm:module build-rkt-nscheme.scm)))))
