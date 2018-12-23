@@ -858,11 +858,13 @@
 (require
   "interop.rkt"
   'stage
+  racket/list
   racket/match
   racket/runtime-path
+  racket/string
   )
 
-(module+ test
+(define (run-tests test!*)
   (define tests-total 0)
   (define test-failures '())
   (define (test-report)
@@ -880,23 +882,92 @@
           (else (printf "Failed.\nExpected: ~s\nActual: ~s\n****************\n"
                         expected actual)
                 (set! test-failures (cons name test-failures)))))
-  (stage:test! test)
+  (for-each (lambda (t) (t test)) test!*)
   (test-report))
+
+(define (alist-ref alist k)
+  (cdr (or (assoc k alist)
+           (error "alist-ref of non-existent key:" k alist))))
+(define (alist-ref* alist k*) (map (lambda (k) (alist-ref alist k)) k*))
+(define (module-apply m env)
+  ($apply (vector-ref m 2) (alist-ref* env (vector-ref m 0))))
+(define (module-apply-provide m env)
+  (map cons (vector-ref m 1) (module-apply m env)))
+(define (link/module env m) (append (module-apply-provide m env) env))
+(define (link/module* env m*)
+  (foldl (lambda (m e) (link/module e m)) env m*))
+;; TODO: single form module header, including language (ignore and assume base)
+(define (nscm:module-spec body)
+  (define (i->r items rrns)
+    (foldl (lambda (item rrns)
+             (if (and (pair? item) (equal? (car item) 'rename))
+               (append (reverse (cdr item)) rrns)
+               (cons (list item item) rrns))) rrns items))
+  (let loop ((body body) (rrequired '()) (rprovided '()))
+    (define next (and (pair? body) (pair? (car body)) (car body)))
+    (cond ((equal? (car next) 'require)
+           (loop (cdr body) (i->r (cdr next) rrequired) rprovided))
+          ((equal? (car next) 'provide)
+           (loop (cdr body) rrequired (i->r (cdr next) rprovided)))
+          (#t (define rd (reverse rrequired)) (define pd (reverse rprovided))
+           (define required (map car rd)) (define required-priv (map cadr rd))
+           (define provided (map cadr pd)) (define provided-priv (map car pd))
+           (vector required provided required-priv provided-priv body)))))
+
+(define (nscm:module body)
+  (define ($list _) (stage env:initial (s->ns '(lambda xs xs))))
+  (define mspec (nscm:module-spec body))
+  (define code (append (list 'lambda (vector-ref mspec 2))
+                       (append (vector-ref mspec 4)
+                               (list (cons $list (vector-ref mspec 3))))))
+  (vector (vector-ref mspec 0) (vector-ref mspec 1) (base:eval (s->ns code))))
+
+(define (build-nscheme)
+  ;; TODO: incorporate base library as a module and throw away base:eval.
+  (define (libmod name)
+    (define file-name (string-append "lib/" (symbol->string name) ".scm"))
+    (nscm:module (read*/file file-name)))
+  (define modules      '(common ast stage base eval extended backend-racket))
+  (define test-modules '(base-test extended-test))
+  (define env:nscheme/tests (link/module* '() (map libmod modules)))
+  (define env:test (link/module* env:nscheme/tests (map libmod test-modules)))
+
+  (printf "~a\n" "Testing nscheme library:")
+  (define env:test! (filter (lambda (rib) (equal? 'test! (car rib))) env:test))
+  (define (lower-test! t) (lambda (test) ((lower t) (lift test))))
+  (run-tests (reverse (map lower-test! (map cdr env:test!))))
+  (filter-not (lambda (r) (equal? (car r) 'test!)) env:nscheme/tests))
+
+(module+ test
+  (printf "~a\n" "Testing bootstrap.rkt stage:")
+  (run-tests (list stage:test!))
+  (void (build-nscheme)))
 
 (module+ main
   (define-runtime-path here ".")
   (define target-path (build-path here "nscheme.scm.rkt"))
   (define simple-path (path->string (simplify-path target-path)))
+  (define (path:s->ns path)
+    (map (lambda (p) (string-trim (path->string p) "/"))
+         (explode-path (simplify-path path))))
+  (define (path:ns->s path) (string-join path "/"))
+  ;; TODO: eventually replace these with lower level file capabilities.
+  ;; e.g., at the very least, make use of racket-datum for more control.
+  (define (nscm:read*/file path)   (s->ns (read*/file (path:s->ns path))))
+  (define (nscm:write/file path d) (write/file (path:ns->s path) (ns->s d)))
+  (define env:nscheme (build-nscheme))
+  (define env:full
+    (append `((program-path           . ,(path:s->ns simple-path))
+              (command-line-arguments . #())
+              (printf                 . ,(lift printf))
+              (read*/file             . ,(lift nscm:read*/file))
+              (write/file             . ,(lift nscm:write/file)))
+            env:nscheme))
+  ;; TODO: move these warnings into build-rkt-nscheme.scm itself.
   (when (file-exists? target-path)
     (printf "~s already exists; remove it to rebuild it.\n" simple-path))
-  (define (nscm:read*/file path) (s->ns (read*/file (build-path here path))))
-  (define capabilities (s->ns `((printf     . ,(lift printf))
-                                (read*/file . ,(lift nscm:read*/file))
-                                (eval       . ,(lift base:eval)))))
-  (define bootstrap.scm
-    (s->ns `(let () ,@(read*/file (build-path here "bootstrap.scm")))))
-  (define nscheme.scm.rkt
-    (time ((lower (base:eval bootstrap.scm)) capabilities)))
+  (define build-rkt-nscheme.scm
+    (read*/file (build-path here "build-rkt-nscheme.scm")))
   (unless (file-exists? target-path)
-    (write/file target-path (racket-datum nscheme.scm.rkt))
+    (time (link/module env:full (nscm:module build-rkt-nscheme.scm)))
     (printf "Finished building: ~s\n" simple-path)))

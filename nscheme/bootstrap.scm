@@ -1,3 +1,5 @@
+;; TODO: throw this file away after scavenging its module manipulation facilities.
+
 ;; TODO: modules should be able to require the entire env/alist as a single value?  Maybe not.
 
 ;; TODO: link/program; how should programs be constructed? require but not provide? optional provide?

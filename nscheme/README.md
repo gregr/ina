@@ -103,7 +103,6 @@
   * convenient relative path loading: provide input file directory as "local-directory"
 
 * bootstrap.rkt: behave like a limited nscheme.scm, hardcoded to produce nscheme.scm.rkt
-  * run "lib" tests
   * run build-rkt-nscheme.scm to produce nscheme.scm.rkt
   * diff nscheme.scm.rkt with output of running build-rkt-nscheme.scm via nscheme.scm.rkt
 
@@ -121,6 +120,8 @@
       * store bytes in mvectors; support consolidation into vector of unicode chars
   * include non-device (aka string/byte buffer) ports
     * for when you want a port interface to string-like data
+
+* rename stage.scm to parse.scm
 
 ### Racket platform
 * provide host system capabilities to a program via lambda
