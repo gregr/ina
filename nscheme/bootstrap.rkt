@@ -889,13 +889,11 @@
   (cdr (or (assoc k alist)
            (error "alist-ref of non-existent key:" k alist))))
 (define (alist-ref* alist k*) (map (lambda (k) (alist-ref alist k)) k*))
-(define (module-apply m env)
-  ($apply (vector-ref m 2) (alist-ref* env (vector-ref m 0))))
-(define (module-apply-provide m env)
-  (map cons (vector-ref m 1) (module-apply m env)))
-(define (link/module env m) (append (module-apply-provide m env) env))
-(define (link/module* env m*)
-  (foldl (lambda (m e) (link/module e m)) env m*))
+(define (module-apply m ns)
+  (define pro ($apply (vector-ref m 2) (alist-ref* ns (vector-ref m 0))))
+  (if (vector-ref m 1) (map cons (vector-ref m 1) pro) pro))
+(define (namespace-link* ns m*)
+  (foldl (lambda (m ns) (append (module-apply m ns) ns)) ns m*))
 (define (nscm:module-spec body)
   (define (i->r items rrns)
     (foldl (lambda (item rrns)
@@ -925,26 +923,27 @@
                                (list (cons $list (vector-ref mspec 3))))))
   (vector (vector-ref mspec 0) (vector-ref mspec 1) (base:eval (s->ns code))))
 
-(define (build-nscheme-lib)
+(define (build-nscheme-namespace)
   ;; TODO: incorporate base library as a module and throw away base:eval.
   (define (libmod name)
     (define file-name (string-append "lib/" (symbol->string name) ".scm"))
     (nscm:module (read*/file file-name)))
-  (define modules      '(common ast stage base eval extended backend-racket))
+  (define modules
+    '(common ast stage base eval extended backend-racket module))
   (define test-modules '(base-test extended-test))
-  (define env:nscheme/tests (link/module* '() (map libmod modules)))
-  (define env:test (link/module* env:nscheme/tests (map libmod test-modules)))
+  (define ns:nscheme/tests (namespace-link* '() (map libmod modules)))
+  (define ns:test (namespace-link* ns:nscheme/tests (map libmod test-modules)))
 
   (printf "~a\n" "Testing nscheme library:")
-  (define env:test! (filter (lambda (rib) (equal? 'test! (car rib))) env:test))
+  (define ns:test! (filter (lambda (rib) (equal? 'test! (car rib))) ns:test))
   (define (lower-test! t) (lambda (test) ((lower t) (lift test))))
-  (run-tests (reverse (map lower-test! (map cdr env:test!))))
-  (filter-not (lambda (r) (equal? (car r) 'test!)) env:nscheme/tests))
+  (run-tests (reverse (map lower-test! (map cdr ns:test!))))
+  (filter-not (lambda (r) (equal? (car r) 'test!)) ns:nscheme/tests))
 
 (module+ test
   (printf "~a\n" "Testing bootstrap.rkt stage:")
   (run-tests (list stage:test!))
-  (void (build-nscheme-lib)))
+  (void (build-nscheme-namespace)))
 
 (module+ main
   (define-runtime-path here ".")
@@ -959,15 +958,15 @@
   ;; e.g., at the very least, make use of racket-datum for more control.
   (define (nscm:read*/file path)   (s->ns (read*/file (path:s->ns path))))
   (define (nscm:write/file path d) (write/file (path:ns->s path) (ns->s d)))
-  (define env:nscheme (build-nscheme-lib))
-  (define env:full
+  (define ns:nscheme (build-nscheme-namespace))
+  (define ns:full
     (append `((program-path           . ,(path:s->ns simple-path))
               (command-line-arguments . #())
               (printf                 . ,(lift printf))
               (file-exists?           . ,(lift nscm:file-exists?))
               (read*/file             . ,(lift nscm:read*/file))
               (write/file             . ,(lift nscm:write/file)))
-            env:nscheme))
+            ns:nscheme))
   (define build-rkt-nscheme.scm
     (read*/file (build-path here "build-rkt-nscheme.scm")))
-  (time (void (link/module env:full (nscm:module build-rkt-nscheme.scm)))))
+  (time (void (module-apply (nscm:module build-rkt-nscheme.scm) ns:full))))
