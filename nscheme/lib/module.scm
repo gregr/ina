@@ -4,7 +4,7 @@
           module module:premodule module:compose
           module:prims module:foreign-prefix module:foreign-suffix
           module-apply namespace-link*)
- (require ast:quote ast:var ast:apply ast:lambda ast:let ast-eval
+ (require ast:quote ast:var ast:apply ast:lambda ast:let ast:list ast-eval
           rename binding:var env:empty env-extend* env-update* stage))
 
 ;; TODO: move these?
@@ -12,7 +12,6 @@
   (cdr (or (assoc k alist)
            (error '"alist-ref of non-existent key:" k alist))))
 (define (alist-ref* alist k*) (map (lambda (k) (alist-ref alist k)) k*))
-(define ast:list (ast:lambda 'xs (ast:var 'xs)))
 
 (define (premodule-require-public pm)  (vector-ref pm 0))
 (define (premodule-provide-public pm)  (vector-ref pm 1))
@@ -81,7 +80,7 @@
   (define env (env-extend* env:lang bv*))
   (define public-req (append (premodule-require-public pm) pub))
   (define private-req (append renamed priv))
-  (define ($list #f) ast:list)
+  (define ($list #f) (ast:lambda 'xs (ast:var 'xs)))
   (define body (if (premodule-provide-private pm)
                  (append (premodule-body pm)
                          (list (cons $list (premodule-provide-private pm))))
@@ -113,7 +112,7 @@
   (define ast:result
     (if become? ast:result:b
       (ast:let (list pro:b) (list ast:result:b)
-               (ast:apply ast:list (map ast:var (append pro:b pro:a))))))
+               (apply ast:list (map ast:var (append pro:b pro:a))))))
   (define ast:c (ast:lambda req (ast:let (list pro:a) (list ast:result:a)
                                          ast:result)))
   (define ast (ast:let (list $ma $mb) (list ast:a ast:b) ast:c))
