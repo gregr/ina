@@ -11,6 +11,16 @@
 ## TODO
 
 ### bootstrap with only simple code
+* redefine languages according to new design
+  * empty:          no implicits, env:empty bindings
+  * initial:        no implicits, env:initial bindings
+  * primitive:      no implicits, env:primitive bindings
+  * base-primitive: like initial,        but with additional reqs
+  * base:           like base-primitive, but with even more additional reqs
+  * extended:       like base, but with a few duplicated reqs and more serious syntax bindings
+
+* rename stage.scm to parse.scm
+
 * reorganize lib/
   * README.md
   * link.scm
@@ -18,76 +28,10 @@
   * modules/
   * eventually cache results?: linked.sdata or linked.bdata
 
-* module.scm: module construction/composition
-  * module repr: ast, require/provide, extra prims, extra foreign code (prefix/suffix)
-  * construct a unit module:
-    * spec: require/provide public/private, body s-expr, language (extra reqs, syntax bindings in terms of reqs)
-      * can load these from a file (probably have to parse)
-    * unit may have `#f` provisions (return normal result of lambda); prevents downstream linking
-      * such a unit is "program-like"
-  * compose two modules: add or become the downstream module
-    * unsatisfied requirements accumulate; can be renamed; duplicate names are fine
-    * provisions either accumulate (add) or are replaced (become); can be renamed; no duplicates
-  * attach a table describing new ast:prim names (e.g., for host capabilities)
-    * name may be attached multiple times as long as attributes match?
-  * attach arbitrary foreign code (e.g., require modules that define ast:prim names, like prim.rkt)
-    * annotate with foreign language name; supports code generation for multiple languages
-
 * module-racket.scm: generating rkt-module for one or more nscm modules
   * associate a name with the final result of each module
   * attach arbitrary other rkt code (prefix/suffix), like a submodule for "test", "main"
     * either via racket-datum or raw strings
-
-* module construction and linking in more detail:
-  * typical units:
-    * source files are parsed into specs w/: language, provided(pub/priv), required(pub/priv), body
-    * languages describe:
-      * implicit additional requirements
-      * renamed->bindings
-        * i.e., bindings are parameterized on implicit requirements (renamed by the eventual @lambda)
-          * e.g., extended language syntax (case, quasiquote) depends on: append, equal?, list->vector
-      * some languages:
-        * empty:          no implicits, env:empty bindings
-        * initial:        no implicits, env:initial bindings
-        * primitive:      no implicits, env:primitive bindings
-        * base-primitive: like initial,        but with additional reqs
-        * base:           like base/primitive, but with even more additional reqs
-        * extended:       like base, but with a few duplicated reqs and more serious syntax bindings
-    * constructing a module repr from spec:
-      * where spec has: provide-public, provide-private, require-public, require-private, body, language
-      * where language has: implicit-require-public, implicit-require-private, renamed->bindings
-      * ast is built via:
-        ```
-        (@lambda env (append implicit-require-private require-private)
-          (lambda (env)
-            (define renamed (map (lambda (n) (env-get-prop env n ctx:var #f))
-                                 implicit-require-private))
-            (stage (env-update* env (renamed->bindings renamed))
-                   (append body (list (cons $list provide-private))))))
-        ```
-      * require is: `(append implicit-require-public require-public)`
-      * provide is: `provide-public`
-      * extra prims and foreign code are empty
-  * typical composite C from A followed by B:
-    * where A, B, or C as X has: X:require, X:provide, X:ast, X:extra-prims, X:foreign-prefix, X:foreign-suffix
-    * C:require        = (append (subtract B:require A:provide) A:require)
-    * C:provide        = (append B:provide A:provide)
-    * C:extra-prims    = (append B:extra-prims A:extra-prims)
-    * C:foreign-prefix = (append A:foreign-prefix B:foreign-prefix)
-    * C:foreign-suffix = (append B:foreign-suffix A:foreign-suffix)
-    * C:ast ~=
-      * add:
-        ```
-        (lambda C:require
-          (let ((A:provide (apply A:ast A:require)))
-            (append (apply B:ast B:require) A:provide))
-        ```
-      * become:
-        ```
-        (lambda C:require
-          (let ((A:provide (apply A:ast A:require)))
-            (apply B:ast B:require)))
-        ```
 
 * nscheme.scm: evaluates one input file as a program (optional command line arguments)
   * provide entire "lib" namespace, some host capabilities, and command line arguments
@@ -111,8 +55,6 @@
       * store bytes in mvectors; support consolidation into vector of unicode chars
   * include non-device (aka string/byte buffer) ports
     * for when you want a port interface to string-like data
-
-* rename stage.scm to parse.scm
 
 ### Racket platform
 * provide host system capabilities to a program via lambda
