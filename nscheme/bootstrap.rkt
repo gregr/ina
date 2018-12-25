@@ -1,6 +1,6 @@
 #lang racket/base
 (module stage racket/base
-  (provide ast-eval stage @lambda env:initial
+  (provide alist-ref* ast-eval stage @lambda env:initial
            base:names base:values base:program base:eval stage:test!)
   (require
     (rename-in "interop.rkt"
@@ -11,6 +11,10 @@
   (define (alist-get rs key default)
     (define rib (assoc key rs))
     (if rib (cdr rib) default))
+  (define (alist-ref alist k)
+    (cdr (or (assoc k alist)
+             (error "alist-ref of non-existent key:" k alist))))
+  (define (alist-ref* alist k*) (map (lambda (k) (alist-ref alist k)) k*))
   (define (alist-remove* rs keys)
     (filter (lambda (rib) (not (member (car rib) keys))) rs))
   (define (vector-set v i x)
@@ -331,6 +335,8 @@
                (cons 'member        member)
                (cons 'assoc         assoc)
                (cons 'alist-get     alist-get)
+               (cons 'alist-ref     alist-ref)
+               (cons 'alist-ref*    alist-ref*)
                (cons 'alist-remove* alist-remove*)
                (cons 'string-append string-append)
                (cons 'foldl         (lower-arg0 foldl))
@@ -888,10 +894,6 @@
   (for-each (lambda (t) (t test)) test!*)
   (test-report))
 
-(define (alist-ref alist k)
-  (cdr (or (assoc k alist)
-           (error "alist-ref of non-existent key:" k alist))))
-(define (alist-ref* alist k*) (map (lambda (k) (alist-ref alist k)) k*))
 (define (module-apply m ns)
   (define pro ($apply (vector-ref m 2) (alist-ref* ns (vector-ref m 0))))
   (if (vector-ref m 1) (map cons (vector-ref m 1) pro) pro))

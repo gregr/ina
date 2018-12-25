@@ -118,6 +118,10 @@
                                 (#t (assoc k (cdr xs))))))
     (alist-get (lambda (rs key default) (let ((rib (assoc key rs)))
                                           (if rib (cdr rib) default))))
+    (alist-ref (lambda (alist k)
+                 (cdr (or (assoc k alist)
+                          (error '"alist-ref of non-existent key:" k alist)))))
+    (alist-ref* (lambda (alist k*) (map (lambda (k) (alist-ref alist k)) k*)))
     (alist-remove* (lambda (rs keys)
                      (filter (lambda (rib) (not (member (car rib) keys))) rs)))
     (string-append (lambda ss

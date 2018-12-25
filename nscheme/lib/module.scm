@@ -9,12 +9,6 @@
  (require ast:quote ast:var ast:apply ast:lambda ast:let ast:list ast-eval
           rename binding:var env:empty env-extend* env-update* parse))
 
-;; TODO: move these?
-(define (alist-ref alist k)
-  (cdr (or (assoc k alist)
-           (error '"alist-ref of non-existent key:" k alist))))
-(define (alist-ref* alist k*) (map (lambda (k) (alist-ref alist k)) k*))
-
 (define (premodule-require-public pm)  (vector-ref pm 0))
 (define (premodule-provide-public pm)  (vector-ref pm 1))
 (define (premodule-require-private pm) (vector-ref pm 2))
