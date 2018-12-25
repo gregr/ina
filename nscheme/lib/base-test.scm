@@ -1,19 +1,19 @@
-((provide test-eval test!)
- (require ast-eval env:initial base:stage base:ast:values eval env:base))
+((provide test!)
+ (require module:base-primitive module:base language:base
+          premodule module:premodule module-apply namespace-link*))
 
 (define (test! test)
   (test 'testing-eval/stage #t #t)
-  (test-eval/stage test)
-  (test 'testing-eval/eval #t #t)
-  (test-eval/eval test))
-
-(define (test-eval/stage test)
-  (define vs (ast-eval base:ast:values))
-  (define (eval form) (apply (ast-eval (base:stage env:initial form)) vs))
+  ;; TODO: this also works:
+  ;(define ns (namespace-link*
+               ;'() (list (module:compose
+                           ;#f module:base-primitive module:base))))
+  (define ns (namespace-link* '() (list module:base-primitive module:base)))
+  (define name=>lang (list (cons 'base language:base)))
+  (define (eval form)
+    (define pm (premodule '() #f '() #f '(base) form))
+    (module-apply (module:premodule name=>lang pm) ns))
   (test-eval eval test))
-
-(define (test-eval/eval test)
-  (test-eval (lambda (form) (eval env:base form)) test))
 
 (define (test-eval ev test)
   (test 'literals

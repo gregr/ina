@@ -1,13 +1,13 @@
 ((provide test!)
- (require ast-eval env:initial
-          base:ast:values extended:stage extended:ast:values))
+ (require module:base-primitive module:base language:extended
+          premodule module:premodule module-apply namespace-link*))
 
 (define (test! test)
-  (define base:values     (ast-eval base:ast:values))
-  (define extended:values (apply (ast-eval extended:ast:values) base:values))
+  (define ns (namespace-link* '() (list module:base-primitive module:base)))
+  (define name=>lang (list (cons 'extended language:extended)))
   (define (ev form)
-    (apply (apply (ast-eval (extended:stage env:initial form)) base:values)
-           extended:values))
+    (define pm (premodule '() #f '() #f '(extended) form))
+    (module-apply (module:premodule name=>lang pm) ns))
 
   (test 'cond-3
     (ev '(cond (#f 3)

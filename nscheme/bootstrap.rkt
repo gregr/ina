@@ -929,7 +929,7 @@
     (define file-name (string-append "lib/" (symbol->string name) ".scm"))
     (nscm:module (read*/file file-name)))
   (define modules
-    '(common ast stage base eval extended backend-racket module))
+    '(common ast stage module base eval extended backend-racket))
   (define test-modules '(base-test extended-test))
   (define ns:nscheme/tests (namespace-link* '() (map libmod modules)))
   (define ns:test (namespace-link* ns:nscheme/tests (map libmod test-modules)))

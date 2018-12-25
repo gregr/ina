@@ -1,4 +1,6 @@
-((provide premodule premodule:parse language
+((provide premodule premodule-language premodule:parse
+          language language-implicit-public language-hidden-public
+          language-implicit-private language-hidden-private language-bindings
           module-require module-provide module-ast module-prims
           module-foreign-prefix module-foreign-suffix
           module module:premodule module:compose

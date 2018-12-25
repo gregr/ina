@@ -1,8 +1,7 @@
-((provide stage env:initial env:primitive language
+((provide stage env:initial env:primitive @or @body*
           ast:null ast:true ast:false ast:cons ast:list ast:vector
           ast:apply* ast:let ast:begin ast:shift ast:reset
-          rename binding:var binding:syntax binding:syntax/validation
-          @or @body*)
+          rename binding:var binding:syntax binding:syntax/validation)
  (require length=? length>=? param?! bpair*?! param-map param-names
           name->string ctx:var ctx:set! ctx:op ctx:def
           env:empty env-ref env-get-prop env-extend* env-update*
@@ -176,37 +175,3 @@
              (ast:prim (car po-desc) (stage* env tail)))))
        primitive-op-descriptions))
 (define env:primitive (env-extend* env:initial primitive-syntax-bindings))
-
-;; Language construction
-(define (language stage0 env
-                  public-names? binding-groups renamings->bindings:syntax)
-  (define all-names
-    (foldl append '() (map (lambda (grp) (map car (cdr grp))) binding-groups)))
-  (define public-names (or public-names? all-names))
-  (define private-names
-    (if public-names?
-      (filter (lambda (n) (not (member n public-names))) all-names) '()))
-  (define public-renames #t)
-  (define all-renames #t)
-  (define (body env)
-    (define private-renames (param/renamings env private-names))
-    (set! public-renames (param/renamings env public-names))
-    (set! all-renames (append private-renames public-renames))
-    (apply ast:list (map ast:var all-renames)))
-  (define (bind-group group body)
-    (define @bind (cond ((equal? (car group) 'let)    @let/)
-                        ((equal? (car group) 'letrec) @letrec)
-                        (#t (error '"invalid binding group:" group))))
-    (lambda (env) (@bind env (cdr group) body)))
-  (define ast:values (stage0 env (foldr bind-group body binding-groups)))
-  (define bindings:syntax
-    (renamings->bindings:syntax (map cons all-names all-renames)))
-  (define (stager env body)
-    (define (form env)
-      (define env:language
-        (env-update*
-          (env-extend* env (map binding:var public-names public-renames))
-          bindings:syntax))
-      (ast:lambda all-renames (stage env:language body)))
-    (stage0 env form))
-  (vector stager ast:values))

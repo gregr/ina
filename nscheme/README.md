@@ -11,15 +11,9 @@
 ## TODO
 
 ### bootstrap with only simple code
-* redefine languages according to new design
-  * empty:          no implicits, env:empty bindings
-  * initial:        no implicits, env:initial bindings
-  * primitive:      no implicits, env:primitive bindings
-  * base-primitive: like initial,        but with additional reqs
-  * base:           like base-primitive, but with even more additional reqs
-  * extended:       like base, but with a few duplicated reqs and more serious syntax bindings
-
 * rename stage.scm to parse.scm
+
+* invert test dependencies
 
 * reorganize lib/
   * README.md

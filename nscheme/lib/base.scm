@@ -1,16 +1,35 @@
-((provide base:stage base:ast:values)
- (require stage env:primitive language
-          primitive-op-descriptions primitive-op-type-signature))
+((provide language:initial language:primitive language:base-primitive
+          language:base module:base-primitive module:base)
+ (require ast:var ast:prim ast:lambda ast:let ast:list
+          primitive-op-descriptions primitive-op-type-signature
+          stage env:initial env:primitive language module))
 
-(define primitive-op-procs
-  (map (lambda (po-desc)
-         (define (x i) (vector-ref '#(x0 x1 x2 x3 x4) i))
-         (define type-sig (primitive-op-type-signature po-desc))
-         (define p* (map x (range (length (car type-sig)))))
-         (list (car po-desc) (list 'lambda p* (cons (car po-desc) p*))))
-       primitive-op-descriptions))
+(define language:initial   (language '() '() '() '() env:initial))
+(define language:primitive (language '() '() '() '() env:primitive))
 
-(define derived-op-procs
+(define names:prim (cons 'apply (map car primitive-op-descriptions)))
+(define language:base-primitive
+  (language names:prim '() names:prim '() env:initial))
+(define module:base-primitive
+  (let* ((lam:apply (stage env:primitive
+                           '(lambda (f arg . args)
+                              (define (cons* x xs)
+                                (if (null? xs) x
+                                  (cons x (cons* (car xs) (cdr xs)))))
+                              (apply f (cons* arg args)))))
+         (lams:prim
+           (map (lambda (po-desc)
+                  (define (x i) (vector-ref '#(x0 x1 x2 x3 x4) i))
+                  (define type-sig (primitive-op-type-signature po-desc))
+                  (define p* (map x (range (length (car type-sig)))))
+                  (ast:lambda p* (ast:prim (car po-desc) (map ast:var p*))))
+                primitive-op-descriptions))
+         (ast (ast:lambda
+                '() (ast:let names:prim (cons lam:apply lams:prim)
+                             (apply ast:list (map ast:var names:prim))))))
+    (module '() names:prim ast '() '() '())))
+
+(define defs:base
   '((error (lambda args ('error args)))
     (not (lambda (b) (if b #f #t)))
     (caar (lambda (v) (car (car v))))
@@ -100,13 +119,13 @@
                      (vector->string (list->vector (apply append css)))))
     ))
 
-(def #(base:stage base:ast:values)
-     (language stage env:primitive #f
-               (list (cons 'let primitive-op-procs)
-                     '(let (apply (lambda (f arg . args)
-                                    (define (cons* x xs)
-                                      (if (null? xs) x
-                                        (cons x (cons* (car xs) (cdr xs)))))
-                                    (apply f (cons* arg args)))))
-                     (cons 'letrec derived-op-procs))
-               (lambda _ '())))
+(define names:base      (map car defs:base))
+(define names:prim&base (append names:prim names:base))
+(define language:base
+  (language names:prim&base '() names:prim&base '() env:initial))
+(define module:base
+  (let ((ast (stage env:initial
+                    (list 'lambda names:prim
+                          (list 'letrec defs:base
+                                (cons '(lambda xs xs) names:base))))))
+    (module names:prim names:base ast '() '() '())))
