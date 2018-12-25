@@ -6,13 +6,15 @@
     (rename-in "interop.rkt"
                (nscm-equal? equal?) (nscm-member member) (nscm-assoc assoc)
                (nscm-quote quote) (nscm-quasiquote quasiquote))
-    racket/list racket/pretty)
+    racket/list racket/vector)
 
   (define (alist-get rs key default)
     (define rib (assoc key rs))
     (if rib (cdr rib) default))
   (define (alist-remove* rs keys)
     (filter (lambda (rib) (not (member (car rib) keys))) rs))
+  (define (vector-set v i x)
+    (let ((result (vector-copy v))) (vector-set! result i x) result))
 
   ;; Pattern matching
   (define (length=? n xs)  (and (list? xs) (= (length xs) n)))
@@ -315,6 +317,7 @@
                (cons 'vector->list  vector->list)
                (cons 'equal?        equal?)
                (cons 'vector        vector)
+               (cons 'vector-set    vector-set)
                (cons 'list?         list?)
                (cons 'list          list)
                (cons 'list*         list*)
