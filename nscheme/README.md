@@ -11,8 +11,6 @@
 ## TODO
 
 ### bootstrap with only simple code
-* rename stage.scm to parse.scm
-
 * invert test dependencies
 
 * reorganize lib/
@@ -126,7 +124,6 @@ Real-world (effect) interaction/reaction:
 
 ### AST augmentation and optimization
 * generated Racket code is currently enormous, partly due to base library
-* try bootstrapping eval.scm/stage.scm first to see how bad it will really be
 * augmented ast
   * variable refcounts, mutability, escape status
   * crude termination/effect status
@@ -179,7 +176,7 @@ Real-world (effect) interaction/reaction:
   * rollback with generalization
 
 ### compiling/evaluating guest programs (program execution states as data)
-* stage.scm syntax error checking that covers all corner cases and contains failure
+* parse.scm syntax error checking that covers all corner cases and contains failure
   * could implement with reset/tag and shift/tag so that errors are catchable
   * could also embed errors within a result, providing more context for better feedback
 * small-step evaluation (of AST) with transparent values

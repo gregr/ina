@@ -3,7 +3,7 @@
           premodule module:premodule module-apply namespace-link*))
 
 (define (test! test)
-  (test 'testing-eval/stage #t #t)
+  (test 'testing-eval/parse #t #t)
   ;; TODO: this also works:
   ;(define ns (namespace-link*
                ;'() (list (module:compose

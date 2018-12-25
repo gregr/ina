@@ -2,7 +2,7 @@
           language:base module:base-primitive module:base)
  (require ast:var ast:prim ast:lambda ast:let ast:list
           primitive-op-descriptions primitive-op-type-signature
-          stage env:initial env:primitive language module))
+          parse env:initial env:primitive language module))
 
 (define language:initial   (language '() '() '() '() env:initial))
 (define language:primitive (language '() '() '() '() env:primitive))
@@ -11,7 +11,7 @@
 (define language:base-primitive
   (language names:prim '() names:prim '() env:initial))
 (define module:base-primitive
-  (let* ((lam:apply (stage env:primitive
+  (let* ((lam:apply (parse env:primitive
                            '(lambda (f arg . args)
                               (define (cons* x xs)
                                 (if (null? xs) x
@@ -124,7 +124,7 @@
 (define language:base
   (language names:prim&base '() names:prim&base '() env:initial))
 (define module:base
-  (let ((ast (stage env:initial
+  (let ((ast (parse env:initial
                     (list 'lambda names:prim
                           (list 'letrec defs:base
                                 (cons '(lambda xs xs) names:base))))))

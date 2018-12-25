@@ -2,7 +2,7 @@
  (require length=? length>=? env-get-prop env-update* @or @body* ctx:op
           ast:var ast:quote ast:if ast:apply* ast:let
           ast:null ast:true ast:false ast:cons
-          stage rename binding:syntax/validation env:initial language:base
+          parse rename binding:syntax/validation env:initial language:base
           language language-implicit-public language-implicit-private))
 
 (define $append              (rename 'append))
@@ -19,11 +19,11 @@
   (define (^ t e) (ast:cons (ast:quote t) (ast:cons e ast:null)))
   (let loop ((level 0) (qq template))
     (cond ((? 'quasiquote qq) (^ 'quasiquote (loop (+ level 1) (cadr qq))))
-          ((? 'unquote qq)    (if (= 0 level) (stage env (cadr qq))
+          ((? 'unquote qq)    (if (= 0 level) (parse env (cadr qq))
                                 (^ 'unquote (loop (- level 1) (cadr qq)))))
           ((and (pair? qq) (? 'unquote-splicing (car qq)))
            (define qqd (loop level (cdr qq)))
-           (if (= 0 level) (ast:append (stage env (cadar qq)) qqd)
+           (if (= 0 level) (ast:append (parse env (cadar qq)) qqd)
              (ast:cons (^ 'unquote-splicing (loop (- level 1) (cadar qq)))
                        qqd)))
           ((pair? qq) (ast:cons (loop level (car qq)) (loop level (cdr qq))))
@@ -38,7 +38,7 @@
   (define $x (make-mvector 1 'scrutinee))
   (define ast:x (ast:var $x))
   (ast:let
-    (list $x) (list (stage env scrutinee))
+    (list $x) (list (parse env scrutinee))
     (foldr
       (lambda (c rest)
         (cond ((not (length>=? 2 c)) (error '"invalid case clause:" c))
@@ -59,10 +59,10 @@
                  ((equal? (keyword? (cadr c)) '=>)
                   (unless (length=? 3 c) (error '"invalid cond clause:" c))
                   (define $x (make-mvector 1 'scrutinee))
-                  (ast:let (list $x) (list (stage env (car c)))
-                           (ast:apply* (stage env (caddr c))
+                  (ast:let (list $x) (list (parse env (car c)))
+                           (ast:apply* (parse env (caddr c))
                                        (list (ast:var $x)))))
-                 (#t (ast:if (stage env (car c)) (@body* env (cdr c))
+                 (#t (ast:if (parse env (car c)) (@body* env (cdr c))
                              rest)))) ast:true clauses))
 
 (define env:extended

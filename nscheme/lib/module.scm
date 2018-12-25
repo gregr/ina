@@ -7,7 +7,7 @@
           module:prims module:foreign-prefix module:foreign-suffix
           module-apply namespace-link*)
  (require ast:quote ast:var ast:apply ast:lambda ast:let ast:list ast-eval
-          rename binding:var env:empty env-extend* env-update* stage))
+          rename binding:var env:empty env-extend* env-update* parse))
 
 ;; TODO: move these?
 (define (alist-ref alist k)
@@ -88,7 +88,7 @@
                          (list (cons $list (premodule-provide-private pm))))
                  (premodule-body pm)))
   (module public-req (premodule-provide-public pm)
-    (ast:lambda private-req (stage env body)) '() '() '()))
+    (ast:lambda private-req (parse env body)) '() '() '()))
 (define (module:compose become? ma mb)
   (define ast:a  (module-ast ma))
   (define req:a  (module-require ma))
