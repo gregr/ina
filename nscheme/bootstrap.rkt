@@ -23,6 +23,7 @@
   ;; Pattern matching
   (define (length=? n xs)  (and (list? xs) (= (length xs) n)))
   (define (length>=? n xs) (and (list? xs) (>= (length xs) n)))
+  (define (name->sym n) (string->symbol (if (mvector? n) (mvector-ref n 0) n)))
   (define (param?! param) (unless (andmap string? (param-names param))
                             (error '"invalid parameters:" param)))
   (define (bpair*?! b*)
@@ -56,7 +57,9 @@
             ((and (null? p) (null? a)) '())
             ((not p)                   '())
             ((not (or (pair? p) (vector? p) (null? p))) (list (cons p a)))
-            (#t (error '"parameter/argument mismatch:" param arg p a)))))
+            (#t (error '"parameter/argument mismatch:"
+                       (param-map name->sym param) arg
+                       (param-map name->sym p) a)))))
 
   (define ctx:var  '"ref")
   (define ctx:set! '"set!")

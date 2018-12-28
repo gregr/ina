@@ -43,7 +43,9 @@
           ((and (null? p) (null? a)) '())
           ((not p)                   '())
           ((not (or (pair? p) (vector? p) (null? p))) (list (cons p a)))
-          (#t (error '"parameter/argument mismatch:" param arg p a)))))
+          (#t (error '"parameter/argument mismatch:"
+                     (param-map name->string param) arg
+                     (param-map name->string p) a)))))
 
 ;; Syntactic environments
 (define ctx:var  'ref)
