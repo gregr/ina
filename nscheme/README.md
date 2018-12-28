@@ -18,11 +18,6 @@
   * modules/
   * eventually cache results?: linked.sdata or linked.bdata
 
-* module-racket.scm: generating rkt-module for one or more nscm modules
-  * associate a name with the final result of each module
-  * attach arbitrary other rkt code (prefix/suffix), like a submodule for "test", "main"
-    * either via racket-datum or raw strings
-
 * nscheme.scm: evaluates one input file as a program (optional command line arguments)
   * provide entire "lib" namespace, some host capabilities, and command line arguments
   * convenient relative path loading: provide input file directory as "local-directory"

@@ -2,7 +2,7 @@
           language language-implicit-public language-hidden-public
           language-implicit-private language-hidden-private language-bindings
           module-require module-provide module-ast module-prims
-          module-meta module module:premodule module:compose
+          module-meta module module:premodule module:compose module:ast->ast
           module:prims module:meta module-apply namespace-link*)
  (require ast:quote ast:var ast:apply ast:lambda ast:let ast:list ast-eval
           rename binding:var env:empty env-extend* env-update* parse))
@@ -50,6 +50,9 @@
 (define (module-prims m)            (vector-ref m 3))
 (define (module-meta m)             (vector-ref m 4))
 (define (module r p ast prims meta) (vector r p ast prims meta))
+(define (module:ast->ast m ast->ast)
+  (module (module-require m) (module-provide m) (ast->ast (module-ast m))
+    (module-prims m) (module-meta m)))
 ;; TODO: check consistency of duplicate prim names.
 (define (module:prims m prims)
   (module (module-require m) (module-provide m) (module-ast m)

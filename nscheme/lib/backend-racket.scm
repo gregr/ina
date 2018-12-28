@@ -1,4 +1,4 @@
-((provide ast->racket-datum rkt:compile rkt:module/main)
+((provide ast->racket-datum)
  (require ast-elaborate))
 
 (define (~map f ~xs)
@@ -29,11 +29,3 @@
         ((or (? 'let) (? 'letrec))
          (list* (@ 0) (map binding (@ 1) (@ 2)) (body (@^ 3))))
         (#t (error '"unknown ast:" ast))))
-
-(define (rkt:compile ast) (ast->racket-datum (ast-elaborate ast)))
-(define (rkt:module/main reqs rkt*)
-  (list 'module '_ 'racket/base
-        '(provide main)
-        (list* 'require '#(string prim.rkt) reqs)
-        (list* 'define '(main) rkt*)
-        '(module+ main (main))))
