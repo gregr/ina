@@ -2,10 +2,8 @@
           language language-implicit-public language-hidden-public
           language-implicit-private language-hidden-private language-bindings
           module-require module-provide module-ast module-prims
-          module-foreign-prefix module-foreign-suffix
-          module module:premodule module:compose
-          module:prims module:foreign-prefix module:foreign-suffix
-          module-apply namespace-link*)
+          module-meta module module:premodule module:compose
+          module:prims module:meta module-apply namespace-link*)
  (require ast:quote ast:var ast:apply ast:lambda ast:let ast:list ast-eval
           rename binding:var env:empty env-extend* env-update* parse))
 
@@ -46,21 +44,19 @@
 (define (language-bindings l)               (vector-ref l 4))
 (define (language ipub hpub ipriv hpriv bs) (vector ipub hpub ipriv hpriv bs))
 
-(define (module-require m)        (vector-ref m 0))
-(define (module-provide m)        (vector-ref m 1))
-(define (module-ast m)            (vector-ref m 2))
-(define (module-prims m)          (vector-ref m 3))
-(define (module-foreign-prefix m) (vector-ref m 4))
-(define (module-foreign-suffix m) (vector-ref m 5))
-(define (module r p ast prims fprefix fsuffix)
-  (vector r p ast prims fprefix fsuffix))
+(define (module-require m)          (vector-ref m 0))
+(define (module-provide m)          (vector-ref m 1))
+(define (module-ast m)              (vector-ref m 2))
+(define (module-prims m)            (vector-ref m 3))
+(define (module-meta m)             (vector-ref m 4))
+(define (module r p ast prims meta) (vector r p ast prims meta))
 ;; TODO: check consistency of duplicate prim names.
-(define (module:prims m prims) (append prims (module-prims m)))
-;; TODO: key by foreign language.
-(define (module:foreign-prefix m foreign) ;; Prefix appears in reverse order.
-  (append foreign (module-foreign-prefix m)))
-(define (module:foreign-suffix m foreign)
-  (append foreign (module-foreign-suffix m)))
+(define (module:prims m prims)
+  (module (module-require m) (module-provide m) (module-ast m)
+    (append prims (module-prims m)) (module-meta m)))
+(define (module:meta m meta)
+  (module (module-require m) (module-provide m) (module-ast m) (module-prims m)
+    (env-update* (module-meta m) meta)))
 (define (module:premodule name=>language pm)
   (define ls (alist-ref* name=>language (premodule-language pm)))
   (define (extend/language l (env pub priv))
@@ -82,25 +78,22 @@
                          (list (cons $list (premodule-provide-private pm))))
                  (premodule-body pm)))
   (module public-req (premodule-provide-public pm)
-    (ast:lambda private-req (parse env body)) '() '() '()))
+    (ast:lambda private-req (parse env body)) '() '()))
 (define (module:compose become? ma mb)
   (define ast:a  (module-ast ma))
   (define req:a  (module-require ma))
   (define pro:a  (module-provide ma))
   (define prim:a (module-prims ma))
-  (define fpre:a (module-foreign-prefix ma))
-  (define fsuf:a (module-foreign-suffix ma))
+  (define meta:a (module-meta ma))
   (define ast:b  (module-ast mb))
   (define req:b  (module-require mb))
   (define pro:b  (module-provide mb))
   (define prim:b (module-prims mb))
-  (define fpre:b (module-foreign-prefix mb))
-  (define fsuf:b (module-foreign-suffix mb))
+  (define meta:b (module-meta mb))
   (define req  (append (filter-not (lambda (n) (member n pro:a)) req:b) req:a))
   (define pro  (append pro:b pro:a))  ;; TODO: check for duplicates.
   (define prim (append prim:b prim:a))
-  (define fpre (append fpre:b fpre:a))  ;; Prefix appears in reverse order.
-  (define fsuf (append fsuf:b fsuf:a))
+  (define meta (env-update* meta:a meta:b))
   (define $ma          (rename 'module:a))
   (define $mb          (rename 'module:b))
   (define ast:result:a (ast:apply (ast:var $ma) (map ast:var req:a)))
@@ -112,10 +105,10 @@
   (define ast:c (ast:lambda req (ast:let (list pro:a) (list ast:result:a)
                                          ast:result)))
   (define ast (ast:let (list $ma $mb) (list ast:a ast:b) ast:c))
-  (module req pro ast prim fpre fsuf))
+  (module req pro ast prim meta))
 
 (define (module-apply m namespace)
-  ;; TODO: incorporate foreign code.
+  ;; TODO: incorporate metadata.
   (define pro (apply (ast-eval (module-ast m))  ;; TODO: use (module-prims m)
                      (alist-ref* namespace (module-require m))))
   (if (module-provide m) (map cons (module-provide m) pro) pro))

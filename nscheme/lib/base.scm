@@ -27,7 +27,7 @@
          (ast (ast:lambda
                 '() (ast:let names:prim (cons lam:apply lams:prim)
                              (apply ast:list (map ast:var names:prim))))))
-    (module '() names:prim ast '() '() '())))
+    (module '() names:prim ast '() '())))
 
 (define defs:base
   '((error (lambda args ('error args)))
@@ -138,4 +138,4 @@
                     (list 'lambda names:prim
                           (list 'letrec defs:base
                                 (cons '(lambda xs xs) names:base))))))
-    (module names:prim names:base ast '() '() '())))
+    (module names:prim names:base ast '() '())))
