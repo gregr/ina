@@ -4,8 +4,8 @@
           module-require module-provide module-ast module-prims
           module-meta module module:premodule module:compose module:ast->ast
           module:prims module:meta module-apply namespace-link*)
- (require ast:quote ast:var ast:apply ast:lambda ast:let ast:list ast-eval
-          rename binding:var env:empty env-extend* env-update* parse))
+ (require ast:quote ast:var ast:apply* ast:lambda ast:let ast:list ast-eval
+          rename binding:var env:empty env-extend* env-update* @body*))
 
 (define (premodule-require-public pm)  (vector-ref pm 0))
 (define (premodule-provide-public pm)  (vector-ref pm 1))
@@ -81,7 +81,7 @@
                          (list (cons $list (premodule-provide-private pm))))
                  (premodule-body pm)))
   (module public-req (premodule-provide-public pm)
-    (ast:lambda private-req (parse env body)) '() '()))
+    (ast:lambda private-req (@body* env body)) '() '()))
 (define (module:compose become? ma mb)
   (define ast:a  (module-ast ma))
   (define req:a  (module-require ma))
@@ -94,13 +94,14 @@
   (define prim:b (module-prims mb))
   (define meta:b (module-meta mb))
   (define req  (append (filter-not (lambda (n) (member n pro:a)) req:b) req:a))
-  (define pro  (append pro:b pro:a))  ;; TODO: check for duplicates.
+  ;; TODO: check for duplicates.
+  (define pro  (if become? pro:b (append pro:b pro:a)))
   (define prim (append prim:b prim:a))
   (define meta (env-update* meta:a meta:b))
   (define $ma          (rename 'module:a))
   (define $mb          (rename 'module:b))
-  (define ast:result:a (ast:apply (ast:var $ma) (map ast:var req:a)))
-  (define ast:result:b (ast:apply (ast:var $mb) (map ast:var req:b)))
+  (define ast:result:a (ast:apply* (ast:var $ma) (map ast:var req:a)))
+  (define ast:result:b (ast:apply* (ast:var $mb) (map ast:var req:b)))
   (define ast:result
     (if become? ast:result:b
       (ast:let (list pro:b) (list ast:result:b)

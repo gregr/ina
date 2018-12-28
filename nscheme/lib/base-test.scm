@@ -9,7 +9,7 @@
 (define ns (namespace-link* '() (list module:base-primitive module:base)))
 (define name=>lang (list (cons 'base language:base)))
 (define (ev form)
-  (define pm (premodule '() #f '() #f '(base) form))
+  (define pm (premodule '() #f '() #f '(base) (list form)))
   (module-apply (module:premodule name=>lang pm) ns))
 
 (test 'literals

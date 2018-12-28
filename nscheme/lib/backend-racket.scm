@@ -7,6 +7,14 @@
         (#t (f ~xs))))
 (define (vsym p) (string-append 'v. p))
 
+(define (datum->racket-datum datum)
+  (cond ((pair? datum) (cons (datum->racket-datum (car datum))
+                             (datum->racket-datum (cdr datum))))
+        ((vector? datum)
+         (vector 'vector (list->vector (map datum->racket-datum
+                                            (vector->list datum)))))
+        ((string? datum) (vector 'string datum))
+        (#t datum)))
 (define (ast->racket-datum ast)
   (define alen          (- (vector-length ast) 1))
   (define (@ i)         (vector-ref ast i))
@@ -17,7 +25,7 @@
                           (cdr e) (list e)))
   ;; Assume: set! param is a name; lambda param and apply arg are lists.
   ;; TODO: simplify quote when possible.
-  (cond ((? 'quote ) (list 'quote (@ 1)))
+  (cond ((? 'quote ) (list 'quote (datum->racket-datum (@ 1))))
         ((? 'var   ) (vsym (@ 1)))
         ((? 'set!  ) (list 'set! (vsym (@ 1)) (@^ 2)))
         ((? 'if    ) (list 'if (@^ 1) (@^ 2) (@^ 3)))
@@ -25,7 +33,7 @@
         ((? 'lambda) (list* 'lambda (~map vsym (@ 1)) (body (@^ 2))))
         ((? 'prim  ) (cons (@ 1) (map ast->racket-datum (@ 2))))
         ((? 'begin ) (cons 'begin (append (map ast->racket-datum (@ 1))
-                                          (ast->racket-datum (@ 2)))))
+                                          (list (ast->racket-datum (@ 2))))))
         ((or (? 'let) (? 'letrec))
          (list* (@ 0) (map binding (@ 1) (@ 2)) (body (@^ 3))))
         (#t (error '"unknown ast:" ast))))

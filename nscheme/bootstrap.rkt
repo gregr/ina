@@ -963,8 +963,9 @@
   (define (nscm:file-exists? path) (file-exists? (path:ns->s path)))
   ;; TODO: eventually replace these with lower level file capabilities.
   ;; e.g., at the very least, make use of racket-datum for more control.
-  (define (nscm:read*/file path)   (s->ns (read*/file (path:s->ns path))))
-  (define (nscm:write/file path d) (write/file (path:ns->s path) (ns->s d)))
+  (define (nscm:read*/file path)   (s->ns (read*/file (path:ns->s path))))
+  (define (nscm:write/file path d)
+    (write/file (path:ns->s path) (racket-datum d)))
   (define ns:nscheme (build-nscheme-namespace))
   (define ns:full
     (append `((program-path           . ,(path:s->ns simple-path))

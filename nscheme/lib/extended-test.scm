@@ -4,7 +4,7 @@
 (define ns (namespace-link* '() (list module:base-primitive module:base)))
 (define name=>lang (list (cons 'extended language:extended)))
 (define (ev form)
-  (define pm (premodule '() #f '() #f '(extended) form))
+  (define pm (premodule '() #f '() #f '(extended) (list form)))
   (module-apply (module:premodule name=>lang pm) ns))
 
 (test 'cond-3
