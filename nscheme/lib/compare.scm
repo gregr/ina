@@ -1,4 +1,5 @@
-((provide compare max/any min/any test!))
+((provide compare max/any min/any)
+ (require test))
 
 (define (typecode d)
   (cond ((null? d)      0)
@@ -54,7 +55,7 @@
   (let loop ((x (car xs)) (xs (cdr xs)))
     (if (null? xs) x (loop (compare x (car xs) x x (car xs)) (cdr xs)))))
 
-(define (test! test)
+(when test
   (test 'compare-1
     (compare 1 2 'lt 'eq 'gt)
     'lt)

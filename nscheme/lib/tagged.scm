@@ -1,4 +1,5 @@
-((provide tagged-vector? tagged-vector?! case/import test!))
+((provide tagged-vector? tagged-vector?! case/import)
+ (require test))
 
 (define (import-apply i env)
   (apply (cdr i) (map (lambda (name)
@@ -24,7 +25,7 @@
               clause*)
        (error '"no matching case/import clause:" d))))
 
-(define (test! test)
+(when test
   (define example:tag         'example)
   (define (example x y)       (vector example:tag x y))
   (define (example? d)        (tagged-vector? example:tag '(x y) d))

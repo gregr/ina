@@ -1,5 +1,5 @@
-((provide assoc:empty assoc-ref assoc-set assoc-set/remove assoc-filter
-          assoc-remove assoc-remove* assoc-keep* assoc-simplify test!))
+((provide test assoc:empty assoc-ref assoc-set assoc-set/remove assoc-filter
+          assoc-remove assoc-remove* assoc-keep* assoc-simplify))
 
 (define assoc:empty '())
 
@@ -25,7 +25,7 @@
           ((member (caar d) k*) (loop (cdr d) k*))
           (#t (cons (car d) (loop (cdr d) (cons (caar d) k*)))))))
 
-(define (test! test)
+(when test
   (test 'assoc-1
     (assoc-ref (assoc-set assoc:empty 'a 1) 'a #f)
     1)

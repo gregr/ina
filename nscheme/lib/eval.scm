@@ -1,5 +1,5 @@
-((provide eval env:base test!)
- (require length>=? param?! bpair*?! param-names param-bind
+((provide eval env:base)
+ (require test length>=? param?! bpair*?! param-names param-bind
           ctx:var ctx:set! ctx:op ctx:def
           env-get-prop env-remove* env-add* env-extend*
           defstate:empty defstate-env defstate-actions
@@ -218,7 +218,7 @@
                (cons 'unless @unless)
                (cons 'cond   @cond)))))
 
-(define (test! test)
+(when test
   (define (ev code) (eval env:base code))
 
   (test '$-1 ;; $ applies a procedure with current environment and raw syntax.

@@ -873,7 +873,7 @@
   racket/string
   )
 
-(define (run-tests test!*)
+(define (test/report)
   (define tests-total 0)
   (define test-failures '())
   (define (test-report)
@@ -891,8 +891,7 @@
           (else (printf "Failed.\nExpected: ~s\nActual: ~s\n****************\n"
                         expected actual)
                 (set! test-failures (cons name test-failures)))))
-  (for-each (lambda (t) (t test)) test!*)
-  (test-report))
+  (cons test test-report))
 
 (define (module-apply m ns)
   (define pro ($apply (vector-ref m 2) (alist-ref* ns (vector-ref m 0))))
@@ -935,18 +934,19 @@
   (define modules
     '(common ast parse module base eval extended backend-racket))
   (define test-modules '(base-test extended-test))
-  (define ns:nscheme/tests (namespace-link* '() (map libmod modules)))
-  (define ns:test (namespace-link* ns:nscheme/tests (map libmod test-modules)))
-
+  (define t/r (test/report))
   (printf "~a\n" "Testing nscheme library:")
-  (define ns:test! (filter (lambda (rib) (equal? 'test! (car rib))) ns:test))
-  (define (lower-test! t) (lambda (test) ((lower t) (lift test))))
-  (run-tests (reverse (map lower-test! (map cdr ns:test!))))
-  (filter-not (lambda (r) (equal? (car r) 'test!)) ns:nscheme/tests))
+  (define ns:nscheme (namespace-link* (list (cons 'test (lift (car t/r))))
+                                      (map libmod modules)))
+  (namespace-link* ns:nscheme (map libmod test-modules))
+  ((cdr t/r))
+  ns:nscheme)
 
 (module+ test
   (printf "~a\n" "Testing bootstrap.rkt stage:")
-  (run-tests (list stage:test!))
+  (define t/r (test/report))
+  (stage:test! (car t/r))
+  ((cdr t/r))
   (void (build-nscheme-namespace)))
 
 (module+ main

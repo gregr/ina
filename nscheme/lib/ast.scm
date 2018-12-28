@@ -1,9 +1,9 @@
 ((provide primitive-op-descriptions
           primitive-op-type-signature primitive-op-handler
           ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-          ast:prim astx:let astx:letrec astx:begin ast-eval test!
+          ast:prim astx:let astx:letrec astx:begin ast-eval
           ast-elaborate)
- (require param-map param-bind param-names name->string))
+ (require test param-map param-bind param-names name->string))
 
 ;; Basic AST
 (define (ast:quote datum)       (vector 'quote   datum))
@@ -181,7 +181,7 @@
                            (lambda (env) (ex* env e*) (final env))))
              (#t (error '"unknown ast:" ast))))) env:empty))
 
-(define (test! test)
+(when test
   (test 'quote
     (ast-eval '#(quote 7))
     7)

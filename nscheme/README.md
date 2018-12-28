@@ -11,8 +11,6 @@
 ## TODO
 
 ### bootstrap with only simple code
-* invert test dependencies
-
 * reorganize lib/
   * README.md
   * link.scm
