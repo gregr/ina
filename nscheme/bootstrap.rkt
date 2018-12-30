@@ -968,6 +968,7 @@
     (write/file (path:ns->s path) (racket-datum d)))
   (define ns:nscheme (build-nscheme-namespace))
   (define ns:full
+    ;; TODO: move these to host.rkt
     (append `((program-path           . ,(path:s->ns simple-path))
               (command-line-arguments . #())
               (printf                 . ,(lift printf))
