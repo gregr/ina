@@ -1,6 +1,4 @@
 ((provide parse env:initial env:primitive @or @body*
-          ast:null ast:true ast:false ast:cons ast:list ast:vector
-          ast:apply* ast:let ast:begin ast:shift ast:reset
           rename binding:var binding:syntax binding:syntax/validation)
  (require length=? length>=? param?! bpair*?! param-map param-names
           name->string ctx:var ctx:set! ctx:op ctx:def
@@ -8,6 +6,8 @@
           defstate:empty defstate-env defstate-names defstate-actions
           defstate-env-set defstate-names-add defstate-actions-add
           ast:quote ast:var ast:set! ast:if ast:apply ast:lambda ast:prim
+          ast:null ast:true ast:false ast:cons ast:list ast:vector
+          ast:apply* ast:let ast:begin ast:shift ast:reset
           primitive-op-descriptions primitive-op-type-signature))
 
 (define (binding:var n r) (cons n (list (cons ctx:var r) (cons ctx:set! r))))
@@ -18,27 +18,6 @@
   (env-extend* env (map (lambda (n) (binding:var n (rename n))) n*)))
 (define (param/renamings env param)
   (param-map (lambda (n) (env-get-prop env n ctx:var #f)) param))
-
-;; High-level AST construction
-(define ast:null        (ast:quote '()))
-(define ast:true        (ast:quote #t))
-(define ast:false       (ast:quote #f))
-(define (ast:cons a d)  (ast:prim 'cons (list a d)))
-(define (ast:list . xs) (foldr ast:cons ast:null xs))
-(define (ast:vector . xs)
-  (define vargs (list (ast:quote (length xs)) ast:true))
-  (define mv (make-mvector 1 'mv)) (define $mv (ast:var mv))
-  (define (! i x) (ast:prim 'mvector-set! (list $mv (ast:quote i) x)))
-  (ast:let (list mv) (list (ast:prim 'make-mvector vargs))
-           (ast:begin (append (map ! (range (length xs)) xs)
-                              (list (ast:prim 'mvector->vector (list $mv)))))))
-(define (ast:apply* $proc $a*) (ast:apply $proc (apply ast:list $a*)))
-(define (ast:let p* v* body)   (ast:apply* (ast:lambda p* body) v*))
-(define (ast:begin a*)
-  (define ra* (reverse (cons ast:true a*)))
-  (foldl (lambda (a rest) (ast:let '(#f) (list a) rest)) (car ra*) (cdr ra*)))
-(define (ast:shift proc) (ast:prim 'shift (list proc)))
-(define (ast:reset body) (ast:prim 'reset (list (ast:lambda '() body))))
 
 ;; Parsing
 (define (parse env form)

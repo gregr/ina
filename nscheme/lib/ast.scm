@@ -1,8 +1,10 @@
 ((provide primitive-op-descriptions
           primitive-op-type-signature primitive-op-handler
           ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-          ast:prim astx:let astx:letrec astx:begin ast-eval
-          ast-elaborate)
+          ast:prim astx:let astx:letrec astx:begin
+          ast:null ast:true ast:false ast:cons ast:list ast:vector
+          ast:apply* ast:let ast:begin ast:shift ast:reset
+          ast-eval ast-elaborate)
  (require test param-map param-bind param-names name->string))
 
 ;; Basic AST
@@ -18,6 +20,27 @@
 (define (astx:let n* a* body)    (vector 'let    n* a* body))
 (define (astx:letrec n* l* body) (vector 'letrec n* l* body))
 (define (astx:begin e* final)    (vector 'begin  e* final))
+
+;; High-level AST construction
+(define ast:null        (ast:quote '()))
+(define ast:true        (ast:quote #t))
+(define ast:false       (ast:quote #f))
+(define (ast:cons a d)  (ast:prim 'cons (list a d)))
+(define (ast:list . xs) (foldr ast:cons ast:null xs))
+(define (ast:vector . xs)
+  (define vargs (list (ast:quote (length xs)) ast:true))
+  (define mv (make-mvector 1 'mv)) (define $mv (ast:var mv))
+  (define (! i x) (ast:prim 'mvector-set! (list $mv (ast:quote i) x)))
+  (ast:let (list mv) (list (ast:prim 'make-mvector vargs))
+           (ast:begin (append (map ! (range (length xs)) xs)
+                              (list (ast:prim 'mvector->vector (list $mv)))))))
+(define (ast:apply* $proc $a*) (ast:apply $proc (apply ast:list $a*)))
+(define (ast:let p* v* body)   (ast:apply* (ast:lambda p* body) v*))
+(define (ast:begin a*)
+  (define ra* (reverse (cons ast:true a*)))
+  (foldl (lambda (a rest) (ast:let '(#f) (list a) rest)) (car ra*) (cdr ra*)))
+(define (ast:shift proc) (ast:prim 'shift (list proc)))
+(define (ast:reset body) (ast:prim 'reset (list (ast:lambda '() body))))
 
 ;; Dynamic context operations
 (define context-ops
@@ -246,8 +269,8 @@
                 (#t        (bind p a rest))))))
     (define (ev* env a*) (map (lambda (a) (ev env a)) a*))
     (define (@ i) (vector-ref ast i)) (define (? tag) (equal? (@ 0) tag))
-    (cond ((? 'var   ) (ast:var (env-ref env (@ 1))))
-          ((? 'set!  )
+    (cond ((? 'var ) (ast:var (env-ref env (@ 1))))
+          ((? 'set!)
            (define p/names (@ 1))
            (define p/ids   (param-map (lambda (n) (env-ref env n)) p/names))
            (astx:let
@@ -255,8 +278,10 @@
              (param-elaborate
                (lambda (p a rest) (astx:begin (list (ast:set! p a)) rest))
                env p/ids p/names (ast:var 'a.set!) (ast:quote #t))))
-          ((? 'if    ) (ast:if (ev env (@ 1)) (ev env (@ 2)) (ev env (@ 3))))
-          ((? 'apply ) (ast:apply (ev env (@ 1)) (list (ev env (@ 2)))))
+          ((? 'if   ) (ast:if (ev env (@ 1)) (ev env (@ 2)) (ev env (@ 3))))
+          ((? 'apply) (define arg (if (vector? (@ 2)) (@ 2)
+                                    (apply ast:list (@ 2))))
+                      (ast:apply (ev env (@ 1)) (list (ev env arg))))
           ((? 'lambda)
            (define p/names (@ 1))
            (define p/ids   (param-map name->id p/names))
