@@ -1,4 +1,4 @@
-((provide primitive-op-descriptions
+((provide type-predicates primitive-op-descriptions
           primitive-op-type-signature primitive-op-handler
           ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
           ast:prim astx:let astx:letrec astx:begin
@@ -42,11 +42,6 @@
 (define (ast:shift proc) (ast:prim 'shift (list proc)))
 (define (ast:reset body) (ast:prim 'reset (list (ast:lambda '() body))))
 
-;; Dynamic context operations
-(define context-ops
-  (list (cons 'reset (lambda (proc) (reset (proc))))
-        (cons 'shift (lambda (proc) (shift k (proc k))))))
-
 ;; Primitive operations
 (define type-predicates
   (list (cons 'procedure? procedure?)
@@ -60,6 +55,10 @@
         (cons 'integer?   integer?)
         (cons 'fixnum?    fixnum?)
         (cons 'flonum?    flonum?)))
+
+(define context-op-descriptions
+  (list (list 'reset (lambda (proc) (reset (proc)))     '((procedure?) #f))
+        (list 'shift (lambda (proc) (shift k (proc k))) '((procedure?) #f))))
 
 ;; TODO: classify primitive behaviors in more detail, for use in analysis.
 ;; e.g., some possibilities: simple; allocation; mutable-read/write; context
@@ -116,6 +115,9 @@
       ;integer-length
       )))
 
+(define all-op-descriptions
+  (append primitive-op-descriptions context-op-descriptions))
+
 (define (primitive-op-handler        po-desc) (cadr po-desc))
 (define (primitive-op-type-signature po-desc) (caddr po-desc))
 
@@ -130,27 +132,9 @@
     (and (list? op) (= 3 (length op)) (string? (car op))
          (procedure? (primitive-op-handler op))
          (valid-type-signature? (primitive-op-type-signature op))))
-  (define malformed (filter-not valid-primop? primitive-op-descriptions))
+  (define malformed (filter-not valid-primop? all-op-descriptions))
   (unless (null? malformed)
     (error '"malformed primitive-op-descriptions:" malformed)))
-
-(define primitive-ops
-  (append
-    (map (lambda (po-desc)
-           (define name (car po-desc))
-           (define sig (primitive-op-type-signature po-desc))
-           (define arg-sig (car sig))
-           (define return-sig (cadr sig))  ;; TODO: validate return type?
-           (define op (primitive-op-handler po-desc))
-           (define (valid? a*)
-             (andmap (lambda (ty? a)
-                       (or (not ty?) ((cdr (assoc ty? type-predicates)) a)))
-                     arg-sig a*))
-           (define (full-op . a*)
-             (if (valid? a*) (apply op a*)
-               (error '"primitive op type error:" name arg-sig a*)))
-           (cons name full-op)) primitive-op-descriptions)
-    context-ops))
 
 ;; Runtime environments
 (define env:empty '())
@@ -189,8 +173,9 @@
                                             (define b* (param-bind param arg))
                                             (body (env-extend* env b*))))))
              ((? 'prim)   (let ((name (@ 1)) (a* (map ev (@ 2))))
-                            (define op (or (alist-get primitive-ops name #f)
-                                           (error '"invalid primitive:" name)))
+                            (define op
+                              (car (or (alist-get all-op-descriptions name #f)
+                                       (error '"invalid primitive:" name))))
                             (lambda (env) (apply op (ex* env a*)))))
              ((? 'let)
               (let ((n* (@ 1)) (a* (map ev (@ 2))) (body (ev (@ 3))))

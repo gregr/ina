@@ -3,12 +3,12 @@
 
 (module interop racket/base
   (provide (all-from-out "prim.rkt")
-           s->ns ns->s writeable?! read* read*/file write/file
-           racket-datum lift lower lower-arg0 $apply
-           nscm-quote nscm-quasiquote nscm-equal? nscm-member nscm-assoc)
+           s->ns ns->s writeable?! path:s->ns path:ns->s read* read*/file
+           write/file racket-datum lift lower lower-arg0 $apply
+           nscm:quote nscm:quasiquote nscm:equal? nscm:member nscm:assoc)
 
-  (require
-    "prim.rkt" racket/path racket/port racket/vector (for-syntax racket/base))
+  (require "prim.rkt" racket/path racket/port racket/string racket/vector
+           (for-syntax racket/base))
 
   (define (s->ns d)
     (cond ((symbol? d) (symbol->string d))
@@ -31,6 +31,11 @@
                (symbol? d) (char? d) (keyword? d)) #t)
           (else (error "cannot write:" d))))
 
+  (define (path:s->ns path)
+    (map (lambda (p) (string-trim (path->string p) "/"))
+         (explode-path (simplify-path path))))
+  (define (path:ns->s path) (string-join path "/"))
+
   (define (read* in)
     (let loop ((rbody '()))
       (define datum (read in))
@@ -40,7 +45,7 @@
     (call-with-output-file path (lambda (out) (writeable?! d) (write d out))))
 
   (define (racket-datum form)
-    (define (@ i) (vector-ref form i)) (define (? tag) (nscm-equal? (@ 0) tag))
+    (define (@ i) (vector-ref form i)) (define (? tag) (nscm:equal? (@ 0) tag))
     (cond ((pair? form)         (cons (racket-datum (car form))
                                       (racket-datum (cdr form))))
           ((string? form)       (string->symbol form))
@@ -63,42 +68,42 @@
     (proc (cons* arg args)))
 
   ;; For safe interop, provided definitions must not override Racket names.
-  (define (nscm-equal? a b)
+  (define (nscm:equal? a b)
     (or (eqv? a b)
         (and (string? a) (string? b) (string=? a b))
         (and (pair? a) (pair? b)
-             (nscm-equal? (car a) (car b))
-             (nscm-equal? (cdr a) (cdr b)))
+             (nscm:equal? (car a) (car b))
+             (nscm:equal? (cdr a) (cdr b)))
         (and (vector? a) (vector? b)
-             (nscm-equal? (vector->list a) (vector->list b)))))
-  (define (nscm-member v xs) (memf (lambda (x) (nscm-equal? x v)) xs))
-  (define (nscm-assoc k xs) (cond ((null? xs) #f)
-                                  ((nscm-equal? k (caar xs)) (car xs))
-                                  (else (nscm-assoc k (cdr xs)))))
+             (nscm:equal? (vector->list a) (vector->list b)))))
+  (define (nscm:member v xs) (memf (lambda (x) (nscm:equal? x v)) xs))
+  (define (nscm:assoc k xs) (cond ((null? xs) #f)
+                                  ((nscm:equal? k (caar xs)) (car xs))
+                                  (else (nscm:assoc k (cdr xs)))))
 
-  (define-syntax (nscm-quote stx)
+  (define-syntax (nscm:quote stx)
     (syntax-case stx ()
       ((_ id)       (identifier? #'id)
-                    #`(nscm-quote #,(symbol->string (syntax->datum #'id))))
-      ((_ (a . d))  #'(cons (nscm-quote a) (nscm-quote d)))
-      ((_ #(d ...)) #'(vector (nscm-quote d) ...))
+                    #`(nscm:quote #,(symbol->string (syntax->datum #'id))))
+      ((_ (a . d))  #'(cons (nscm:quote a) (nscm:quote d)))
+      ((_ #(d ...)) #'(vector (nscm:quote d) ...))
       ((_ d)        #'(quote d))))
-  (define-syntax nscm-quasiquote (syntax-rules () ((_ d) (nscm-qq () d))))
-  (define-syntax nscm-qq
-    (syntax-rules (nscm-quasiquote unquote unquote-splicing)
-      ((_ lvl (nscm-quasiquote d))
-       (list (nscm-quote quasiquote)       (nscm-qq (s . lvl) d)))
+  (define-syntax nscm:quasiquote (syntax-rules () ((_ d) (nscm:qq () d))))
+  (define-syntax nscm:qq
+    (syntax-rules (nscm:quasiquote unquote unquote-splicing)
+      ((_ lvl (nscm:quasiquote d))
+       (list (nscm:quote quasiquote)       (nscm:qq (s . lvl) d)))
       ((_ (s . p) (unquote e))
-       (list (nscm-quote unquote)          (nscm-qq p e)))
+       (list (nscm:quote unquote)          (nscm:qq p e)))
       ((_ (s . p) (unquote-splicing e))
-       (list (nscm-quote unquote-splicing) (nscm-qq p (unquote-splicing e))))
+       (list (nscm:quote unquote-splicing) (nscm:qq p (unquote-splicing e))))
       ((_ () (unquote e))                e)
-      ((_ () ((unquote-splicing e) . d)) (append e (nscm-qq () d)))
+      ((_ () ((unquote-splicing e) . d)) (append e (nscm:qq () d)))
       ((_ lvl unquote)          (error "invalid unquote"))
       ((_ lvl unquote-splicing) (error "invalid unquote-splicing"))
-      ((_ lvl (a . d))          (cons (nscm-qq lvl a) (nscm-qq lvl d)))
-      ((_ lvl #(d ...))         (list->vector (nscm-qq lvl (d ...))))
-      ((_ lvl d)                (nscm-quote d)))))
+      ((_ lvl (a . d))          (cons (nscm:qq lvl a) (nscm:qq lvl d)))
+      ((_ lvl #(d ...))         (list->vector (nscm:qq lvl (d ...))))
+      ((_ lvl d)                (nscm:quote d)))))
 
 (require racket/runtime-path 'interop)
 (define-runtime-module-path interop-mod (submod "." interop))

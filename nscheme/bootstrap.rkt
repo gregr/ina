@@ -4,8 +4,8 @@
            base:names base:values base:program base:eval stage:test!)
   (require
     (rename-in "interop.rkt"
-               (nscm-equal? equal?) (nscm-member member) (nscm-assoc assoc)
-               (nscm-quote quote) (nscm-quasiquote quasiquote))
+               (nscm:equal? equal?) (nscm:member member) (nscm:assoc assoc)
+               (nscm:quote quote) (nscm:quasiquote quasiquote))
     racket/list racket/vector)
 
   (define (alist-get rs key default)
@@ -869,12 +869,11 @@
 
 (require
   "interop.rkt"
+  (prefix-in nscm: "io.rkt")
   'stage
   racket/list
   racket/match
-  racket/runtime-path
-  racket/string
-  )
+  racket/runtime-path)
 
 (define (test/report)
   (define tests-total 0)
@@ -934,13 +933,18 @@
   (define (libmod name)
     (define file-name (string-append "lib/" (symbol->string name) ".scm"))
     (nscm:module (read*/file file-name)))
-  (define modules
-    '(common ast parse module base eval extended backend-racket module-racket))
+  (define modules '(common ast parse module base eval extended io
+                           backend-racket module-racket))
   (define test-modules '(base-test extended-test))
   (define t/r (test/report))
   (printf "~a\n" "Testing nscheme library:")
-  (define ns:nscheme (namespace-link* (list (cons 'test (lift (car t/r))))
-                                      (map libmod modules)))
+  (define ns:init
+    `((test                   . ,(lift (car t/r)))
+      (printf                 . ,(lift nscm:printf))
+      (file-exists?           . ,(lift nscm:file-exists?))
+      (read*/file             . ,(lift nscm:read*/file))
+      (write/file             . ,(lift nscm:write/file))))
+  (define ns:nscheme (namespace-link* ns:init (map libmod modules)))
   (namespace-link* ns:nscheme (map libmod test-modules))
   ((cdr t/r))
   ns:nscheme)
@@ -956,25 +960,10 @@
   (define-runtime-path here ".")
   (define target-path (build-path here "nscheme.scm.rkt"))
   (define simple-path (path->string (simplify-path target-path)))
-  (define (path:s->ns path)
-    (map (lambda (p) (string-trim (path->string p) "/"))
-         (explode-path (simplify-path path))))
-  (define (path:ns->s path) (string-join path "/"))
-  (define (nscm:file-exists? path) (file-exists? (path:ns->s path)))
-  ;; TODO: eventually replace these with lower level file capabilities.
-  ;; e.g., at the very least, make use of racket-datum for more control.
-  (define (nscm:read*/file path)   (s->ns (read*/file (path:ns->s path))))
-  (define (nscm:write/file path d)
-    (write/file (path:ns->s path) (racket-datum d)))
   (define ns:nscheme (build-nscheme-namespace))
   (define ns:full
-    ;; TODO: move these to host.rkt
     (append `((program-path           . ,(path:s->ns simple-path))
-              (command-line-arguments . #())
-              (printf                 . ,(lift printf))
-              (file-exists?           . ,(lift nscm:file-exists?))
-              (read*/file             . ,(lift nscm:read*/file))
-              (write/file             . ,(lift nscm:write/file)))
+              (command-line-arguments . #()))
             ns:nscheme))
   (define build-rkt-nscheme.scm
     (read*/file (build-path here "build-rkt-nscheme.scm")))
