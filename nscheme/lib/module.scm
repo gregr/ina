@@ -82,6 +82,8 @@
   (module public-req (premodule-provide-public pm)
     (ast:lambda private-req (@body* env body)) '() '()))
 (define (module:compose become? ma mb)
+  (define (ncons name names) (if (member name names) names (cons name names)))
+  (define (napp as bs) (if (null? as) bs (ncons (car as) (napp (cdr as) bs))))
   (define ast:a  (module-ast ma))
   (define req:a  (module-require ma))
   (define pro:a  (module-provide ma))
@@ -92,7 +94,7 @@
   (define pro:b  (module-provide mb))
   (define prim:b (module-prims mb))
   (define meta:b (module-meta mb))
-  (define req  (append (filter-not (lambda (n) (member n pro:a)) req:b) req:a))
+  (define req  (napp (filter-not (lambda (n) (member n pro:a)) req:b) req:a))
   ;; TODO: check for duplicates.
   (define pro  (if become? pro:b (append pro:b pro:a)))
   (define prim (append prim:b prim:a))

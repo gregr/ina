@@ -1,9 +1,11 @@
-((provide language:initial language:primitive language:base-primitive
-          language:base module:base-primitive module:base)
+((provide language:empty language:initial language:primitive
+          language:base-primitive language:base
+          module:base-primitive module:base)
  (require ast:var ast:prim ast:lambda ast:let ast:list
           primitive-op-descriptions primitive-op-type-signature
-          parse env:initial env:primitive language module))
+          parse env:empty env:initial env:primitive language module))
 
+(define language:empty     (language '() '() '() '() env:empty))
 (define language:initial   (language '() '() '() '() env:initial))
 (define language:primitive (language '() '() '() '() env:primitive))
 

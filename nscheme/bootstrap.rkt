@@ -938,12 +938,11 @@
   (define test-modules '(base-test extended-test))
   (define t/r (test/report))
   (printf "~a\n" "Testing nscheme library:")
-  (define ns:init
-    `((test                   . ,(lift (car t/r)))
-      (printf                 . ,(lift nscm:printf))
-      (file-exists?           . ,(lift nscm:file-exists?))
-      (read*/file             . ,(lift nscm:read*/file))
-      (write/file             . ,(lift nscm:write/file))))
+  (define ns:init `((test         . ,(lift (car t/r)))
+                    (printf       . ,(lift nscm:printf))
+                    (file-exists? . ,(lift nscm:file-exists?))
+                    (read*/file   . ,(lift nscm:read*/file))
+                    (write/file   . ,(lift nscm:write/file))))
   (define ns:nscheme (namespace-link* ns:init (map libmod modules)))
   (namespace-link* ns:nscheme (map libmod test-modules))
   ((cdr t/r))
@@ -958,13 +957,12 @@
 
 (module+ main
   (define-runtime-path here ".")
-  (define target-path (build-path here "nscheme.scm.rkt"))
-  (define simple-path (path->string (simplify-path target-path)))
+  (define program-path (build-path here "build-rkt-nscheme.scm"))
+  (define simple-path (path->string (simplify-path program-path)))
   (define ns:nscheme (build-nscheme-namespace))
   (define ns:full
     (append `((program-path           . ,(path:s->ns simple-path))
               (command-line-arguments . #()))
             ns:nscheme))
-  (define build-rkt-nscheme.scm
-    (read*/file (build-path here "build-rkt-nscheme.scm")))
+  (define build-rkt-nscheme.scm (read*/file program-path))
   (time (void (module-apply (nscm:module build-rkt-nscheme.scm) ns:full))))

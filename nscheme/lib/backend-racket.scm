@@ -24,8 +24,8 @@
   (define (body e)      (if (and (pair? e) (equal? 'begin (car e)))
                           (cdr e) (list e)))
   ;; Assume: set! param is a name; lambda param and apply arg are lists.
-  ;; TODO: simplify quote when possible.
-  (cond ((? 'quote ) (list 'quote (datum->racket-datum (@ 1))))
+  (cond ((? 'quote ) (if (or (boolean? (@ 1)) (number? (@ 1))) (@ 1)
+                       (list 'quote (datum->racket-datum (@ 1)))))
         ((? 'var   ) (vsym (@ 1)))
         ((? 'set!  ) (list 'set! (vsym (@ 1)) (@^ 2)))
         ((? 'if    ) (list 'if (@^ 1) (@^ 2) (@^ 3)))

@@ -2,8 +2,7 @@
  (require length=? length>=? env-get-prop env-update* @or @body* ctx:op
           ast:var ast:quote ast:if ast:apply* ast:let
           ast:null ast:true ast:false ast:cons
-          parse rename binding:syntax/validation env:initial
-          language language-implicit-public language-implicit-private))
+          parse rename binding:syntax/validation env:initial language))
 
 (define $append              (rename 'append))
 (define $list->vector        (rename 'list->vector))
