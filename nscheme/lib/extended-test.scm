@@ -1,10 +1,11 @@
-((require test module:base-primitive module:base language:extended
-          premodule module:premodule module-apply namespace-link*))
+((require language:base module:base-primitive module:base language:extended
+          premodule module:premodule module-apply namespace-link* test))
 
 (define ns (namespace-link* '() (list module:base-primitive module:base)))
-(define name=>lang (list (cons 'extended language:extended)))
+(define name=>lang (list (cons 'base language:base)
+                         (cons 'extended language:extended)))
 (define (ev form)
-  (define pm (premodule '() #f '() #f '(extended) (list form)))
+  (define pm (premodule '() #f '() #f '(base extended) (list form)))
   (module-apply (module:premodule name=>lang pm) ns))
 
 (test 'cond-3

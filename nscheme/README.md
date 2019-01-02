@@ -228,9 +228,8 @@ Real-world (effect) interaction/reaction:
 
 ### syntax extensions
 * light extensions
-  * case-lambda, case-let, quasiquote
+  * lambda/match, match
   * lambda-syntax, let[rec]-syntax, define-syntax, define-syntax/define
-  * maybe case, extended cond
 * definition context conveniences
   * embedded procedures in a definition context that take st as argument
     * #(define ,(lambda (st) ...))

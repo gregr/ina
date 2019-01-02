@@ -2,7 +2,7 @@
  (require length=? length>=? env-get-prop env-update* @or @body* ctx:op
           ast:var ast:quote ast:if ast:apply* ast:let
           ast:null ast:true ast:false ast:cons
-          parse rename binding:syntax/validation env:initial language:base
+          parse rename binding:syntax/validation env:initial
           language language-implicit-public language-implicit-private))
 
 (define $append              (rename 'append))
@@ -80,8 +80,5 @@
                (list 'cond       @cond       0 #f)))))
 
 (define language:extended
-  (language (language-implicit-public language:base)
-            '(append list->vector equal?)
-            (language-implicit-private language:base)
-            (list $append $list->vector $equal?)
-            env:extended))
+  (language '() '(append list->vector equal?) '()
+            (list $append $list->vector $equal?) env:extended))
