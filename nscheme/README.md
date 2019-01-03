@@ -4,9 +4,14 @@
 
 `raco test *.rkt`
 
-## Bootstrap the compiler (nscheme.scm.rkt)
+## Bootstrap the compiler and evaluator
 
-`racket bootstrap.rkt`
+```
+racket bootstrap.rkt
+raco exe -o compile compile.scm.rkt
+./compile eval.scm
+raco exe -o eval eval.scm.rkt
+```
 
 ## TODO
 
@@ -18,6 +23,8 @@
   * modules/
   * eventually cache results?: linked.sdata or linked.bdata
 
+* ast-simplify: improve elaborated ASTs to shrink and speed up compiled Racket
+  * maybe perform some let-based simplification before elaborating?
 
 * io.rkt capabilities:
   * stdin/stdout/stderr, stty, filesystem, network sockets, gui

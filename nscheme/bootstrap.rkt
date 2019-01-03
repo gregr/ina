@@ -965,13 +965,15 @@
 
 (module+ main
   (define-runtime-path here ".")
-  (define program-path (build-path here "build-rkt-nscheme.scm"))
+  (define program-path (build-path here "compile.scm"))
   (define simple-path (path->string (simplify-path program-path)))
+  (define str:in
+    (path->string (simplify-path (build-path here "compile.scm"))))
   (define ns:nscheme (build-nscheme-namespace))
   (define nscm:ns:nscheme
     (map (lambda (r) (cons (symbol->string (car r)) (cdr r))) ns:nscheme))
   (define ns:full
-    (append `((program-arguments . (,(path:s->ns simple-path)))
+    (append `((program-arguments . (,(path:s->ns simple-path) ,str:in))
               (ns:nscheme        . ,nscm:ns:nscheme))
             ns:nscheme))
   (define build-rkt-nscheme.scm (read*/file program-path))

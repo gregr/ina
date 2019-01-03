@@ -1,1 +1,4 @@
-/nscheme.scm.rkt
+/compile.scm.rkt
+/eval.scm.rkt
+/compile
+/eval
