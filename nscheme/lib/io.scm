@@ -1,13 +1,17 @@
 ((provide language:io module:io)
  (require primitive-op-type-signature primitive-op-handler
           ast:var ast:lambda ast:prim ast:let ast:list
-          language module env:empty
-          printf file-exists? read*/file write/file))
+          language module env:empty printf file-exists? eof?
+          read read*/string read*/file write write/file))
 
 (define io-op-descriptions
   (list (list 'printf       printf       '((string #f) boolean?))
         (list 'file-exists? file-exists? '((#f)        boolean?))
+        (list 'eof?         eof?         '(()          boolean?))
+        (list 'read         read         '(()          #f))
+        (list 'read*/string read*/string '((string)    #f))
         (list 'read*/file   read*/file   '((#f)        boolean?))
+        (list 'write        write        '((#f)        boolean?))
         (list 'write/file   write/file   '((#f #f)     boolean?))))
 
 (define names       (map car io-op-descriptions))
