@@ -18,15 +18,8 @@
   * modules/
   * eventually cache results?: linked.sdata or linked.bdata
 
-* nscheme.scm: evaluates one input file as a program (optional command line arguments)
-  * provide entire "lib" namespace, some host capabilities, and command line arguments
-  * convenient relative path loading: provide input file directory as "local-directory"
 
-* bootstrap.rkt: behave like a limited nscheme.scm, hardcoded to produce nscheme.scm.rkt
-  * run build-rkt-nscheme.scm to produce nscheme.scm.rkt
-  * diff nscheme.scm.rkt with output of running build-rkt-nscheme.scm via nscheme.scm.rkt
-
-* host.rkt capabilities:
+* io.rkt capabilities:
   * stdin/stdout/stderr, stty, filesystem, network sockets, gui
   * threads/places/futures, timers, exception/break/interrupt handling
     * uncaught-exception-handler, call-with-exception-handler, exn:break?

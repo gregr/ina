@@ -2,10 +2,6 @@
           premodule module:premodule module-apply namespace-link*))
 
 (test 'testing-eval/parse #t #t)
-;; TODO: this also works:
-;(define ns (namespace-link*
-;'() (list (module:compose
-;#f module:base-primitive module:base))))
 (define ns (namespace-link* '() (list module:base-primitive module:base)))
 (define name=>lang (list (cons 'base language:base)))
 (define (ev form)
