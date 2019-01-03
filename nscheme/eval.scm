@@ -1,7 +1,8 @@
-((require program-arguments ns:nscheme read*/file printf
-          language:empty language:initial language:primitive
+((require language:empty language:initial language:primitive
           language:base-primitive language:base language:extended language:io
-          premodule:parse module:premodule module-apply namespace-link*))
+          premodule premodule:parse module:premodule module-apply
+          namespace-link* program-arguments ns:nscheme)
+ (language base io))
 
 (define name=>lang (list (cons 'empty          language:empty)
                          (cons 'initial        language:initial)
@@ -15,13 +16,28 @@
 (define (eval/file path args)
   (define ns (cons (cons 'program-arguments (cons path args)) ns:nscheme+))
   (module-apply (module:file path) ns))
+(define (eval form*)
+  (define ns       (cons (cons 'program-arguments '(#f)) ns:nscheme+))
+  (define names    (map car ns))
+  (define language '(base extended io))
+  (define pm       (premodule names #f names #f language form*))
+  (module-apply (module:premodule name=>lang pm) ns))
 (define ns:nscheme+ (list* (cons 'eval/file eval/file)
                            (cons 'ns:nscheme ns:nscheme) ns:nscheme))
 (define path:nscheme  (car program-arguments))
 (define args          (cdr program-arguments))
 (define rpath:here    (cdr (reverse path:nscheme)))
-(cond ((null? args) (define pname (string-join path:nscheme '"/"))
-                    (printf '"Usage: ~s PROGRAM [ARGUMENT]...\n" pname))
+(define language '(base))
+(define (usage) (printf '"Usage: ~s [-e <forms> | <program> <argument>...] \n"
+                        (string-join path:nscheme '"/")))
+(cond ((null? args) (let loop ()
+                      (printf '"~a " '>)
+                      (unless (eof?)
+                        (printf '"~a\n" (eval (list (read)))) (loop))))
+      ((equal? (car args) '-e)
+       (cond ((null? (cdr args))  (usage))
+             ((null? (cddr args)) (eval (read*/string (cadr args))))
+             (#t                  (usage))))
       (#t
        (define str:program   (car args))
        (define rpath:program (reverse (string-split str:program '"/")))

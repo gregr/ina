@@ -11,6 +11,7 @@ racket bootstrap.rkt
 raco exe -o compile compile.scm.rkt
 ./compile eval.scm
 raco exe -o eval eval.scm.rkt
+./eval -e "(printf '\"hello ~a\n\" 'world)"
 ```
 
 ## TODO
