@@ -16,23 +16,245 @@ raco exe -o eval eval.scm.rkt
 
 ## TODO
 
-### bootstrap with only simple code
-* reorganize lib/
-  * README.md
-  * link.scm
-  * test.scm
-  * modules/
-  * eventually cache results?: linked.sdata or linked.bdata
+### AST simplification (optional?)
+* generated Racket code is currently enormous, partly due to base library
+* simple, code shrinking optimizations
+  * ast augmentation (introduce astx:let, astx:begin) and normalization
+    * `(apply (lambda P _) A) => (let ((p a) ...) _)` via (pbind P A)
+      * (pbind P A) => (list (p a) ...)
+        * P = (Q . R) & A = (cons B C)|(quote (B . C))
+          * (append (pbind Q B) (pbind R C))
+        * P = #(Q ..k) & A = (vector R ..k)|(quote #(R ..k))
+          * (append (pbind Q R) ..k)
+        * P = #f | v
+          * (list (P A))
+    * `(let (A ... (#f VALUE) B ...) _) => (let (A ... B ...) _)`
+    * `(let ((#f X) _ ...) Y) => (begin X (let (_ ...) Y))`
+    * lift lets while preserving effect order; e.g., let in let binding:
+      `(let (X ... ((v (let (A ...) B))) Y ...) _)` =>  ;; assumes unique var names
+      `(let (X ... A ...) (let ((v B) Y ...) _))`
+  * context simplification
+    * non-last begin context reduces to effects; non-effects eliminated
+      * e.g., `(begin (cons (mvector-set! A ...) B) C ...)` =>
+              `(begin (mvector-set! A ...) B C ...)`
+          and `(begin VALUE _ ...)` => `(begin _ ...)`
+    * unreferenced binders become #f; #f-bound values simplify to #t
+      * same idea as begin's effect context; dead code elimination
+      * try to infer #f-bound-ness across non-inlined procedure application
+    * if-condition context reduces to truthiness; more dead code elimination
+  * inline tiny procedures (i.e., single constant, variable, or primitive)
+  * inline single-apply procedures
+  * constant propagation/folding
+  * be careful with set! variables
+* orthogonal to elaboration
 
-* ast-simplify: improve elaborated ASTs to shrink and speed up compiled Racket
-  * maybe perform some let-based simplification before elaborating?
+### AST elaboration before converting to SSA
+* replace set! with mvector-set!; all SSA variables are immutable
+* CPS transform wrt dynamic var and delimited control operators
+* lift lambda and pass closure argument explicitly
+  * locally bind free variable names as closure-refs
+  * replace lambda expressions with closure construction
 
+### Intermediate representation, analysis, transformation, execution
+
+#### CPS-style SSA
+Implement SSA as a sea of continuations, inspired by MLton and Guile Scheme.
+
+```
+atoms:
+  primitive names: p
+  constants:       c
+  variable ids:    v
+  block labels:    l
+
+SSA:
+  identifier: I ::= #f | (v . i-provenance)
+  simple:     S ::= (v . s-provenance)
+  expression: E ::= (values S ...) | (quote c) | (prim p S ...) | (call l S ...) | (apply S S)
+  transfer:   T ::= (return expr) | (jump expr l) | (if v l l)
+  block:      B ::= (b-provenance (I ...) T)
+
+value ids: id
+values:    V ::= c | (cons id id) | (vector id ...) | (mvector length) | (closure l fv-count)
+
+heap:
+  blocks                = {(l  => B)        ...}
+  values                = {(id => V)        ...}
+  mvector/closure store = {(id => (id ...)) ...}
+  provenance accumulators
+
+thread:
+  instruction = T
+  env         = {(v => id) ...}
+  returns     = ((l . env) ...)
+
+system state:
+  IO log      = ((action id ...) ...)
+  global heap
+  threads, possibly with local heaps
+```
+
+* streamline and add new primitives
+  * direct vector construction via (prim vector S ...)
+  * (closure label fv-slot-count) (closure-set! c i v) (closure-ref c i)
+  * mvector-set! returns no values
+
+#### Flow analyses
+* support general flow analysis on a graph representation of SSA
+  * preorder/postorder numbering
+  * predecessor and immediate dominator links
+* abstract interpretation
+  * effects
+    * identity-=: mvector=?, procedure=?
+    * type-check: null? boolean? number? string? pair? vector? mvector? procedure?
+    * (and (<= 0 I) (< I (vector-length  V)))
+    * (and (<= 0 I) (< I (mvector-length M)))
+    * (not (= 0 X))
+    * (mvector-set! M I X)
+    * (mvector-ref M I)
+    * diverge
+  * labels/procedures
+    * static-call-count, closure-count, cont-count, abstract store/IO-log preconditions
+  * bindings and references
+    * abstract-value, ref-counts: call, mref, mset, identity-=, boolean, escape, use
+    * availability and required lifetime
+    * return
+    * if-condition or argument
+    * can these be subsumed by type constraints?
+      * as procedure
+      * impure: mvector-set!/mvector-ref
+    * pure references
+      * irrelevant argument to known procedure: e.g. X in ((lambda (#f y) y) X Y)
+      * argument to type-testing predicate; use as if-condition
+      * argument to procedure or constructor
+      * type-specific
+        * use as procedure
+        * component access: car, cdr, vector-ref
+        * arithmetic or other type-specific operator argument
+    * escapes
+      * different levels of escape
+        * full: unknown uses of this value are possible
+        * deterministic limited: value-only escapes via known code
+        * nondeterministic limited: captured by a known thread
+      * argument to unknown procedure
+      * procedure return to unknown caller
+      * transitive: embedding in escaping value as constructor argument or closure free var
+
+#### Transformations
+* remove unreachable blocks
+* remove irrelevant mset!s  ; escape/lifetime, no subsequent mrefs
+* remove irrelevant labels  ; no jump/call/closure/return-stack
+* remove #f-ified bindings  ; pure i.e., no produced-effects
+* #f-ify irrelevant vars    ; no refs
+* simplify #f-ified sources
+* simplify boolean-only sources
+* simplify closures
+* constant propagate/fold/flatten
+* contify single-point returns
+* worker/wrapper refactoring
+* inline call
+* CSE/tieback memoized      ; original label
+* reorder blocks            ; commutative produced-effects according to before/after abstract-env
+  * not sound wrt removed type-checks without consulting abstract-env
+  * need to track abstract env to commute follow-up type-checks
+  * might not be necessary for effective tiebacks
+  * when supercompiling you'll often want to bring relevant bindings as close to the
+    return expr as possible, making it easier to form tieback loops
+
+#### Deciding what to specialize
+* parameters: SSA node costs; inlining threshold; conditional/join specialization threshold
+* when is a procedure "interesting" to inline?
+  * when doing so has no downsides (program does not increase in size)
+  * or, if there are downsides, when doing so is reasonably more efficient than not doing so
+    efficiency comes from reducing/removing:
+      * i/o operations (often hard to prove these are unnecessary)
+      * allocation (cons, vector, mvector, closure)
+        * unknown call overhead (allocating a structured argument)
+        * dead code (code takes up space)
+      * indirect data access (car/cdr, vector-ref, mvector-ref, closure-ref, spilled arguments)
+        * for one datum, larger difference between 0 and 1 access than 1 and 2, due to caching
+      * branching
+        * conditionals
+        * all call overhead
+      * arithmetic operations
+  * when it is known to be called exactly once
+  * when it has a tiny body; what is tiny?
+    * any number of constants or variable references
+    * one primitive
+      * no matter how small the call signature is
+    * no larger than the call signature size
+      * sum up the sizes of all primitives, if-statements, and procedure calls (known or unknown)
+  * when interesting arguments, or their elements, are known; which ones?
+    * known applied closure; even better if the application is interesting enough to inline
+    * known cons/vector/mvector being taken apart
+    * known numeric operands
+    * revealing aggregates/closures that will be taken-apart/applied
+    * arguments to a child procedure call that considers them interesting
+    * known truthiness of if-statement conditions, which allows removal of dead code
+      * particularly when eliminating possibility of bad behavior (e.g., escaping values)
+    * interest is lower under if-statements and lambdas (lambdas may be worse)
+      * interest can be recovered
+        * knowing the truthiness of an if-statement's condition
+        * knowing the outgoing lambda will be applied
+  * when it's not too boring (too large in an uninteresting way); what is boring?
+    * performing IO
+    * constructing aggregates/closures that aren't known to be taken-apart/applied
+    * calling unknown or boring procedures
+  * when doing so won't potentially infinite loop
+* when is a join point "interesting" to specialize?
+
+#### Dynamic linking and virtualized execution
+* compile SSA to RTL with lower level value/control representations
+  * [de]allocate based on linearity/escape analysis
+* heap linking
+* system state image serialization
+
+### Program virtualization
+* program representation
+  * global and thread-local heaps
+    * transparent values; procedures retain linkable code
+    * procedure heap is effectively a giant letrec
+  * additional gc roots; migration
+  * live threads
+    * thread-local heap; cached global heap
+      * escaping values/mutations committed to global heap upon sync/preemption
+      * thread allocates from a disjoint chunk of heap ids
+        * exhaustion forces preemption to obtain a new chunk
+    * code can directly reference heap values; allocates ids from same namespace
+    * how do they coordinate heap changes? similar to linking?
+    * resource-budgeted small-step evaluation of any subset of threads
+      * resource control
+        * budget time and memory, throttle/suspend/resume/rewind/terminate
+        * replicate and distribute
+      * failure isolation: optional recovery/repair and resumption
+      * incremental/adaptive computation
+      * observe a program's internal state while it's running
+      * modify a program while it's running
+      * symbolic profiling, time-travel debugging, provenance
+        * and other forms of analysis and immediate feedback
+* how does external state/communication work?
+  * what interface with host/io?
+* incremental, dynamic compilation and linking with adaptive evaluation
+  * can link multiple program states
+* persisting program states as images
+  * serialize snapshots as (racket) programs that resume from the snapshot point
+    * or should this be in some other executable form? executable+data would be nice
+  * what processes/state does an image actually persist?
+    * all state and processes, except for real devices (or external virtual hardware)
+      * real devices can't persist; their drivers involve external processes
+    * internal virtual device states and driver processes can be persisted
+      * image restart begins with a (boot) process that hooks them up to real devices
+* safe compiling of guest programs from source
+  * parse.scm syntax error checking that covers all corner cases and contains failure
+    * could implement with reset/tag and shift/tag so that errors are catchable
+    * could also embed errors within a result, providing more context for better feedback
+
+### Racket platform
 * io.rkt capabilities:
   * stdin/stdout/stderr, stty, filesystem, network sockets, gui
   * threads/places/futures, timers, exception/break/interrupt handling
     * uncaught-exception-handler, call-with-exception-handler, exn:break?
   * cmdline/shell/env/subprocesses, racket-eval
-
 * define ports, read, write
   * start with high level ops for now, then reimplement in terms of lower level ops
     * open-input-file, open-output-file, close-input-port, close-output-port, flush-output
@@ -41,16 +263,6 @@ raco exe -o eval eval.scm.rkt
       * store bytes in mvectors; support consolidation into vector of unicode chars
   * include non-device (aka string/byte buffer) ports
     * for when you want a port interface to string-like data
-
-### Racket platform
-* provide host system capabilities to a program via lambda
-  * (lambda (host) ... program ...)
-  * host object can be queried for (virtual) hardware capabilities
-    * spectrum of capability granting outcomes and other feedback:
-      * no-grant to full-unconditional-grant
-      * capability may or may not be recognized
-        * host recognizes device, but refuses to grant access
-        * host unable to grant because it doesn't understand what you want
 * backend-racket integration
   * runtime compilation with option for immediate execution
     * foreign procedures (capabilities) for using Racket eval and namespaces
@@ -58,6 +270,12 @@ raco exe -o eval eval.scm.rkt
   * ultimately, a platform should abstract away its native language for normal use
     * publicly provide just eval, not racket-eval directly
       * internally, it would compose the frontend with racket-eval
+* (virtual) hardware capabilities
+  * spectrum of capability granting outcomes and other feedback:
+    * no-grant to full-unconditional-grant
+    * capability may or may not be recognized
+      * host recognizes device, but refuses to grant access
+      * host unable to grant because it doesn't understand what you want
 * example (virtual) devices
   * timers
   * network
@@ -67,15 +285,6 @@ raco exe -o eval eval.scm.rkt
   * display: terminal, canvas, html, gui widgets, etc.
   * gui sub-windows/frames: multiplexed access to many of the above devices
     * another level of virtualization
-* persistent images
-  * is full persistence worth it just for bootstrapping?
-  * serialize snapshots as racket programs that resume from the snapshot point
-    * or should this be in some other executable form? executable+data would be nice
-  * what processes/state does an image actually persist?
-    * all state and processes, except for real devices (or external virtual hardware)
-      * real devices can't persist; their drivers involve external processes
-    * internal virtual device states and driver processes can be persisted
-      * image restart begins with a (boot) process that hooks them up to real devices
 * evaluating expressions in a REPL subsumes many activities
   * manipulate data, operate devices, launch and manage concurrent processes
     * read in data, write out data (including taking image snapshots)
@@ -87,11 +296,20 @@ raco exe -o eval eval.scm.rkt
   * REPL with persistent state/history (less-style scrolling?)
   * terminal hijacked by ncurses-style UI (with mouse support)
 
+### Reorganize
+* reorganize lib/
+  * README.md
+  * link.scm
+  * test.scm
+  * modules/
+  * eventually cache results?: linked.sdata or linked.bdata
+
 ### backend for web/javascript
 Define a target AST (micro-js) for javascript-specific simplification/optimization.
 * target ASTs will be converted to strings for output or processing by JS `Function`
 * data: undefined, null, boolean, number, string, array, object, function; var, ref, set!
 * control: if, labelled while, apply, return; labelled continue/break
+* consult this list: https://github.com/anko/eslisp/blob/master/doc/basics-reference.markdown#built-in-macros
 
 ### Web browser platform
 Wrap web features as capabilities and build a runtime system in nScheme.
@@ -115,80 +333,6 @@ Real-world (effect) interaction/reaction:
 * independent processes communicating via shared mvectors
   * arbitrary topology; can support true paralllelism
   * can reason about host system as a concurrent, black box process
-
-### AST augmentation and optimization
-* generated Racket code is currently enormous, partly due to base library
-* augmented ast
-  * variable refcounts, mutability, escape status
-  * crude termination/effect status
-    * expr always evaluate to a value without observable effects? yes/no
-    * tracking more precise status gets too complicated for now, e.g.:
-      * some type info is needed to notice error effects
-      * tracking effects under lambda is important for higher order procedures
-    * inlining could improve precision without the analysis complexity
-  * doubly-linked tree?
-    * children point to parent and know position in parent
-    * variables point to both their binding and references
-* simple, code shrinking optimizations
-  * ast augmentation and normalization; worker/wrapper-ification
-    * lambda and apply are vectorized; lambdas are factored into worker and wrapper
-      * param tree manipulation is elaborated, leaving only single-arg lambdas
-      * single-arg, always-inlineable "wrapper" lambdas call multi-arg workers
-        * workers must be named and lifted out, to avoid recursive inlining forever
-      * e.g., (lambda (x . y) _) => (let ((f (lambda* (x y) _)))
-                                      (lambda a  ;; inlined as often as possible
-                                        (assert (pair? a))
-                                        (let ((a.1 (car a)) (a.2 (cdr a)))
-                                          (apply* f a.1 a.2))))
-    * `(apply (lambda x _) a) => (let ((x a)) _)`
-    * `(apply* (lambda* (x ...) _) a ...) => (let ((x a) ...) _)`
-    * `(let ((#f X) _ ...) Y) => (begin X (let (_ ...) Y))`
-    * lift lets everywhere while preserving effect order; e.g., let in let binding:
-      `(let (X ... ((v (let (A ...) B))) Y ...) _)` =>  ;; assumes unique var names
-      `(let (X ... A ...) (let ((v B) Y ...) _))`
-  * value decomposition/propagation/folding/dedup
-    * complex constructions are decomposed with let bindings
-  * context simplification
-    * non-last begin context reduces to effects; non-effects eliminated
-      * e.g., `(begin (cons (mvector-set! A ...) B) C ...)` =>
-              `(begin (mvector-set! A ...) B C ...)`
-          and `(begin VALUE _ ...)` => `(begin _ ...)`
-    * unreferenced binders become #f; #f-bound values simplify to #t
-      * same idea as begin's effect context; dead code elimination
-      * try to infer #f-bound-ness across non-inlined procedure application
-    * if-condition context reduces to truthiness; more dead code elimination
-  * worker-wrapper inlining, single-site inlining, eta-expansion inlining
-    * `(lambda a* (apply f a*))` is an eta-expansion of variable f; safe to inline
-    * general eta-reduction would also be safe with enough type info
-  * if these techniques don't provide enough shrinking:
-    * some other specualtive, shrinking inlining (fuel-based inline-and-measure)
-* supercompilation (if simple techniques don't provide enough performance)
-  * speculative, effect-aware, memoized inlining
-    * memoization produces letrecs of residual procedures
-    * should first lower set!-able variables to mvectors
-  * branching w/ logic variables tracking condition properties
-  * rollback with generalization
-
-### compiling/evaluating guest programs (program execution states as data)
-* parse.scm syntax error checking that covers all corner cases and contains failure
-  * could implement with reset/tag and shift/tag so that errors are catchable
-  * could also embed errors within a result, providing more context for better feedback
-* small-step evaluation (of AST) with transparent values
-  * guarantees serializability of residual programs
-  * supports transformations such as inlining, staged compilation
-* flexible syntactic extension
-  * parsers can safely produce code containing computed values
-    * the computed values will be serializable, amenable to analysis
-* virtualization
-  * resource control
-    * budget time and memory, throttle/suspend/resume/rewind/terminate
-    * replicate and distribute
-  * failure isolation: optional recovery/repair and resumption
-  * incremental/adaptive computation
-  * observe a program's internal state while it's running
-  * modify a program while it's running
-  * symbolic profiling, time-travel debugging, provenance
-    * and other forms of analysis and immediate feedback
 
 ### control extensions
 * implement tag-aware delimited continuation operators in base language
@@ -351,10 +495,10 @@ Real-world (effect) interaction/reaction:
 * eventually at the RTL level, would like to define procedures with register pre/post conditions
 
 ### other backends to consider
-WebAssembly, Python, C, Java, .NET, LLVM, x86, ARM, FPGA, ...
+WebAssembly, Python, C, Java, .NET, Erlang, LLVM, x86, ARM, FPGA, ...
 
 ### other platforms to consider
-Electron, Node.js, Python, POSIX, Java, .NET, mobile etc., bare metal, ...
+Electron, NW.js/Node.js, Python, POSIX, Java, .NET, Erlang, mobile etc., bare metal, ...
 
 ### alternative semantics
 Support other forms of evaluation using the same syntax:
