@@ -310,6 +310,13 @@
                (cons '/               /)
                (cons 'truncate        truncate)
 
+               (cons 'arithmetic-shift arithmetic-shift)
+               (cons 'bitwise-and      bitwise-and)
+               (cons 'bitwise-ior      bitwise-ior)
+               (cons 'bitwise-xor      bitwise-xor)
+               (cons 'bitwise-not      bitwise-not)
+               (cons 'integer-length   integer-length)
+
                (cons 'apply         $apply)
                (cons 'error         (lambda args (error "error:" args)))
                (cons 'not           not)

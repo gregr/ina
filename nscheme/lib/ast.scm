@@ -93,27 +93,22 @@
       (list 'string<? string<? '((string? string?) boolean?))
       (list 'string>? string>? '((string? string?) boolean?))
       ;; TODO: flonum variants.
-      (list '=     =  '((number? number?) boolean?))
-      (list '<=    <= '((number? number?) boolean?))
-      (list '<     <  '((number? number?) boolean?))
-      (list '>=    >= '((number? number?) boolean?))
-      (list '>     >  '((number? number?) boolean?))
-      (list '+     +  '((number? number?) number?))
-      (list '*     *  '((number? number?) number?))
-      (list '-     -  '((number? number?) number?))
-      (list '/     /  '((number? number?) number?))
-
-      (list 'truncate truncate '((number?) integer?))
-
-      ;bitwise-and
-      ;bitwise-ior
-      ;bitwise-xor
-      ;bitwise-not
-      ;bitwise-bit-set?
-      ;bitwise-bit-field
-      ;arithmetic-shift
-      ;integer-length
-      )))
+      (list '=  =  '((number? number?) boolean?))
+      (list '<= <= '((number? number?) boolean?))
+      (list '<  <  '((number? number?) boolean?))
+      (list '>= >= '((number? number?) boolean?))
+      (list '>  >  '((number? number?) boolean?))
+      (list '+  +  '((number? number?) number?))
+      (list '*  *  '((number? number?) number?))
+      (list '-  -  '((number? number?) number?))
+      (list '/  /  '((number? number?) number?))
+      (list 'truncate         truncate         '((number?) integer?))
+      (list 'arithmetic-shift arithmetic-shift '((integer? integer?) integer?))
+      (list 'bitwise-and      bitwise-and      '((integer? integer?) integer?))
+      (list 'bitwise-ior      bitwise-ior      '((integer? integer?) integer?))
+      (list 'bitwise-xor      bitwise-xor      '((integer? integer?) integer?))
+      (list 'bitwise-not      bitwise-not      '((integer?) integer?))
+      (list 'integer-length   integer-length   '((integer?) integer?)))))
 
 (define all-op-descriptions
   (append primitive-op-descriptions context-op-descriptions))
