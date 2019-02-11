@@ -949,7 +949,7 @@
     (define file-name (string-append "lib/" (symbol->string name) ".scm"))
     (nscm:module (read*/file file-name)))
   (define modules '(common ast parse module base eval extended io
-                           backend-racket module-racket trie-map))
+                           backend-racket module-racket trie-map trie-vector))
   (define test-modules '(base-test extended-test))
   (define t/r (test/report))
   (printf "~a\n" "Testing nscheme library:")
