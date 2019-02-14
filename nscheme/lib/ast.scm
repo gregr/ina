@@ -3,7 +3,7 @@
           ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
           ast:prim astx:let astx:letrec astx:begin
           ast:null ast:true ast:false ast:cons ast:list ast:vector
-          ast:apply* ast:let ast:begin ast:shift ast:reset
+          ast:apply* ast:let ast:let* ast:begin ast:shift ast:reset
           ast-eval ast-elaborate)
  (require test param-map param-bind param-names name->string))
 
@@ -36,6 +36,9 @@
                               (list (ast:prim 'mvector->vector (list $mv)))))))
 (define (ast:apply* $proc $a*) (ast:apply $proc (apply ast:list $a*)))
 (define (ast:let p* v* body)   (ast:apply* (ast:lambda p* body) v*))
+(define (ast:let* p* v* body)
+  (foldr (lambda ((p . v) body) (ast:let (list p) (list v) body))
+         body (map cons p* v*)))
 (define (ast:begin a*)
   (define ra* (reverse (cons ast:true a*)))
   (foldl (lambda (a rest) (ast:let '(#f) (list a) rest)) (car ra*) (cdr ra*)))
