@@ -5,7 +5,7 @@
 (define shift-size 4)
 (define branch-size (arithmetic-shift 1 shift-size))
 (define local-mask (- branch-size 1))
-(define rshift-size (- shift-size))
+(define rshift-size (* -1 shift-size))
 (define (local-i i)   (bitwise-and i local-mask))
 (define (shift-i i)   (arithmetic-shift i rshift-size))
 (define (unshift-i i) (arithmetic-shift i shift-size))

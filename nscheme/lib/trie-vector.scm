@@ -19,7 +19,7 @@
 (define shift-size 4)
 (define branch-size (arithmetic-shift 1 shift-size))
 (define local-mask (- branch-size 1))
-(define rshift-size (- shift-size))
+(define rshift-size (* -1 shift-size))
 (define (local-i i)   (bitwise-and i local-mask))
 (define (shift-i i)   (arithmetic-shift i rshift-size))
 (define (unshift-i i) (arithmetic-shift i shift-size))
@@ -111,6 +111,10 @@
                    (#t (vector-set t j (loop (vector-ref t j)
                                              (- i shift-size)))))))
          (tvec (- len 1) new-trie new-tail))))
+
+;; TODO: define batch/interval/slice operators:
+;; tvec-ref*, tvec-set*, tvec-push*, tvec-pop*
+;; For efficiency, redefine single-element operators in terms of these.
 
 (when test
   (test 'tvec-identity-1
