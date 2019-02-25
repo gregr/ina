@@ -15,6 +15,16 @@ raco exe -o eval eval.scm.rkt
 ```
 
 ## TODO
+* compress directly-compiled racket via param-bind and param-map
+  * compress set! handling
+
+* ensure readable formatting of all code
+* sorted map (btree?)
+* provide unreliable eq[v]? internable strings? internable cons/vectors?
+
+### AST parsing
+* add a primitive ast:letrec; don't immediately elaborate letrec expressions via ast:set!
+  * one parser can then serve evaluators that don't permit set!
 
 ### AST simplification (optional?)
 * generated Racket code is currently enormous, partly due to base library
@@ -49,8 +59,11 @@ raco exe -o eval eval.scm.rkt
 * orthogonal to elaboration
 
 ### AST elaboration before converting to SSA
+* convert ast:letrec into uses of set! (other translations are possible)
+* elaborate set! param matching
 * replace set! with mvector-set!; all SSA variables are immutable
 * CPS transform wrt dynamic var and delimited control operators
+* elaborate lambda param matching; avoid quadratic growth of error message constants
 * lift lambda and pass closure argument explicitly
   * locally bind free variable names as closure-refs
   * replace lambda expressions with closure construction
@@ -63,19 +76,20 @@ Implement SSA as a sea of continuations, inspired by MLton and Guile Scheme.
 ```
 atoms:
   primitive names: p
-  constants:       c
   variable ids:    v
   block labels:    l
+  value ids:       id
 
 SSA:
-  identifier: I ::= #f | (v . i-provenance)
-  simple:     S ::= (v . s-provenance)
-  expression: E ::= (values S ...) | (quote c) | (prim p S ...) | (call l S ...) | (apply S S)
-  transfer:   T ::= (return expr) | (jump expr l) | (if v l l)
+  identifier: I ::= (v  . I-provenance) | #f
+  variable:   X ::= (v  . X-provenance)
+  constant:   C ::= (id . C-provenance)
+  expression: E ::= (values X ...) | (constants C ...) | (prim p X ...) | (call l X ...) | (apply X X)
+  transfer:   T ::= (return E) | (jump E l) | (if v l l)
   block:      B ::= (b-provenance (I ...) T)
 
-value ids: id
-values:    V ::= c | (cons id id) | (vector id ...) | (mvector length) | (closure l fv-count)
+atomic constants: c
+values: V ::= c | (cons id id) | (vector id ...) | (mvector length) | (closure l fv-count)
 
 heap:
   blocks                = {(l  => B)        ...}
@@ -83,10 +97,8 @@ heap:
   mvector/closure store = {(id => (id ...)) ...}
   provenance accumulators
 
-thread:
-  instruction = T
-  env         = {(v => id) ...}
-  returns     = ((l . env) ...)
+env:   ENV ::= {(v => id) ...}
+process: P ::= (stuck reason details) | (running id* returns=((l . ENV) ...))
 
 system state:
   IO log      = ((action id ...) ...)
@@ -95,7 +107,7 @@ system state:
 ```
 
 * streamline and add new primitives
-  * direct vector construction via (prim vector S ...)
+  * direct vector construction via (prim vector X ...)
   * (closure label fv-slot-count) (closure-set! c i v) (closure-ref c i)
   * mvector-set! returns no values
 
@@ -401,6 +413,36 @@ Real-world (effect) interaction/reaction:
     (define-vector-type name field ...)
 
 ### representation type system
+* an alternative design for structural types (inconsistent, needs some cleanup)
+  * unit, atom, (dependent sum?) product (n-ary shorthand), sum, fix, fixvar, pointers?
+  * atom      A ::= unit | (float ...) | (int ... numeric range/set ...) | (pointer T)
+  * mutable?  M ::= A | (mutable A)
+  * product   P ::= M | (struct M P) | (exists (n ...). P) | (array N P P)  ;; array of N repetitions of P followed by P
+  * recursive R ::= S | (fix x. S) | (fixvar x)
+  * sum       S ::= P | (case N (N P) ...)
+  * sealed/nominal? witness tag, existential, ...
+  * procedure F ::= (-> ...) | (forall n. F) | sealer/unsealer(must be given an underlying type)?
+  * ptrtarget T ::= F | R
+  * nat       N ::= ... arithmetic expressions ...
+  * convenient let expressions and corresponding names/variables, struct-append, etc? or have this be metalevel?
+  * example:
+    (fix scheme-object. (union (exists n. (int60 n))
+                               (*8 (struct scheme-object scheme-object))
+                               (*8 (exists n. (struct n (array n scheme-object unit))))
+                               (*8 (exists n. (struct n (array n (mutable scheme-object) unit))))
+                               (exists c.
+                                (fix closure. (*8 (struct (-> (closure scheme-object) (scheme-object))
+                                                         (array c (mutable scheme-object) unit)))))
+                               (* sealed)))
+    * replace union with case mappings (nat-indexed dependent types)
+  * name attributes, allow nested structs, allow mutable products as a shorthand for product of mutables?
+  * linear types for initialization mutation of to-be-immutable values
+  * allocation, initialization, and stack frames
+    * shared vs. unique pointers
+      * shared mutation must preserve type
+      * unique mutation may change type, but may not be copied; similar to registers
+  * How are garbage collectable pointers indicated?  Or is everything implicitly gc-able?
+
 * an intermediate representation, but also a lower level user notation
 * aliasing/uniqueness annotations
   * e.g., mvector->vector need not copy if the mvector was unique and is no longer used
