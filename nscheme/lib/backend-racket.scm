@@ -1,10 +1,5 @@
-((provide ast->racket-datum)
- (require ast-elaborate))
+((provide ast->racket-datum))
 
-(define (~map f ~xs)
-  (cond ((pair? ~xs) (cons (f (car ~xs)) (~map f (cdr ~xs))))
-        ((null? ~xs) '())
-        (#t (f ~xs))))
 (define (vsym p) (string-append 'v. p))
 
 (define (datum->racket-datum datum)
@@ -30,7 +25,7 @@
         ((? 'set!  ) (list 'set! (vsym (@ 1)) (@^ 2)))
         ((? 'if    ) (list 'if (@^ 1) (@^ 2) (@^ 3)))
         ((? 'apply ) (cons (@^ 1) (map ast->racket-datum (@ 2))))
-        ((? 'lambda) (list* 'lambda (~map vsym (@ 1)) (body (@^ 2))))
+        ((? 'lambda) (list* 'lambda (map vsym (@ 1)) (body (@^ 2))))
         ((? 'prim  ) (cons (@ 1) (map ast->racket-datum (@ 2))))
         ((? 'begin ) (cons 'begin (append (map ast->racket-datum (@ 1))
                                           (list (ast->racket-datum (@ 2))))))

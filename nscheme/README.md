@@ -15,9 +15,6 @@ raco exe -o eval eval.scm.rkt
 ```
 
 ## TODO
-* compress directly-compiled racket via param-bind and param-map
-  * compress set! handling
-
 * ensure readable formatting of all code
 * sorted map (btree?)
 * provide unreliable eq[v]? internable strings? internable cons/vectors?

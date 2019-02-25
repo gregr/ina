@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  param-map param-bind param-apply
   procedure? mvector? vector? pair? null? boolean? string?
   number? integer? fixnum? flonum?
   boolean=? number=? string=? mvector=? procedure=?
@@ -36,3 +37,24 @@
 
 (define (nscm-shift proc) (shift k ((lower proc) (lift k))))
 (define (nscm-reset proc) (reset   ((lower proc))))
+
+(define (name->sym n) (string->symbol (if (mvector? n) (mvector-ref n 0) n)))
+(define (param-map f p)
+  (cond ((pair? p)   (cons (param-map f (car p)) (param-map f (cdr p))))
+        ((vector? p) (list->vector (param-map f (vector->list p))))
+        ((null? p)   '())
+        ((not p)     #f)
+        (#t          (f p))))
+(define (param-bind param arg)
+  (let loop ((p param) (a arg) (bs '()))
+    (cond ((and (pair? p) (pair? a))
+           (loop (car p) (car a) (loop (cdr p) (cdr a) bs)))
+          ((and (vector? p) (vector? a))
+           (loop (vector->list p) (vector->list a) bs))
+          ((and (null? p) (null? a))                  bs)
+          ((not p)                                    bs)
+          ((not (or (pair? p) (vector? p) (null? p))) (cons (cons p a) bs))
+          (#t (error '"parameter/argument mismatch:"
+                     (param-map name->sym param) arg
+                     (param-map name->sym p) a)))))
+(define (param-apply param arg k) (apply k (map cdr (param-bind param arg))))
