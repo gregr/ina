@@ -3,7 +3,6 @@
 ## TODO
 
 ### semi-isolated embedded interactive systems
-
 Normally, when evaluating programs within the editor, the results are displayed as structured data (that can then also be manipulated).  This data can be visualized as raw symbolic expressions, or with custom visualizations (e.g., viewing the data in some graphical form, or with a different notation that better matches the domain).
 
 Beyond treating results as data, some can also be treated as interactive systems of their own (the editor itself can be thought of as such an interactive system).  For safety by default, these interactions are isolated/sandboxed, in that any events/effects they have are recorded in buffers, but don't otherwise escape.  If desired, their effects/events can be hooked up to capabilities that allow them to communicate with and manipulate external systems, including the host editor.
@@ -12,24 +11,19 @@ These embedded interactive systems should support logging, replaying, and arbitr
 
 Bootstrapping goal: it should be possible to build new systems, such as games or editors, as embedded interactions for testing, and then reboot directly into the interaction to treat it as the new host system (shedding/garbage collecting any "dead code or data" not needed from the old host system).
 
-
 ### YSWYG/YAHWYS/WYSYAH editor
-
 * what is the first UI you see/type-into when opening?
   * keyboard command pane on far right
   * named relation explorer on far left
   * definition/palette pane on the left
   * (multiple) view/result pane(s) on the right
-
 * personalization
   * accessibility
   * color schemes: color blindness, solarized, vim, emacs, etc.
   * suggestion/hint/advice settings (new user, experienced user, power user)
   * user-configurable resource quotas
 
-
 ### self-extensible browser-based editor
-
 * text-like editor mode
   * present an AST-editing interface that feels like text editing
   * how to move subterms to remote locations?
@@ -51,9 +45,7 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
     * new contexts inside the arg list are like lam-wrapping
     * removing var applies that lam to unit
 
-
 ### smart editors
-
 * non-textual
   * directly manipulate program structure
     * syntactically-correct programs by construction
@@ -95,9 +87,7 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
       * arbitrary html would mean you can run the editor in the editor...
       * similar ideas? http://blog.duangle.com/2015/01/conspire-programming-environment-for.html
 
-
 ### Visualization
-
 * text
   * tokens
   * labels
@@ -133,9 +123,7 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
       * brackets/ranges, candlesticks
       * histograms
 
-
 ### Data representation
-
 * metadata ideas
   * Annotating data with metadata supports choosing UI that depends on context.
   * uids
@@ -149,7 +137,6 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
     * "parsing" code maps uids to corresponding aspect info
 * mirror tree for annotating data with metadata
   * keep data structures separately interpretable in O(1) from their metadata
-
 * design a DOM-compatible algebra
   * look at REBOL UI constructors for inspiration
   * mouse icons?
@@ -178,9 +165,7 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
     * highlighting
     * animation, fading, motion
 
-
 ### Misc design and UI ideas
-
 * code layout/styling/navigation
   * configure absolute vs. hierarchical navigation per element
   * style information as data that's also manipulated in the editor
@@ -208,9 +193,7 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
   * https://conclave-team.github.io/conclave-site/
   * https://docs.google.com/presentation/d/1MD-CgzODFWzdpnYXr8bEgysfDmb8PDV6iCAjH5JIvaI/edit#slide=id.g1d7c11dd1b_0_304
 
-
 ### Example apps and ideas
-
 * TodoMVC
 * https://github.com/eugenkiss/7guis/wiki
 * kill the bill: splitting a bill via collaborative editing
@@ -225,51 +208,45 @@ Bootstrapping goal: it should be possible to build new systems, such as games or
   * rich text docs, spreadsheets
   * video calling
 
-
 ### Technical issues
-
-  * data persistence and ingestion
-    * appcache
-    * local storage
-    * indexedDB
-    * dumpfile download
-    * file upload
-    * link-only representations
-      * e.g., inline image data to not depend on external source availability
-    * tab synchronization
-      * how would browser tabs coordinate shared state?
-      * are they separate processes? who owns what?
-      * is local storage and indexed db a separate process?
-      * test localstorage tab count
-
-  * communication
-    * cors without web server
-    * webRTC, webcam
-    * websockets
-    * peer to peer connection (STUN servers?)
-
-  * events
-    * simple tagged events
-    * UI element event handlers
-      * use data- attributes
-        * get/setAttribute
-      * define per element type
-      * database of per element attributes/deltas/state to supplement crappy event fields
-    * filtered event log view
-    * think pygame?
-    * http://quirksmode.org/js/contents.html#events
-    * http://sprymedia.co.uk/
-      * design/UI ideas, ve1+2
-    * extensions
-      * network, db, process control
-        * processes as timer rules (time-triggered events)
-      * reactive state changes
-
-  * UI
-    * accessibility
-    * can you program just with two thumbs? (mobile UI)
-    * drag and drop
-    * measure textarea ch units
-    * DOM rendering/graphics/audio with diffing
-
-  * introduce revocation handles when distributing capabilities
+* data persistence and ingestion
+  * appcache
+  * local storage
+  * indexedDB
+  * dumpfile download
+  * file upload
+  * link-only representations
+    * e.g., inline image data to not depend on external source availability
+  * tab synchronization
+    * how would browser tabs coordinate shared state?
+    * are they separate processes? who owns what?
+    * is local storage and indexed db a separate process?
+    * test localstorage tab count
+* communication
+  * cors without web server
+  * webRTC, webcam
+  * websockets
+  * peer to peer connection (STUN servers?)
+* events
+  * simple tagged events
+  * UI element event handlers
+    * use data- attributes
+      * get/setAttribute
+    * define per element type
+    * database of per element attributes/deltas/state to supplement crappy event fields
+  * filtered event log view
+  * think pygame?
+  * http://quirksmode.org/js/contents.html#events
+  * http://sprymedia.co.uk/
+    * design/UI ideas, ve1+2
+  * extensions
+    * network, db, process control
+      * processes as timer rules (time-triggered events)
+    * reactive state changes
+* UI
+  * accessibility
+  * can you program just with two thumbs? (mobile UI)
+  * drag and drop
+  * measure textarea ch units
+  * DOM rendering/graphics/audio with diffing
+* introduce revocation handles when distributing capabilities
