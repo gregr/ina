@@ -58,8 +58,8 @@ raco exe -o eval eval.scm.rkt
 ### AST elaboration before converting to SSA
 * convert ast:letrec into uses of set! (other translations are possible)
 * elaborate set! param matching
-* replace set! with mvector-set!; all SSA variables are immutable
-* CPS transform wrt dynamic var and delimited control operators
+* replace set! with mvector-set! so that all variables are immutable
+* replace dynamic var and delimited control operators via CPS transform
 * elaborate lambda param matching; avoid quadratic growth of error message constants
 * lift lambda and pass closure argument explicitly
   * locally bind free variable names as closure-refs

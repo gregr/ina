@@ -1,25 +1,22 @@
 ((provide type-predicates primitive-op-descriptions
           primitive-op-type-signature primitive-op-handler
-          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
-          ast:prim astx:let astx:letrec astx:begin
+          ast:quote ast:var ast:set! ast:if ast:apply ast:lambda ast:prim
+          ast:begin ast:let ast:letrec ast:apply* ast:begin1 ast:let*
           ast:null ast:true ast:false ast:cons ast:list ast:vector
-          ast:apply* ast:let ast:let* ast:begin ast:begin1 ast:shift ast:reset
-          ast-eval ast-elaborate)
+          ast:shift ast:reset ast-eval ast-elaborate)
  (require test param-map param-bind param-names name->string))
 
 ;; Basic AST
-(define (ast:quote datum)       (vector 'quote   datum))
-(define (ast:var address)       (vector 'var     address))
-(define (ast:set! param arg)    (vector 'set!    param arg))
-(define (ast:if c t f)          (vector 'if      c t f))
-(define (ast:apply proc arg)    (vector 'apply   proc arg))
-(define (ast:lambda param body) (vector 'lambda  param body))
-(define (ast:prim name a*)      (vector 'prim    name a*))
-
-;; Extended AST
-(define (astx:let n* a* body)    (vector 'let    n* a* body))
-(define (astx:letrec n* l* body) (vector 'letrec n* l* body))
-(define (astx:begin e* final)    (vector 'begin  e* final))
+(define (ast:quote datum)       (vector 'quote  datum))
+(define (ast:var address)       (vector 'var    address))
+(define (ast:set! param arg)    (vector 'set!   param arg))
+(define (ast:if c t f)          (vector 'if     c t f))
+(define (ast:apply proc arg)    (vector 'apply  proc arg))
+(define (ast:lambda param body) (vector 'lambda param body))
+(define (ast:prim name a*)      (vector 'prim   name a*))
+(define (ast:begin  a* final)   (vector 'begin  a* final))
+(define (ast:let    p* a* body) (vector 'let    p* a* body))
+(define (ast:letrec p* a* body) (vector 'letrec p* a* body))
 
 ;; High-level AST construction
 (define ast:null        (ast:quote '()))
@@ -35,18 +32,26 @@
            (ast:begin (append (map ! (range (length xs)) xs)
                               (list (ast:prim 'mvector->vector (list $mv)))))))
 (define (ast:apply* $proc $a*) (ast:apply $proc (apply ast:list $a*)))
-(define (ast:let p* v* body)   (ast:apply* (ast:lambda p* body) v*))
-(define (ast:let* p* v* body)
-  (foldr (lambda ((p . v) body) (ast:let (list p) (list v) body))
-         body (map cons p* v*)))
-(define (ast:begin e* final)
-  (foldr (lambda (e rest) (ast:let '(#f) (list e) rest)) final e*))
 (define (ast:begin1 e*)
   (if (null? e*) ast:true
     (let (((suf . rpre) (split (reverse e*) 1)))
       (ast:begin (reverse rpre) (car suf)))))
+(define (ast:let* p* v* body)
+  (foldr (lambda ((p . v) body) (ast:let (list p) (list v) body))
+         body (map cons p* v*)))
 (define (ast:shift proc) (ast:prim 'shift (list proc)))
 (define (ast:reset body) (ast:prim 'reset (list (ast:lambda '() body))))
+(define (ast:begin/let ast)
+  (define (@ i) (vector-ref ast i))
+  (ast:let* (map (lambda #f #f) (@ 1)) (@ 1) (@ 2)))
+(define (ast:let/lambda ast)
+  (define (@ i) (vector-ref ast i))
+  (ast:apply* (ast:lambda (@ 1) (@ 3)) (@ 2)))
+(define (ast:letrec/set! ast)
+  (define (@ i) (vector-ref ast i))
+  (define n* (param-names (@ 1)))
+  (ast:let n* (map (lambda #f ast:true) n*)
+           (ast:begin (map ast:set! (@ 1) (@ 2)) (@ 3))))
 
 ;; Primitive operations
 (define type-predicates
@@ -164,10 +169,7 @@
                               (for-each ! (param-bind param (arg env))))))
              ((? 'if)     (let ((c (ev (@ 1))) (t (ev (@ 2))) (f (ev (@ 3))))
                             (lambda (env) (if (c env) (t env) (f env)))))
-             ((? 'apply)  (let ((proc (ev (@ 1)))
-                                (arg (if (vector? (@ 2)) (ev (@ 2))
-                                       (let ((a* (map ev (@ 2))))
-                                         (lambda (env) (ex* env a*))))))
+             ((? 'apply)  (let ((proc (ev (@ 1))) (arg (ev (@ 2))))
                             (lambda (env) (apply (proc env) (arg env)))))
              ((? 'lambda) (let ((param (@ 1)) (body (ev (@ 2))))
                             (lambda (env) (lambda arg
@@ -178,16 +180,10 @@
                               (car (or (alist-get all-op-descriptions name #f)
                                        (error '"invalid primitive:" name))))
                             (lambda (env) (apply op (ex* env a*)))))
-             ((? 'let)
-              (let ((n* (@ 1)) (a* (map ev (@ 2))) (body (ev (@ 3))))
-                (lambda (env)
-                  (body (env-extend* env (param-bind n* (ex* env a*)))))))
-             ((? 'letrec)
-              (let ((n* (@ 1)) (l* (@ 2)) (body (@ 3)))
-                (ev (astx:let n* (map (lambda #f (ast:quote #t)) n*)
-                              (astx:begin (map ast:set! n* l*) body)))))
-             ((? 'begin) (let ((e* (map ev (@ 1))) (final (ev (@ 2))))
-                           (lambda (env) (ex* env e*) (final env))))
+             ((? 'let)    (ev (ast:let/lambda ast)))
+             ((? 'letrec) (ev (ast:letrec/set! ast)))
+             ((? 'begin)  (let ((e* (map ev (@ 1))) (final (ev (@ 2))))
+                            (lambda (env) (ex* env e*) (final env))))
              (#t (error '"unknown ast:" ast))))) env:empty))
 
 (when test
@@ -218,7 +214,6 @@
     (let ((i -1))
       (lambda (n) (set! i (+ i 1))
         (string-append (natural->string i) '"." (name->string n)))))
-  (define (name*->id* n*) (map name->id n*))
   (define (env-extend* env n* id*) (append (map cons n* id*) env))
   (define (env-ref env n)
     (let ((rib (assoc n env)))
@@ -227,6 +222,16 @@
     (define (ref n) (env-ref env n))
     (define (param-elaborate param/ids param/names arg body)
       (define param/strings (param-map name->string param/names))
+      ;; TODO: use of param-apply restricts the scope of this elaboration.
+      ;; Eventually, this entire elaboration should be replaced with this:
+      ;; * convert ast:letrec into uses of set! (other translations are possible)
+      ;; * elaborate set! param matching
+      ;; * replace set! with mvector-set! so that all variables are immutable
+      ;; * replace dynamic var and delimited control operators via CPS transform
+      ;; * elaborate lambda param matching; avoid quadratic growth of error message constants
+      ;; * lift lambda and pass closure argument explicitly
+      ;;   * locally bind free variable names as closure-refs
+      ;;   * replace lambda expressions with closure construction
       (ast:prim 'param-apply (list (ast:quote param/strings)
                                    arg (ast:lambda param/ids body))))
     (define (ev* env a*) (map (lambda (a) (ev env a)) a*))
@@ -236,11 +241,11 @@
            (define p/names (@ 1))
            (define p/ids   (map ref (param-names p/names)))
            (define p/alts  (map (lambda (n) (string-append 'a. n)) p/ids))
-           (astx:let (list 'a.set!) (list (ev env (@ 2)))
-                     (param-elaborate
-                       p/alts p/names (ast:var 'a.set!)
-                       (astx:begin (map ast:set! p/ids (map ast:var p/alts))
-                                   (ast:quote #t)))))
+           (ast:let (list 'a.set!) (list (ev env (@ 2)))
+                    (param-elaborate
+                      p/alts p/names (ast:var 'a.set!)
+                      (ast:begin (map ast:set! p/ids (map ast:var p/alts))
+                                 ast:true))))
           ((? 'if   ) (ast:if (ev env (@ 1)) (ev env (@ 2)) (ev env (@ 3))))
           ((? 'apply) (define arg (if (vector? (@ 2)) (@ 2)
                                     (apply ast:list (@ 2))))
@@ -254,12 +259,8 @@
                        (param-elaborate
                          p/ids p/names (ast:var 'a.lambda) (ev benv (@ 2)))))
           ((? 'prim  ) (ast:prim (@ 1) (ev* env (@ 2))))
-          ((? 'begin ) (astx:begin (ev* env (@ 1)) (ev env (@ 2))))
-          ((? 'let   ) (define i* (name*->id* (@ 1)))
-                       (astx:let i* (ev* env (@ 2))
-                                 (ev (env-extend* env (@ 1) i*) (@ 3))))
-          ((? 'letrec) (define i* (name*->id* (@ 1)))
-                       (astx:letrec i* (ev* env (@ 2))
-                                    (ev (env-extend* env (@ 1) i*) (@ 3))))
+          ((? 'begin ) (ast:begin (ev* env (@ 1)) (ev env (@ 2))))
+          ((? 'let   ) (ev env (ast:let/lambda ast)))
+          ((? 'letrec) (ev env (ast:letrec/set! ast)))
           ((? 'quote ) ast)
           (#t          (error '"unknown ast:" ast)))))
