@@ -4,8 +4,7 @@
   procedure? mvector? vector? pair? null? boolean? string?
   number? integer? fixnum? flonum?
   boolean=? number=? string=? mvector=? procedure=?
-  string->vector vector->string
-  cons car cdr vector-ref vector-length
+  string->vector vector->string cons car cdr vector-ref vector-length
   make-mvector mvector->vector mvector-set! mvector-ref mvector-length
   ;; TODO: mvector-cas!
   string<? string>?

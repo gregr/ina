@@ -5,8 +5,8 @@
   (provide (all-from-out "prim.rkt")
            s->ns ns->s writeable?! path:s->ns path:ns->s read* read*/file
            write/file racket-datum lift lower lower-arg0 $apply
-           nscm:quote nscm:quasiquote nscm:equal? nscm:member nscm:assoc)
-
+           nscm:quote nscm:quasiquote
+           nscm:equal? nscm:member nscm:assoc nscm:split)
   (require "prim.rkt" racket/path racket/port racket/string racket/vector
            (for-syntax racket/base))
 
@@ -80,6 +80,10 @@
   (define (nscm:assoc k xs) (cond ((null? xs) #f)
                                   ((nscm:equal? k (caar xs)) (car xs))
                                   (else (nscm:assoc k (cdr xs)))))
+  (define (nscm:split xs n)
+    (let loop ((xs xs) (n n) (rprefix '()))
+      (if (= 0 n) (cons rprefix xs)
+        (loop (cdr xs) (- n 1) (cons (car xs) rprefix)))))
 
   (define-syntax (nscm:quote stx)
     (syntax-case stx ()

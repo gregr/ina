@@ -5,6 +5,7 @@
   (require
     (rename-in "interop.rkt"
                (nscm:equal? equal?) (nscm:member member) (nscm:assoc assoc)
+               (nscm:split split)
                (nscm:quote quote) (nscm:quasiquote quasiquote))
     racket/list racket/string racket/vector)
 
@@ -328,6 +329,7 @@
                (cons 'append        append)
                (cons 'reverse       reverse)
                (cons 'range         range)
+               (cons 'split         split)
                (cons 'take          take)
                (cons 'drop          drop)
                (cons 'member        member)

@@ -3,7 +3,7 @@
           ast:quote ast:var ast:set! ast:if ast:apply ast:lambda
           ast:prim astx:let astx:letrec astx:begin
           ast:null ast:true ast:false ast:cons ast:list ast:vector
-          ast:apply* ast:let ast:let* ast:begin ast:shift ast:reset
+          ast:apply* ast:let ast:let* ast:begin ast:begin1 ast:shift ast:reset
           ast-eval ast-elaborate)
  (require test param-map param-bind param-names name->string))
 
@@ -39,9 +39,12 @@
 (define (ast:let* p* v* body)
   (foldr (lambda ((p . v) body) (ast:let (list p) (list v) body))
          body (map cons p* v*)))
-(define (ast:begin a*)
-  (define ra* (reverse (cons ast:true a*)))
-  (foldl (lambda (a rest) (ast:let '(#f) (list a) rest)) (car ra*) (cdr ra*)))
+(define (ast:begin e* final)
+  (foldr (lambda (e rest) (ast:let '(#f) (list e) rest)) final e*))
+(define (ast:begin1 e*)
+  (if (null? e*) ast:true
+    (let (((suf . rpre) (split (reverse e*) 1)))
+      (ast:begin (reverse rpre) (car suf)))))
 (define (ast:shift proc) (ast:prim 'shift (list proc)))
 (define (ast:reset body) (ast:prim 'reset (list (ast:lambda '() body))))
 

@@ -7,7 +7,7 @@
           defstate-env-set defstate-names-add defstate-actions-add
           ast:quote ast:var ast:set! ast:if ast:apply ast:lambda ast:prim
           ast:null ast:true ast:false ast:cons ast:list ast:vector
-          ast:apply* ast:let ast:begin ast:shift ast:reset
+          ast:apply* ast:let ast:begin ast:begin1 ast:shift ast:reset
           primitive-op-descriptions primitive-op-type-signature))
 
 (define (binding:var n r) (cons n (list (cons ctx:var r) (cons ctx:set! r))))
@@ -59,8 +59,8 @@
         (#t (bpair*?! (car tail)) (apply @let/ env tail))))
 (define (@letrec env b* . body)
   (bpair*?! b*)
-  (define (k env) (ast:begin (append (map (lambda (b) (apply @set! env b)) b*)
-                                     (list (apply @let env '() body)))))
+  (define (k env) (ast:begin (map (lambda (b) (apply @set! env b)) b*)
+                             (apply @let env '() body)))
   (@let env (map (lambda (b) (list (car b) #t)) b*) k))
 (define (@let* env b* . body)
   (bpair*?! b*)
@@ -81,7 +81,7 @@
            (unless (length>=? 1 c) (error '"invalid cond clause:" c))
            (ast:if (parse env (car c)) (@body* env (cdr c)) rest))
          ast:true clauses))
-(define (@begin env . body)    (ast:begin (parse* env body)))
+(define (@begin env . body)    (ast:begin1 (parse* env body)))
 (define (@when env c . body)   (@if env c (lambda (env) (@body* env body)) #t))
 (define (@unless env c . body) (@if env c #t (lambda (env) (@body* env body))))
 
@@ -91,7 +91,7 @@
   (let ((actions (reverse (defstate-actions st)))
         (env (defstate-env st)) (names (defstate-names st)))
     (ast:let (param/renamings env names) (map (lambda (_) ast:true) names)
-             (ast:begin (map (lambda (act) (act env)) actions)))))
+             (ast:begin1 (map (lambda (act) (act env)) actions)))))
 (define (@begin/define st . forms)
   (foldl (lambda (form st)
            (let* ((n (and (pair? form) (string? (car form)) (car form)))
