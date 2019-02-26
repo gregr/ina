@@ -1,0 +1,17 @@
+#!/bin/bash
+set -eufo pipefail
+
+here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+(
+cd "$here"
+rm compile.scm.rkt || true
+rm eval.scm.rkt || true
+rm compile || true
+rm eval || true
+time racket bootstrap.rkt
+time raco exe -o compile compile.scm.rkt
+time ./compile eval.scm
+time raco exe -o eval eval.scm.rkt
+time ./eval hello.scm 1 two "three"
+)
