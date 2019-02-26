@@ -19,10 +19,6 @@ raco exe -o eval eval.scm.rkt
 * sorted map (btree?)
 * provide unreliable eq[v]? internable strings? internable cons/vectors?
 
-### AST parsing
-* add a primitive ast:letrec; don't immediately elaborate letrec expressions via ast:set!
-  * one parser can then serve evaluators that don't permit set!
-
 ### AST simplification (optional?)
 * generated Racket code is currently enormous, partly due to base library
 * simple, code shrinking optimizations

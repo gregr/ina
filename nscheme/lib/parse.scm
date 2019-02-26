@@ -6,8 +6,8 @@
           defstate:empty defstate-env defstate-names defstate-actions
           defstate-env-set defstate-names-add defstate-actions-add
           ast:quote ast:var ast:set! ast:if ast:apply ast:lambda ast:prim
-          ast:null ast:true ast:false ast:cons ast:list ast:vector
-          ast:apply* ast:let ast:begin ast:begin1 ast:shift ast:reset
+          ast:begin ast:let ast:letrec ast:apply* ast:begin1 ast:null ast:true
+          ast:false ast:cons ast:list ast:vector ast:shift ast:reset
           primitive-op-descriptions primitive-op-type-signature))
 
 (define (binding:var n r) (cons n (list (cons ctx:var r) (cons ctx:set! r))))
@@ -59,9 +59,10 @@
         (#t (bpair*?! (car tail)) (apply @let/ env tail))))
 (define (@letrec env b* . body)
   (bpair*?! b*)
-  (define (k env) (ast:begin (map (lambda (b) (apply @set! env b)) b*)
-                             (apply @let env '() body)))
-  (@let env (map (lambda (b) (list (car b) #t)) b*) k))
+  (define p* (map car b*))
+  (define benv (env-extend*/var env (param-names p*)))
+  (ast:letrec (param/renamings benv p*) (parse* benv (map cadr b*))
+              (@body* benv body)))
 (define (@let* env b* . body)
   (bpair*?! b*)
   (let loop ((b* b*) (env env))
@@ -78,7 +79,7 @@
          ast:false args))
 (define (@cond env . clauses)
   (foldr (lambda (c rest)
-           (unless (length>=? 1 c) (error '"invalid cond clause:" c))
+           (unless (length>=? 2 c) (error '"invalid cond clause:" c))
            (ast:if (parse env (car c)) (@body* env (cdr c)) rest))
          ast:true clauses))
 (define (@begin env . body)    (ast:begin1 (parse* env body)))
@@ -88,10 +89,14 @@
 (define (defstate-actions-add-expr st form)
   (defstate-actions-add st (lambda (env) (parse env form))))
 (define (defstate-run st)
-  (let ((actions (reverse (defstate-actions st)))
-        (env (defstate-env st)) (names (defstate-names st)))
-    (ast:let (param/renamings env names) (map (lambda (_) ast:true) names)
-             (ast:begin1 (map (lambda (act) (act env)) actions)))))
+  (let* ((actions (defstate-actions st))
+         (#f      (or (and (pair? actions) (not (pair? (car actions))))
+                      (error '"missing final body expression:" actions)))
+         (b*      (map (lambda (a) (if (pair? a) a (cons #f a)))
+                       (reverse (cdr actions))))
+         (env     (defstate-env st)))
+    (ast:letrec (param/renamings env (map car b*)) (parse* env (map cdr b*))
+                (parse env (car actions)))))
 (define (@begin/define st . forms)
   (foldl (lambda (form st)
            (let* ((n (and (pair? form) (string? (car form)) (car form)))
@@ -102,7 +107,7 @@
   (define names (param-names param))
   (define env (env-extend*/var (defstate-env st) names))
   (defstate-actions-add (defstate-env-set (defstate-names-add st names) env)
-                        (lambda (env) (@set! env param arg))))
+                        (cons param arg)))
 (define (@define st param . body)
   (if (pair? param)
     (@define st (car param)
