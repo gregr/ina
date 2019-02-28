@@ -34,7 +34,7 @@
   (define paths:lib-modules
     (map (lambda (n) (reverse (cons (string-append n '".scm") rpath:lib)))
          '(common ast parse module base extended io
-                  backend-racket module-racket)))
+                  backend-racket module-racket trie-map trie-vector)))
   (define mtest
     (module:premodule name=>lang (premodule '() '(test) '() '(test) '(base)
                                             '((define test #f)))))
