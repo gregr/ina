@@ -6,6 +6,8 @@
 
 ## Bootstrap the compiler and evaluator
 
+Run `./clean-bootstrap`, or manually run:
+
 ```
 racket bootstrap.rkt
 raco exe -o compile compile.scm.rkt
@@ -15,9 +17,76 @@ raco exe -o eval eval.scm.rkt
 ```
 
 ## TODO
+* store near-source language ASTs as virtualized programs
+  * usual ASTs, but everything allocated in a VM heap
+    * heap values are values annotated with a virtual address
+      * no lookup needed in most cases (value is local)
+      * address is useful for comparison, sharing, gc, serialization, modelling mutable state
+    * ASTs themselves, and any values they embed (e.g., in ast:quote), are heap values
+  * still CPS-convert if supporting delimited continuations and dynamic parameters
+  * optionally optimize ASTs without changing representation
+    * e.g., some variant of partial evaluation
+  * implement resource-budgeted evaluation
+    * optionally w/ provenance tracking for debugging
+    * interrupted virtualized programs should be storeable
+  * ast:io as the only way to interact with host; no leaking of procedures in either direction
+
+* virtualized evaluation
+  * host provides the s-expr datum representing a program and has the vm parse it
+    * datum is "allocated" in the vm heap, optionally with metadata/provenance
+    * datum is then parsed by the vm in some syntactic environment
+      * i.e., parse is a vm-level program taking newly-allocated datum as input
+      * in this way, env may refer to heap-allocated macros
+        * which may embed heap-allocated values as program constants during expansion
+          * e.g., quasiquote may embed references to `append` and `list->vector`
+  * host can then eval the parse result/AST (also a vm heap value) using a
+    safe/resource-budgeted/debuggable/etc. evaluator, with the vm heap as background
+    * host can optionally optimize the AST before evaluating it
+    * host could also extract the AST heap value, compile the AST, etc.
+  * how does the vm's version of parse get installed in the first place?
+    * host can run non-vm parse on itself to get its AST, then allocate/install it
+
+* add ast:io
+* add AST type general enough to cover dynamic state and delimited control
+  * call it something like handle/dynamic/context?
+* provide unreliable eq[v] primitive(s)
+* provide n-ary vector constructor primitive (but can't lift it as a procedure)
+
+* macro system alternatives
+  * unusual systems
+    * current system is similar to syntactic closures and "micros"
+      * syntax may embed lambdas, which are anonymous parsers
+    * staged syntax w/ usual lexical scope, requiring explicit environment management
+    * explicit syntax-open/syntax-close
+    * hygienic scope/binder static inference
+  * standard scheme systems
+    * mark/rename
+    * implicit/explicit renaming
+    * syntactic closures
+    * macros-that-work
+  * expansion-passing style
+
+* pattern matching for tree structures
+  * multiple surface syntaxes
+    * quasiquote vs. syntax-rules vs. kitchen sink; guards vs. qualifiers
+  * a single low level pattern language
+    * should support literals, compound data, and/or/?/app, quasiquote, ellipses, etc.
+  * multiple matching algorithms
+    * general vs. fast for restricted patterns
+
+* pattern matching for sequences (maybe later when the use is clearer?)
+  * maybe limit to context free, aka mu-regular languages/grammars
+  * recognition-only vs. accumulation/transformation
+  * detecting and exploiting unambiguous grammars
+
+* optional ast:io requests for alloc/free and execute (with operands) arbitrary host-platform code
+  * to support dynamic compilation without interpretive overhead
+  * need to design compatible calling conventions
+  * valid code depends on platform, but interface can be wrapped as a generic dynamic eval
+
 * ensure readable formatting of all code
-* sorted map (btree?)
-* provide unreliable eq[v]? internable strings? internable cons/vectors?
+* internable strings? internable pairs/vectors?
+* sorted map (btree?); once there's a clear need
 
 ### AST simplification (optional?)
 * generated Racket code is currently enormous, partly due to base library
