@@ -1,5 +1,23 @@
 # nScheme
 
+## Deviations from Scheme
+
+* Strings, pairs, and vectors are immutable.
+  * Mutable vectors (i.e., mvectors) are a distinct type of data.
+* Booleans, null, symbols, procedures, and mvectors do have stable identities.
+  * i.e., using `eq?` is always the same as using `equal?`.
+  * Numbers, characters, strings, pairs, and vectors are not guaranteed to have
+    a stable identity.
+    * i.e., result of `eq?` is somewhat unpredictable.
+    * `eqv?` is predictable for numbers and characters.
+* `integer?` will return #f for inexact numbers.
+* Various fixed-size (possibly unsigned) integer and floating point types are
+  supported.
+* Convenient conventions from Racket are adopted:
+  * Order of operand evaluation is left-to-right.
+  * Internal definitions may appear more freely.
+  * `letrec` behaves like Scheme's `letrec*`.
+
 ## Test the bootstrap interpreter
 
 `raco test *.rkt`
