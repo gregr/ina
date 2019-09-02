@@ -2,21 +2,28 @@
 
 ## Deviations from Scheme
 
-* Strings, pairs, and vectors are immutable.
-  * Mutable vectors (i.e., mvectors) are a distinct type of data.
-* Booleans, null, symbols, procedures, and mvectors do have stable identities.
-  * i.e., using `eq?` is always the same as using `equal?`.
+* Strings, pairs, and vectors are immutable
+  * Mutable vectors (i.e., mvectors) are a distinct type of data
+* Booleans, null, symbols, procedures, and mvectors do have stable identities
+  * i.e., using `eq?` is always the same as using `equal?`
   * Numbers, characters, strings, pairs, and vectors are not guaranteed to have
-    a stable identity.
-    * i.e., result of `eq?` is somewhat unpredictable.
-    * `eqv?` is predictable for numbers and characters.
-* `integer?` will return #f for inexact numbers.
+    a stable identity
+    * i.e., result of `eq?` is somewhat unpredictable
+    * `eqv?` is predictable for numbers and characters
+* `integer?` will return #f for inexact numbers
 * Various fixed-size (possibly unsigned) integer and floating point types are
-  supported.
+  supported
 * Convenient conventions from Racket are adopted:
-  * Order of operand evaluation is left-to-right.
-  * Internal definitions may appear more freely.
-  * `letrec` behaves like Scheme's `letrec*`.
+  * Order of operand evaluation is left-to-right
+  * Internal definitions may appear more freely
+  * `letrec` behaves like Scheme's `letrec*`
+* Errors are fatal
+  * Errors cannot be caught by the object-level program itself
+    * No prescribed object-level error handling model.  You choose your method
+  * Meta-level systems (e.g., REPL, safe compiler) normally still catch errors
+    * Counter-example: for performance, unsafe compilers may assume no errors
+      * Programs crash or exhibit undefined behavior when assumption fails
+      * May employ static analyses to rule out errors and provide warnings
 
 ## Test the bootstrap interpreter
 
