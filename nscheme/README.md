@@ -25,23 +25,41 @@
       * Programs crash or exhibit undefined behavior when assumption fails
       * May employ static analyses to rule out errors and provide warnings
 
-## Test the bootstrap interpreter
+## Run tests
 
 `raco test *.rkt`
 
-## Bootstrap the compiler and evaluator
+## Bootstrap
 
-Run `./clean-bootstrap`, or manually run:
-
-```
-racket bootstrap.rkt
-raco exe -o compile compile.scm.rkt
-./compile eval.scm
-raco exe -o eval eval.scm.rkt
-./eval -e "(printf '\"hello ~a\n\" 'world)"
-```
+TODO
 
 ## TODO
+
+* Racket-compatible bootstrap
+  * shallow embedding of nScheme in Racket
+    * mvectors
+    * simple record types
+    * simple match
+    * .rkt files that include .scm files
+  * bootstrap self-applicable compiler
+    * simple port/file io
+    * read-syntax/write
+    * hygienic syntax objects with source annotations
+    * parse/unparse
+      * design new AST including case-lambda and dynamic control
+      * syntax-case
+    * nanopass framework
+      * automatic record definition, validation, translation
+    * virtualization-friendly compilation
+      * modules as environments
+      * catch/handle io requests and fatal errors
+      * resource-budgeted processes
+      * dynamically-compiled code that may refer to existing heap values
+    * Racket as compilation target
+      * if output is too large, apply simple code-shrinking optimizations
+
+## Old TODO that needs to be reorganized
+
 * store near-source language ASTs as virtualized programs
   * usual ASTs, but everything allocated in a VM heap
     * heap values are values annotated with a virtual address
