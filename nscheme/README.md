@@ -37,26 +37,80 @@ TODO
 
 * Racket-compatible bootstrap
   * shallow embedding of nScheme in Racket
-    * mvectors
-    * simple record types
-    * simple match
     * .rkt files that include .scm files
+    * mvectors: use opaque struct, maybe with gen:custom-write
+      * opacity affects equal? and other standard operators that use comparison
+    * simple io capabilities (see platforms for more io): files and stdio
+    * avoid situations where racket features can be distinguished from nscheme
+      * void values produced by set!, cond, case, when, unless, etc.
+      * abort/shift/reset tags and dynamic parameters
+        * could avoid their use entirely?  might be hard for dynamic parameters
+      * procedures with non-list parameters
+  * base library
+    * redefine values, let-values in terms of vectors
+    * simple record types
+      * optional common fields for multiple record types
+    * simple match
+      * maybe just implement more general pattern matching?
+      * hack for matching record types, with optional implicit field matching:
+        if `name` is not special, then (name (field1 x) field2) matches values
+        that are `name?` and submatches on `name-field1` and `name-field2`.
+      * special names: quote, quasiquote, cons, list, cons*, list*, vector
+    * input/output ports (build on simple io primitives)
   * bootstrap self-applicable compiler
-    * simple port/file io
+    * syntax objects with source annotations
     * read-syntax/write
-    * hygienic syntax objects with source annotations
     * parse/unparse
       * design new AST including case-lambda and dynamic control
-      * syntax-case
+      * environment mapping symbols to property lists
+        * variable (with lexical address?), pattern?(w/ ellipsis level),
+          syntax:expression, syntax:set!, syntax:definition
+      * hygienic macros
+        * syntax pattern matching
+        * syntax-case, syntax-rules
+        * syntax-parameterize
     * nanopass framework
-      * automatic record definition, validation, translation
-    * virtualization-friendly compilation
-      * modules as environments
-      * catch/handle io requests and fatal errors
-      * resource-budgeted processes
-      * dynamically-compiled code that may refer to existing heap values
+      * automatic record definition, validation, translation, parsing/unparsing
+        * more general grammar definition and match?
+          * terminal-aware patterns
+      * define-language, define-pass
+      * nanopass-case, with-output-language
+      * language->s-expression, diff-languages
+      * echo and trace
     * Racket as compilation target
       * if output is too large, apply simple code-shrinking optimizations
+    * modularity and libraries
+      * worst case, could bootstrap with just a manual include-based system
+        * include/load programs and/or data from file, compile/eval
+      * ideally, use a typical library approach with implicit phasing
+        * r[6,7]rs libraries, s48 structures and configuration language
+        * Chez-style modules for precise binding visibility within expressions
+        * Chez-inspired meta defs, but block-structured and cross-phase
+        * rebind exports/imports to allow non-interfering library-local set!
+          * e.g., invoke applies an import lambda that returns an export vector
+        * invoke must return all bindings that exported macros may leak
+          * including imports, transitively... this could explode
+          * unless indirect exports are manually controlled
+        * library components:
+          - environment mapping labels to properties (includes macros)
+          - scope/substitution mapping exported names to labels
+          - invoke-code returning a vector of exported runtime values
+            * due to macro leak, export all top-level definitions (by label)
+          - a vector of exported runtime value labels in the same order
+      * build on top of low-level programmatic construction and linking
+      * dynamic library installation and invocation
+        * r6rs environment, eval
+      * link-preserving library renaming/repointing to support live upgrade
+    * virtual systems
+      * virtualization-friendly compilation
+        * handle io requests, signals/interrupts/preemption, and fatal errors
+        * fine-grained process control, resource-budgeting
+        * dynamically-compiled code that may refer to existing heap values
+        * heap/image dumping and resumption
+      * a real platform process may run multiple virtual systems at once
+        * each may have a different configuration (libraries, devices, etc.)
+        * isolation/distribution at the system level
+          * as in Racket places, E vats, Erlang processes
 
 ## Old TODO that needs to be reorganized
 
@@ -368,15 +422,18 @@ system state:
 
 ### Racket platform
 * io.rkt capabilities:
-  * stdin/stdout/stderr, stty, filesystem, network sockets, gui
-  * threads/places/futures, timers, exception/break/interrupt handling
-    * uncaught-exception-handler, call-with-exception-handler, exn:break?
+  * stdin/stdout/stderr, stty/terminfo, filesystem, network sockets, gui
+  * threads/places/futures, timers, sleep, exception/break/interrupt handling
+    * with-handlers, uncaught-exception-handler, call-with-exception-handler, exn:break?
   * cmdline/shell/env/subprocesses, racket-eval
+  * crypto-random-bytes
 * define ports, read, write
   * start with high level ops for now, then reimplement in terms of lower level ops
     * open-input-file, open-output-file, close-input-port, close-output-port, flush-output
     * high level: eof?, printf, write-string, write, read-string, read
-    * low level: peek-bytes!, read-bytes!, write-bytes, file-position (via `*` version for safety)
+    * low level: raw unbuffered io streams with block read/write
+      * implement ports on top of these
+      * read-bytes!, write-bytes, file-position (via `*` version for safety)
       * store bytes in mvectors; support consolidation into vector of unicode chars
   * include non-device (aka string/byte buffer) ports
     * for when you want a port interface to string-like data
