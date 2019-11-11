@@ -38,8 +38,6 @@ TODO
 * Racket-compatible bootstrap
   * shallow embedding of nScheme in Racket
     * .rkt files that include .scm files
-    * mvectors: use opaque struct, maybe with gen:custom-write
-      * opacity affects equal? and other standard operators that use comparison
     * simple io capabilities (see platforms for more io): files and stdio
     * avoid situations where racket features can be distinguished from nscheme
       * void values produced by set!, cond, case, when, unless, etc.
