@@ -2,7 +2,7 @@
 (provide make-mvector mvector? mvector->vector
          mvector-length mvector-ref mvector-set! mvector-cas!
          string->vector vector->string
-         filesystem console stdio stdio/byte)
+         filesystem console stdio)
 
 (require racket/file racket/string racket/struct racket/vector)
 
@@ -72,62 +72,46 @@
     ((buffer-mode-ref)       (file-stream-buffer-mode port))
     ((buffer-mode-set! mode) (file-stream-buffer-mode port mode))))
 
-(define (port:file:input get port)
+;; TODO: define port:input and factor out super.
+(define (port:file:input port)
   (define super (port:file port))
   (define (eof->false d) (if (eof-object? d) #f d))
   (method-lambda
     ((close) (close-input-port port))
-    ((get)   (eof->false (get port)))
+    ((get)   (eof->false (read-byte port)))
     (else    super)))
 
-(define (port:file:input/char port) (port:file:input read-char port))
-(define (port:file:input/byte port) (port:file:input read-byte port))
-
-(define (port:file:output put port)
+(define (port:file:output port)
   (define super (port:file port))
   (method-lambda
     ((close)         (close-output-port port))
-    ((put v)         (put v port))
+    ((put v)         (write-byte v port))
     ((flush)         (flush-output port))
     ((truncate size) (file-truncate port size))
     (else            super)))
 
-(define (port:file:output/char port) (port:file:output write-char port))
-(define (port:file:output/byte port) (port:file:output write-byte port))
-
 (define (filesystem root)
   (define (path/root path)
-    ;; TODO: string-split has a weird default, requiring us to use #:trim?.
+    ;; NOTE: string-split has a weird default, requiring us to use #:trim?.
     (let loop ((path (if (string? path) (string-split path "/" #:trim? #f)
                        path)))
       (cond ((null? path)             root)
             ((equal? ".." (car path)) (loop (cdr path)))
             (else                     (append root path)))))
   (define (resolve path) (string-join (path/root path) "/"))
-  (define (open-input port: path) (port: (open-input-file (resolve path))))
-  (define (open-output port: path exists)
-    (port: (open-output-file (resolve path) #:exists exists)))
-  (define (open-input-output iport: oport: path exists)
-    (define-values (in out)
-      (open-input-output-file (resolve path) #:exists exists))
-    (list (iport: in) (oport: in)))
   (lambda/handle-fail
     (lambda (x) x)
     (method-lambda
-      ((subfilesystem path) (filesystem (path/root path)))
+      ((filesystem path) (filesystem (path/root path)))
 
-      ((open-input/char  path)        (open-input  port:file:input/char path))
-      ((open-output/char path exists) (open-output port:file:output/char
-                                                   path exists))
-      ((open-input/byte  path)        (open-input  port:file:input/byte path))
-      ((open-output/byte path exists) (open-output port:file:output/byte
-                                                   path exists))
-      ((open-input-output/char path exists)
-       (open-input-output port:file:input/char port:file:output/char
-                          path exists))
-      ((open-input-output/byte path exists)
-       (open-input-output port:file:input/byte port:file:output/byte
-                          path exists))
+      ((open-input path)
+       (port:file:input (open-input-file (resolve path))))
+      ((open-output path exists)
+       (port:file:output (open-output-file (resolve path) #:exists exists)))
+      ((open-input-output path exists)
+       (define-values (in out)
+         (open-input-output-file (resolve path) #:exists exists))
+       (list (port:file:input in) (port:file:output in)))
 
       ((directory path) (map path->string (directory-list (resolve path))))
 
@@ -174,13 +158,11 @@
                       (method-lambda ((in) in) ((out) out) ((error) err))))
 
 ;; TODO: maybe these shouldn't be fully-fledged file ports?
-;; Might want to hide: close, truncate, position
-(define (console/stdio iport: oport:) (console (iport: (current-input-port))
-                                               (oport: (current-output-port))
-                                               (oport: (current-error-port))))
+;; Might want to hide: truncate, position
+(define stdio (console (port:file:input  (current-input-port))
+                       (port:file:output (current-output-port))
+                       (port:file:output (current-error-port))))
 
-(define stdio      (console/stdio port:file:input/char port:file:output/char))
-(define stdio/byte (console/stdio port:file:input/byte port:file:output/byte))
 
 ;; TODO:
 ;(define (network host?)  ;; TODO: how do we scope what it can see/connect-to?
