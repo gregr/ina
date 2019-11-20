@@ -1,12 +1,14 @@
 # nScheme
 
+This is a nonstandard Scheme implementation.
+
 ## Deviations from Scheme
 
 * Strings, pairs, and vectors are immutable
   * Mutable vectors (i.e., mvectors) are a distinct type of data
 * Booleans, null, symbols, procedures, and mvectors do have stable identities
   * i.e., using `eq?` is always the same as using `equal?`
-  * Numbers, characters, strings, pairs, and vectors are not guaranteed to have
+  * Numbers, strings, pairs, and vectors are not guaranteed to have
     a stable identity
     * i.e., result of `eq?` is somewhat unpredictable
     * `eqv?` is predictable for numbers and characters
@@ -24,6 +26,11 @@
     * Counter-example: for performance, unsafe compilers may assume no errors
       * Programs crash or exhibit undefined behavior when assumption fails
       * May employ static analyses to rule out errors and provide warnings
+* no special character type, strings are bytevectors instead (utf-8 assumed)
+  * useful notion of character depends on context
+    * code units (bytes) suffice for typical string manipulation
+    * characters as grapheme clusters (substrings) for user interaction
+    * characters as code points (like Racket's char type) is rarely useful
 
 ## Run tests
 

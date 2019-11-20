@@ -21,8 +21,10 @@
 (define (mvector-set! mv i x)       (vector-set!   (mvector-v mv) i x))
 (define (mvector-cas! mv i old new) (vector-cas!   (mvector-v mv) i old new))
 
-(define (string->vector s) (list->vector (string->list s)))
-(define (vector->string v) (list->string (vector->list v)))
+(define (string->vector s)
+  (list->vector (bytes->list (string->bytes/utf-8 s))))
+(define (vector->string v)
+  (bytes->string/utf-8 (list->bytes (vector->list v))))
 
 (define-syntax assert
   (syntax-rules ()
