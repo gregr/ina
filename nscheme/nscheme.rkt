@@ -65,28 +65,36 @@
      (method-choose ((name) (lambda (_ . param) body ...)) ... (else else-body ...)))
     ((_ body ...) (method-lambda body ... (else method-unknown)))))
 
-(define (port:file port)
+(define (port:bytestream port)
   (method-lambda
-    ((position-ref)          (file-position* port))
-    ((position-set! index)   (file-position* port index))
     ((buffer-mode-ref)       (file-stream-buffer-mode port))
     ((buffer-mode-set! mode) (file-stream-buffer-mode port mode))))
 
-;; TODO: define port:input and factor out super.
-(define (port:file:input port)
-  (define super (port:file port))
+(define (port:bytestream:input super port)
   (define (eof->false d) (if (eof-object? d) #f d))
   (method-lambda
     ((close) (close-input-port port))
     ((get)   (eof->false (read-byte port)))
     (else    super)))
 
-(define (port:file:output port)
-  (define super (port:file port))
+(define (port:bytestream:output super port)
   (method-lambda
-    ((close)         (close-output-port port))
-    ((put v)         (write-byte v port))
-    ((flush)         (flush-output port))
+    ((close) (close-output-port port))
+    ((put b) (write-byte b port))
+    ((flush) (flush-output port))
+    (else    super)))
+
+(define (port:file port)
+  (define super (port:bytestream port))
+  (method-lambda
+    ((position-ref)        (file-position* port))
+    ((position-set! index) (file-position* port index))
+    (else                  super)))
+
+(define (port:file:input  port) (port:bytestream:input (port:file port) port))
+(define (port:file:output port)
+  (define super (port:bytestream:output (port:file port) port))
+  (method-lambda
     ((truncate size) (file-truncate port size))
     (else            super)))
 
