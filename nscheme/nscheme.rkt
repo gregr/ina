@@ -2,7 +2,8 @@
 (provide make-mvector mvector? mvector->vector
          mvector-length mvector-ref mvector-set! mvector-cas!
          string->vector vector->string
-         filesystem console tcp stdio)
+         filesystem console tcp stdio
+         racket-eval)
 
 (require racket/file racket/tcp racket/string racket/struct racket/vector)
 
@@ -213,3 +214,16 @@
 (define stdio (console (port:file:input  (current-input-port))
                        (port:file:output (current-output-port))
                        (port:file:output (current-error-port))))
+
+(define (racket-eval rkt-datum)
+  (define (racket-datum form)
+    (define (@ i) (vector-ref form i))
+    (cond ((pair? form)         (cons (racket-datum (car form))
+                                      (racket-datum (cdr form))))
+          ((not (vector? form)) form)
+          ((eq? (@ 0) 'quote)   (@ 1))
+          ((eq? (@ 0) 'vector)  (vector-map racket-datum (@ 1)))
+          ((eq? (@ 0) 'keyword) (string->keyword (@ 1)))
+          (else                 (error "invalid racket-datum:" form))))
+  (parameterize ((current-namespace (make-base-namespace)))
+    (eval (racket-datum rkt-datum))))
