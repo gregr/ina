@@ -60,9 +60,21 @@ TODO
     * read-syntax/write
     * parse/unparse
       * design new AST including case-lambda and dynamic control
-      * environment mapping symbols to property lists
-        * variable (with lexical address?), pattern?(w/ ellipsis level),
-          syntax:expression, syntax:set!, syntax:definition
+      * environment mapping identifier labels to property lists
+        * identifiers may be associated with multiple properties, e.g., `begin`
+          has (different) parsers/micros in both the expression and definition
+          contexts
+        * example properties:
+          * variable
+            * track lexical/global address?
+          * expression (transformers for typical macros, identifiers, and set!)
+            * application, ref, set!
+          * definition (transformers for definition contexts)
+          * template (for syntax-case pattern variables)
+            * track ellipsis level
+          * module (a Chez-style module)
+          * match (a pattern in the match vocabulary (match is a micro))
+          * ... possibly other pattern vocabularies
       * hygienic macros
         * syntax pattern matching
         * syntax-case, syntax-rules
@@ -422,7 +434,9 @@ system state:
 * io.rkt capabilities:
   * stdin/stdout/stderr, stty/terminfo, filesystem, network sockets, gui
   * threads/places/futures, timers, sleep, exception/break/interrupt handling
-    * with-handlers, uncaught-exception-handler, call-with-exception-handler, exn:break?
+    * with-handlers, uncaught-exception-handler, call-with-exception-handler
+    * exn:break?, exn:break-continuation (usable via ueh or cweh, not with-handlers)
+    * (parameterize-break #t|#f body ...)
   * cmdline/shell/env/subprocesses, racket-eval
   * crypto-random-bytes
 * define ports, read, write
