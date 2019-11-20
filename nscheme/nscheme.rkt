@@ -2,9 +2,9 @@
 (provide make-mvector mvector? mvector->vector
          mvector-length mvector-ref mvector-set! mvector-cas!
          string->vector vector->string
-         filesystem console stdio)
+         filesystem console tcp stdio)
 
-(require racket/file racket/string racket/struct racket/vector)
+(require racket/file racket/tcp racket/string racket/struct racket/vector)
 
 (struct mvector (v)
         #:methods gen:custom-write
@@ -165,20 +165,41 @@
   (lambda/handle-fail (lambda (x) x)
                       (method-lambda ((in) in) ((out) out) ((error) err))))
 
-;; TODO: maybe these shouldn't be fully-fledged file ports?
-;; Might want to hide: truncate, position
-(define stdio (console (port:file:input  (current-input-port))
-                       (port:file:output (current-output-port))
-                       (port:file:output (current-error-port))))
+(define (port:tcp port)
+  (define super (port:bytestream port))
+  (lambda/handle-fail
+    (lambda (x) x)
+    (method-lambda
+      ((addresses) (define-values
+                     (local-host local-port remote-host remote-port)
+                     (tcp-addresses port #t))
+                   (list local-host local-port remote-host remote-port))
+      ((abandon)   (tcp-abandon-port port))
+      (else        super))))
 
+(define (port:tcp:input port)  (port:bytestream:input (port:tcp port) port))
+(define (port:tcp:output port) (port:bytestream:output (port:tcp port) port))
 
-;; TODO:
-;(define (network host?)  ;; TODO: how do we scope what it can see/connect-to?
-  ;)
+(define (tcp:listener listen)
+  (lambda/handle-fail
+    (lambda (x) x)
+    (method-lambda
+      ((close)  (tcp-close listen))
+      ((ready?) (tcp-accept-ready? listen))
+      ((accept) (define-values (in out) (tcp-accept listen))
+                (list (port:tcp:input in) (port:tcp:output out))))))
 
-;; TODO: network ports.
+(define tcp
+  (lambda/handle-fail
+    (lambda (x) x)
+    (method-lambda
+      ((listen hostname port max-wait reuse?)
+       (tcp:listener (tcp-listen port max-wait reuse? hostname)))
+      ((connect host port localhost localport)
+       (define-values (in out) (tcp-connect host port localhost localport))
+       (list (port:tcp:input in) (port:tcp:output out))))))
+
 ;; TODO: what does a pre-connected udp port object look like?
-;(define (port:tcp port) ...)  ;; tcp-abandon-port
 ;(define (port:udp port) ...)  ;; connected udp ports: udp-send, udp-receive
 
 ;; TODO: synchronous channel ports.
@@ -186,3 +207,9 @@
 ;; TODO: generator ports.
 
 ;; TODO: string(, mstring ?), vector, mvector ports.
+
+;; TODO: maybe these shouldn't be fully-fledged file ports?
+;; Might want to hide: truncate, position
+(define stdio (console (port:file:input  (current-input-port))
+                       (port:file:output (current-output-port))
+                       (port:file:output (current-error-port))))
