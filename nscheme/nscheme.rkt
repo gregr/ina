@@ -3,6 +3,7 @@
          mvector-length mvector-ref mvector-set! mvector-cas!
          string->vector vector->string
          filesystem console tcp stdio
+         port:string:input
          racket-eval)
 
 (require racket/file racket/tcp racket/string racket/struct racket/vector)
@@ -206,17 +207,25 @@
 ;; TODO: what does a pre-connected udp port object look like?
 ;(define (port:udp port) ...)  ;; connected udp ports: udp-send, udp-receive
 
-;; TODO: synchronous channel ports.
-
-;; TODO: generator ports.
-
-;; TODO: string(, mstring ?), vector, mvector ports.
-
 ;; TODO: maybe these shouldn't be fully-fledged file ports?
 ;; Might want to hide: truncate, position
 (define stdio (console (port:file:input  (current-input-port))
                        (port:file:output (current-output-port))
                        (port:file:output (current-error-port))))
+
+(define (port:string:input s)
+  (define v (string->vector s))
+  (define i 0)
+  (define (ref i) (and (< i (vector-length v)) (vector-ref v i)))
+  (method-lambda
+    ((get)       (define b (ref i))
+                 (when b (set! i (+ i 1)))
+                 b)
+    ((peek skip) (ref (+ i skip)))))
+;; TODO: port:string:output
+;; TODO: vector, mvector ports.
+;; TODO: synchronous channel ports.
+;; TODO: generator ports.
 
 (define (racket-eval rkt-datum)
   (define (racket-datum form)
