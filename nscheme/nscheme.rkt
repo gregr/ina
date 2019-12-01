@@ -76,9 +76,10 @@
 (define (port:bytestream:input super port)
   (define (eof->false d) (if (eof-object? d) #f d))
   (method-lambda
-    ((close) (close-input-port port))
-    ((get)   (eof->false (read-byte port)))
-    (else    super)))
+    ((close)     (close-input-port port))
+    ((get)       (eof->false (read-byte port)))
+    ((peek skip) (eof->false (peek-byte port skip)))
+    (else        super)))
 
 (define (port:bytestream:output super port)
   (method-lambda
@@ -180,7 +181,7 @@
       ((abandon)   (tcp-abandon-port port))
       (else        super))))
 
-(define (port:tcp:input port)  (port:bytestream:input (port:tcp port) port))
+(define (port:tcp:input  port) (port:bytestream:input  (port:tcp port) port))
 (define (port:tcp:output port) (port:bytestream:output (port:tcp port) port))
 
 (define (tcp:listener listen)
