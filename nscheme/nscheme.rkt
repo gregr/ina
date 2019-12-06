@@ -218,10 +218,13 @@
   (define i 0)
   (define (ref i) (and (< i (vector-length v)) (vector-ref v i)))
   (method-lambda
-    ((get)       (define b (ref i))
-                 (when b (set! i (+ i 1)))
-                 b)
-    ((peek skip) (ref (+ i skip)))))
+    ((get)                 (define b (ref i))
+                           (when b (set! i (+ i 1)))
+                           b)
+    ((peek skip)           (ref (+ i skip)))
+    ((position-ref)        i)
+    ((position-set! index) (set! i (min (max index 0) (vector-length v))))))
+
 ;; TODO: port:string:output
 ;; TODO: vector, mvector ports.
 ;; TODO: synchronous channel ports.
