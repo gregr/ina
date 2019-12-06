@@ -15,7 +15,7 @@
 ;; TODO: include these? 133 8232 8233
 (define linebreaks (map char '("\n" "\r")))
 (define spaces     (string->list "\t\n\v\f\r "))
-(define separators (cons #f (append spaces (string->list ";'`,()[]{}\""))))
+(define separators (cons #f (append spaces (string->list "#;'`,()[]{}\""))))
 
 (define (read in)
   (read/k (lambda () (in 'peek 0)) (lambda () (in 'get))
