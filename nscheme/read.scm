@@ -15,7 +15,7 @@
 ;; TODO: include these? 133 8232 8233
 (define linebreaks (map char '("\n" "\r")))
 (define spaces     (string->list "\t\n\v\f\r "))
-(define separators (cons #f (append spaces (string->list "#;'`,()[]{}\""))))
+(define separators (cons #f (append spaces (string->list ";'`,()[]{}\""))))
 
 (define (read in)
   (read/k (lambda () (in 'peek 0)) (lambda () (in 'get))
@@ -184,9 +184,10 @@
             (rad  (make-polar       rad  (make-real)))
             (else                        (make-real))))
     (define (k/special cs v.0 v.f)
-      (and sign (andmap (lambda (cs)
-                          (let ((c1 (car cs)) (c2 (cadr cs)) (ch (next)))
-                            (or (char=? ch c1) (char=? ch c2)))) cs)
+      (and sign (not (eq? exactness 'exact))
+           (andmap (lambda (cs)
+                     (let ((c1 (car cs)) (c2 (cadr cs)) (ch (next)))
+                       (or (char=? ch c1) (char=? ch c2)))) cs)
            (char=? (next) ".")
            (let ((last (next)))
              (cond ((char=? last "0")                        (* sign v.0))
@@ -195,7 +196,7 @@
     (define (k/sign s)
       (if sign (and lhs (not real) (loop (next) s radix exactness
                                         #f #f #f #f (make) #f))
-        (loop (next) s radix exactness #f #f #f #f #f #f)))
+        (loop (next) s radix exactness lhs rhs frac-type exp real rad)))
     (define (k/start lhs rhs ftype real rad)
       (loop (next) (or sign 1) (or radix 10) (or exactness 'infer)
             lhs rhs ftype #f real rad))
@@ -204,19 +205,19 @@
                 (cond (exp  (loop (next) sign radix exactness
                                   lhs rhs frac-type (cons d exp) real rad))
                       (rhs  (loop (next) sign radix exactness
-                                  lhs (cons d rhs) frac-type #f  real rad))
+                                  lhs (cons d rhs) frac-type exp real rad))
                       (lhs  (loop (next) sign radix exactness
-                                  (cons d lhs) #f #f #f          real rad))
-                      (else (k/start (list d) #f #f real rad)))))
+                                  (cons d lhs) rhs frac-type exp real rad))
+                      (else (k/start (list d) rhs frac-type real rad)))))
           ((=? "#")
            (define ch (next))
            (define (=? . cs)       (ormap (lambda (c) (char=? ch c)) cs))
            (define (k/radix r)     (and (not sign) (not radix)
                                         (loop (next) sign r exactness
-                                              #f #f #f #f #f #f)))
+                                              lhs rhs frac-type exp real rad)))
            (define (k/exactness e) (and (not sign) (not exactness)
                                         (loop (next) sign radix e
-                                              #f #f #f #f #f #f)))
+                                              lhs rhs frac-type exp real rad)))
            (cond ((=? "b" "B") (k/radix 2))
                  ((=? "o" "O") (k/radix 8))
                  ((=? "d" "D") (k/radix 10))
@@ -228,11 +229,11 @@
           ((=? "+") (k/sign  1))
           ((=? ".") (cond ((not lhs) (k/start '() '() 'dec real rad))
                           ((not rhs) (loop (next) sign radix exactness
-                                           lhs '() 'dec #f real rad))
+                                           lhs '() 'dec exp real rad))
                           (else      #f)))
           ((=? "/") (cond ((not lhs) #f)
                           ((not rhs) (loop (next) sign radix exactness
-                                           lhs '() '/ #f real rad))
+                                           lhs '() '/ exp real rad))
                           (else      #f)))
           ((=? "l" "L" "d" "D" "e" "E")
            (and lhs (not exp) (loop (next) sign radix exactness
@@ -241,7 +242,7 @@
           ;; TODO:
           ;((=? "s" "S" "f" "F")  ;; single-precision?
           ;)
-          ((=? "@") (and lhs (not real) (not rad)
+          ((=? "@") (and lhs (not real) (not rad) (not (eq? exactness 'exact))
                          (loop (next) 1 radix exactness
                                #f #f #f #f #f (make))))
           ((=? "i" "I") (if real (and (not (next)) (make))
