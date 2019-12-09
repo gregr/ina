@@ -177,12 +177,13 @@
       (let loop ((ds digits) (acc 0) (mult 1))
         (if (null? ds) acc
           (loop (cdr ds) (+ (* (car ds) mult) acc) (* radix mult)))))
-    (define (make-real)
+    (define (make-real) (if (number? lhs) lhs (make-real/digits)))
+    (define (make-real/digits)
       (define nlhs (whole lhs))
       (define nrhs (whole (or rhs '())))
       (define nexp (expt radix (whole (or exp '()))))
       ;; TODO: how should we handle division by zero?
-      (define n (* sign nexp
+      (define n (* (or sign 1) nexp
                    (if (eq? (or frac-type 'dec) 'dec)
                      (+ nlhs (* nrhs (expt 10 (- (length (or rhs '()))))))
                      (/ nlhs nrhs))))
@@ -197,21 +198,24 @@
             (rad  (make-polar       rad  (make-real)))
             (else                        (make-real))))
     (define (k/special cs v.0 v.f)
-      (and sign (not (eq? exactness 'exact))
-           (andmap (lambda (cs)
-                     (let ((c1 (car cs)) (c2 (cadr cs)) (ch (next)))
-                       (or (char=? ch c1) (char=? ch c2)))) cs)
-           (char=? (next) ".")
-           (let ((last (next)))
-             (cond ((char=? last "0")                        (* sign v.0))
-                   ((or (char=? last "f") (char=? last "F")) (* sign v.f))
-                   (else                                     #f)))))
+      (define v
+        (and sign (not lhs) (not (eq? exactness 'exact))
+             (andmap (lambda (cs)
+                       (let ((c1 (car cs)) (c2 (cadr cs)) (ch (next)))
+                         (or (char=? ch c1) (char=? ch c2)))) cs)
+             (char=? (next) ".")
+             (let ((last (next)))
+               (cond ((char=? last "0")                        (* sign v.0))
+                     ((or (char=? last "f") (char=? last "F")) (* sign v.f))
+                     (else                                     #f)))))
+      (and v (loop (next) sign radix exactness v rhs frac-type exp real rad)))
     (define (k/sign s)
-      (if sign (and lhs (not real) (loop (next) s radix exactness
-                                        #f #f #f #f (make) #f))
-        (loop (next) s radix exactness lhs rhs frac-type exp real rad)))
-    (define (k/start lhs rhs ftype real rad)
-      (loop (next) (or sign 1) (or radix 10) (or exactness 'infer)
+      (if lhs (and (not real) (loop (next) s radix exactness
+                                    #f #f #f #f (make) #f))
+        (and (not sign) (loop (next) s radix exactness
+                              lhs rhs frac-type exp real rad))))
+    (define (k/new ch lhs rhs ftype real rad)
+      (loop ch sign (or radix 10) (or exactness 'infer)
             lhs rhs ftype #f real rad))
     (cond ((digit)
            => (lambda (d)
@@ -221,7 +225,7 @@
                                   lhs (cons d rhs) frac-type exp real rad))
                       (lhs  (loop (next) sign radix exactness
                                   (cons d lhs) rhs frac-type exp real rad))
-                      (else (k/start (list d) rhs frac-type real rad)))))
+                      (else (k/new (next) (list d) rhs frac-type real rad)))))
           ((=? "#")
            (define ch (next))
            (define (=? . cs)       (ormap (lambda (c) (char=? ch c)) cs))
@@ -240,7 +244,7 @@
                  (else         #f)))
           ((=? "-") (k/sign -1))
           ((=? "+") (k/sign  1))
-          ((=? ".") (cond ((not lhs) (k/start '() '() 'dec real rad))
+          ((=? ".") (cond ((not lhs) (k/new (next) '() '() 'dec real rad))
                           ((not rhs) (loop (next) sign radix exactness
                                            lhs '() 'dec exp real rad))
                           (else      #f)))
@@ -256,10 +260,14 @@
           ;((=? "s" "S" "f" "F")  ;; single-precision?
           ;)
           ((=? "@") (and lhs (not real) (not rad) (not (eq? exactness 'exact))
-                         (loop (next) 1 radix exactness
+                         (loop (next) #f radix exactness
                                #f #f #f #f #f (make))))
-          ((=? "i" "I") (if real (and (not (next)) (make))
-                          (k/special '(("n" "N") ("f" "F")) +inf.0 +inf.f)))
+          ((=? "i" "I")
+           (if (and sign (not (peek)))
+             (cond ((not lhs)  (k/new ch '(1) rhs frac-type real rad))
+                   ((not real) (k/new ch lhs  rhs frac-type 0    rad))
+                   (else (and (not (next)) (make))))
+             (k/special '(("n" "N") ("f" "F")) +inf.0 +inf.f)))
           ((=? "n" "N") (k/special '(("a" "A") ("n" "N")) +nan.0 +nan.f))
           ((and (not ch) (not real)) (and lhs (make)))
           (else                      #f))))
