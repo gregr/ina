@@ -48,7 +48,7 @@
               (else          (loop (next)    level)))))
     (define (Dot dot k)
       (cond ((member (peek) separators) (k:dot dot))
-            (else                       (Number/Symbol (list dot) k k))))
+            (else                       (Number/Symbol (list dot) k))))
     (define (Hash k)
       (define ch (next))
       (define (=? . cs) (ormap (lambda (c) (char=? ch c)) cs))
@@ -70,8 +70,9 @@
              (define acc (if (char=? (peek) "#")
                            (list (next) ch (char "#"))
                            (list        ch (char "#"))))
-             (Number/Symbol acc k (lambda (s)
-                                    (k:error (list "invalid number" s)))))
+             (Number/Symbol acc (lambda (v)
+                                  (if (number? v) (k v)
+                                    (k:error (list "invalid number" v))))))
             (else (k:fail ch))))
 
     (cond ((member ch spaces) (Datum k:dot k:delim k))
@@ -86,7 +87,7 @@
           ((=? "\"") (String                          k))
           ((=? ".")  (Dot  ch                         k))
           ((or (not ch) (=? ")" "]" "}")) (k:delim ch))
-          (else                           (Number/Symbol (list ch) k k))))
+          (else                           (Number/Symbol (list ch) k))))
 
   (define (Sequence dot-allowed? delim k)
     (let loop ((data '()))
@@ -150,7 +151,7 @@
     (let loop ((acc acc))
       (cond ((member (peek) separators)
              (let* ((s (rlist->string acc)) (num (string->number s)))
-               (if num (k:num num) (k:sym (string->symbol s)))))
+               (k (if num num (string->symbol s)))))
             ;; TODO: \ and || escapes
             (else (loop (cons (next) acc))))))
 
