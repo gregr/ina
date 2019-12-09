@@ -110,6 +110,16 @@
 
   (define (String k)
     (let loop ((ch (next)) (acc '()))
+      (define (escape-code-unit radix)
+        (let cu-loop ((num (list radix (char "#"))))
+          (define ch (next))
+          (cond ((char=? ch ";")
+                 (let* ((cu (rlist->string num)) (n (string->number cu)))
+                   (cond ((and n (<= 0 n 255)) (loop (next) (cons n acc)))
+                         (else (k:error (list "invalid code unit" cu))))))
+                (else (cu-loop (cons ch num))))))
+      ;; TODO:
+      ;;(define (escape-code-point radix))
       (define (escape ch)
         (cond ((assoc ch (map (lambda (kv) (cons (char (car kv))
                                                  (char (cdr kv))))
@@ -124,10 +134,10 @@
                                 ("\\" . "\\"))))
                => (lambda (kv) (loop (next) (cons (cdr kv) acc))))
               ;; TODO:
-              ;((char=? ch "u")  ;; \u[bodx]...;
-               ;)
-              ;((member ch (string->list "bBoOdDxX"))
-               ;)
+              ;((and (member ch     (string->list "uU"))
+                    ;(member (peek) (string->list "bBoOdDxX")))
+               ;(escape-code-point (next)))
+              ((member ch (string->list "bBoOdDxX")) (escape-code-unit ch))
               ((char=? ch "\n") (loop (next) acc))
               ((char=? ch "\r") (define ch (next))
                                 (loop (if (char=? ch "\n") (next) ch) acc))
