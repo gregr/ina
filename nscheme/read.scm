@@ -12,8 +12,7 @@
   (and (= (vector-length v) 1) (vector-ref v 0)))
 (define (char=? ch c) (equal? ch (char c)))
 
-;; TODO: include these? 133 8232 8233
-(define linebreaks (map char '("\n" "\r")))
+(define linebreaks (append (map char '("\n" "\r")) '(133)))
 (define spaces     (string->list "\t\n\v\f\r "))
 (define separators (cons #f (append spaces (string->list "#;'`,()[]{}\""))))
 
@@ -28,9 +27,10 @@
     (define ch (next))
     (define (=? . cs) (ormap (lambda (c) (char=? ch c)) cs))
     (define (Comment:line k)
-      ;; TODO: allow \NL \CRNL \CR to elide linebreak and continue comment.
-      (cond ((member (peek) linebreaks) (Datum k:dot k:delim k))
-            (else                       (next) (Comment:line k))))
+      (define ch (next))
+      (cond ((member ch linebreaks) (Datum k:dot k:delim k))
+            ((char=? ch "\\")       (next) (Comment:line k))
+            (else                          (Comment:line k))))
     (define (Comment:line/eof targets)
       (if (null? targets) (k:delim #f)
         (cond ((char=? (peek) (car targets)) (next)
@@ -262,13 +262,10 @@
                           ((not rhs) (loop (next) sign radix exactness
                                            lhs '() '/ exp real rad))
                           (else      #f)))
-          ((=? "l" "L" "d" "D" "e" "E")
+          ((=? "l" "L" "d" "D" "e" "E" "s" "S" "f" "F")
            (and lhs (not exp) (loop (next) sign radix exactness
                                     lhs (or rhs '()) (or frac-type 'dec)
                                     '() real rad)))
-          ;; TODO:
-          ;((=? "s" "S" "f" "F")  ;; single-precision?
-          ;)
           ((=? "@") (and lhs (not real) (not rad) (not (eq? exactness 'exact))
                          (loop (next) #f radix exactness
                                #f #f #f #f #f (make))))
