@@ -192,21 +192,23 @@
       (define nlhs (whole lhs))
       (define nrhs (whole (or rhs '())))
       (define nexp (expt radix (whole (or exp '()))))
-      ;; TODO: how should we handle division by zero?
-      (define n (* (or sign 1) nexp
-                   (if (eq? (or frac-type 'dec) 'dec)
-                     (+ nlhs (* nrhs (expt 10 (- (length (or rhs '()))))))
-                     (/ nlhs nrhs))))
-      (case exactness
-        ('exact   n)
-        ('inexact (exact->inexact n))
-        ('infer   (if (or exp (eq? frac-type 'dec))
-                    (exact->inexact n)
-                    n))))
-    (define (make)
-      (cond (real (make-rectangular real (make-real)))
-            (rad  (make-polar       rad  (make-real)))
-            (else                        (make-real))))
+      (define m (cond ((eq? (or frac-type 'dec) 'dec)
+                       (+ nlhs (* nrhs (expt 10 (- (length (or rhs '())))))))
+                      ((and (eqv? nrhs 0) (eqv? nlhs 0)) +nan.0)
+                      ((and (eqv? nrhs 0) (> nlhs 0))    +inf.0)
+                      ((and (eqv? nrhs 0) (< nlhs 0))    -inf.0)
+                      (else                              (/ nlhs nrhs))))
+      (define n (* (or sign 1) nexp m))
+      (and n (case exactness
+               ('exact   (and (exact? n) n))
+               ('inexact (exact->inexact n))
+               ('infer   (if (or exp (eq? frac-type 'dec)) (exact->inexact n)
+                           (and (exact? n) n))))))
+    (define (make k)
+      (define n (make-real))
+      (and n (k (cond (real (make-rectangular real n))
+                      (rad  (make-polar       rad  n))
+                      (else                        n)))))
     (define (k/special cs v.0 v.f)
       (define v
         (and sign (not lhs) (not (eq? exactness 'exact))
@@ -220,8 +222,8 @@
                      (else                                     #f)))))
       (and v (loop (next) sign radix exactness v rhs frac-type exp real rad)))
     (define (k/sign s)
-      (if lhs (and (not real) (loop (next) s radix exactness
-                                    #f #f #f #f (make) #f))
+      (if lhs (and (not real) (make (lambda (n) (loop (next) s radix exactness
+                                                      #f #f #f #f n #f))))
         (and (not sign) (loop (next) s radix exactness
                               lhs rhs frac-type exp real rad))))
     (define (k/new ch lhs rhs ftype real rad)
@@ -267,14 +269,14 @@
                                     lhs (or rhs '()) (or frac-type 'dec)
                                     '() real rad)))
           ((=? "@") (and lhs (not real) (not rad) (not (eq? exactness 'exact))
-                         (loop (next) #f radix exactness
-                               #f #f #f #f #f (make))))
+                         (make (lambda (n) (loop (next) #f radix exactness
+                                                 #f #f #f #f #f n)))))
           ((=? "i" "I")
            (if (and sign (not (peek)))
              (cond ((not lhs)  (k/new ch '(1) rhs frac-type real rad))
                    ((not real) (k/new ch lhs  rhs frac-type 0    rad))
-                   (else (and (not (next)) (make))))
+                   (else (and (not (next)) (make (lambda (n) n)))))
              (k/special '(("n" "N") ("f" "F")) +inf.0 +inf.f)))
           ((=? "n" "N") (k/special '(("a" "A") ("n" "N")) +nan.0 +nan.f))
-          ((and (not ch) (not real)) (and lhs (make)))
+          ((and (not ch) (not real)) (and lhs (make (lambda (n) n))))
           (else                      #f))))
