@@ -48,3 +48,9 @@
   (displayln "vs:")
   (newline)
   (pretty-print racket:data))
+
+;(let loop ()
+  ;(define datum (read (stdio 'in)))
+  ;(when (not (eof-object? datum))
+    ;(printf "~s\n" datum)
+    ;(loop)))
