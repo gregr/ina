@@ -1,14 +1,19 @@
+;; TODO: numeric operations
+;; expt make-rectangular make-polar exact->inexact inexact->exact exact?
+
 ;; TODO: move these
 (define (reverse-append xs ys) (foldl cons ys xs))
 (define (string->list s) (vector->list (string->vector s)))
 (define (list->string cs) (vector->string (list->vector cs)))
 (define (rlist->string cs) (list->string (reverse cs)))
-(define (integer->octets i)
+(define (code-point->code-units i)
   (define (lead tag shift)
     (bitwise-ior tag (bitwise-arithmetic-shift i shift)))
   (define (follow shift)
     (bitwise-ior #b10000000 (bitwise-and
                               #b111111 (bitwise-arithmetic-shift i shift))))
+  ;; Conventionally invalid ranges: U+D800 through U+DFFF and above U+10FFFF
+  ;; This encoding could handle up to 7 units (42 bits), i.e., U+3FFFFFFFFFF
   (and (<= 0 i #x10ffff) (cond ((<= i 255)    (list i))
                                ((<= i #x07ff) (list (lead #b11000000 -6)
                                                     (follow           0)))
@@ -19,6 +24,8 @@
                                                     (follow          -12)
                                                     (follow          -6)
                                                     (follow           0))))))
+
+;; TODO: describe reader via grammar/parser DSL
 
 (define (read-error? d) (and (procedure? d) (not (read-eof? d))))
 (define (read-eof? d)   (and (procedure? d) (eq? 'eof (d))))
@@ -143,19 +150,13 @@
       (define (escape-code-unit radix)
         (escape-code radix (lambda (n) (and n (<= 0 n 255) (list n)))))
       (define (escape-code-point radix)
-        (escape-code radix (lambda (n) (and n (integer->octets n)))))
+        (escape-code radix (lambda (n) (and n (code-point->code-units n)))))
       (define (escape ch)
         (cond ((assoc ch (map (lambda (kv) (cons (char (car kv))
                                                  (char (cdr kv))))
-                              '(("a"  . "\a")
-                                ("t"  . "\t")
-                                ("n"  . "\n")
-                                ("v"  . "\v")
-                                ("f"  . "\f")
-                                ("r"  . "\r")
-                                ("e"  . "\e")
-                                ("\"" . "\"")
-                                ("\\" . "\\"))))
+                              '(("a"  . "\a") ("t"  . "\t") ("n"  . "\n")
+                                ("v"  . "\v") ("f"  . "\f") ("r"  . "\r")
+                                ("e"  . "\e") ("\"" . "\"") ("\\" . "\\"))))
                => (lambda (kv) (loop (next) (cons (cdr kv) acc))))
               ((and (member ch     (string->list "uU"))
                     (member (peek) (string->list "bBoOdDxX")))
