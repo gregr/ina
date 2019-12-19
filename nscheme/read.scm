@@ -25,6 +25,10 @@
                                                     (follow          -6)
                                                     (follow           0))))))
 
+(define (char c)
+  (define v (string->vector c))
+  (and (= (vector-length v) 1) (vector-ref v 0)))
+
 ;; TODO: implement grammar/parser DSL
 ;; unicode tokenization: UTF-8 code units -> code points
 ;; monadic implementation, optionally push-based for iterative parsing
@@ -59,6 +63,7 @@
 
 ;(define-grammar*
   ;(EOF           (alt #f "#!eof"))
+  ;; TODO: lower unicode code points to units
   ;(Linebreak     (alt (alt* "\n\r") 133 8232 8233))
   ;(WSpace        (alt (alt* "\t\v\f ") Linebreak))
   ;(Separator     (alt WSpace (alt* "#;'`,()[]{}\"") #f))
@@ -94,18 +99,18 @@
   ;((List ldelim rdelim)
    ;;; TODO: either memoize Datum or factor out parsing of init.
    ;(alt (seq ldelim (seq0 (*/seq Datum) (*/seq Space) rdelim))
-        ;(seq ldelim (let/seq ((init (seq0 (+/seq Datum) "." (peek Separator)))
-                              ;(last (seq0 Datum rdelim)))
-                      ;(return (append init last))))))
+        ;(seq ldelim
+             ;(let/return ((init (seq0 (+/seq Datum) "." (peek Separator)))
+                          ;(last (seq0 Datum rdelim)))
+               ;(append init last)))))
   ;((Vector ldelim rdelim)
    ;(seq ldelim (app/seq list->vector
                  ;(seq0 (*/seq Datum) (*/seq Space) rdelim))))
-  ;((Tag leader tag) (seq leader (let/seq ((d Datum)) (return (list tag d)))))
+  ;((Tag leader tag) (seq leader (let/return ((d Datum)) (list tag d))))
   ;((Tag@ leader tag1 tag2)
-   ;(seq leader (alt (let/seq ((d (seq (peek (not/alt* "@")) Datum)))
-                      ;(return (list tag1 d)))
-                    ;(let/seq ((d (seq "@"            Datum)))
-                      ;(return (list tag2 d))))))
+   ;(seq leader (alt (let/return ((d (seq "@" Datum))) (list tag2 d))
+                    ;(let/return ((d (seq (peek (not/alt* "@")) Datum)))
+                      ;(list tag1 d)))))
   ;(String
     ;(define Escape-code       (let/seq ((r Radix))
                                 ;(seq0 (*/seq (Digit/radix r)) ";")))
@@ -140,7 +145,7 @@
          ;(let/seq ((r Radix) (e (?/seq #f "#" Exact))) (NumberNoPrefix e r))))
 
   ;((NumberNoPrefix exactness radix)
-   ;(define (fail-repr . args) (cons "no exact representation" args))
+   ;(define (fail-repr . args) (fail "no exact representation" args))
    ;(define (make-dec lhs rhs ex)
      ;(define float? (or (not (eq? exactness 'exact)) rhs ex))
      ;(define m (digits->nat (append lhs (or rhs '())) radix))
@@ -158,7 +163,7 @@
                      ;((and (eqv? d 0) (< n 0))    -inf.0)
                      ;(else                        (* (/ n d) e))))
      ;(cond (float?       (return (exact->inexact v)))
-           ;((inexact? v) (fail-repr n "/" d "*" e))
+           ;((inexact? v) (fail-repr (list n "/" d "*" e)))
            ;(else         (return v))))
    ;(define D  (Digit/radix radix))
    ;(define D* (*/seq D))
@@ -186,9 +191,6 @@
 (define (eof-object? d) (read-eof? d))
 (define (eof) 'eof)
 
-(define (char c)
-  (define v (string->vector c))
-  (and (= (vector-length v) 1) (vector-ref v 0)))
 (define (char=? ch c) (equal? ch (char c)))
 
 (define linebreaks (append (map char '("\n" "\r")) '(133)))
