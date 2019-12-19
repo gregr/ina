@@ -1,8 +1,10 @@
 #lang racket
 (require "nscheme.rkt"
          racket/pretty
+         (for-syntax racket/list)
          (rename-in racket/base
                     (read racket:read) (eof-object? racket:eof-object?)))
+(include "grammar.scm")
 (include "read.scm")
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
@@ -54,3 +56,5 @@
   ;(when (not (eof-object? datum))
     ;(printf "~s\n" datum)
     ;(loop)))
+
+;(pretty-print ((g:nonterminal-thunk (NumberNoPrefix #f 10))))
