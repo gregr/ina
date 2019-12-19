@@ -17,7 +17,7 @@
   (define datum (racket:read in))
   (if (racket:eof-object? datum) '() (cons datum (racket:read* in))))
 
-(define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 5/0 -2/0 0/0 3-2/3i 4-inf.0i 5@5 #e5@5 #i1@1 #i1/0 #i-1/0 #i0/0 1@+2 1@-2 1@++5 .5 6. #e.75")
+(define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 5/0 -2/0 0/0 3-2/3i 4-inf.0i 5@5 #e5@5 #i1@1 #i1/0 #i-1/0 #i0/0 1@+2 1@-2 1@++5 .5 6. #e.75 #b1.1")
 (define symbols "|1+2i| \\3 |a b| c\\ d")
 (define comments ";; foo\\\nbar\n x #;(1 2 3)y #| #| a b |# c d |# z")
 (define strings "\"hello\\d32;world\\b1010;\\x7e;\" \"abc\\ud8232;def\"")

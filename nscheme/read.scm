@@ -364,7 +364,8 @@
       (define nrhs (whole (or rhs '())))
       (define nexp (expt radix (whole (or exp '()))))
       (define m (cond ((eq? (or frac-type 'dec) 'dec)
-                       (+ nlhs (* nrhs (expt 10 (- (length (or rhs '())))))))
+                       (+ nlhs (* nrhs (expt radix
+                                             (- (length (or rhs '())))))))
                       ((and (eqv? nrhs 0) (eqv? nlhs 0)) +nan.0)
                       ((and (eqv? nrhs 0) (> nlhs 0))    +inf.0)
                       ((and (eqv? nrhs 0) (< nlhs 0))    -inf.0)
