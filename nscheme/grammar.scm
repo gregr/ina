@@ -105,68 +105,63 @@
 
 (define (grammar->parser/dfs g)
   (match g
-    (`#(g:fail ,reasons) (lambda (k kf . _)     (kf reasons)))
-    (`#(g:eps  ,thunk  ) (lambda (k kf s peek?) (k s thunk)))
-    (`#(g:one  ,meta ,?) (lambda (k kf s peek?)
-                           (let* ((s (s peek?)) (v (car s)))
+    (`#(g:fail ,reasons) (lambda (k kf s) (kf s reasons)))
+    (`#(g:eps  ,v-thunk) (lambda (k kf s) (k  s v-thunk)))
+    (`#(g:one  ,meta ,?) (lambda (k kf s)
+                           (let* ((s (s)) (v (car s)))
                              (if (? v) (k (cdr s) (thunk v))
-                               (kf (list (cons v meta)))))))
+                               (kf (cdr s) (list (cons v meta)))))))
     (`#(g:alt ,g1 ,g2)
       (define p1 (grammar->parser/dfs g1))
       (define p2 (grammar->parser/dfs g2))
-      (lambda (k kf s peek?)
-        (p1 k (lambda (r1) (p2 k (lambda (r2) (kf (append r1 r2))) s peek?))
-            s peek?)))
+      (lambda (k kf s)
+        ;; TODO: should pass kf the shortest of s1 and s2.
+        (p1 k (lambda (s1 r1) (p2 k (lambda (s2 r2) (kf s2 (append r1 r2)))
+                                  s)) s)))
     (`#(g:seq ,g1 ,g2)
       (define p1 (grammar->parser/dfs g1))
       (define p2 (grammar->parser/dfs g2))
-      (lambda (k kf s peek?)
+      (lambda (k kf s)
         (p1 (lambda (s r1) (p2 (lambda (s r2) (k s (thunk (cons (r1) (r2)))))
-                               kf s peek?))
-            kf s peek?)))
+                               kf s))
+            kf s)))
     (`#(g:app ,proc ,g)
       (define p (grammar->parser/dfs g))
-      (lambda (k kf s peek?) (p (lambda (s r) (k s (thunk (proc (r)))))
-                                kf s peek?)))
+      (lambda (k kf s) (p (lambda (s r) (k s (thunk (proc (r)))))
+                          kf s)))
     (`#(g:bind ,v->g ,g)
       (define p (grammar->parser/dfs g))
-      (lambda (k kf s peek?)
-        (p (lambda (s r) ((grammar->parser/dfs (v->g (r))) k s peek?))
-           kf s peek?)))
+      (lambda (k kf s)
+        (p (lambda (s r) ((grammar->parser/dfs (v->g (r))) k s)) kf s)))
     (`#(g:peek     ,g) (define p (grammar->parser/dfs g))
-                       (lambda (k kf s _) (p (lambda (_ r) (k s r)) kf s #t)))
+                       (lambda (k kf s) (p (lambda (_ r) (k s r))
+                                           (lambda (_ r) (kf s r)) s)))
     (`#(g:peek-not ,g) (define p (grammar->parser/dfs g))
-                       (lambda (k kf s _)
-                         (p (lambda (_ r) (kf (list r)))
-                            (lambda (r)   (k s (thunk #t))) s #t)))
+                       (lambda (k kf s)
+                         (p (lambda (_ r) (kf s (list r)))
+                            (lambda (_ r) (k s (thunk #t))) s)))
     (`#(g:nonterminal ,meta ,gthunk)
-      (lambda (k kf s peek?) ((grammar->parser/dfs (gthunk)) k kf s peek?)))))
+      (lambda (k kf s) ((grammar->parser/dfs (gthunk)) k kf s)))))
 
 (define (parse/dfs g in k kf)
-  ;; TODO: this commit strategy is too eager.  For a set of alternatives, we
-  ;; should only commit the amount consumed by the chosen match.  We can fix
-  ;; this in a few ways:
-  ;;   * thread a progress counter telling us how much to commit at the end
-  ;;     * a downside is the need to retain uncommitted buffers for longer
-  ;;   * use BFS instead of DFS, committing progress of the slowest branch
-  ;;     * more complicated, but buffers may be committed incrementally
-  ;;       * peek node retains a buffer to provide to downstream consumer
-  ;;       * max retained buffer size determines global uncommitted amount
-  ;;     * this is closer to the incremental parsing we eventually want
-  (define lookahead 0)
-  (define (stream)
-    (let ((v #f) (committed? #f))
-      (lambda (peek?)
-        (cond ((and v (or committed? peek?)) v)
-              (v (set! committed? #t) (set! lookahead (- lookahead 1))
-                 (in 'get) v)
-              (peek? (set! v (cons (in 'peek lookahead) (stream)))
-                     (set! lookahead (+ lookahead 1))
-                     v)
-              (else  (set! committed? #t)
-                     (set! v (cons (in 'get)            (stream)))
-                     v)))))
-  ((grammar->parser/dfs g) (lambda (_ r) (k r)) kf (stream) #f))
+  ;; TODO: this strategy retains uncommitted buffers for the entire parse.
+  ;; Switching to BFS would allow us to commit progress of the slowest branch
+  ;;   * more complicated, but buffers may be committed incrementally
+  ;;     * peek node retains a buffer to provide to downstream consumer
+  ;;     * max retained buffer size determines global uncommitted amount
+  ;;   * this is closer to the incremental parsing we eventually want
+  (define (stream i)
+    (define v #f)
+    (lambda () (cond (v    v)
+                     (else (set! v (cons (in 'peek i) (stream (+ i 1))))
+                           v))))
+  (define s:initial (stream 0))
+  (define (k/commit k)
+    (lambda (s:final r)
+      (let commit ((s s:initial))
+        (cond ((eq? s:final s) (k r))
+              (else (in 'get) (commit (cdr (s))))))))
+  ((grammar->parser/dfs g) (k/commit k) (k/commit kf) s:initial))
 
 ;; TODO: for more expressiveness, try
 ;;   BFS to handle left-recursion as simply as possible
