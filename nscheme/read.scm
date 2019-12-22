@@ -54,7 +54,6 @@
   (case radix ((2) Digit-2) ((8) Digit-8) ((10) Digit-10) ((16) Digit-16)))
 
 (define-grammar*
-  (EOF           (seq (alt #f "#!eof") (return #f)))
   ; TODO: lower unicode code points to units
   (Linebreak     (alt (alt* "\n\r") 133 8232 8233))
   (WSpace        (alt (alt* "\t\v\f ") Linebreak))
@@ -66,6 +65,7 @@
                                        Comment:block)) "|#"))
   (Comment (alt Comment:datum Comment:line Comment:block))
   (Space   (alt WSpace Comment))
+  (EOF     (seq (*/seq Space) (alt #f "#!eof") (return eof)))
   (Datum (seq (*/seq Space)
               (alt (alt Hash
                         (List "(" ")") (List "[" "]") (List "{" "}")
@@ -83,7 +83,27 @@
                       NumberAfterHash)))
 
   ((List ldelim rdelim)
-   ;; TODO: either memoize Datum or factor out parsing of init.
+   ;; TODO: this version factors out parsing of init to avoid worst-case
+   ;; exponential parsing when using naive non-memoizing DFS.  But for some
+   ;; reason it's about 50% slower in the typical case.
+   ;(seq ldelim
+        ;(seq0 (alt (let/return
+                     ;((init (+/seq Datum))
+                      ;(last (alt (return '())
+                                 ;(seq (*/seq Space) "." (peek Separator)
+                                      ;Datum))))
+                     ;(if (null? last) init (append init last)))
+                   ;(return '()))
+              ;(*/seq Space) rdelim))
+   ;; Even this partial factoring is about 3% slower.  Maybe the problem is
+   ;; how nested alts behave in the current DFS parser.
+   ;(seq ldelim
+        ;(seq0 (alt (*/seq Datum)
+                   ;(seq (let/return ((init (seq0 (+/seq Datum) (*/seq Space) "."
+                                                 ;(peek Separator)))
+                                     ;(last Datum))
+                          ;(append init last))))
+              ;(*/seq Space) rdelim))
    (alt (seq ldelim (seq0 (*/seq Datum) (*/seq Space) rdelim))
         (seq ldelim
              (let/return ((init (seq0 (+/seq Datum) (*/seq Space) "."
@@ -177,8 +197,7 @@
    (seq0 (alt Real (app/seq make-rectangular (?/seq 0 Real) Imaginary) Polar)
          (peek Separator))))
 
-(define parse
-  (grammar->parser/dfs (alt Datum (seq (*/seq Space) EOF (return eof)))))
+(define parse (grammar->parser/dfs (alt Datum EOF)))
 (define (read/grammar in) (parse in (lambda (result-thunk) (result-thunk))
                                  (lambda (reasons) (thunk reasons))))
 
