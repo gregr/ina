@@ -177,6 +177,11 @@
    (seq0 (alt Real (app/seq make-rectangular (?/seq 0 Real) Imaginary) Polar)
          (peek Separator))))
 
+(define (read/grammar in)
+  (parse/dfs (alt Datum (seq (*/seq Space) EOF (return eof))) in
+             (lambda (result-thunk) (result-thunk))
+             (lambda (reasons)      (thunk reasons))))
+
 (define (read-error? d) (and (procedure? d) (not (read-eof? d))))
 (define (read-eof? d)   (and (procedure? d) (eq? 'eof (d))))
 (define (eof-object? d) (read-eof? d))
@@ -201,6 +206,7 @@
     (define (Comment:line k)
       (define ch (next))
       (cond ((member ch linebreaks) (Datum k:dot k:delim k))
+            ;; TODO: grammar doesn't support escaping linebreaks.  Should it?
             ((char=? ch "\\")       (next) (Comment:line k))
             (else                          (Comment:line k))))
     (define (Comment:line/eof targets)
@@ -445,6 +451,7 @@
              (cond ((not lhs)  (k/new ch '(1) rhs frac-type real rad))
                    ((not real) (k/new ch lhs  rhs frac-type 0    rad))
                    (else (and (not (next)) (make (lambda (n) n)))))
+             ;; TODO: grammar doesn't support .f versions.  Should it?
              (k/special '(("n" "N") ("f" "F")) +inf.0 +inf.f)))
           ((=? "n" "N") (k/special '(("a" "A") ("n" "N")) +nan.0 +nan.f))
           ((and (not ch) (not real)) (and lhs (make (lambda (n) n))))
