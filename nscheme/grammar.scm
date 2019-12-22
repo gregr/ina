@@ -104,17 +104,20 @@
                                           (xs (apply */seq gs)))
                                (cons x xs)))
 
-
-(define-tuple* (mzero reasons) (choice s v retry))
-(define-syntax-rule
-  (case/p e ((s v retry) success-body ...) ((reasons) failure-body ...))
-  (let ((x e)) (cond ((mzero? x) (let ((reasons (mzero-reasons x)))
-                                   failure-body ...))
-                     (else       (let ((s     (choice-s     x))
-                                       (v     (choice-v     x))
-                                       (retry (choice-retry x)))
-                                   success-body ...)))))
+;; TODO: performance: try compiling to CPS instead
+;; Static continuation vs. dynamic (call/return and fail-to-alt) continuations
+;; A parser then has the same signature as the continuations you pass to it:
+;;   (s v kreturn kfail) -> return-or-fail
 (define (grammar->parser/dfs g)
+  (define-tuple* (mzero reasons) (choice s v retry))
+  (define-syntax-rule
+    (case/p e ((s v retry) success-body ...) ((reasons) failure-body ...))
+    (let ((x e)) (cond ((mzero? x) (let ((reasons (mzero-reasons x)))
+                                     failure-body ...))
+                       (else       (let ((s     (choice-s     x))
+                                         (v     (choice-v     x))
+                                         (retry (choice-retry x)))
+                                     success-body ...)))))
   (define (unit s v) (choice s v (thunk (mzero '()))))
   (define (transform p t)
     (lambda (s)
@@ -131,72 +134,71 @@
       ((s v retry^) (choice s v (thunk (mplus (retry^) retry))))
       ((reasons)    (remember reasons retry))))
 
-  (match g
-    (`#(g:fail ,reasons) (lambda (s) (mzero reasons)))
-    (`#(g:eps  ,v-thunk) (lambda (s) (unit s v-thunk)))
-    (`#(g:one  ,meta ,?) (lambda (s) (let* ((s (s)) (v (car s)))
-                                       (if (? v) (unit (cdr s) (thunk v))
-                                         (mzero (list (cons v meta)))))))
-    (`#(g:alt ,g1 ,g2)
-      (define p1 (grammar->parser/dfs g1))
-      (define p2 (grammar->parser/dfs g2))
-      (lambda (s) (mplus (p1 s) (thunk (p2 s)))))
-    (`#(g:seq ,g1 ,g2)
-      (define p1 (grammar->parser/dfs g1))
-      (define p2 (grammar->parser/dfs g2))
-      (lambda (s)
-        (let loop ((result (p1 s)))
-          (case/p result
-            ((s v1 retry) (mplus ((transform p2 (lambda (v2)
-                                                  (thunk (cons (v1) (v2)))))
-                                  s)
-                                 (thunk (loop (retry)))))
-            ((rs)         (mzero rs))))))
-    (`#(g:app ,proc ,g) (transform (grammar->parser/dfs g)
-                                   (lambda (v) (thunk (proc (v))))))
-    (`#(g:bind ,v->g ,g)
-      (define p (grammar->parser/dfs g))
-      (lambda (s)
-        (let loop ((result (p s)))
-          (case/p result
-            ((s v retry) (mplus ((grammar->parser/dfs (v->g (v))) s)
-                                (thunk (loop (retry)))))
-            ((reasons)   (mzero reasons))))))
-    (`#(g:peek ,g)
-      (define p (grammar->parser/dfs g))
-      (lambda (s) (let rewind ((result (p s)))
-                    (case/p result
-                      ((_ v retry) (choice s v (thunk (rewind (retry)))))
-                      ((reasons)   (mzero reasons))))))
-    (`#(g:peek-not ,g) (define p (grammar->parser/dfs g))
-                       (lambda (s) (case/p (p s)
-                                     ((_ v retry) (mzero (list v)))
-                                     ((reasons)   (unit s (thunk #t))))))
-    (`#(g:nonterminal ,meta ,g-thunk)
-      (lambda (s) ((grammar->parser/dfs (g-thunk)) s)))))
-
-(define (parse/dfs g in k kf)
-  ;; TODO: this strategy retains uncommitted buffers for the entire parse.
-  ;; Switching to BFS would allow us to commit progress of the slowest branch
-  ;;   * more complicated, but buffers may be committed incrementally
-  ;;     * peek node retains a buffer to provide to downstream consumer
-  ;;     * max retained buffer size determines global uncommitted amount
-  ;;   * this is closer to the incremental parsing we eventually want
-  (define i 0)
-  (define (stream)
-    (define v #f)
-    (thunk (cond (v    v)
-                 (else (set! v (cons (in 'peek i) (stream)))
-                       (set! i (+ i 1))
-                       v))))
-  (define s:initial (stream))
-  (case/p ((grammar->parser/dfs g) s:initial)
-    ((s:final v _) (let commit ((s s:initial))
-                     (cond ((eq? s:final s) (k v))
-                           (else (in 'get) (commit (cdr (s)))))))
-    ((reasons) (let commit ((i i))
-                 (unless (= i 0) (in 'get) (commit (- i 1))))
-               (kf reasons))))
+  (define (g->p g)
+    (match g
+      (`#(g:fail ,reasons) (lambda (s) (mzero reasons)))
+      (`#(g:eps  ,v-thunk) (lambda (s) (unit s v-thunk)))
+      (`#(g:one  ,meta ,?) (lambda (s) (let* ((s (s)) (v (car s)))
+                                         (if (? v) (unit (cdr s) (thunk v))
+                                           (mzero (list (cons v meta)))))))
+      (`#(g:alt ,g1 ,g2)
+        (define p1 (g->p g1)) (define p2 (g->p g2))
+        (lambda (s) (mplus (p1 s) (thunk (p2 s)))))
+      (`#(g:seq ,g1 ,g2)
+        (define p1 (g->p g1)) (define p2 (g->p g2))
+        (lambda (s)
+          (let loop ((result (p1 s)))
+            (case/p result
+              ((s v1 retry) (mplus ((transform p2 (lambda (v2)
+                                                    (thunk (cons (v1) (v2)))))
+                                    s)
+                                   (thunk (loop (retry)))))
+              ((rs)         (mzero rs))))))
+      (`#(g:app ,proc ,g) (transform (g->p g)
+                                     (lambda (v) (thunk (proc (v))))))
+      (`#(g:bind ,v->g ,g)
+        (define p (g->p g))
+        (lambda (s)
+          (let loop ((result (p s)))
+            (case/p result
+              ((s v retry) (mplus ((g->p (v->g (v))) s)
+                                  (thunk (loop (retry)))))
+              ((reasons)   (mzero reasons))))))
+      (`#(g:peek ,g)
+        (define p (g->p g))
+        (lambda (s) (let rewind ((result (p s)))
+                      (case/p result
+                        ((_ v retry) (choice s v (thunk (rewind (retry)))))
+                        ((reasons)   (mzero reasons))))))
+      (`#(g:peek-not ,g) (define p (g->p g))
+                         (lambda (s) (case/p (p s)
+                                       ((_ v retry) (mzero (list v)))
+                                       ((reasons)   (unit s (thunk #t))))))
+      (`#(g:nonterminal ,meta ,g-thunk)
+        (lambda (s) ((g->p (g-thunk)) s)))))
+  (define parse (g->p g))
+  (lambda (in k kf)
+    ;; TODO: this strategy retains uncommitted buffers for the entire parse.
+    ;; Switching to BFS would allow us to commit progress of the slowest branch
+    ;;   * more complicated, but buffers may be committed incrementally
+    ;;     * peek node retains a buffer to provide to downstream consumer
+    ;;     * max retained buffer size determines global uncommitted amount
+    ;;   * this is closer to the incremental parsing we eventually want
+    (define i 0)
+    (define (stream)
+      (define v #f)
+      (thunk (cond (v    v)
+                   (else (set! v (cons (in 'peek i) (stream)))
+                         (set! i (+ i 1))
+                         v))))
+    (define s:initial (stream))
+    (case/p (parse s:initial)
+      ((s:final v _) (let commit ((s s:initial))
+                       (cond ((eq? s:final s) (k v))
+                             (else (in 'get) (commit (cdr (s)))))))
+      ((reasons) (let commit ((i i))
+                   (unless (= i 0) (in 'get) (commit (- i 1))))
+                 (kf reasons)))))
 
 ;; TODO: for more expressiveness, try
 ;;   BFS to handle left-recursion as simply as possible

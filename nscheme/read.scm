@@ -177,10 +177,10 @@
    (seq0 (alt Real (app/seq make-rectangular (?/seq 0 Real) Imaginary) Polar)
          (peek Separator))))
 
-(define (read/grammar in)
-  (parse/dfs (alt Datum (seq (*/seq Space) EOF (return eof))) in
-             (lambda (result-thunk) (result-thunk))
-             (lambda (reasons)      (thunk reasons))))
+(define parse
+  (grammar->parser/dfs (alt Datum (seq (*/seq Space) EOF (return eof)))))
+(define (read/grammar in) (parse in (lambda (result-thunk) (result-thunk))
+                                 (lambda (reasons) (thunk reasons))))
 
 (define (read-error? d) (and (procedure? d) (not (read-eof? d))))
 (define (read-eof? d)   (and (procedure? d) (eq? 'eof (d))))
