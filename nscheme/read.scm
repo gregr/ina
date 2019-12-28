@@ -14,7 +14,7 @@
                               #b111111 (bitwise-arithmetic-shift i shift))))
   ;; Conventionally invalid ranges: U+D800 through U+DFFF and above U+10FFFF
   ;; This encoding could handle up to 7 units (42 bits), i.e., U+3FFFFFFFFFF
-  (and (<= 0 i #x10ffff) (cond ((<= i 255)    (list i))
+  (and (<= 0 i #x10ffff) (cond ((<= i 127)    (list i))
                                ((<= i #x07ff) (list (lead #b11000000 -6)
                                                     (follow           0)))
                                ((<= i #xffff) (list (lead #b11100000 -12)
