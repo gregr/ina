@@ -1,41 +1,39 @@
+;; Conventionally invalid ranges: U+D800 through U+DFFF and above U+10FFFF
+;; This encoding could handle up to 7 units (42 bits), i.e., U+3FFFFFFFFFF
+;; These octets happen to never appear:
+;; C0: #b11000000
+;; C1: #b11000001
+;; F5: #b11110101
+;; FF: #b11111111
+(define unicode-ranges
+  ;;   rmin      rmax       tag-mask   tag        shift
+  '#(#(#x0000000 #x0000007F #b10000000 #b00000000 0)
+     #(#x0000080 #x000007FF #b11100000 #b11000000 6)
+     #(#x0000800 #x0000FFFF #b11110000 #b11100000 12)
+     #(#x0010000 #x001FFFFF #b11111000 #b11110000 18)
+     #(#x0200000 #x03FFFFFF #b11111100 #b11111000 24)
+     #(#x4000000 #x7FFFFFFF #b11111110 #b11111100 30)))
+
 (define (unicode->utf8 i)
-  (define (lead tag shift)
-    (bitwise-ior tag (bitwise-arithmetic-shift i shift)))
-  (define (follow shift)
-    (bitwise-ior #b10000000 (bitwise-and
-                              #b111111 (bitwise-arithmetic-shift i shift))))
-  ;; Conventionally invalid ranges: U+D800 through U+DFFF and above U+10FFFF
-  ;; This encoding could handle up to 7 units (42 bits), i.e., U+3FFFFFFFFFF
-  (and (<= 0 i #x10ffff) (cond ((<= i #x7F)   (list i))
-                               ((<= i #x07FF) (list (lead #b11000000 -6)
-                                                    (follow           0)))
-                               ((<= i #xFFFF) (list (lead #b11100000 -12)
-                                                    (follow          -6)
-                                                    (follow           0)))
-                               (else          (list (lead #b11110000 -18)
-                                                    (follow          -12)
-                                                    (follow          -6)
-                                                    (follow           0))))))
+  (let loop ((ri 0))
+    (and (< ri (vector-length unicode-ranges))
+         (let ((r (vector-ref unicode-ranges ri)))
+           (match-define (vector rmin rmax tag-mask tag shift) r)
+           (if (<= i rmax)
+             (cons (bitwise-ior tag (>> i shift))
+                   (let loop ((s (- shift 6)))
+                     (if (<= 0 s)
+                       (cons (\| #x80 (& #x3F (>> i s))) (loop (- s 6)))
+                       '())))
+             (loop (+ ri 1)))))))
 
 (define (utf8->unicode i0)
-  (define (lead i mask shift)
-    (bitwise-arithmetic-shift (bitwise-and mask i) shift))
-  (define (follow c i shift)
-    (and (< #b01111111 i #b11000000)
-         (bitwise-ior c (bitwise-arithmetic-shift
-                          (bitwise-and #b00111111 i) shift))))
-  (cond ((<= i0 #x7F) i0)
-        ((<= #xF0 i0) (define c0 (lead i0 #b00000111 18))
-                      (lambda (i1)
-                        (define c1 (follow c0 i1 12))
-                        (and c1 (<= #x10000 c1)
-                             (lambda (i2)
-                               (define c2 (follow c1 i2 6))
-                               (and c2 (lambda (i3) (follow c2 i3 0)))))))
-        ((<= #xE0 i0) (define c0 (lead i0 #b00001111 12))
-                      (lambda (i1)
-                        (define c1 (follow c0 i1 6))
-                        (and c1 (<= #x800 c1) (lambda (i2) (follow c1 i2 0)))))
-        ((<= #xC2 i0) (define c0 (lead i0 #b00011111 6))
-                      (lambda (i1) (follow c0 i1 0)))
-        (else         #f)))
+  (let loop ((ri 0) (i i0))
+    (and (< ri (vector-length unicode-ranges))
+         (let ((r (vector-ref unicode-ranges ri)))
+           (match-define (vector rmin rmax tag-mask tag shift) r)
+           (if (= (& i0 tag-mask) tag)
+             (let ((i (& i rmax))) (and (< rmin i) i))
+             (lambda (inext) (let ((inext (^ inext #x80)))
+                               (and (= 0 (& inext #xC0))
+                                    (loop (+ ri 1) (\| (<< i 6) inext))))))))))
