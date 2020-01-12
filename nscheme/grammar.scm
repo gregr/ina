@@ -1,10 +1,31 @@
-;; TODO: move define-tuple[*]
+;; TODO: move define-tuple[*] and define-variant[*]
 (define-syntax (define-tuple stx)
+  (syntax-case stx ()
+    ((_ (name field ...))
+     (andmap identifier? (syntax->list #'(name field ...)))
+     (let ((name-string (symbol->string (syntax->datum #'name)))
+           (len         (length (syntax->list #'(field ...)))))
+       (with-syntax
+         ((dlen     (datum->syntax #'_ len))
+          ((df ...) (datum->syntax
+                      #'_ (map (lambda (f)
+                                 (datum->syntax
+                                   f (string->symbol
+                                       (string-append
+                                         name-string "-"
+                                         (symbol->string (syntax->datum f))))))
+                               (syntax->list #'(field ...)))))
+          ((di ...) (datum->syntax #'_ (range 0 len))))
+         #'(begin (define (name field ...) (vector field ...))
+                  (define (df d) (vector-ref d di)) ...))))))
+(define-syntax-rule (define-tuple* td tds ...)
+  (begin (define-tuple td) (define-tuple tds) ...))
+(define-syntax (define-variant stx)
   (syntax-case stx ()
     ((_ (tag field ...))
      (andmap identifier? (syntax->list #'(tag field ...)))
      (let ((tag-string (symbol->string (syntax->datum #'tag)))
-           (len (length (syntax->list #'(tag field ...)))))
+           (len        (length (syntax->list #'(tag field ...)))))
        (with-syntax
          ((dlen     (datum->syntax #'_ len))
           (d?       (datum->syntax
@@ -22,20 +43,21 @@
                   (define (d? d) (and (vector? d) (= dlen (vector-length d))
                                       (eq? 'tag (vector-ref d 0))))
                   (define (df d) (vector-ref d di)) ...))))))
-(define-syntax-rule (define-tuple* dd dds ...)
-  (begin (define-tuple dd) (define-tuple dds) ...))
+(define-syntax-rule (define-variant* vd vds ...)
+  (begin (define-variant vd) (define-variant vds) ...))
 
 (define (grammar? x) (vector? x))
-(define-tuple* (g:fail        reasons     )
-               (g:eps         v-thunk     )
-               (g:one         meta ?      )
-               (g:alt         g1   g2     )
-               (g:seq         g1   g2     )
-               (g:app         proc g      )
-               (g:bind        v->g g      )
-               (g:peek        g           )
-               (g:peek-not    g           )
-               (g:nonterminal meta g-thunk))
+(define-variant*
+  (g:fail        reasons     )
+  (g:eps         v-thunk     )
+  (g:one         meta ?      )
+  (g:alt         g1   g2     )
+  (g:seq         g1   g2     )
+  (g:app         proc g      )
+  (g:bind        v->g g      )
+  (g:peek        g           )
+  (g:peek-not    g           )
+  (g:nonterminal meta g-thunk))
 
 (define-syntax-rule (return x) (g:eps (thunk x)))
 (define (fail . xs)            (g:fail (list xs)))
@@ -109,7 +131,7 @@
 ;; A parser then has the same signature as the continuations you pass to it:
 ;;   (s v kreturn kfail) -> return-or-fail
 (define (grammar->parser/dfs g)
-  (define-tuple* (mzero reasons) (choice s v retry))
+  (define-variant* (mzero reasons) (choice s v retry))
   (define-syntax-rule
     (case/p e ((s v retry) success-body ...) ((reasons) failure-body ...))
     (let ((x e)) (cond ((mzero? x) (let ((reasons (mzero-reasons x)))
