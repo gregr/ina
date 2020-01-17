@@ -1,3 +1,17 @@
+;; TODO: move these
+(define (mvector-fill! mv v)
+  (let loop ((i (- (mvector-length mv) 1)))
+    (when (<= 0 i) (mvector-set! mv i v) (loop (- i 1)))))
+(define (mvector-copy! dest dest-start src src-start src-end)
+  (let loop ((di dest-start) (si src-start))
+    (when (< si src-end)
+      (mvector-set! dest di (mvector-ref src si))
+      (loop (+ di 1) (+ si 1)))))
+(define (mvector-copy!/list mv start xs)
+  (let loop ((i start) (xs xs)) (unless (null? xs)
+                                  (mvector-set! mv i (car xs))
+                                  (loop (+ i 1) (cdr xs)))))
+
 ;; TODO: move define-tuple[*] and define-variant[*]
 (define-syntax (define-tuple stx)
   (syntax-case stx ()
