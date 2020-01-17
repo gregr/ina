@@ -1,7 +1,8 @@
 #lang racket/base
 (provide make-mvector mvector? mvector->vector
          mvector-length mvector-ref mvector-set! mvector-cas!
-         string->vector vector->string bitwise-arithmetic-shift << >> & \| ^
+         string->vector vector->string cons*
+         bitwise-arithmetic-shift << >> & \| ^
          filesystem console tcp stdio
          port:string:input
          racket-eval)
@@ -26,6 +27,7 @@
   (list->vector (bytes->list (string->bytes/utf-8 s))))
 (define (vector->string v)
   (bytes->string/utf-8 (list->bytes (vector->list v))))
+(define cons* list*)
 
 (define (bitwise-arithmetic-shift a b) (arithmetic-shift a b))
 (define (<< i s) (bitwise-arithmetic-shift i s))
