@@ -288,6 +288,13 @@
                 (next              (consume pos next)))))))
   halted)
 
+;; TODO: optional recompilation into a DFA that can track submatches properly
+;; rx-interpret runs atom:number ~15x slower than a handwritten state machine.
+(define (rx sre)
+  (define code (rx-compile sre))
+  (case-lambda (()       (vector-ref code 3))
+               ((in pos) (rx-interpret code (lambda (i) (in 'peek i)) pos))))
+
 (define (grammar? x) (vector? x))
 (define-variant*
   (g:fail        reasons     )
