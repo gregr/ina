@@ -97,11 +97,11 @@
     ;(printf "~s\n" datum)
     ;(loop)))
 
-(let loop ()
-  (define datum (read/grammar (stdio 'in)))
-  (when (not (eof-object? datum))
-    (printf "~s\n" datum)
-    (loop)))
+;(let loop ()
+  ;(define datum (read/grammar (stdio 'in)))
+  ;(when (not (eof-object? datum))
+    ;(printf "~s\n" datum)
+    ;(loop)))
 
 ;(define utf8-input '(124 133 8232 8233 82330 802330 8020330 80203030))
 ;(define utf8 (map unicode->utf8 utf8-input))
@@ -180,3 +180,17 @@
                                                ;(cons (car seg) (substring ex start (mvector-ref r (+ (cdr seg) 1))))))
                                         ;(atom:number)))))))
        ;examples number-results))
+
+(define (a^n n) (make-string n #\a))
+(define (rx:a^n n) (rx `(seq ,@(make-list n '(? "a")) . ,(make-list n "a"))))
+;(define (rx:a^n n) (rx `(seq . ,(make-list n "a"))))
+;(define (rx:a^n n) (rx `(seq . ,(make-list n '(? "a")))))
+
+(define (test n)
+  (displayln (a^n n))
+  (define in (port:string:input (a^n n)))
+  (define r (time (rx:a^n n)))
+  ;(define r (time (rx '(* "a"))))
+  (time (r in 0)))
+
+(test 3000)
