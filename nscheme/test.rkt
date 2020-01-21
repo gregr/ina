@@ -1,9 +1,11 @@
 #lang racket
 (require "nscheme.rkt"
+         profile
          racket/pretty
          (for-syntax racket/list)
          (rename-in racket/base
                     (read racket:read) (eof-object? racket:eof-object?)))
+(include "unicode.scm")
 (include "grammar.scm")
 (include "read.scm")
 (print-as-expression #f)
@@ -21,7 +23,7 @@
   (define datum (racket:read in))
   (if (racket:eof-object? datum) '() (cons datum (racket:read* in))))
 
-(define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 5/0 -2/0 0/0 3-2/3i 4-inf.0i 5@5 #e5@5 #i1@1 #i1/0 #i-1/0 #i0/0 1@+2 1@-2 1@++5 .5 6. #e.75 #b1.1")
+(define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 5/0 -2/0 0/0 3-2/3i 4-inf.0i 5@5 #e5@5 #i1@1 #i1/0 #i-1/0 #i0/0 1@+2 1@-2 1@++5 .5 6. #e.75 #b1.1 5e-2")
 (define symbols "|1+2i| \\3 |a b| c\\ d")
 (define comments ";; foo\n x #;(1 2 3)y #| #| a b |# c d |# z")
 (define strings "\"hello\\d32;world\\b1010;\\x7e;\" \"abc\\ud8232;def\"")
@@ -100,3 +102,81 @@
   (when (not (eof-object? datum))
     (printf "~s\n" datum)
     (loop)))
+
+;(define utf8-input '(124 133 8232 8233 82330 802330 8020330 80203030))
+;(define utf8 (map unicode->utf8 utf8-input))
+;utf8
+;(map (lambda (bytes) (foldl (lambda (b u->u) (and (procedure? u->u) (u->u b))) utf8->unicode bytes))
+     ;utf8)
+
+;(define rin (port:string:input "\".@.(t457\"ok"))
+;(define rin (port:string:input ".,@.\\(t457|\"o|k"))
+;(define examples
+  ;(append* (map (lambda (_)
+                  ;(list "3238465928346598236459827364958762394856"
+                        ;"457.03e51"
+                        ;"-457.03e51"
+                        ;"+457.03e-51"
+                        ;"+457.03e+51"
+                        ;"#o+457.03e51"
+                        ;"#e#o+457.03e51"
+                        ;"#o#e+457.03e51"
+                        ;"+nan.0"
+                        ;"-inf.0"
+                        ;"+nan.0i"
+                        ;"-inf.0i"
+                        ;"-i"
+                        ;"-57.03e51-23i"
+                        ;"+57.03e51+34i"
+                        ;"8@8"
+                        ;"5/7"
+                        ;"#i5/7"
+                        ;)
+                ;;(list "3238465928346598236459827364958762394856"
+                       ;;"457.03e51 ywefjx"
+                       ;;"-457.03e51 ywefjx"
+                       ;;"+457.03e-51 ywefjx"
+                       ;;"+457.03e+51 ywefjx"
+                       ;;"#o+457.03e51 ywefjx"
+                       ;;"#e#o+457.03e51 ywefjx"
+                       ;;"#o#e+457.03e51 ywefjx"
+                       ;;"+nan.0"
+                       ;;"-inf.0"
+                       ;;"+nan.0i"
+                       ;;"-inf.0i"
+                       ;;"-i"
+                       ;;"-57.03e51-23i ywefjx"
+                       ;;"+57.03e51+34i ywefjx"
+                       ;;"8@8()"
+                       ;;"5/7#t"
+                       ;;"#i5/7#t"
+                       ;;)
+                ;)
+                ;(range 500))))
+;(define rins (map port:string:input examples))
+
+;(void (profile (map string->number examples)))
+
+;;(atom:true   rin 0)
+;;(atom:true   rin 0)
+;;(atom:false  rin 0)
+;;(punctuation rin 0)
+;;(atom:symbol rin 0)
+;;(dot rin 0)
+;;(atom:string rin 0)
+
+;(displayln 'rx-matching)
+;(define number-results
+  ;(profile (map (lambda (rin) (atom:number rin 0)) rins)))
+;(pretty-print
+  ;(map (lambda (ex r)
+         ;(cons ex (and r
+                       ;(cons (substring ex 0 (mvector-ref
+                                               ;r (- (mvector-length r) 2)))
+                             ;(filter-not
+                               ;not (map (lambda (seg)
+                                          ;(define start (mvector-ref r (cdr seg)))
+                                          ;(and start
+                                               ;(cons (car seg) (substring ex start (mvector-ref r (+ (cdr seg) 1))))))
+                                        ;(atom:number)))))))
+       ;examples number-results))
