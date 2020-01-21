@@ -7,6 +7,77 @@
 (define (list->string cs) (vector->string (list->vector cs)))
 (define (rlist->string cs) (list->string (reverse cs)))
 
+;; tokenization: type value src
+;; punc
+;; datum
+;; eof
+;; error
+;(define EOF          (rx '(or eof "#!eof")))
+;(define linebreak    '(or (set "\n\r") 133 8232 8233))
+;(define space        `(or ,linebreak (set "\t\v\f ")))
+;(define comment:line `(seq (or ";" "#!") (* (~ ,linebreak)) ,linebreak))
+;(define skip         (rx `(* (or ,space ,comment:line))))
+
+;(define comment:datum:begin (rx "#;"))
+;(define comment:block:begin (rx "#|"))
+;(define comment:block:end   (rx "|#"))
+
+;(define punctuation (rx '($ (or ",@" "#(" "#[" "#{" "#'" "#`" "#,@" "#,"
+                                ;(set "()[]{}'`,")))))
+
+;(define atom:true  (rx '(or "#t" "#T")))
+;(define atom:false (rx '(or "#f" "#F")))
+
+;;; TODO: postprocess escape codes?
+;(define atom:string
+  ;(rx '(seq "\"" ($ (* (or (~ (set "\\\"")) (seq "\\" any)))) "\"")))
+
+;(define separator `(or (set "#;'`,()[]{}\"") ,space))
+
+;(define atom:number
+  ;(let* ((sign      '($: sign (set "+-")))
+         ;(exactness '(seq "#" ($: exactness (set "eEiI"))))
+         ;(special
+           ;`(seq ,sign (or ($: nan (seq (set "nN") (set "aA") (set "nN")))
+                           ;($: inf (seq (set "iI") (set "nN") (set "fF"))))
+                 ;".0"))
+         ;(digit10 '(range "0" "9"))
+         ;(digit16 `(or ,digit10 (range "A" "F") (range "a" "f")))
+         ;(exp10   '(set "dDeEfFlLsS"))
+         ;(exp16   '(set "lLsS")))
+    ;(define (radix rs) `(or (seq            "#" (set ,rs))
+                            ;(seq ,exactness "#" (set ,rs))
+                            ;(seq            "#" (set ,rs) ,exactness)))
+    ;(define (num pre d e)
+      ;(define unsigned-real
+        ;(let ((float-suffix `(seq "." ($: float (+ ,d)))))
+          ;`(seq (or ,float-suffix
+                    ;(seq ($: lhs (+ ,d))
+                         ;(? (or ,float-suffix (seq "/" ($: denom (+ ,d)))))))
+                ;(? ,e ($: exp (? ($: sign (set "+-"))) (+ ,d))))))
+      ;(define signed-real `(or (seq ,sign     ,unsigned-real) ,special))
+      ;(define real        `(or (seq (? ,sign) ,unsigned-real) ,special))
+      ;(define rectangular `(seq (? ($:: real ,real))
+                                ;($:: imaginary (seq (or ,sign ,signed-real)
+                                                    ;(set "iI")))))
+      ;(define polar       `(seq ($:: magnitude ,real) "@" ($:: angle ,real)))
+      ;`(seq ,pre (or ,rectangular ,polar ($:: real ,real))))
+    ;(define radix10 `(or "" ,exactness ,(radix "dD")))
+    ;(rx `(seq ($: number (or ,(num radix10      digit10          exp10)
+                             ;,(num (radix "bB") '(range "0" "1") exp10)
+                             ;,(num (radix "oO") '(range "0" "7") exp10)
+                             ;,(num (radix "xX") digit16          exp16)))
+              ;(or eof ,separator)))))
+
+;(define atom:symbol
+  ;(rx `($ (or (seq (* ".") (+ (or (seq "\\" any) (seq "|" (* (~ "|")) "|")
+                                  ;(~ (set".\\|") ,separator))
+                              ;(* ".")))
+              ;(seq "." (+ "."))))))
+
+;(define dot (rx "."))
+
+
 (define (char c)
   (define v (string->vector c))
   (and (= (vector-length v) 1) (vector-ref v 0)))
@@ -162,6 +233,7 @@
    (define D* (*/seq D))
    (define D+ (+/seq D))
    (define Sign (alt (seq "+" (return 1)) (seq "-" (return -1))))
+   ;; TODO: negative exponents
    (define Expt (seq (if (< radix 16) (alt* "dDeEfFlLsS") (alt* "lLsS")) D+))
    (define NAN (seq (alt* "nN") (alt* "aA") (alt* "nN") ".0" (return +nan.0)))
    (define INF (seq (alt* "iI") (alt* "nN") (alt* "fF") ".0" (return +inf.0)))
@@ -366,6 +438,7 @@
     (define (make-real/digits)
       (define nlhs (whole lhs))
       (define nrhs (whole (or rhs '())))
+      ;; TODO: negative exponents
       (define nexp (expt radix (whole (or exp '()))))
       (define m (cond ((eq? (or frac-type 'dec) 'dec)
                        (+ nlhs (* nrhs (expt radix
