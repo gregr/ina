@@ -1,6 +1,10 @@
 ;; TODO: numeric operations
 ;; expt make-rectangular make-polar exact->inexact inexact->exact exact?
 
+(define (read-error? d) (and (procedure? d) (not (read-eof? d))))
+(define (read-eof? d)   (and (procedure? d) (eq? 'eof (d))))
+(define (eof-object? d) (read-eof? d))
+(define (eof) 'eof)
 
 ;; tokenization: type value src
 ;; punc
@@ -247,15 +251,8 @@
          (peek Separator))))
 
 (define parse (grammar->parser/dfs (alt Datum EOF)))
-(define (read/grammar in) (parse in (lambda (result-thunk) (result-thunk))
-                                 (lambda (reasons) (thunk reasons))))
-
-(define (read-error? d) (and (procedure? d) (not (read-eof? d))))
-(define (read-eof? d)   (and (procedure? d) (eq? 'eof (d))))
-(define (eof-object? d) (read-eof? d))
-(define (eof) 'eof)
-
-(define (char=? ch c) (equal? ch (char c)))
+(define (read/experimental in) (parse in (lambda (result-thunk) (result-thunk))
+                                      (lambda (reasons) (thunk reasons))))
 
 (define linebreaks (append (map char '("\n" "\r")) '(133)))
 (define spaces     (string->list "\t\n\v\f\r "))

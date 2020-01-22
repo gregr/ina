@@ -20,9 +20,9 @@
   (define datum (read in))
   (if (eof-object? datum) '() (cons datum (read* in))))
 
-(define (read*/grammar in)
-  (define datum (read/grammar in))
-  (if (eof-object? datum) '() (cons datum (read*/grammar in))))
+(define (read*/experimental in)
+  (define datum (read/experimental in))
+  (if (eof-object? datum) '() (cons datum (read*/experimental in))))
 
 (define (racket:read* in)
   (define datum (racket:read in))
@@ -48,7 +48,7 @@
                 (string-join
                   (list numbers symbols comments strings separation quotes)
                   " ")))
-       (read*/grammar
+       (read*/experimental
          (port:string:input
            (string-join
              (list numbers symbols comments strings separation quotes)
@@ -56,17 +56,17 @@
 
 (define fsys (filesystem '(".")))
 
-;; TODO: read*/grammar is significantly slower at the moment:
-;;   read*:         cpu time:   54 real time:   57 gc time:   3
-;;   read*/grammar: cpu time: 1199 real time: 1206 gc time: 541
+;; TODO: read*/experimental is significantly slower at the moment:
+;;   read*:              cpu time:   54 real time:   57 gc time:   3
+;;   read*/experimental: cpu time: 1199 real time: 1206 gc time: 541
 (define data
   (let* ((in (fsys 'open-input "read.scm"))
          (d (time (read* in))))
     (in 'close)
     d))
-(define data/grammar
+(define data/experimental
   (let* ((in (fsys 'open-input "read.scm"))
-         (d (time (read*/grammar in))))
+         (d (time (read*/experimental in))))
     (in 'close)
     d))
 (define racket:data (call-with-input-file "read.scm" racket:read*))
@@ -81,19 +81,19 @@
   (displayln "vs:")
   (newline)
   (pretty-print racket:data))
-(when (equal? data/grammar racket:data)
-  (displayln "no diff with grammar"))
-(unless (equal? data/grammar racket:data)
+(when (equal? data/experimental racket:data)
+  (displayln "no diff with experimental"))
+(unless (equal? data/experimental racket:data)
   (for-each
     (lambda (d/g d/r)
       (unless (equal? d/g d/r)
-        (displayln "diff with grammar:")
+        (displayln "diff with experimental:")
         (pretty-print d/g)
         (newline)
         (displayln "vs:")
         (newline)
         (pretty-print d/r)))
-    data/grammar
+    data/experimental
     racket:data))
 
 ;(let loop ()
@@ -103,7 +103,7 @@
     ;(loop)))
 
 ;(let loop ()
-  ;(define datum (read/grammar (stdio 'in)))
+  ;(define datum (read/experimental (stdio 'in)))
   ;(when (not (eof-object? datum))
     ;(printf "~s\n" datum)
     ;(loop)))
