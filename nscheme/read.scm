@@ -1,11 +1,6 @@
 ;; TODO: numeric operations
 ;; expt make-rectangular make-polar exact->inexact inexact->exact exact?
 
-;; TODO: move these
-(define (reverse-append xs ys) (foldl cons ys xs))
-(define (string->list s) (vector->list (string->vector s)))
-(define (list->string cs) (vector->string (list->vector cs)))
-(define (rlist->string cs) (list->string (reverse cs)))
 
 ;; tokenization: type value src
 ;; punc

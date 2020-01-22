@@ -1,10 +1,15 @@
-#lang racket
+#lang racket/base
 (require "nscheme.rkt"
-         profile
-         racket/pretty
-         (for-syntax racket/list)
-         (rename-in racket/base
+         profile racket/function racket/include racket/list racket/match
+         racket/pretty racket/string
+         (for-syntax (except-in racket/base append string->list list->string))
+         (rename-in (except-in racket/base append string->list list->string)
                     (read racket:read) (eof-object? racket:eof-object?)))
+(module nscm:base racket
+  (provide (all-defined-out))
+  (require "nscheme.rkt" (for-syntax racket/list))
+  (include "base.scm"))
+(require 'nscm:base (for-syntax 'nscm:base))
 (include "unicode.scm")
 (include "grammar.scm")
 (include "read.scm")
