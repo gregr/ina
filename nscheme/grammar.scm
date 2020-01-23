@@ -1,3 +1,38 @@
+(define-syntax (cset/x stx)
+  (define (cunit c)
+    (cond ((byte? c)                                 c)
+          ((and (string? c) (= (string-length c) 1)) (string-ref c 0))
+          (else (error "invalid codeunit:" c))))
+  (syntax-case stx ()
+    ((_ x)           #'#f)
+    ((_ x #f)        #'(not x))
+    ((_ x (r0 . r1)) (let ((p0 (cunit (syntax->datum #'r0)))
+                           (p1 (cunit (syntax->datum #'r1))))
+                       #`(and x (<= #,p0 x #,p1))))
+    ((_ x cstx) (let ((c (syntax->datum #'cstx)))
+                  (cond ((byte? c)   #'(eq? x c))
+                        ((string? c) #`(or #,@(map (lambda (b) #`(eq? x #,b))
+                                                   (string->list c))))
+                        (else        (error "invalid cset:" #'cstx)))))
+    ((_ x #(c ...)) #'(or (cset/x x c) ...))))
+
+(define-syntax-rule (cset c) (lambda (x) (cset/x x c)))
+
+(define-syntax (case/char stx)
+  (syntax-case stx (else)
+    ((_ e clause ...) (not (identifier? #'e))
+                      #'(let ((x e)) (case/char x clause ...)))
+    ((_ x)               #'(error "missing char case:" x))
+    ((_ x (else e* ...)) #'(begin e* ...))
+    ((_ x (cs e* ...) clause ...)
+     #'(cond (((cset cs) x) e* ...) (else (case/char x clause ...))))))
+
+(define-syntax cseq?
+  (syntax-rules ()
+    ((_ get pos c cs ...) (case/char (get pos)
+                            (c    (cseq? get (+ pos 1) cs ...))
+                            (else #f)))
+    ((_ get pos)          pos)))
 
 
 (define (rx-compile sre)
