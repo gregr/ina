@@ -2,8 +2,10 @@
 (require "nscheme.rkt"
          profile racket/function racket/include racket/list racket/match
          racket/pretty racket/string
-         (for-syntax (except-in racket/base append string->list list->string))
-         (rename-in (except-in racket/base append string->list list->string)
+         (for-syntax (except-in racket/base append string-ref string-length
+                                string->list list->string))
+         (rename-in (except-in racket/base append string-ref string-length
+                               string->list list->string)
                     (read racket:read) (eof-object? racket:eof-object?)))
 (module nscm:base racket
   (provide (all-defined-out))

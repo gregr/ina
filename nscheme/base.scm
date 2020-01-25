@@ -6,6 +6,8 @@
 (define (list->string cs) (vector->string (list->vector cs)))
 (define (rlist->string cs) (list->string (reverse cs)))
 (define (mvector->string mv) (vector->string (mvector->vector mv)))
+(define (string-length s) (vector-length (string->vector s)))
+(define (string-ref s i) (vector-ref (string->vector s) i))
 
 (define (mvector-fill! mv v)
   (let loop ((i (- (mvector-length mv) 1)))
