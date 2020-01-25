@@ -105,6 +105,8 @@
     ((peek*! mv start skip until)
      (define bs (eof->false (peek-bytes (- until skip) skip port)))
      (if bs (mvector-copy!/bytes mv start bs 0 (bytes-length bs)) 0))
+    ((forget amount) (define bs (eof->false (read-bytes amount port)))
+                     (if bs (bytes-length bs) 0))
     (else        super)))
 
 (define (port:bytestream:output super port)
@@ -254,6 +256,9 @@
                                   (set! i (+ i amount))
                                   amount)
     ((peek*! mv start skip until) (ref* mv start i skip until))
+    ((forget amount) (define next-i (min (vector-length v) (+ i amount)))
+                     (define actual (- next-i i))
+                     (set! i next-i) actual)
     ((position-ref)        i)
     ((position-set! index) (set! i (min (max index 0) (vector-length v))))))
 
