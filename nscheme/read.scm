@@ -80,8 +80,7 @@
 (define (char c)
   (define v (string->vector c))
   (and (= (vector-length v) 1) (vector-ref v 0)))
-(define (char-range low high)     (in-range (char low) (char high)))
-(define (not/char-range low high) (not/one (char-range low high)))
+(define (char=? ch c) (equal? ch (char c)))
 
 ;; TODO: Re-implement reader using this grammar
 (define (digit->nat ch)
