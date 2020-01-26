@@ -87,7 +87,13 @@
         ((datum) (return v   p1))
         ((eof)   (return eof p1))
         ((error) (fail v                              p0 p1))
-        (else    (fail (list "unexpected token:" t v) p0 p1))))))
+        (else    (fail (list "unexpected token" t v) p0 p1))))))
+
+(define-syntax-rule (case/token (k t v p0 p1) clause ...)
+  (case t clause ...
+    ((error) (k t v p0 p1))
+    ((eof)   (k 'error "unexpected EOF" p0 p1))
+    (else    (k 'error (list "unexpected token" t v) p0 p1))))
 
 (define (read-token get pos k)
   (define (Any pos)
@@ -157,12 +163,7 @@
   (define (Comment:datum pos)
     (read-datum/token
       get pos #f
-      (lambda (t v p0 p1)
-        (case t
-          ((datum) (Any p1))
-          ((error) (k t v p0 p1))
-          ((eof) (k 'error "unexpected EOF" p0 p1))
-          (else  (k 'error (list "unexpected token" t v) p0 p1))))))
+      (lambda (t v p0 p1) (case/token (k t v p0 p1) ((datum) (Any p1))))))
 
   (define (String start)
     (define (escape-code validate pos consume)
@@ -263,7 +264,7 @@
       (read-datum/token
         get pos annotate
         (lambda (t v p0 p1)
-          (case t
+          (case/token (k t v p0 p1)
             ;; TODO: annotate element
             ((datum) (loop p1 (cons v acc)))
             ((rbracket)
@@ -277,28 +278,17 @@
                      (read-datum/token
                        get p1 annotate
                        (lambda (t v p0 p1)
-                         (case t
+                         (case/token (k t v p0 p1)
                            ((datum)
                             (read-datum/token
                               get p1 annotate
                               (lambda (t v2 p0 p1)
-                                (case t
+                                (case/token (k t v2 p0 p1)
                                   ;; TODO: annotate element and compound
                                   ((rbracket) (k 'datum (foldl cons v acc)
                                                  start p1))
                                   ((datum) (k 'error "extra datum after dot"
-                                              p0 p1))
-                                  ((eof) (k 'error "unexpected EOF" p0 p1))
-                                  ((error) (k t v2 p0 p1))
-                                  (else (k 'error (list "unexpected token" t v2)
-                                           p0 p1))))))
-                           ((eof) (k 'error "unexpected EOF" p0 p1))
-                           ((error) (k t v p0 p1))
-                           (else (k 'error (list "unexpected token" t v)
-                                    p0 p1)))))))
-            ((error) (k t v p0 p1))
-            ((eof)   (k 'error "unexpected EOF" p0 p1))
-            (else    (k 'error (list "unexpected token" t v) p0 p1)))))))
+                                              p0 p1))))))))))))))))
   (read-token get pos
               (lambda (type value start end)
                 (case type
@@ -309,13 +299,9 @@
                   ((tag) (read-datum/token
                            get end annotate
                            (lambda (t v p0 p1)
-                             (case t
+                             (case/token (k t v p0 p1)
                                ;; TODO: annotate both tag value and list
-                               ((datum) (k 'datum (list value v) start p1))
-                               ((error) (k t v p0 p1))
-                               ((eof)   (k 'error "unexpected EOF" p0 p1))
-                               (else    (k 'error (list "unexpected token" t v)
-                                           p0 p1))))))
+                               ((datum) (k 'datum (list value v) start p1))))))
                   (else (k type value start end))))))
 
 ;(define (string->number s)
