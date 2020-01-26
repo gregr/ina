@@ -94,6 +94,8 @@
     ((error) (k t v p0 p1))
     ((eof)   (k 'error "unexpected EOF" p0 p1))
     (else    (k 'error (list "unexpected token" t v) p0 p1))))
+(define-syntax-rule (lambda/token (k t v p0 p1) clause ...)
+  (lambda (t v p0 p1) (case/token (k t v p0 p1) clause ...)))
 
 (define (read-token get pos k)
   (define (Any pos)
@@ -162,8 +164,7 @@
       (else (Comment:block (+ pos 1) level #f))))
   (define (Comment:datum pos)
     (read-datum/token
-      get pos #f
-      (lambda (t v p0 p1) (case/token (k t v p0 p1) ((datum) (Any p1))))))
+      get pos #f (lambda/token (k t v p0 p1) ((datum) (Any p1)))))
 
   (define (String start)
     (define (escape-code validate pos consume)
@@ -263,45 +264,40 @@
     (let loop ((pos pos) (acc '()))
       (read-datum/token
         get pos annotate
-        (lambda (t v p0 p1)
-          (case/token (k t v p0 p1)
-            ;; TODO: annotate element
-            ((datum) (loop p1 (cons v acc)))
-            ((rbracket)
-             ;; TODO: annotate compound
-             (cond ((eq? delim-shape v)
-                    (define c (reverse acc))
-                    (k 'datum (if vec? (list->vector c) c) start p1))
-                   (else (k 'error (list "mismatched closing bracket" v)
-                            p0 p1))))
-            ((dot) (if (or (null? acc) vec?) (k 'error "misplaced dot" p0 p1)
-                     (read-datum/token
-                       get p1 annotate
-                       (lambda (t v p0 p1)
-                         (case/token (k t v p0 p1)
-                           ((datum)
-                            (read-datum/token
-                              get p1 annotate
-                              (lambda (t v2 p0 p1)
-                                (case/token (k t v2 p0 p1)
-                                  ;; TODO: annotate element and compound
-                                  ((rbracket) (k 'datum (foldl cons v acc)
-                                                 start p1))
-                                  ((datum) (k 'error "extra datum after dot"
-                                              p0 p1))))))))))))))))
+        (lambda/token (k t v p0 p1)
+          ;; TODO: annotate element
+          ((datum) (loop p1 (cons v acc)))
+          ((rbracket)
+           ;; TODO: annotate compound
+           (cond ((eq? delim-shape v)
+                  (define c (reverse acc))
+                  (k 'datum (if vec? (list->vector c) c) start p1))
+                 (else (k 'error (list "mismatched closing bracket" v)
+                          p0 p1))))
+          ((dot) (if (or (null? acc) vec?) (k 'error "misplaced dot" p0 p1)
+                   (read-datum/token
+                     get p1 annotate
+                     (lambda/token (k t v p0 p1)
+                       ((datum) (read-datum/token
+                                  get p1 annotate
+                                  (lambda/token (k t v2 p0 p1)
+                                    ;; TODO: annotate element and compound
+                                    ((rbracket) (k 'datum (foldl cons v acc)
+                                                   start p1))
+                                    ((datum) (k 'error "extra datum after dot"
+                                                p0 p1)))))))))))))
   (read-token get pos
               (lambda (type value start end)
                 (case type
                   ;; TODO: annotate
-                  ((datum) (k 'datum value start end))
+                  ((datum)     (k 'datum value start end))
                   ((lbracket)  (read-compound start end value #f))
                   ((hlbracket) (read-compound start end value #t))
                   ((tag) (read-datum/token
                            get end annotate
-                           (lambda (t v p0 p1)
-                             (case/token (k t v p0 p1)
-                               ;; TODO: annotate both tag value and list
-                               ((datum) (k 'datum (list value v) start p1))))))
+                           (lambda/token (k t v p0 p1)
+                             ;; TODO: annotate both tag value and list
+                             ((datum) (k 'datum (list value v) start p1)))))
                   (else (k type value start end))))))
 
 ;(define (string->number s)
