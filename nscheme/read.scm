@@ -165,30 +165,22 @@
           (else  (k 'error (list "unexpected token" t v) p0 p1))))))
 
   (define (String start)
-    (define (escape-byte pos consume)
+    (define (escape-code validate pos consume)
       (read-number
         get (+ pos 2)
         (lambda (type n _ next-pos)
           (define (err msg) (k 'error msg pos next-pos))
           (case type
             ((datum) (case/char (get next-pos)
-                       (";" (if (byte? n) (consume n (+ next-pos 1))
-                              (err (list "invalid byte escape value:" n))))
-                       (else (err "invalid byte escape sequence terminator"))))
+                       (";" (let ((v (validate n)))
+                              (if v (consume v (+ next-pos 1))
+                                (err (list "invalid escape code value" n)))))
+                       (else (err "invalid escape code terminator"))))
             ((error) (k type n _ next-pos))))))
+    (define (escape-byte pos consume)
+      (escape-code (lambda (n) (and (byte? n) n)) pos consume))
     (define (escape-unicode pos consume)
-      (read-number
-        get (+ pos 2)
-        (lambda (type n _ next-pos)
-          (define (err msg) (k 'error msg pos next-pos))
-          (case type
-            ((datum)
-             (case/char (get next-pos)
-               (";" (let ((bs (unicode->utf8 n)))
-                      (if bs (consume bs (+ next-pos 1))
-                        (err (list "invalid unicode escape value:" n)))))
-               (else (err "invalid unicode escape sequence terminator"))))
-            ((error) (k type n _ next-pos))))))
+      (escape-code unicode->utf8 pos consume))
     (let loop ((pos (+ start 1)) (len 0))
       (case/char (get pos)
         ("\"" (let ((mv (make-mvector len 0)) (last-pos pos))
@@ -217,7 +209,7 @@
                 ("#"  (escape-byte pos (lambda (_ pos) (loop pos (+ len 1)))))
                 ("Uu" (escape-unicode pos (lambda (bs pos)
                                             (loop pos (+ len (length bs))))))
-                (else (k 'error (list "invalid escape character:"
+                (else (k 'error (list "invalid escape character"
                                       (get (+ pos 1))) pos (+ pos 2)))))
         (#f   (k 'error "unexpected EOF while reading string" start pos))
         (else (loop (+ pos 1) (+ len 1))))))
