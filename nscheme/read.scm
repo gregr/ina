@@ -77,16 +77,15 @@
 ;(define dot (rx "."))
 
 (define (read/experimental in)
-  (define (get i)          (in 'peek i))
   (define (return v pos)   (in 'forget pos) v)
   (define (fail msg p0 p1) (return (thunk (vector msg p0 p1)) p1))
   (read-datum/token
-    get 0 #f
+    (lambda (i) (in 'peek i)) 0 #f
     (lambda (t v p0 p1)
       (case t
         ((datum) (return v   p1))
         ((eof)   (return eof p1))
-        ((error) (fail v                              p0 p1))
+        ((error) (fail v                             p0 p1))
         (else    (fail (list "unexpected token" t v) p0 p1))))))
 
 (define-syntax-rule (case/token (k t v p0 p1) clause ...)
@@ -100,7 +99,6 @@
 
 (define (read-token get pos k)
   (define (Any pos)
-    (define (punc type value len) (k type value pos (+ pos len)))
     (define (lbrack value len) (k 'lbracket value pos (+ pos len)))
     (define (rbrack value len) (k 'rbracket value pos (+ pos len)))
     ;(define (par type value len) (k type value    pos (+ pos len)))
@@ -115,14 +113,13 @@
       ("," (case/char (get (+ pos 1))
              ("@"  (tag 'unquote-splicing 2))
              (else (tag 'unquote          1))))
-      (";" (Comment:line  (+ pos 1)))
+      (";" (Comment:line (+ pos 1)))
       ("#" (Hash pos)) ("\"" (String pos)) ("." (Dot pos))
       (else (Number/Symbol pos))))
   (define (Hash pos)
-    (define (datum v)       (k 'datum v   pos (+ pos 2)))
-    ;(define (punc type len) (k type  #f   pos (+ pos len)))
+    (define (datum  value)     (k 'datum     value pos (+ pos 2)))
     (define (lbrack value len) (k 'hlbracket value pos (+ pos len)))
-    (define (tag value len) (k 'tag value pos (+ pos len)))
+    (define (tag    value len) (k 'tag       value pos (+ pos len)))
     ;; TODO: #<<EOS
     ;; ...string...
     ;; EOS
@@ -140,8 +137,7 @@
                  (else (Comment:line (+ pos 2)))))
       ("BDEIOXbdeiox" (read-number get pos k))
       (#f   (k 'error "unexpected EOF following #" pos (+ pos 1)))
-      (else (k 'error (list "invalid character following #" (get (+ pos 1)))
-               pos (+ pos 1)))))
+      (else (k 'error "invalid character following #" pos (+ pos 2)))))
   (define (Dot pos)
     (case/char (get (+ pos 1))
       ;; TODO: 133 8232 8233
