@@ -10,6 +10,7 @@
     ((_ x #f)        #'(not x))
     ((_ x (r0 . r1)) (let ((p0 (cunit #'r0)) (p1 (cunit #'r1)))
                        #`(and x (<= #,p0 x #,p1))))
+    ((_ x p?)        (identifier? #'p?) #'(p? x))
     ((_ x cstx) (let ((c (syntax->datum #'cstx)))
                   (cond ((byte? c)   #'(eq? x c))
                         ((string? c) #`(or #,@(map (lambda (b) #`(eq? x #,b))
