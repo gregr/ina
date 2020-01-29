@@ -166,7 +166,7 @@
   (define (String start)
     (define (escape-code validate pos consume)
       (read-number
-        get (+ pos 2)
+        get pos
         (lambda (type n _ next-pos)
           (define (err msg) (k 'error msg pos next-pos))
           (case type
@@ -200,14 +200,15 @@
                                 ("e"  (estore "\e")) ("f"  (estore "\f"))
                                 ("n"  (estore "\n")) ("r"  (estore "\r"))
                                 ("t"  (estore "\t")) ("v"  (estore "\v"))
-                                ("#"  (escape-byte    pos store))
-                                ("Uu" (escape-unicode pos store*))))
+                                ("#"  (escape-byte    (+ pos 1) store))
+                                ("Uu" (escape-unicode (+ pos 2) store*))))
                         (else (store c (+ pos 1)))))))))
         ("\\" (case/char (get (+ pos 1))
                 ("\"\\abefnrtv" (loop (+ pos 2) (+ len 1)))
-                ("#"  (escape-byte pos (lambda (_ pos) (loop pos (+ len 1)))))
-                ("Uu" (escape-unicode pos (lambda (bs pos)
-                                            (loop pos (+ len (length bs))))))
+                ("#"  (escape-byte
+                        (+ pos 1) (lambda (_ p) (loop p (+ len 1)))))
+                ("Uu" (escape-unicode
+                        (+ pos 2) (lambda (v p) (loop p (+ len (length v))))))
                 (else (k 'error (list "invalid escape character"
                                       (get (+ pos 1))) pos (+ pos 2)))))
         (#f   (k 'error "unexpected EOF while reading string" start pos))
