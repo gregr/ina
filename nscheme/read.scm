@@ -288,7 +288,7 @@
               (else (Suffix (inexact->exact real) pos ex))))
       (define (Rest sign pos)
         (Natural pos (lambda (e ep) (if (= ep pos) (ksymbol ep)
-                                      (Real (* real (expt radix e)) ep
+                                      (Real (* real (expt radix (* sign e))) ep
                                             (or ex 'inexact))))))
       (case/char (get pos)
         ("DEFLSdefls" (case/char (get (+ pos 1))
