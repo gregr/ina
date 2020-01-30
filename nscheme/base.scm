@@ -72,3 +72,6 @@
                   (define (df d) (vector-ref d di)) ...))))))
 (define-syntax-rule (define-variant* vd vds ...)
   (begin (define-variant vd) (define-variant vds) ...))
+
+(define-syntax-rule (let/cps name params expr body ...)
+  (let ((name (lambda params body ...))) expr))
