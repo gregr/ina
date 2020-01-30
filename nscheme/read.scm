@@ -79,22 +79,20 @@
 (define (read/experimental in)
   (define (return v pos)   (in 'forget pos) v)
   (define (fail msg p0 p1) (return (thunk (vector msg p0 p1)) p1))
-  (read-datum/token
-    (lambda (i) (in 'peek i)) 0 #f
-    (lambda (t v p0 p1)
-      (case t
-        ((datum) (return v   p1))
-        ((eof)   (return eof p1))
-        ((error) (fail v                             p0 p1))
-        (else    (fail (list "unexpected token" t v) p0 p1))))))
+  (let/cps _ (t v p0 p1) (read-datum (lambda (i) (in 'peek i)) 0 #f _)
+    (case t
+      ((datum) (return v   p1))
+      ((eof)   (return eof p1))
+      ((error) (fail v                             p0 p1))
+      (else    (fail (list "unexpected token" t v) p0 p1)))))
 
 (define-syntax-rule (case/token (k t v p0 p1) clause ...)
   (case t clause ...
     ((error) (k t v p0 p1))
     ((eof)   (k 'error "unexpected EOF" p0 p1))
     (else    (k 'error (list "unexpected token" t v) p0 p1))))
-(define-syntax-rule (lambda/token (k t v p0 p1) clause ...)
-  (lambda (t v p0 p1) (case/token (k t v p0 p1) clause ...)))
+(define-syntax-rule (let/token name (k params ...) expr clause ...)
+  (let/cps name (params ...) expr (case/token (k params ...) clause ...)))
 (define separator? (cset #(" " ("\t" . "\r") "\"#'(),;[]`{}" #f)))
 
 (define (read-token get pos k)
@@ -156,23 +154,20 @@
               (Comment:block (+ pos 1) level 'closing)))
       (#f   (k 'eof #f pos pos))
       (else (Comment:block (+ pos 1) level #f))))
-  (define (Comment:datum pos)
-    (read-datum/token
-      get pos #f (lambda/token (k t v p0 p1) ((datum) (Any p1)))))
+  (define (Comment:datum p) (let/token _ (k t v p0 p1) (read-datum get p #f _)
+                              ((datum) (Any p1))))
 
   (define (String start)
-    (define (escape-code validate pos consume)
-      (read-number
-        get pos
-        (lambda (type n _ next-pos)
-          (define (err msg) (k 'error msg pos next-pos))
-          (case type
-            ((datum) (case/char (get next-pos)
-                       (";" (let ((v (validate n)))
-                              (if v (consume v (+ next-pos 1))
-                                (err (list "invalid escape code value" n)))))
-                       (else (err "invalid escape code terminator"))))
-            ((error) (k type n _ next-pos))))))
+    (define (escape-code validate pos kv)
+      (let/cps _ (type n _ next-pos) (read-number get pos _)
+        (define (err msg) (k 'error msg pos next-pos))
+        (case type
+          ((datum) (case/char (get next-pos)
+                     (";" (let ((v (validate n)))
+                            (if v (kv v (+ next-pos 1))
+                              (err (list "invalid escape code value" n)))))
+                     (else (err "invalid escape code terminator"))))
+          ((error) (k type n _ next-pos)))))
     (define (code->byte n) (and (byte? n) n))
     (define (escape-byte    pos k) (escape-code code->byte    pos k))
     (define (escape-unicode pos k) (escape-code unicode->utf8 pos k))
@@ -201,18 +196,17 @@
                         (else (store c (+ pos 1)))))))))
         ("\\" (case/char (get (+ pos 1))
                 ("\"\\abefnrtv" (loop (+ pos 2) (+ len 1)))
-                ("#"  (escape-byte
-                        (+ pos 1) (lambda (_ p) (loop p (+ len 1)))))
-                ("Uu" (escape-unicode
-                        (+ pos 2) (lambda (v p) (loop p (+ len (length v))))))
+                ("#"  (let/cps _ (_ p) (escape-byte    (+ pos 1) _)
+                        (loop p (+ len 1))))
+                ("Uu" (let/cps _ (v p) (escape-unicode (+ pos 2) _)
+                        (loop p (+ len (length v)))))
                 (else (k 'error (list "invalid escape character"
                                       (get (+ pos 1))) pos (+ pos 2)))))
         (#f   (k 'error "unexpected EOF while reading string" start pos))
         (else (loop (+ pos 1) (+ len 1))))))
 
-  (define (Number/Symbol start)
-    (read-number/symbol
-      get start k (lambda (pos) (Symbol start pos (- pos start)))))
+  (define (Number/Symbol p0) (let/cps _ (p1) (read-number/symbol get p0 k _)
+                               (Symbol p0 p1 (- p1 p0))))
   (define (Symbol start pos len)
     (let loop ((pos pos) (len len))
       (case/char (get pos)
@@ -242,9 +236,8 @@
         (else (loop (+ pos 1) (+ len 1))))))
   (Any pos))
 
-(define (read-number get pos k)
-  (read-number/symbol
-    get pos k (lambda (epos) (k 'error "invalid number" pos epos))))
+(define (read-number get p0 k) (let/cps _ (p1) (read-number/symbol get p0 k _)
+                                 (k 'error "invalid number" p0 p1)))
 (define (read-number/symbol get start k ksymbol)
   (define (Rect r i pos)
     (case/char (get pos)
@@ -282,10 +275,10 @@
               ((or (= real +inf.0) (= real -inf.0) (eqv? real +nan.0))
                (k 'error "no exact representation" start pos))
               (else (Suffix (inexact->exact real) pos ex))))
-      (define (Rest sign pos)
-        (Natural pos (lambda (e ep) (if (= ep pos) (ksymbol ep)
-                                      (Real (* real (expt radix (* sign e))) ep
-                                            (or ex 'inexact))))))
+      (define (Rest sign pos) (let/cps _ (e ep) (Natural pos _)
+                                (if (= ep pos) (ksymbol ep)
+                                  (Real (* real (expt radix (* sign e))) ep
+                                        (or ex 'inexact)))))
       (case/char (get pos)
         ("DEFLSdefls" (case/char (get (+ pos 1))
                         ("+"  (Rest  1 (+ pos 2)))
@@ -309,10 +302,9 @@
     (define (NoLHS)
       (define (Special v) (Suffix (* (or sign 1) v) (+ pos 5) ex))
       (case/char (get pos)
-        ("." (Natural (+ pos 1) (lambda (f fp)
-                                  (if (= fp (+ pos 1)) (ksymbol fp)
-                                    (Float sign 0 f (+ pos 1) fp
-                                           (or ex 'inexact))))))
+        ("."  (let/cps _ (f fp) (Natural (+ pos 1) _)
+                (if (= fp (+ pos 1)) (ksymbol fp)
+                  (Float sign 0 f (+ pos 1) fp (or ex 'inexact)))))
         (else (if (not sign) (ksymbol pos)
                 (cond ((cseq? get pos "Ii" "Nn" "Ff" "." "0") (Special +inf.0))
                       ((cseq? get pos "Nn" "Aa" "Nn" "." "0") (Special +nan.0))
@@ -321,14 +313,11 @@
                       (else (ksymbol pos)))))))
     (define (LHS n np)
       (case/char (get np)
-        ("." (Natural (+ np 1)
-                      (lambda (f fp)
-                        (Float sign n f (+ np 1) fp (or ex 'inexact)))))
-        ("/" (Natural (+ np 1)
-                      (lambda (d dp)
-                        (define v (if (= d 0) (if (= n 0) +nan.0 +inf.0)
-                                    (/ n d)))
-                        (Exp (* (or sign 1) v) dp ex))))
+        ("." (let/cps _ (f fp) (Natural (+ np 1) _)
+               (Float sign n f (+ np 1) fp (or ex 'inexact))))
+        ("/" (let/cps _ (d dp) (Natural (+ np 1) _)
+               (define v (if (= d 0) (if (= n 0) +nan.0 +inf.0) (/ n d)))
+               (Exp (* (or sign 1) v) dp ex)))
         (else (Exp (* (or sign 1) n) np ex))))
     (Natural pos (lambda (n np) (if (= np pos) (NoLHS) (LHS n np)))))
   (define (herr hp) (k 'error "invalid character following #" hp (+ hp 2)))
@@ -350,46 +339,36 @@
              (else (herr start)))))
     (else (NumberSign start #f 10 #f #f))))
 
-(define (read-datum/token get pos annotate k)
+(define (read-datum get pos annotate k)
+  (define (dloop pos k) (read-datum get pos annotate k))
   (define (read-compound start pos delim-shape vec?)
-    (let loop ((pos pos) (acc '()))
-      (read-datum/token
-        get pos annotate
-        (lambda/token (k t v p0 p1)
-          ;; TODO: annotate element
-          ((datum) (loop p1 (cons v acc)))
-          ((rbracket)
-           ;; TODO: annotate compound
-           (cond ((eq? delim-shape v)
-                  (define c (reverse acc))
-                  (k 'datum (if vec? (list->vector c) c) start p1))
-                 (else (k 'error (list "mismatched closing bracket" v)
-                          p0 p1))))
-          ((dot) (if (or (null? acc) vec?) (k 'error "misplaced dot" p0 p1)
-                   (read-datum/token
-                     get p1 annotate
-                     (lambda/token (k t v p0 p1)
-                       ((datum) (read-datum/token
-                                  get p1 annotate
-                                  (lambda/token (k t v2 p0 p1)
-                                    ;; TODO: annotate element and compound
-                                    ((rbracket) (k 'datum (foldl cons v acc)
-                                                   start p1))
-                                    ((datum) (k 'error "extra datum after dot"
-                                                p0 p1)))))))))))))
-  (read-token get pos
-              (lambda (type value start end)
-                (case type
-                  ;; TODO: annotate
-                  ((datum)     (k 'datum value start end))
-                  ((lbracket)  (read-compound start end value #f))
-                  ((hlbracket) (read-compound start end value #t))
-                  ((tag) (read-datum/token
-                           get end annotate
-                           (lambda/token (k t v p0 p1)
-                             ;; TODO: annotate both tag value and list
-                             ((datum) (k 'datum (list value v) start p1)))))
-                  (else (k type value start end))))))
+    (let eloop ((pos pos) (acc '()))
+      (let/token _ (k t v p0 p1) (dloop pos _)
+        ;; TODO: annotate element
+        ((datum)    (eloop p1 (cons v acc)))
+        ((rbracket) (cond ((eq? delim-shape v)
+                           ;; TODO: annotate compound
+                           (define c (reverse acc))
+                           (k 'datum (if vec? (list->vector c) c) start p1))
+                          (else (k 'error (list "mismatched closing bracket" v)
+                                   p0 p1))))
+        ((dot) (if (or (null? acc) vec?) (k 'error "misplaced dot" p0 p1)
+                 (let/token _ (k t v p0 p1) (dloop p1 _)
+                   ((datum)
+                    (let/token _ (k t v2 p0 p1) (dloop p1 _)
+                      ;; TODO: annotate element and compound
+                      ((rbracket) (k 'datum (foldl cons v acc) start p1))
+                      ((datum) (k 'error "extra item after dot" p0 p1))))))))))
+  (let/cps _ (type value start end) (read-token get pos _)
+    (case type
+      ;; TODO: annotate
+      ((datum)     (k 'datum value start end))
+      ((lbracket)  (read-compound start end value #f))
+      ((hlbracket) (read-compound start end value #t))
+      ((tag) (let/token _ (k t v p0 p1) (dloop end _)
+               ;; TODO: annotate both tag value and list
+               ((datum) (k 'datum (list value v) start p1))))
+      (else (k type value start end)))))
 
 ;(define (string->number s)
   ;)
