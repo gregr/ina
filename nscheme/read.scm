@@ -79,10 +79,15 @@
 
 ;(define dot (rx "."))
 
-(define (read in)
+(define (read in) (read/annotate #f in))
+(define (read/annotate annotate in)
   (define (return v pos)   (in 'forget pos) v)
-  (define (fail msg p0 p1) (return (thunk (vector msg p0 p1)) p1))
-  (let/cps _ (t v p0 p1) (read-datum (lambda (i) (in 'peek i)) 0 #f _)
+  (define (fail msg p0 p1)
+    (define (describe msg p0 p1) (let ((mv (make-mvector (- p1 p0) 0)))
+                                   (in 'peek*! mv 0 p0 p1)
+                                   (list msg (mvector->string mv))))
+    (let ((v ((or annotate describe) msg p0 p1))) (return (thunk v) p1)))
+  (let/cps _ (t v p0 p1) (read-datum (lambda (i) (in 'peek i)) 0 annotate _)
     (case t
       ((datum) (return v   p1))
       ((eof)   (return eof p1))
@@ -343,35 +348,32 @@
     (else (NumberSign start #f 10 #f #f))))
 
 (define (read-datum get pos annotate k)
+  (define (ann v p0 p1) (if annotate (annotate v p0 p1) v))
+  (define (return v p0 p1) (k 'datum (ann v p0 p1) p0 p1))
   (define (dloop pos k) (read-datum get pos annotate k))
   (define (read-compound start pos delim-shape vec?)
     (let eloop ((pos pos) (acc '()))
       (let/token _ (k t v p0 p1) (dloop pos _)
-        ;; TODO: annotate element
         ((datum)    (eloop p1 (cons v acc)))
         ((rbracket) (cond ((eq? delim-shape v)
-                           ;; TODO: annotate compound
                            (define c (reverse acc))
-                           (k 'datum (if vec? (list->vector c) c) start p1))
+                           (return (if vec? (list->vector c) c) start p1))
                           (else (k 'error (list "mismatched closing bracket" v)
                                    p0 p1))))
         ((dot) (if (or (null? acc) vec?) (k 'error "misplaced dot" p0 p1)
                  (let/token _ (k t v p0 p1) (dloop p1 _)
                    ((datum)
                     (let/token _ (k t v2 p0 p1) (dloop p1 _)
-                      ;; TODO: annotate element and compound
-                      ((rbracket) (k 'datum (foldl cons v acc) start p1))
+                      ((rbracket) (return (foldl cons v acc) start p1))
                       ((datum) (k 'error "extra item after dot" p0 p1))))))))))
-  (let/cps _ (type value start end) (read-token get pos _)
+  (let/cps _ (type v p0 p1) (read-token get pos _)
     (case type
-      ;; TODO: annotate
-      ((datum)     (k 'datum value start end))
-      ((lbracket)  (read-compound start end value #f))
-      ((hlbracket) (read-compound start end value #t))
-      ((tag) (let/token _ (k t v p0 p1) (dloop end _)
-               ;; TODO: annotate both tag value and list
-               ((datum) (k 'datum (list value v) start p1))))
-      (else (k type value start end)))))
+      ((datum)     (return v p0 p1))
+      ((lbracket)  (read-compound p0 p1 v #f))
+      ((hlbracket) (read-compound p0 p1 v #t))
+      ((tag) (let/token _ (k t v2 p2 p3) (dloop p1 _)
+               ((datum) (return (list (ann v p0 p1) v2) p0 p3))))
+      (else (k type v p0 p1)))))
 
 (define (string->number s)
   (define in (port:string:input s))

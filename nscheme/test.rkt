@@ -21,6 +21,15 @@
 (define (read* in)
   (define datum (read in))
   (if (eof-object? datum) '() (cons datum (read* in))))
+(define (read*/ann in)
+  (define offset 0)
+  (define (annotate v p0 p1)
+    (define datum (vector v (+ p0 offset) (+ p1 offset)))
+    (set! offset (+ offset p1))
+    datum)
+  (let loop ()
+    (define datum (read/annotate annotate in))
+    (if (eof-object? datum) '() (cons datum (loop)))))
 
 ;(define (read*/experimental in)
   ;(define datum (read/experimental in))
@@ -50,6 +59,10 @@
                 (string-join
                   (list numbers symbols comments strings separation quotes)
                   " ")))
+       (read*/ann (port:string:input
+                    (string-join
+                      (list numbers symbols comments strings separation quotes)
+                      " ")))
        ;(read*/experimental
          ;(port:string:input
            ;(string-join
