@@ -9,76 +9,6 @@
   (define v (string->vector c))
   (and (= (vector-length v) 1) (vector-ref v 0)))
 
-;; tokenization: type value src
-;; punc
-;; datum
-;; eof
-;; error
-;(define EOF          (rx '(or eof "#!eof")))
-;(define linebreak    '(or (set "\n\r") 133 8232 8233))
-;(define space        `(or ,linebreak (set "\t\v\f ")))
-;(define comment:line `(seq (or ";" "#!") (* (~ ,linebreak)) ,linebreak))
-;(define skip         (rx `(* (or ,space ,comment:line))))
-
-;(define comment:datum:begin (rx "#;"))
-;(define comment:block:begin (rx "#|"))
-;(define comment:block:end   (rx "|#"))
-
-;(define punctuation (rx '($ (or ",@" "#(" "#[" "#{" "#'" "#`" "#,@" "#,"
-                                ;(set "()[]{}'`,")))))
-
-;(define atom:true  (rx '(or "#t" "#T")))
-;(define atom:false (rx '(or "#f" "#F")))
-
-;;; TODO: postprocess escape codes?
-;(define atom:string
-  ;(rx '(seq "\"" ($ (* (or (~ (set "\\\"")) (seq "\\" any)))) "\"")))
-
-;(define separator `(or (set "#;'`,()[]{}\"") ,space))
-
-;(define atom:number
-  ;(let* ((sign      '($: sign (set "+-")))
-         ;(exactness '(seq "#" ($: exactness (set "eEiI"))))
-         ;(special
-           ;`(seq ,sign (or ($: nan (seq (set "nN") (set "aA") (set "nN")))
-                           ;($: inf (seq (set "iI") (set "nN") (set "fF"))))
-                 ;".0"))
-         ;(digit10 '(range "0" "9"))
-         ;(digit16 `(or ,digit10 (range "A" "F") (range "a" "f")))
-         ;(exp10   '(set "dDeEfFlLsS"))
-         ;(exp16   '(set "lLsS")))
-    ;(define (radix rs) `(or (seq            "#" (set ,rs))
-                            ;(seq ,exactness "#" (set ,rs))
-                            ;(seq            "#" (set ,rs) ,exactness)))
-    ;(define (num pre d e)
-      ;(define unsigned-real
-        ;(let ((float-suffix `(seq "." ($: float (+ ,d)))))
-          ;`(seq (or ,float-suffix
-                    ;(seq ($: lhs (+ ,d))
-                         ;(? (or ,float-suffix (seq "/" ($: denom (+ ,d)))))))
-                ;(? ,e ($: exp (? ($: sign (set "+-"))) (+ ,d))))))
-      ;(define signed-real `(or (seq ,sign     ,unsigned-real) ,special))
-      ;(define real        `(or (seq (? ,sign) ,unsigned-real) ,special))
-      ;(define rectangular `(seq (? ($:: real ,real))
-                                ;($:: imaginary (seq (or ,sign ,signed-real)
-                                                    ;(set "iI")))))
-      ;(define polar       `(seq ($:: magnitude ,real) "@" ($:: angle ,real)))
-      ;`(seq ,pre (or ,rectangular ,polar ($:: real ,real))))
-    ;(define radix10 `(or "" ,exactness ,(radix "dD")))
-    ;(rx `(seq ($: number (or ,(num radix10      digit10          exp10)
-                             ;,(num (radix "bB") '(range "0" "1") exp10)
-                             ;,(num (radix "oO") '(range "0" "7") exp10)
-                             ;,(num (radix "xX") digit16          exp16)))
-              ;(or eof ,separator)))))
-
-;(define atom:symbol
-  ;(rx `($ (or (seq (* ".") (+ (or (seq "\\" any) (seq "|" (* (~ "|")) "|")
-                                  ;(~ (set".\\|") ,separator))
-                              ;(* ".")))
-              ;(seq "." (+ "."))))))
-
-;(define dot (rx "."))
-
 (define (read in) (read/annotate #f in))
 (define (read/annotate annotate in)
   (define p   (and annotate (in 'position-ref)))
@@ -104,8 +34,37 @@
     (else    (k 'error (list "unexpected token" t v) p0 p1))))
 (define-syntax-rule (let/token name (k params ...) expr clause ...)
   (let/cps name (params ...) expr (case/token (k params ...) clause ...)))
-(define separator? (cset #(" " ("\t" . "\r") "\"#'(),;[]`{}" #f)))
+(define (read-datum get pos annotate k)
+  (define (dloop pos k)    (read-datum get pos annotate k))
+  (define (ann    v p0 p1) (if annotate (annotate v p0 p1) v))
+  (define (return v p0 p1) (k 'datum (ann v p0 p1) p0 p1))
+  (define (read-compound start pos delim-shape vec?)
+    (let eloop ((pos pos) (acc '()))
+      (let/token _ (k t v p0 p1) (dloop pos _)
+        ((datum)    (eloop p1 (cons v acc)))
+        ((rbracket) (cond ((eq? delim-shape v)
+                           (define c (reverse acc))
+                           (return (if vec? (list->vector c) c) start p1))
+                          (else (k 'error (list "mismatched closing bracket" v)
+                                   p0 p1))))
+        ((dot) (if (or (null? acc) vec?) (k 'error "misplaced dot" p0 p1)
+                 (let/token _ (k t v p0 p1) (dloop p1 _)
+                   ((datum)
+                    (let/token _ (k t v2 p0 p1) (dloop p1 _)
+                      ((rbracket) (return (foldl cons v acc) start p1))
+                      ((datum) (k 'error "extra item after dot" p0 p1))))))))))
+  (let/cps _ (type v p0 p1) (read-token get pos _)
+    (case type
+      ((datum)         (return v p0 p1))
+      ((lbracket)      (read-compound p0 p1 v #f))
+      ((hlbracket)     (read-compound p0 p1 v #t))
+      ((tag)           (let/token _ (k t v2 p2 p3) (dloop p1 _)
+                         ((datum) (return (list (ann v p0 p1) v2) p0 p3))))
+      ((comment:datum) (let/token _ (k t v p0 p1) (read-datum get p1 #f _)
+                         ((datum) (dloop p1 k))))
+      (else (k type v p0 p1)))))
 
+(define separator? (cset #(" " ("\t" . "\r") "\"#'(),;[]`{}" #f)))
 (define (read-token get pos k)
   (define (Any pos)
     (define (lbrack value len) (k 'lbracket value pos (+ pos len)))
@@ -348,43 +307,17 @@
              (else (herr start)))))
     (else (NumberSign start #f 10 #f #f))))
 
-(define (read-datum get pos annotate k)
-  (define (ann v p0 p1) (if annotate (annotate v p0 p1) v))
-  (define (return v p0 p1) (k 'datum (ann v p0 p1) p0 p1))
-  (define (dloop pos k) (read-datum get pos annotate k))
-  (define (read-compound start pos delim-shape vec?)
-    (let eloop ((pos pos) (acc '()))
-      (let/token _ (k t v p0 p1) (dloop pos _)
-        ((datum)    (eloop p1 (cons v acc)))
-        ((rbracket) (cond ((eq? delim-shape v)
-                           (define c (reverse acc))
-                           (return (if vec? (list->vector c) c) start p1))
-                          (else (k 'error (list "mismatched closing bracket" v)
-                                   p0 p1))))
-        ((dot) (if (or (null? acc) vec?) (k 'error "misplaced dot" p0 p1)
-                 (let/token _ (k t v p0 p1) (dloop p1 _)
-                   ((datum)
-                    (let/token _ (k t v2 p0 p1) (dloop p1 _)
-                      ((rbracket) (return (foldl cons v acc) start p1))
-                      ((datum) (k 'error "extra item after dot" p0 p1))))))))))
-  (let/cps _ (type v p0 p1) (read-token get pos _)
-    (case type
-      ((datum)     (return v p0 p1))
-      ((lbracket)  (read-compound p0 p1 v #f))
-      ((hlbracket) (read-compound p0 p1 v #t))
-      ((tag) (let/token _ (k t v2 p2 p3) (dloop p1 _)
-               ((datum) (return (list (ann v p0 p1) v2) p0 p3))))
-      ((comment:datum) (let/token _ (k t v p0 p1) (read-datum get p1 #f _)
-                         ((datum) (dloop p1 k))))
-      (else (k type v p0 p1)))))
-
 (define (string->number s)
   (define in (port:string:input s))
   (read-number/symbol (lambda (i) (in 'peek i)) 0
                       (lambda (t v p0 p1) (case t ((datum) v) (else #f)))
                       (lambda (_) #f)))
 
-;; TODO: Re-implement reader using this grammar
+;; TODO: Re-implement reader using this grammar?
+;; Revisit this if grammar can be compiled to an efficient state machine.
+;(define (char c)
+  ;(define v (string->vector c))
+  ;(and (= (vector-length v) 1) (vector-ref v 0)))
 ;(define (digit->nat ch)
   ;(define (in-range? start end) (and ch (<= (char start) ch (char end))))
   ;(cond ((in-range? "0" "9")       (- ch (char "0")))
@@ -554,3 +487,69 @@
 ;(define parse (grammar->parser/dfs (alt Datum EOF)))
 ;(define (read/experimental in) (parse in (lambda (result-thunk) (result-thunk))
                                       ;(lambda (reasons) (thunk reasons))))
+
+;; An attempt at tokenization via rx; unfortunately this is also really slow
+;(define EOF          (rx '(or eof "#!eof")))
+;(define linebreak    '(or (set "\n\r") 133 8232 8233))
+;(define space        `(or ,linebreak (set "\t\v\f ")))
+;(define comment:line `(seq (or ";" "#!") (* (~ ,linebreak)) ,linebreak))
+;(define skip         (rx `(* (or ,space ,comment:line))))
+
+;(define comment:datum:begin (rx "#;"))
+;(define comment:block:begin (rx "#|"))
+;(define comment:block:end   (rx "|#"))
+
+;(define punctuation (rx '($ (or ",@" "#(" "#[" "#{" "#'" "#`" "#,@" "#,"
+                                ;(set "()[]{}'`,")))))
+
+;(define atom:true  (rx '(or "#t" "#T")))
+;(define atom:false (rx '(or "#f" "#F")))
+
+;;; TODO: postprocess escape codes?
+;(define atom:string
+  ;(rx '(seq "\"" ($ (* (or (~ (set "\\\"")) (seq "\\" any)))) "\"")))
+
+;(define separator `(or (set "#;'`,()[]{}\"") ,space))
+
+;(define atom:number
+  ;(let* ((sign      '($: sign (set "+-")))
+         ;(exactness '(seq "#" ($: exactness (set "eEiI"))))
+         ;(special
+           ;`(seq ,sign (or ($: nan (seq (set "nN") (set "aA") (set "nN")))
+                           ;($: inf (seq (set "iI") (set "nN") (set "fF"))))
+                 ;".0"))
+         ;(digit10 '(range "0" "9"))
+         ;(digit16 `(or ,digit10 (range "A" "F") (range "a" "f")))
+         ;(exp10   '(set "dDeEfFlLsS"))
+         ;(exp16   '(set "lLsS")))
+    ;(define (radix rs) `(or (seq            "#" (set ,rs))
+                            ;(seq ,exactness "#" (set ,rs))
+                            ;(seq            "#" (set ,rs) ,exactness)))
+    ;(define (num pre d e)
+      ;(define unsigned-real
+        ;(let ((float-suffix `(seq "." ($: float (+ ,d)))))
+          ;`(seq (or ,float-suffix
+                    ;(seq ($: lhs (+ ,d))
+                         ;(? (or ,float-suffix (seq "/" ($: denom (+ ,d)))))))
+                ;(? ,e ($: exp (? ($: sign (set "+-"))) (+ ,d))))))
+      ;(define signed-real `(or (seq ,sign     ,unsigned-real) ,special))
+      ;(define real        `(or (seq (? ,sign) ,unsigned-real) ,special))
+      ;(define rectangular `(seq (? ($:: real ,real))
+                                ;($:: imaginary (seq (or ,sign ,signed-real)
+                                                    ;(set "iI")))))
+      ;(define polar       `(seq ($:: magnitude ,real) "@" ($:: angle ,real)))
+      ;`(seq ,pre (or ,rectangular ,polar ($:: real ,real))))
+    ;(define radix10 `(or "" ,exactness ,(radix "dD")))
+    ;(rx `(seq ($: number (or ,(num radix10      digit10          exp10)
+                             ;,(num (radix "bB") '(range "0" "1") exp10)
+                             ;,(num (radix "oO") '(range "0" "7") exp10)
+                             ;,(num (radix "xX") digit16          exp16)))
+              ;(or eof ,separator)))))
+
+;(define atom:symbol
+  ;(rx `($ (or (seq (* ".") (+ (or (seq "\\" any) (seq "|" (* (~ "|")) "|")
+                                  ;(~ (set".\\|") ,separator))
+                              ;(* ".")))
+              ;(seq "." (+ "."))))))
+
+;(define dot (rx "."))
