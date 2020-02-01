@@ -81,14 +81,16 @@
 
 (define (read in) (read/annotate #f in))
 (define (read/annotate annotate in)
+  (define p   (and annotate (in 'position-ref)))
+  (define ann (and annotate (lambda (v p0 p1) (annotate v (+ p0 p) (+ p1 p)))))
   (define (return v pos) (in 'forget pos) v)
   (define (fail msg p0 p1)
     (define mv (make-mvector (- p1 p0) 0))
     (in 'peek*! mv 0 p0 p1)
     (define v0 (cons msg (mvector->string mv)))
-    (define v (if annotate (annotate v0 p0 p1) v0))
+    (define v (if ann (ann v0 p0 p1) v0))
     (return (thunk v) p1))
-  (let/cps _ (t v p0 p1) (read-datum (lambda (i) (in 'peek i)) 0 annotate _)
+  (let/cps _ (t v p0 p1) (read-datum (lambda (i) (in 'peek i)) 0 ann _)
     (case t
       ((datum) (return v   p1))
       ((eof)   (return eof p1))
