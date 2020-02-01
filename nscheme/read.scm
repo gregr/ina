@@ -138,8 +138,8 @@
       ("," (case/char (get (+ pos 2))
              ("@"  (tag 'unsyntax-splicing 3))
              (else (tag 'unsyntax          2))))
+      (";" (k 'comment:datum #f pos (+ pos 2)))
       ("|" (Comment:block (+ pos 2) 0 #f))
-      (";" (Comment:datum (+ pos 2)))
       ("!" (cond ((cseq? get (+ pos 2) "Ee" "Oo" "Ff")
                   => (lambda (next-pos) (k 'eof #f pos next-pos)))
                  (else (Comment:line (+ pos 2)))))
@@ -165,8 +165,6 @@
               (Comment:block (+ pos 1) level 'closing)))
       (#f   (k 'eof #f pos pos))
       (else (Comment:block (+ pos 1) level #f))))
-  (define (Comment:datum p) (let/token _ (k t v p0 p1) (read-datum get p #f _)
-                              ((datum) (Any p1))))
 
   (define (String start)
     (define (escape-code validate pos kv)
@@ -376,6 +374,8 @@
       ((hlbracket) (read-compound p0 p1 v #t))
       ((tag) (let/token _ (k t v2 p2 p3) (dloop p1 _)
                ((datum) (return (list (ann v p0 p1) v2) p0 p3))))
+      ((comment:datum) (let/token _ (k t v p0 p1) (read-datum get p1 #f _)
+                         ((datum) (dloop p1 k))))
       (else (k type v p0 p1)))))
 
 (define (string->number s)
