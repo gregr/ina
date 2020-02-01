@@ -1,3 +1,8 @@
+(define-syntax (char stx)
+  (syntax-case stx ()
+    ((_ ss) (let ((s (syntax->datum #'ss)))
+              (and (string? s) (= (string-length s) 1)))
+            (datum->syntax #'_ (string-ref (syntax->datum #'ss) 0)))))
 (define-syntax (cset/x stx)
   (define (cunit cstx)
     (define c (syntax->datum cstx))

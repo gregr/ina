@@ -5,9 +5,6 @@
 (define (read-eof? d)   (and (procedure? d) (eq? 'eof (d))))
 (define (eof-object? d) (read-eof? d))
 (define (eof) 'eof)
-(define (char c)
-  (define v (string->vector c))
-  (and (= (vector-length v) 1) (vector-ref v 0)))
 
 (define (read in) (read/annotate #f in))
 (define (read/annotate annotate in)
@@ -226,7 +223,6 @@
   (define (NumberBody pos ex radix sign prev mode)
     (define (Natural start kd)
       (let loop ((pos start) (value 0))
-        ;; TODO: compute char at compile time
         (let* ((c (get pos)) (d (case/char c
                                   (("0" . "9")       (- c (char "0")))
                                   (("A" . "F") (+ 10 (- c (char "A"))))
