@@ -238,7 +238,7 @@
         (cond ((eq? ex 'inexact) (Suffix (exact->inexact real) pos ex))
               ((or (= real +inf.0) (= real -inf.0) (eqv? real +nan.0))
                (k 'error "no exact representation" start pos))
-              (else (Suffix (inexact->exact real) pos ex))))
+              (else (Suffix real pos ex))))
       (define (Rest sign pos) (let/cps _ (e ep) (Natural pos _)
                                 (if (= ep pos) (ksymbol ep)
                                   (Real (* real (expt radix (* sign e))) ep
