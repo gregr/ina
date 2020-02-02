@@ -26,10 +26,6 @@
     (define datum (read/annotate annotate in))
     (if (eof-object? datum) '() (cons datum (loop)))))
 
-;(define (read*/experimental in)
-  ;(define datum (read/experimental in))
-  ;(if (eof-object? datum) '() (cons datum (read*/experimental in))))
-
 (define (racket:read* in)
   (define datum (racket:read in))
   (if (racket:eof-object? datum) '() (cons datum (racket:read* in))))
@@ -59,16 +55,11 @@
                   (string-join
                     (list numbers symbols comments strings separation quotes)
                     " ")))
-       ;(read*/experimental
-         ;(port:string:input
-           ;(string-join
-             ;(list numbers symbols comments strings separation quotes)
-             ;" ")))
        ))
 
 (define fsys (filesystem '(".")))
 
-;; TODO: read*/experimental is significantly slower at the moment:
+;; TODO: read* via grammar is significantly slower at the moment:
 ;;   read*:              cpu time:   54 real time:   57 gc time:   3
 ;;   read*/experimental: cpu time: 1199 real time: 1206 gc time: 541
 (define data
@@ -76,11 +67,6 @@
          (d (time (read* in))))
     (in 'close)
     d))
-;(define data/experimental
-  ;(let* ((in (fsys 'open-input "read.scm"))
-         ;(d (time (read*/experimental in))))
-    ;(in 'close)
-    ;d))
 (define racket:data (time (call-with-input-file "read.scm" racket:read*)))
 
 (newline)
@@ -105,32 +91,11 @@
   ;(newline)
   ;(pretty-print racket:data)
   )
-;(when (equal? data/experimental racket:data)
-  ;(displayln "no diff with experimental"))
-;(unless (equal? data/experimental racket:data)
-  ;(for-each
-    ;(lambda (d/g d/r)
-      ;(unless (equal? d/g d/r)
-        ;(newline)
-        ;(displayln "diff with experimental:")
-        ;(pretty-print (if (procedure? d/g) (d/g) d/g))
-        ;(newline)
-        ;(displayln "vs:")
-        ;(newline)
-        ;(pretty-print d/r)))
-    ;data/experimental ;(take data/experimental (length racket:data))
-    ;racket:data))
 
 ;(let loop ()
   ;(define datum (read (stdio 'in)))
   ;(when (not (eof-object? datum))
-    ;(printf "~s\n" datum)
-    ;(loop)))
-
-;(let loop ()
-  ;(define datum (read/experimental (stdio 'in)))
-  ;(when (not (eof-object? datum))
-    ;(printf "~s\n" datum)
+    ;(printf "~s\n" (if (procedure? datum) (datum) datum))
     ;(loop)))
 
 ;(define utf8-input '(124 133 8232 8233 82330 802330 8020330 80203030))
