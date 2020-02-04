@@ -61,6 +61,7 @@
                          ((datum) (dloop p1 k))))
       (else (k type v p0 p1)))))
 
+;; TODO: 133 160 (8192 . 8202) 8232 8233 8239 8287 12288 via cseq?
 (define separator? (cset #(" " ("\t" . "\r") "\"#'(),;[]`{}" #f)))
 (define (read-token get pos k)
   (define (Any pos)
@@ -69,7 +70,7 @@
     (define (tag value len)    (k 'tag      value pos (+ pos len)))
     (case/char (get pos)
       (#f                   (k 'eof #f pos pos))
-      ;; TODO: 133 8232 8233 8239 8287 12288, etc. via cseq?
+      ;; TODO: 133 160 (8192 . 8202) 8232 8233 8239 8287 12288 via cseq?
       (#(" " ("\t" . "\r")) (Any (+ pos 1)))
       ("(" (lbrack 'round 1)) ("[" (lbrack 'square 1)) ("{" (lbrack 'curly 1))
       (")" (rbrack 'round 1)) ("]" (rbrack 'square 1)) ("}" (rbrack 'curly 1))
