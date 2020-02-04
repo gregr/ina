@@ -88,6 +88,8 @@
     (cond ((<= src-end i) (- i src-start))
           (else (mvector-set! mv (+ start (- i src-start)) (ref src i))
                 (loop (+ i 1))))))
+(define (mvector-copy! mv start src src-start src-end)
+  (mvector-copy!/ref mv start src src-start src-end mvector-ref))
 (define (mvector-copy!/bytes mv start bs bs-start bs-end)
   (mvector-copy!/ref mv start bs bs-start bs-end bytes-ref))
 (define (mvector-copy!/vector mv start v v-start v-end)
@@ -262,7 +264,25 @@
     ((position-ref)        i)
     ((position-set! index) (set! i (min (max index 0) (vector-length v))))))
 
-;; TODO: port:string:output
+(define (port:string:output)
+  (define buffer (make-mvector 32 0))
+  (define i 0)
+  (method-lambda
+    ((string) (define out (make-mvector i 0))
+              (mvector-copy! out 0 buffer 0 i)
+              (vector->string (mvector->vector out)))
+    ((put b) (when (= i (mvector-length buffer))
+               (define current buffer)
+               (set! buffer (make-mvector (* 2 (mvector-length buffer)) 0))
+               (mvector-copy! buffer 0 current 0 (mvector-length current)))
+             (mvector-set! buffer i b)
+             (set! i (+ i 1)))
+    ((close)               #t)
+    ((flush)               #t)
+    ((position-ref)        i)
+    ((position-set! index) (set! i (min (max index 0) i)))
+    ((truncate)            (set! i 0) (set! buffer (make-mvector 32 0)))))
+
 ;; TODO: vector, mvector ports.
 ;; TODO: synchronous channel ports.
 ;; TODO: generator ports.
