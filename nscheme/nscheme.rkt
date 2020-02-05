@@ -95,7 +95,8 @@
 (define (mvector-copy!/vector mv start src src-start src-end)
   (mvector-copy!/ref mv start src src-start src-end vector-ref))
 (define (mvector-copy!/string mv start src src-start src-end)
-  (mvector-copy!/ref mv start src src-start src-end string-ref))
+  (mvector-copy!/ref mv start src src-start src-end
+                     (lambda (s i) (char->integer (string-ref s i)))))
 
 (define (port:bytestream:input super port)
   (define (eof->false d) (if (eof-object? d) #f d))
