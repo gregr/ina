@@ -4,7 +4,7 @@
          string->vector vector->string cons*
          bitwise-arithmetic-shift << >> & \| ^
          filesystem console tcp stdio
-         port:string:input
+         port:string:input port:string:output
          racket-eval)
 
 (require racket/file racket/tcp racket/string racket/struct racket/vector)
