@@ -108,3 +108,10 @@
 (define (unicode-vspace?  i) (intset-member? unicode-vspace  i))
 (define (unicode-space?   i) (intset-member? unicode-space   i))
 (define (unicode-control? i) (intset-member? unicode-control i))
+
+;; TODO: support entire unicode code points
+(define-syntax (char stx)
+  (syntax-case stx ()
+    ((_ ss) (let ((s (syntax->datum #'ss)))
+              (and (string? s) (= (string-length s) 1)))
+            (datum->syntax #'_ (string-ref (syntax->datum #'ss) 0)))))
