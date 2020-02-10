@@ -15,6 +15,7 @@
 (include "unicode.scm")
 (include "grammar.scm")
 (include "read.scm")
+(include "write.scm")
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 
@@ -30,7 +31,7 @@
   (define datum (racket:read in))
   (if (racket:eof-object? datum) '() (cons datum (racket:read* in))))
 
-(define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 5/0 -2/0 0/0 3-2/3i 4-inf.0i 5@5 #e5@5 #i1@1 #i1/0 #i-1/0 #i0/0 1@+2 1@-2 1@++5 .5 6. #e.75 #b1.1 5e-2")
+(define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 5/0 -2/0 0/0 3-2/3i 4-inf.0i 5@5 #e5@5 #i1@1 #i1/0 #i-1/0 #i0/0 1@+2 1@-2 1@++5 .5 6. #e.75 #b1.1 5e-2 0 0.0 1 122 -3 4.0 500010000000.0 67.89 0.00001234")
 (define symbols "|1+2i| \\3 |a b| c\\ d")
 (define comments ";; foo\n x #;(1 2 3)y #| #| a b |# c d |# z")
 (define strings "\"hello\\#d32;world\\#b1010;\\#x7e;\" \"abc\\u8232;\\u#d8233;def\"")
@@ -189,3 +190,14 @@
   (time (r in 0)))
 
 ;(test 3000)
+
+
+(define out (port:string:output))
+(write `(#t #f () xyz |a b| |p q|\ r\|s|tu|
+         ,(string-append "1 2\t3\n4"
+                         (list->string (append '(5) (unicode->utf8 150))))
+         0 0.0 1 122 -3 4.0 500010000000.0 67.89 0.00001234
+         10/8 -2+3i +nan.0+i -inf.0 +inf.0i
+         #(#t #f 1 2 3) (#t #f 1 2 3) (#t #f 1 2 . 3))
+       out)
+(out 'string)
