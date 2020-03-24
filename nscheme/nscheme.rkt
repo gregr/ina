@@ -78,6 +78,8 @@
      (method-choose ((name) (lambda (_ . param) body ...)) ... (else else-body ...)))
     ((_ body ...) (method-lambda body ... (else method-unknown)))))
 
+;; TODO: model file descriptors and their operations directly?
+
 (define (port:bytestream port)
   (method-lambda
     ((buffer-mode-ref)       (file-stream-buffer-mode port))

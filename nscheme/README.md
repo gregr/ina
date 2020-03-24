@@ -42,7 +42,27 @@ TODO
 
 ## TODO
 
-* Racket-compatible bootstrap
+improve write for flonums:
+  * http://www.ryanjuckett.com/programming/printing-floating-point-numbers/
+  * http://www.ryanjuckett.com/programming/printing-floating-point-numbers/part-2/
+
+rough component implementation order for bootstrap:
+  * io(?)
+  * port
+  * unicode
+  * grammar
+  * read
+  * write
+  * syntax
+  * library
+  * parse
+  * ast
+  * nanopass
+  * target-racket
+  * base
+  * virtualization, concurrency, io
+
+Racket-compatible bootstrap in more detail:
   * shallow embedding of nScheme in Racket
     * .rkt files that include .scm files
     * simple io capabilities (see platforms for more io): files and stdio
@@ -118,10 +138,13 @@ TODO
       * dynamic library installation and invocation
         * r6rs environment, eval
       * link-preserving library renaming/repointing to support live upgrade
+      * relative lib name paths and auto-prefixing child libs; packages
     * virtual systems
       * virtualization-friendly compilation
         * handle io requests, signals/interrupts/preemption, and fatal errors
         * fine-grained process control, resource-budgeting
+        * timers and concurrency via delimited continuations?
+          * reset/timeout? reset/ticks?
         * dynamically-compiled code that may refer to existing heap values
         * heap/image dumping and resumption
       * a real platform process may run multiple virtual systems at once
