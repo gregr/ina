@@ -748,9 +748,13 @@ Electron, NW.js/Node.js, Python, POSIX, Java, .NET, Erlang, mobile etc., bare me
 
 ### alternative semantics
 Support other forms of evaluation using the same syntax:
-* functional logic programming
-* probabilistic programming
+* symbolic evaluation
+* abstract interpretation
+* theorem proving
+* functional logic/relational programming
+* incremental/adaptive computation
 * automatic differentiation
+* probabilistic programming
 
 ### temporal relational programming
 * checked assertions
