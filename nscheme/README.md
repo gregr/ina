@@ -19,7 +19,7 @@ This is a nonstandard Scheme implementation.
   * Order of operand evaluation is left-to-right
   * Internal definitions may appear more freely
   * `letrec` behaves like Scheme's `letrec*`
-* Errors are fatal
+* Errors are fatal (change to `assert` (is fatal), and allow `error` handling?)
   * Errors cannot be caught by the object-level program itself
     * No prescribed object-level error handling model.  You choose your method
   * Meta-level systems (e.g., REPL, safe compiler) normally still catch errors
@@ -145,12 +145,33 @@ Racket-compatible bootstrap in more detail:
         * fine-grained process control, resource-budgeting
         * timers and concurrency via delimited continuations?
           * reset/timeout? reset/ticks?
+          * optional deterministic scheduling
         * dynamically-compiled code that may refer to existing heap values
         * heap/image dumping and resumption
+        * rewinding/undo
       * a real platform process may run multiple virtual systems at once
         * each may have a different configuration (libraries, devices, etc.)
         * isolation/distribution at the system level
           * as in Racket places, E vats, Erlang processes
+        * user processes as subsystems
+          * process event handling for communication
+            * communicate via effects such as io and mutable read/write
+              * effects escaping a process produce events
+            * meta-level can use this to implement arbitrary event-driven
+              systems, e.g., dataflow or reactive computation, fancy IDEs/REPLs
+          * hierarchy of [sub]system evaluation/state contexts
+            * effects escaping a subsystem bubble up into parent
+              * may be paused/blocked/redirected
+          * duplication of arbitrary subset of context
+            * explore multiple worlds of hypothetical evaluation
+            * fork with mulltiple incompatible changes that then work together
+          * multiple concurrency modes
+            * effect transactions
+              * process may affect the context without race conditions
+            * running uninterruptibly/atomically
+              * prevents effect interference by pausing sibling events
+            * unrestricted
+              * must coordinate explicitly (CAS/locks/etc) to prevent races
 
 ## Old TODO that needs to be reorganized
 
