@@ -6,15 +6,19 @@ This is a nonstandard Scheme implementation.
 
 * Strings, pairs, and vectors are immutable
   * Mutable vectors (i.e., mvectors) are a distinct type of data
+* Numbers, strings, pairs, and vectors are not guaranteed to have a stable identity
+  * i.e., result of `eq?` is somewhat unpredictable
+  * `eqv?` is predictable for numbers
 * Booleans, null, symbols, procedures, and mvectors do have stable identities
   * i.e., using `eq?` is always the same as using `equal?`
-  * Numbers, strings, pairs, and vectors are not guaranteed to have
-    a stable identity
-    * i.e., result of `eq?` is somewhat unpredictable
-    * `eqv?` is predictable for numbers and characters
-* `integer?` will return #f for inexact numbers
-* Various fixed-size (possibly unsigned) integer and floating point types are
-  supported
+* `integer?` will return `#f` for all inexact numbers
+* variables are immutable by default
+  * `set!` only works on variables introduced by special binders
+* The empty symbol `||` binds a parser that defines the meaning of all non-keyword
+  syntax, including literals, variable references, and procedure application
+  * `5` is parsed as `(|| 5)`
+  * a normal variable reference `x` is parsed as `(|| x)`
+  * `(f e ...)` where `f` is not a syntactic keyword, is parsed as `(|| (f e ...))`
 * Convenient conventions from Racket are adopted:
   * Order of operand evaluation is left-to-right
   * Internal definitions may appear more freely
@@ -26,11 +30,29 @@ This is a nonstandard Scheme implementation.
     * Counter-example: for performance, unsafe compilers may assume no errors
       * Programs crash or exhibit undefined behavior when assumption fails
       * May employ static analyses to rule out errors and provide warnings
-* no special character type, strings are bytevectors instead (utf-8 assumed)
+* no special character type, strings are bytevectors instead
+  * utf-8 encoding is intended, but not guaranteed; arbitrary bytes may be stored
   * useful notion of character depends on context
     * code units (bytes) suffice for typical string manipulation
     * characters as grapheme clusters (substrings) for user interaction
     * characters as code points (like Racket's char type) is rarely useful
+* [m]vectors may be constrained to only contain elements of a specified fixed-width type
+  * providing `mvector-set!` with an element of the wrong type is an error
+  * `[m]vector`, `[m]vector-length`, `[m]vector-ref`, `mvector-set!` `mvector-cas!` are
+    implemented in terms of lower-level typed [m]vector operations that specify an assumed
+    element type, which by default is the usual (tagged value or pointer) Scheme type
+    * Various fixed-size (possibly unsigned) integer and floating point types are
+      supported
+    * strings are implemented as vectors constrained to contain unsigned bytes
+    * a low-level representation language exposes these details and is used to implement
+      the primitive operations and data types
+* A library for a higher-level Scheme-like language is implemented in terms of the basic
+  language, with user-defined data types expressed by treating basic language procedures
+  as objects.  These types may implement protocols, or common behavioral interfaces
+  * e.g., hashing, equality, ordering, traversal, accessing, updating, conversion,
+    arithmetic, callability, read/write
+  * typical library procedures, such as `map`, are defined to accept any type that
+    implements the appropriate protocols
 
 ## Run tests
 
