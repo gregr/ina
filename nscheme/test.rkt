@@ -19,6 +19,17 @@
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 
+(define-syntax-rule (test name e.test e.expected)
+  (begin (printf "Testing ~s:\n" name)
+         (let ((expected e.expected) (answer e.test))
+           (unless (equal? answer expected)
+             (pretty-print 'e.test)
+             (printf "FAILED ~s:\n" name)
+             (printf "  ANSWER:\n")
+             (pretty-print answer)
+             (printf "  EXPECTED:\n")
+             (pretty-print expected)))))
+
 (define (read* in)
   (define datum (read in))
   (if (eof-object? datum) '() (cons datum (read* in))))
@@ -182,22 +193,50 @@
 ;(define (rx:a^n n) (rx `(seq . ,(make-list n "a"))))
 ;(define (rx:a^n n) (rx `(seq . ,(make-list n '(? "a")))))
 
-(define (test n)
+(define (test-rx n)
   (displayln (a^n n))
   (define in (port:string:input (a^n n)))
   (define r (time (rx:a^n n)))
   ;(define r (time (rx '(* "a"))))
   (time (r in 0)))
 
-;(test 3000)
+;(test-rx 3000)
 
 
-(define out (port:string:output))
-(write `(#t #f () xyz |a b| |p q|\ r\|s|tu|
+
+(test 'write.0
+  (map (lambda (datum)
+         (define out (port:string:output))
+         (write datum out)
+         (out 'string))
+       `(#t #f () xyz |a b| |p q|\ r\|s|tu|
          ,(string-append "1 2\t3\n4"
                          (list->string (append '(5) (unicode->utf8 150))))
-         0 0.0 1 122 -3 4.0 500010000000.0 67.89 0.00001234
+         0 0.0 1 122 -3 4.0 500010000000.0 67.89 0.00001234 #i3/10
          10/8 -2+3i +nan.0+i -inf.0 +inf.0i
-         #(#t #f 1 2 3) (#t #f 1 2 3) (#t #f 1 2 . 3))
-       out)
-(out 'string)
+         #(#t #f 1 2 3) (#t #f 1 2 3) (#t #f 1 2 . 3)))
+  '("#t"
+    "#f"
+    "()"
+    "xyz"
+    "|a b|"
+    "|p q r|\\||stu|"
+    "\"1 2\\t3\\n4\\u5;\\u150;\""
+    "0"
+    "0.0"
+    "1"
+    "122"
+    "-3"
+    "4.0"
+    "5.0001e11"
+    "67.8900000000000005684341886080801486968994140625"                    ;; TODO: 67.89
+    "1.23400000000000004368554129552393305857549421489238739013671875e-5"  ;; TODO: 1.234e-5
+    "0.299999999999999988897769753748434595763683319091796875"             ;; TODO: 0.3
+    "5/4"
+    "-2+3i"
+    "+nan.0+1.0i"
+    "-inf.0"
+    "0.0+inf.0i"
+    "#(#t #f 1 2 3)"
+    "(#t #f 1 2 3)"
+    "(#t #f 1 2 . 3)"))
