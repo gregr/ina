@@ -49,14 +49,14 @@
 (define separation "#i#d1@1#i#xf#t#f test#(#t#t#f (ok . 123) 5)")
 (define quotes "`(one ,two ,@(three 4 5) #(xxx ,'#(6 7)) #`(_ #,eight #,@splice _) #'nine . ten)")
 
+(define (tagged d)
+  (cond ((procedure? d) (list 'read-error (d)))
+        ((symbol? d)    (list 'sym         d))
+        ((number? d)    (list 'num         d))
+        (else           (list 'other       d))))
+
 (for-each
-  (lambda (ds)
-    (map (lambda (d) (if (procedure? d)
-                       (printf "read error: ~s\n" (d))
-                       (pretty-print (cond ((symbol? d) (list 'sym d))
-                                           ((number? d) (list 'num d))
-                                           (else        (list 'other d))))))
-         ds))
+  (lambda (ds) (pretty-write (map tagged ds)))
   (map list
        (read* (port:string:input
                 (string-join
@@ -66,8 +66,7 @@
          vector (port:string:input
                   (string-join
                     (list numbers symbols comments strings separation quotes)
-                    " ")))
-       ))
+                    " ")))))
 
 (define fsys (filesystem '(".")))
 
@@ -79,30 +78,21 @@
          (d (time (read* in))))
     (in 'close)
     d))
-(define racket:data (time (call-with-input-file "read.scm" racket:read*)))
+(define data.racket (time (call-with-input-file "read.scm" racket:read*)))
+
+(test 'read.compare-with-racket.length
+  (length data)
+  (length data.racket))
+
+(for-each (lambda (i d d.racket)
+            (test (list 'read.compare-with-racket: i)
+              (if (procedure? d) (d) d)
+              d.racket))
+          (range (length data))
+          data
+          data.racket)
 
 (newline)
-(when (equal? data racket:data)
-  (displayln "no diff"))
-(unless (equal? data racket:data)
-  (for-each
-    (lambda (d/g d/r)
-      (unless (equal? d/g d/r)
-        (displayln "diff:")
-        (pretty-print (if (procedure? d/g) (d/g) d/g))
-        (newline)
-        (displayln "vs:")
-        (newline)
-        (pretty-print d/r)))
-    data ;(take data (length racket:data))
-    racket:data)
-  ;(displayln "diff:")
-  ;(pretty-print data)
-  ;(newline)
-  ;(displayln "vs:")
-  ;(newline)
-  ;(pretty-print racket:data)
-  )
 
 ;(let loop ()
   ;(define datum (read (stdio 'in)))
