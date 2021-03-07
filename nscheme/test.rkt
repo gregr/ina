@@ -1,7 +1,7 @@
 #lang racket/base
 (require "nscheme.rkt"
          profile racket/function racket/include racket/list racket/match
-         racket/pretty racket/string
+         racket/port racket/pretty racket/string
          (for-syntax (except-in racket/base append string-ref string-length
                                 string->list list->string))
          (rename-in (except-in racket/base append string-ref string-length
@@ -32,15 +32,26 @@
 
 (define (read* in)
   (define datum (read in))
-  (if (eof-object? datum) '() (cons datum (read* in))))
+  (if (eof-object? datum) '() (cons (if (procedure? datum)
+                                      `#s(read-error ,(datum))
+                                      datum)
+                                    (read* in))))
 (define (read*/annotate annotate in)
   (let loop ()
     (define datum (read/annotate annotate in))
-    (if (eof-object? datum) '() (cons datum (loop)))))
+    (if (eof-object? datum) '() (cons (if (procedure? datum)
+                                        `#s(read-error ,(datum))
+                                        datum)
+                                      (loop)))))
 
 (define (racket:read* in)
-  (define datum (racket:read in))
+  (define datum (with-handlers ((exn:fail? (lambda (x) `#s(read-error ,(exn-message x)))))
+                  (racket:read in)))
   (if (racket:eof-object? datum) '() (cons datum (racket:read* in))))
+
+(define (read*/string          s) (read*          (port:string:input s)))
+(define (read*/annotate/string s) (read*/annotate (port:string:input s)))
+(define (racket:read*/string   s) (call-with-input-string s racket:read*))
 
 (define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 5/0 -2/0 0/0 3-2/3i 4-inf.0i 5@5 #e5@5 #i1@1 #i1/0 #i-1/0 #i0/0 1@+2 1@-2 1@++5 .5 6. #e.75 #b1.1 5e-2 0 0.0 1 122 -3 4.0 500010000000.0 67.89 0.00001234")
 (define symbols "|1+2i| \\3 |a b| c\\ d")
@@ -80,24 +91,22 @@
     d))
 (define data.racket (time (call-with-input-file "read.scm" racket:read*)))
 
-(test 'read.compare-with-racket.length
+(test 'read.read.scm.length
   (length data)
   (length data.racket))
 
 (for-each (lambda (i d d.racket)
-            (test (list 'read.compare-with-racket: i)
-              (if (procedure? d) (d) d)
+            (test (list 'read.read.scm: i)
+              d
               d.racket))
           (range (length data))
           data
           data.racket)
 
-(newline)
-
 ;(let loop ()
   ;(define datum (read (stdio 'in)))
   ;(when (not (eof-object? datum))
-    ;(printf "~s\n" (if (procedure? datum) (datum) datum))
+    ;(printf "~s\n" datum)
     ;(loop)))
 
 ;(define utf8-input '(124 133 8232 8233 82330 802330 8020330 80203030))
