@@ -53,31 +53,67 @@
 (define (read*/annotate/string s) (read*/annotate (port:string:input s)))
 (define (racket:read*/string   s) (call-with-input-string s racket:read*))
 
-(define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 5/0 -2/0 0/0 3-2/3i 4-inf.0i 5@5 #e5@5 #i1@1 #i1/0 #i-1/0 #i0/0 1@+2 1@-2 1@++5 .5 6. #e.75 #b1.1 5e-2 0 0.0 1 122 -3 4.0 500010000000.0 67.89 0.00001234")
-(define symbols "|1+2i| \\3 |a b| c\\ d")
+(define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 3-2/3i 4-inf.0i 5@5 #i1@1 1@+2 1@-2 .5 6. #e.75 #b1.1 5e-2 0 0.0 1 122 -3 4.0 500010000000.0 67.89 0.00001234")
+(define numbers/errors "5/0 -2/0 0/0 #i1/0 #i-1/0 #i0/0 #e5@5")
+(define symbols "|1+2i| \\3 |a b| c\\ d 1@++5")
 (define comments ";; foo\n x #;(1 2 3)y #| #| a b |# c d |# z")
 (define strings "\"hello\\#d32;world\\#b1010;\\#x7e;\" \"abc\\u8232;\\u#d8233;def\"")
+;; TODO: match Racket's behavior, which does not treat # as a separator?
 (define separation "#i#d1@1#i#xf#t#f test#(#t#t#f (ok . 123) 5)")
 (define quotes "`(one ,two ,@(three 4 5) #(xxx ,'#(6 7)) #`(_ #,eight #,@splice _) #'nine . ten)")
 
-(define (tagged d)
-  (cond ((procedure? d) (list 'read-error (d)))
-        ((symbol? d)    (list 'sym         d))
-        ((number? d)    (list 'num         d))
-        (else           (list 'other       d))))
-
+(displayln "These tests are known to diverge in behavior:")
 (for-each
-  (lambda (ds) (pretty-write (map tagged ds)))
-  (map list
-       (read* (port:string:input
-                (string-join
-                  (list numbers symbols comments strings separation quotes)
-                  " ")))
-       (read*/annotate
-         vector (port:string:input
-                  (string-join
-                    (list numbers symbols comments strings separation quotes)
-                    " ")))))
+  (lambda (name s)
+    (test (list 'read/error: name)
+      (read*/string        s)
+      (racket:read*/string s)))
+  '(    numbers/errors strings separation)
+  (list numbers/errors strings separation))
+
+(displayln "\nThese tests should pass:")
+(for-each
+  (lambda (name s)
+    (test (list 'read: name)
+      (read*/string        s)
+      (racket:read*/string s)))
+  '(    numbers symbols comments quotes)
+  (list numbers symbols comments quotes))
+
+(define categorized-data.normal
+  (read*
+    (port:string:input
+      (string-join
+        (list numbers numbers/errors symbols comments strings separation quotes)
+        " "))))
+
+(define categorized-data.annotated
+  (read*/annotate
+    (lambda (d p0 p1) `#s(annotated ,d ,p0 ,p1))
+    (port:string:input
+      (string-join
+        (list numbers numbers/errors symbols comments strings separation quotes)
+        " "))))
+
+(define (annotated-datum x)
+  (match x
+    (`#s(read-error ,message.a)    `#s(read-error ,(annotated-datum message.a)))
+    (`#s(annotated ,datum ,p0 ,p1) (annotated-datum datum))
+    (`(,a . ,d)                    (cons (annotated-datum a) (annotated-datum d)))
+    ((vector xs ...)               (list->vector (map annotated-datum xs)))
+    (_                             x)))
+
+(for-each (lambda (i d.n d.a)
+            (test (list 'read/annotate: i)
+              (annotated-datum d.a)
+              d.n)
+            ;(test (list 'read/annotate.annotation: i)
+            ;  d.a
+            ;  '?)
+            )
+          (range (length categorized-data.normal))
+          categorized-data.normal
+          categorized-data.annotated)
 
 (define fsys (filesystem '(".")))
 
