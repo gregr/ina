@@ -76,7 +76,7 @@
         ((=    n -inf.0) (pr "-inf.0"))
         ((eqv? n +nan.0) (pr "+nan.0"))
         ((inexact? n)
-         (when (< n 0) (pr "-"))
+         (when (or (< n 0) (equal? n -0.0)) (pr "-"))
          (let ((n (abs (inexact->exact n))))
            (cond ((>= n #e1e10) (let loop ((n n) (e 0))
                                   (cond ((>= n 10) (loop (/ n 10) (+ e 1)))
