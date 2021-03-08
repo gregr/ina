@@ -186,97 +186,20 @@
                 #i5/7
                 ))
 
-;(let loop ()
-  ;(define datum (read (stdio 'in)))
-  ;(when (not (eof-object? datum))
-    ;(printf "~s\n" datum)
-    ;(loop)))
-
-;(define rin (port:string:input "\".@.(t457\"ok"))
-;(define rin (port:string:input ".,@.\\(t457|\"o|k"))
-;(define examples
-  ;(append* (map (lambda (_)
-                  ;(list "3238465928346598236459827364958762394856"
-                        ;"457.03e51"
-                        ;"-457.03e51"
-                        ;"+457.03e-51"
-                        ;"+457.03e+51"
-                        ;"#o+457.03e51"
-                        ;"#e#o+457.03e51"
-                        ;"#o#e+457.03e51"
-                        ;"+nan.0"
-                        ;"-inf.0"
-                        ;"+nan.0i"
-                        ;"-inf.0i"
-                        ;"-i"
-                        ;"-57.03e51-23i"
-                        ;"+57.03e51+34i"
-                        ;"8@8"
-                        ;"5/7"
-                        ;"#i5/7"
-                        ;)
-                ;;(list "3238465928346598236459827364958762394856"
-                       ;;"457.03e51 ywefjx"
-                       ;;"-457.03e51 ywefjx"
-                       ;;"+457.03e-51 ywefjx"
-                       ;;"+457.03e+51 ywefjx"
-                       ;;"#o+457.03e51 ywefjx"
-                       ;;"#e#o+457.03e51 ywefjx"
-                       ;;"#o#e+457.03e51 ywefjx"
-                       ;;"+nan.0"
-                       ;;"-inf.0"
-                       ;;"+nan.0i"
-                       ;;"-inf.0i"
-                       ;;"-i"
-                       ;;"-57.03e51-23i ywefjx"
-                       ;;"+57.03e51+34i ywefjx"
-                       ;;"8@8()"
-                       ;;"5/7#t"
-                       ;;"#i5/7#t"
-                       ;;)
-                ;)
-                ;(range 500))))
-;(define rins (map port:string:input examples))
-
-;(void (profile (map string->number examples)))
-
-;;(atom:true   rin 0)
-;;(atom:true   rin 0)
-;;(atom:false  rin 0)
-;;(punctuation rin 0)
-;;(atom:symbol rin 0)
-;;(dot rin 0)
-;;(atom:string rin 0)
-
-;(displayln 'rx-matching)
-;(define number-results
-  ;(profile (map (lambda (rin) (atom:number rin 0)) rins)))
-;(pretty-write
-  ;(map (lambda (ex r)
-         ;(cons ex (and r
-                       ;(cons (substring ex 0 (mvector-ref
-                                               ;r (- (mvector-length r) 2)))
-                             ;(filter-not
-                               ;not (map (lambda (seg)
-                                          ;(define start (mvector-ref r (cdr seg)))
-                                          ;(and start
-                                               ;(cons (car seg) (substring ex start (mvector-ref r (+ (cdr seg) 1))))))
-                                        ;(atom:number)))))))
-       ;examples number-results))
-
-(define (a^n n) (make-string n #\a))
-(define (rx:a^n n) (rx `(seq ,@(make-list n '(? "a")) . ,(make-list n "a"))))
-;(define (rx:a^n n) (rx `(seq . ,(make-list n "a"))))
-;(define (rx:a^n n) (rx `(seq . ,(make-list n '(? "a")))))
-
-(define (test-rx n)
-  (displayln (a^n n))
-  (define in (port:string:input (a^n n)))
-  (define r (time (rx:a^n n)))
-  ;(define r (time (rx '(* "a"))))
-  (time (r in 0)))
-
-;(test-rx 3000)
+(test 'rx.repetition
+  (let ((n 3000))
+    (define (a^n n) (make-string n #\a))
+    (define (rx:a^n n) (rx '(* "a")))
+    ;; These are expensive
+    ;(define (rx:a^n n) (rx `(seq ,@(make-list n '(? "a")) . ,(make-list n "a"))))
+    ;(define (rx:a^n n) (rx `(seq . ,(make-list n "a"))))
+    ;(define (rx:a^n n) (rx `(seq . ,(make-list n '(? "a")))))
+    (define (run-test n)
+      (define in (port:string:input (a^n n)))
+      (define r (time (rx:a^n n)))
+      (time (r in 0)))
+    (not (not (run-test n))))
+  #t)
 
 (test 'write.0
   (map (lambda (datum)
@@ -333,3 +256,9 @@
                   utf8->unicode bytes))
          bytess.utf8)
     codepoints))
+
+;(let loop ()
+  ;(define datum (read (stdio 'in)))
+  ;(when (not (eof-object? datum))
+    ;(printf "~s\n" datum)
+    ;(loop)))
