@@ -65,7 +65,7 @@
 (displayln "These tests are known to diverge in behavior:")
 (for-each
   (lambda (name s)
-    (test (list 'read/error: name)
+    (test (list 'read/error name)
       (read*/string        s)
       (racket:read*/string s)))
   '(    numbers/errors strings separation)
@@ -74,7 +74,7 @@
 (displayln "\nThese tests should pass:")
 (for-each
   (lambda (name s)
-    (test (list 'read: name)
+    (test (list 'read name)
       (read*/string        s)
       (racket:read*/string s)))
   '(    numbers symbols comments quotes)
@@ -104,7 +104,7 @@
     (_                             x)))
 
 (for-each (lambda (i d.n d.a)
-            (test (list 'read/annotate: i)
+            (test (list 'read/annotate i)
               (annotated-datum d.a)
               d.n)
             ;(test (list 'read/annotate.annotation: i)
@@ -132,7 +132,7 @@
   (length data.racket))
 
 (for-each (lambda (i d d.racket)
-            (test (list 'read.read.scm: i)
+            (test (list 'read 'read.scm i)
               d
               d.racket))
           (range (length data))
@@ -202,7 +202,7 @@
   #t)
 
 (for-each (lambda (x s)
-            (test (list 'write: x s)
+            (test (list 'write x s)
               (let ((out (port:string:output)))
                 (write x out)
                 (out 'string))
