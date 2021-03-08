@@ -145,12 +145,6 @@
     ;(printf "~s\n" datum)
     ;(loop)))
 
-;(define utf8-input '(124 133 8232 8233 82330 802330 8020330 80203030))
-;(define utf8 (map unicode->utf8 utf8-input))
-;utf8
-;(map (lambda (bytes) (foldl (lambda (b u->u) (and (procedure? u->u) (u->u b))) utf8->unicode bytes))
-     ;utf8)
-
 ;(define rin (port:string:input "\".@.(t457\"ok"))
 ;(define rin (port:string:input ".,@.\\(t457|\"o|k"))
 ;(define examples
@@ -237,8 +231,6 @@
 
 ;(test-rx 3000)
 
-
-
 (test 'write.0
   (map (lambda (datum)
          (define out (port:string:output))
@@ -275,3 +267,22 @@
     "#(#t #f 1 2 3)"
     "(#t #f 1 2 3)"
     "(#t #f 1 2 . 3)"))
+
+(let* ((codepoints  '(124 133 8232 8233 82330 802330 8020330 80203030))
+       (bytess.utf8 (map unicode->utf8 codepoints)))
+  (test 'utf8.bytes
+    bytess.utf8
+    '((124)
+      (194 133)
+      (226 128 168)
+      (226 128 169)
+      (240 148 134 154)
+      (243 131 184 154)
+      (248 158 166 133 170)
+      (252 132 177 188 180 150)))
+  (test 'utf8.identity
+    (map (lambda (bytes)
+           (foldl (lambda (b u->u) (and (procedure? u->u) (u->u b)))
+                  utf8->unicode bytes))
+         bytess.utf8)
+    codepoints))
