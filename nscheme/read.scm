@@ -289,17 +289,17 @@
   (case/char (get start)
     ("#" (let ((c0 (get (+ start 1))))
            (case/char c0
-             ("EIei" (case/char (get (+ start 2))
-                       ("#" (let ((c1 (get (+ start 3))))
-                              (case/char c1
-                                ("BDOXbdox" (NumberPrefix (+ start 4) c0 c1))
-                                (else (herr (+ start 2))))))
-                       (else (NumberPrefix (+ start 2) c0 #f))))
-             ("BDOXbdox" (case/char (get (+ start 2))
-                           ("#" (let ((c1 (get (+ start 2))))
+             ("EIei"     (case/char (get (+ start 2))
+                           ("#" (let ((c1 (get (+ start 3))))
                                   (case/char c1
-                                    ("EIei" (NumberPrefix (+ start 4) c1 c0))
-                                    (else (herr (+ start 2))))))
+                                    ("BDOXbdox" (NumberPrefix (+ start 4) c0 c1))
+                                    (else       (herr (+ start 2))))))
+                           (else (NumberPrefix (+ start 2) c0 #f))))
+             ("BDOXbdox" (case/char (get (+ start 2))
+                           ("#" (let ((c1 (get (+ start 3))))
+                                  (case/char c1
+                                    ("EIei"     (NumberPrefix (+ start 4) c1 c0))
+                                    (else       (herr (+ start 2))))))
                            (else (NumberPrefix (+ start 2) #f c0))))
              (else (herr start)))))
     (else (NumberSign start #f 10 #f #f))))
