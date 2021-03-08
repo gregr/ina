@@ -23,12 +23,12 @@
   (begin (printf "Testing ~s:\n" name)
          (let ((expected e.expected) (answer e.test))
            (unless (equal? answer expected)
-             (pretty-print 'e.test)
+             (pretty-write 'e.test)
              (printf "FAILED ~s:\n" name)
              (printf "  ANSWER:\n")
-             (pretty-print answer)
+             (pretty-write answer)
              (printf "  EXPECTED:\n")
-             (pretty-print expected)))))
+             (pretty-write expected)))))
 
 (define (read* in)
   (define datum (read in))
@@ -139,6 +139,53 @@
           data
           data.racket)
 
+(for-each (lambda (s n)
+            (test (list 'string->number s n)
+              (string->number s)
+              n))
+          (list "3238465928346598236459827364958762394856"
+                "457.03e50"
+                "-457.03e50"
+                "457.03e51"       ;; Racket's reader used to have a bug here
+                "-457.03e51"
+                "+457.03e-51"
+                "+457.03e+51"
+                "#o+457.03e51"
+                "#e#o+457.03e51"
+                "#o#e+457.03e51"
+                "+nan.0"
+                "-inf.0"
+                "+nan.0i"
+                "-inf.0i"
+                "-i"
+                "-57.03e51-23i"
+                "+57.03e51+34i"
+                "8@8"
+                "5/7"
+                "#i5/7"
+                )
+          (list 3238465928346598236459827364958762394856
+                457.03e50
+                -457.03e50
+                457.03e51       ;; Racket's reader used to have a bug here
+                -457.03e51
+                +457.03e-51
+                +457.03e+51
+                #o+457.03e51
+                #e#o+457.03e51
+                #o#e+457.03e51
+                +nan.0
+                -inf.0
+                +nan.0i
+                -inf.0i
+                -i
+                -57.03e51-23i
+                +57.03e51+34i
+                8@8
+                5/7
+                #i5/7
+                ))
+
 ;(let loop ()
   ;(define datum (read (stdio 'in)))
   ;(when (not (eof-object? datum))
@@ -204,7 +251,7 @@
 ;(displayln 'rx-matching)
 ;(define number-results
   ;(profile (map (lambda (rin) (atom:number rin 0)) rins)))
-;(pretty-print
+;(pretty-write
   ;(map (lambda (ex r)
          ;(cons ex (and r
                        ;(cons (substring ex 0 (mvector-ref
