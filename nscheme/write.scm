@@ -102,6 +102,7 @@
       (define   d   (truncate m))
       (define a+d   (+ approx (*    d    scale)))
       (define a+d+1 (+ approx (* (+ d 1) scale)))
+      ;; TODO: a+d+1 should be used when it would yield a result closer to the original value
       (cond ((eqv? (exact->inexact a+d  ) n.inexact)
              (finish (cons    d    rdigits) e))
             ((eqv? (exact->inexact a+d+1) n.inexact)
