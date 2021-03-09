@@ -63,9 +63,18 @@
   (define (pr-int n) (cond ((< n 0) (pr "-") (pr-nat (- n)))
                            (else             (pr-nat    n))))
   (define (larger-log10 n)
-    (let loop ((e 0) (p 1))
-      (if (< n p) e
-        (loop (+ e 1) (* p 10)))))
+    (if (< n 1) 0
+      (let loop ((e 1) (p 10) (e+ 1) (p+ 10) (prev '()))
+        (if (< n p+)
+          (let loop ((e e) (p p) (e.best e+) (p.best p+) (prev prev))
+            (if (null? prev) e.best
+              (let ((e.0 (caar prev)) (p.0 (cdar prev)) (prev (cdr prev)))
+                (define e+ (+ e e.0))
+                (define p+ (* p p.0))
+                (if (< n p+)
+                  (loop e  p  e+     p+     prev)
+                  (loop e+ p+ e.best p.best prev)))))
+          (loop e+ p+ (+ e+ e+) (* p+ p+) (cons (cons e p) prev))))))
   (define (pr-float n.inexact)
     (define n (inexact->exact n.inexact))
     (define (finish rdigits e)
