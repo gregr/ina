@@ -53,7 +53,7 @@
 (define (read*/annotate/string s) (read*/annotate (port:string:input s)))
 (define (racket:read*/string   s) (call-with-input-string s racket:read*))
 
-(define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 3-2/3i 4-inf.0i 5@5 #i1@1 1@+2 1@-2 .5 6. #e.75 #b1.1 5e-2 0 0.0 1 122 -3 4.0 500010000000.0 67.89 0.00001234")
+(define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 3-2/3i 4-inf.0i 5@5 #i1@1 1@+2 1@-2 .5 6. #e.75 #b1.1 5e-2 0 0.0 -0.0 1 122 -3 4.0 500010000000.0 67.89 0.00001234")
 (define numbers/errors "5/0 -2/0 0/0 #i1/0 #i-1/0 #i0/0 #e5@5")
 (define symbols "|1+2i| \\3 |a b| c\\ d 1@++5")
 (define comments ";; foo\n x #;(1 2 3)y #| #| a b |# c d |# z")
