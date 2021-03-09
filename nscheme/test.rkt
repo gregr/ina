@@ -6,7 +6,8 @@
                                 string->list list->string))
          (rename-in (except-in racket/base append string-ref string-length
                                string->list list->string)
-                    (read racket:read) (eof-object? racket:eof-object?)))
+                    (eof-object? racket:eof-object?)
+                    (read racket:read) (write racket:write)))
 (module nscm:base racket
   (provide (all-defined-out))
   (require "nscheme.rkt" (for-syntax racket/list))
@@ -74,9 +75,13 @@
 (displayln "\nThese tests should pass:")
 (for-each
   (lambda (name s)
-    (test (list 'read name)
-      (read*/string        s)
-      (racket:read*/string s)))
+    (define xs        (read*/string        s))
+    (define xs.racket (racket:read*/string s))
+    (for-each (lambda (x x.racket)
+                (test (list 'read name x.racket)
+                  x
+                  x.racket))
+              xs xs.racket))
   '(    numbers symbols comments quotes)
   (list numbers symbols comments quotes))
 
@@ -202,11 +207,16 @@
   #t)
 
 (for-each (lambda (x s)
-            (test (list 'write x s)
+            (define s.written
               (let ((out (port:string:output)))
                 (write x out)
-                (out 'string))
-              s))
+                (out 'string)))
+            (test (list 'write x s)
+              s.written
+              s)
+            (test (list 'write.read x s)
+              (read (port:string:input s.written))
+              x))
           `(#t
             #f
             ()
@@ -333,5 +343,10 @@
 ;(let loop ()
   ;(define datum (read (stdio 'in)))
   ;(when (not (eof-object? datum))
-    ;(printf "~s\n" datum)
+    ;(printf "       write: ~s\nracket:write: ~s\n"
+            ;(let ((out (port:string:output)))
+              ;(write datum out)
+              ;(out 'string))
+            ;(with-output-to-string
+              ;(thunk (racket:write datum))))
     ;(loop)))
