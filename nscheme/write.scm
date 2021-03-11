@@ -1,28 +1,83 @@
-;; recognize symbol characters that must be escaped when writing
-
-;; TODO: indent? pretty printing? optional formatting styles?
+;; TODO: optional formatting styles?
 ;; quote/abbreviations, padding, packing, numeric formats/radixes/rounding
 ;; fine-grained writing styles? express write in terms of richer documents?
 
-(define (write v out)
+(define (write v out (format-policy? #f))
   (define (pr s) (out 'put* s))
-  (define (write* v)
-    (write (car v) out)
-    (cond ((pair? (cdr v))       (pr " ")   (write* (cdr v)))
-          ((not (null? (cdr v))) (pr " . ") (write (cdr v) out))))
-  (define (bracket l r v) (pr l) (write* v) (pr r))
-  (cond ((eq? #t     v) (pr "#t"))
-        ((eq? #f     v) (pr "#f"))
-        ((null?      v) (pr "()"))
-        ((number?    v) (write-number v out))
-        ((symbol?    v) (write-symbol v out))
-        ((string?    v) (write-string v out))
-        ((pair?      v) (bracket "(" ")" v))
-        ((vector?    v) (cond ((eqv? (vector-length  v) 0) (pr "#()"))
-                              (else (bracket "#(" ")"  (vector->list  v)))))
-        ((mvector?   v) (cond ((eqv? (mvector-length v) 0) (pr "#m()"))
-                              (else (bracket "#m(" ")" (mvector->list v)))))
-        ((procedure? v) (pr "#<procedure>"))))
+  (define (wr+:default x pos _ __) (pr " ") (wr x (+ pos 1) 0))
+  (define format-policy
+    (match format-policy?
+      (#f      #f)
+      ('pretty `(pretty 80))
+      ('bulky  `(bulky  80))
+      (policy  policy)))
+  (define wr+
+    (match format-policy
+      (#f               wr+:default)
+      (`(pretty ,width) (lambda (x pos indent s.indent)
+                          (pr "\n") (pr s.indent)
+                          (wr x indent indent)))
+      (`(bulky  ,width) (lambda (x pos indent s.indent)
+                          (define pos.after (+ pos (wunit-width x)))
+                          (define pos.1
+                            (cond ((< width pos.after) (pr "\n") (pr s.indent) indent)
+                                  (else                (pr " ")                (+ pos 1))))
+                          (wr x pos.1 indent)))))
+  (define width
+    (match format-policy
+      (#f               #f)
+      (`(pretty ,width) width)
+      (`(bulky  ,width) width)))
+  (define (wunit-width x)
+    (match x
+      ((? string?)      (string-length x))
+      ((vector w _ _ _) w)))
+  (define (datum->wunit v)
+    (define (bracket l r vs)
+      (define xs
+        (let loop ((vs vs))
+          (match vs
+            ('()         '())
+            (`(,v . ,vs) (cons (datum->wunit v) (loop vs)))
+            (v (list "."       (datum->wunit v))))))
+      (vector (+ (string-length l) (string-length r) (foldl + 0 (map wunit-width xs))
+                 (max 0 (- (length xs) 1)))
+              l r xs))
+    (cond ((pair?      v) (bracket "(" ")" v))
+          ((vector?    v) (cond ((eqv? (vector-length  v) 0) (pr "#()"))
+                                (else (bracket "#(" ")"  (vector->list  v)))))
+          ((mvector?   v) (cond ((eqv? (mvector-length v) 0) (pr "#m()"))
+                                (else (bracket "#m(" ")" (mvector->list v)))))
+          ((eq? #t     v) "#t")
+          ((eq? #f     v) "#f")
+          ((null?      v) "()")
+          ((procedure? v) "#<procedure>")
+          (else (define out (port:string:output))
+                (define (pr s) (out 'put* s))
+                (cond ((number? v) (write-number v out))
+                      ((symbol? v) (write-symbol v out))
+                      ((string? v) (write-string v out))
+                      (else        (pr "#<unknown>")))
+                (out 'string))))
+  (define (wr x pos indent.0)
+    (match x
+      ((? string?) (pr x) (+ pos (string-length x)))
+      ((vector w.full l r xs)
+       (define w.l    (string-length l))
+       (define w.r    (string-length r))
+       (define pos.0  (+ pos      w.l))
+       (define indent (+ indent.0 w.l))
+       (pr l)
+       (define pos.1
+         (match xs
+           ('()         pos.0)
+           (`(,x . ,xs) (foldl (if (and width (<= (+ pos w.full) width))
+                                 (lambda   (x pos) (wr+:default x pos 0      ""))
+                                 (let ((s.indent (string-append* (make-list indent " "))))
+                                   (lambda (x pos) (wr+         x pos indent s.indent))))
+                               (wr x pos.0 indent) xs))))
+       (pr r) (+ pos.1 w.r))))
+  (wr (datum->wunit v) 0 0))
 
 (define (write-string v out)
   (define (pr s) (out 'put* s))
