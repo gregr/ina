@@ -319,7 +319,7 @@
     codepoints))
 
 (define benchmark
-  (let ((out (port:string:output)))
+  (let ((out port:null:output))
     (time (for-each (lambda (_)
                       (for-each (lambda (x) (write x out))
                                 '(4.0

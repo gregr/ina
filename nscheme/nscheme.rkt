@@ -4,7 +4,7 @@
          string->vector vector->string cons*
          bitwise-arithmetic-shift << >> & \| ^
          filesystem console tcp stdio
-         port:string:input port:string:output
+         port:string:input port:string:output port:null:output
          racket-eval)
 
 (require racket/file racket/tcp racket/string racket/struct racket/vector)
@@ -293,6 +293,13 @@
     ((position-ref)        i)
     ((position-set! index) (set! i (min (max index 0) i)))
     ((truncate)            (set! i 0) (set! buffer (make-mvector 32 0)))))
+
+(define port:null:output
+  (method-lambda
+    ((put  _) #t)
+    ((put* _) #t)
+    ((close)  #t)
+    ((flush)  #t)))
 
 ;; TODO: vector, mvector ports.
 ;; TODO: synchronous channel ports.
