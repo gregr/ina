@@ -299,6 +299,105 @@
             "(#t #f 1 2 3)"
             "(#t #f 1 2 . 3)"))
 
+(define data.formatted-writing
+  '((0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+    ((0 1 2 3 4 5 6) 7 8 9 10 11 12 (13 14 15 16))
+    (zero one two three four five six seven eight nine)
+    #(zero one two three four five six seven eight nine)
+    (zero one two three four five six seven eight nine . ten)
+    (zero one two three four five six seven
+          (zero one two three four five six seven eight nine . ten)
+          eight nine . ten)
+    (zero one two three
+          #(zero one two three four five six seven eight nine)
+          four five six seven eight nine
+          (zero one two three four five six seven eight nine)
+          ((zero one two three four five six seven eight nine)
+           zero one two three four five six seven eight nine)
+          ((zero one two three four five six seven eight nine)
+           zero one two three four
+           (zero one two three four five six seven eight nine)
+           five six seven eight nine)
+          ((0 1 2 3 4 5 6) 7 8 9 10 11 12 (13 14 15 16))
+          #(#(zero one two three four five six seven eight nine)
+            zero one two three four five six
+            #(zero one two three four five six seven eight nine) seven eight nine))))
+
+(let ((x data.formatted-writing)
+      (s "((0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16) ((0 1 2 3 4 5 6) 7 8 9 10 11 12 (13 14 15 16)) (zero one two three four five six seven eight nine) #(zero one two three four five six seven eight nine) (zero one two three four five six seven eight nine . ten) (zero one two three four five six seven (zero one two three four five six seven eight nine . ten) eight nine . ten) (zero one two three #(zero one two three four five six seven eight nine) four five six seven eight nine (zero one two three four five six seven eight nine) ((zero one two three four five six seven eight nine) zero one two three four five six seven eight nine) ((zero one two three four five six seven eight nine) zero one two three four (zero one two three four five six seven eight nine) five six seven eight nine) ((0 1 2 3 4 5 6) 7 8 9 10 11 12 (13 14 15 16)) #(#(zero one two three four five six seven eight nine) zero one two three four five six #(zero one two three four five six seven eight nine) seven eight nine)))"))
+  (define s.written
+    (let ((out (port:string:output)))
+      (write x out)
+      (out 'string)))
+  ;(printf "formatted write:\n~a\n" s.written)
+  (test (list 'write/default)
+    s.written
+    s)
+  (test (list 'write/default.read)
+    (read (port:string:input s.written))
+    x))
+
+(let ((x data.formatted-writing))
+  (define s.written
+    (let ((out (port:string:output)))
+      ;(write x out 'pretty)
+      (write x out '(pretty 80))
+      (out 'string)))
+  (define racket:s.written
+    (string-trim
+      (with-output-to-string (thunk (pretty-write data.formatted-writing)))))
+  ;(printf "formatted write:\n~a\n" s.written)
+  ;(printf "Racket's formatted write:\n~a\n" racket:s.written)
+  (test (list 'write/pretty)
+    s.written
+    racket:s.written)
+  (test (list 'write/pretty.read)
+    (read (port:string:input s.written))
+    x))
+
+(let ((x data.formatted-writing)
+      (s "((0\n  1\n  2\n  3\n  4\n  5\n  6\n  7\n  8\n  9\n  10\n  11\n  12\n  13\n  14\n  15\n  16)\n ((0\n   1\n   2\n   3\n   4\n   5\n   6)\n  7\n  8\n  9\n  10\n  11\n  12\n  (13\n   14\n   15\n   16))\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  eight\n  nine)\n #(zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  eight\n  nine\n  .\n  ten)\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  (zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine\n   .\n   ten)\n  eight\n  nine\n  .\n  ten)\n (zero\n  one\n  two\n  three\n  #(zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n  four\n  five\n  six\n  seven\n  eight\n  nine\n  (zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n  ((zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n  ((zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   zero\n   one\n   two\n   three\n   four\n   (zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   five\n   six\n   seven\n   eight\n   nine)\n  ((0\n    1\n    2\n    3\n    4\n    5\n    6)\n   7\n   8\n   9\n   10\n   11\n   12\n   (13\n    14\n    15\n    16))\n  #(#(zero\n      one\n      two\n      three\n      four\n      five\n      six\n      seven\n      eight\n      nine)\n    zero\n    one\n    two\n    three\n    four\n    five\n    six\n    #(zero\n      one\n      two\n      three\n      four\n      five\n      six\n      seven\n      eight\n      nine)\n    seven\n    eight\n    nine)))"))
+  (define s.written
+    (let ((out (port:string:output)))
+      (write x out '(pretty 0))
+      (out 'string)))
+  ;(printf "formatted write:\n~a\n" s.written)
+  (test (list 'write/pretty-thin)
+    s.written
+    s)
+  (test (list 'write/pretty-thin.read)
+    (read (port:string:input s.written))
+    x))
+
+(let ((x data.formatted-writing)
+      (s "((0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)\n ((0 1 2 3 4 5 6) 7 8 9 10 11 12 (13 14 15 16))\n (zero one two three four five six seven eight nine)\n #(zero one two three four five six seven eight nine)\n (zero one two three four five six seven eight nine . ten)\n (zero one two three four five six seven\n  (zero one two three four five six seven eight nine . ten) eight nine . ten)\n (zero one two three #(zero one two three four five six seven eight nine) four\n  five six seven eight nine (zero one two three four five six seven eight nine)\n  ((zero one two three four five six seven eight nine) zero one two three four\n   five six seven eight nine)\n  ((zero one two three four five six seven eight nine) zero one two three four\n   (zero one two three four five six seven eight nine) five six seven eight nine)\n  ((0 1 2 3 4 5 6) 7 8 9 10 11 12 (13 14 15 16))\n  #(#(zero one two three four five six seven eight nine) zero one two three four\n    five six #(zero one two three four five six seven eight nine) seven eight\n    nine)))"))
+  (define s.written
+    (let ((out (port:string:output)))
+      ;(write x out 'bulky)
+      (write x out '(bulky 80))
+      (out 'string)))
+  ;(printf "formatted write:\n~a\n" s.written)
+  (test (list 'write/bulky)
+    s.written
+    s)
+  (test (list 'write/bulky.read)
+    (read (port:string:input s.written))
+    x))
+
+(let ((x data.formatted-writing)
+      (s "((0\n  1\n  2\n  3\n  4\n  5\n  6\n  7\n  8\n  9\n  10\n  11\n  12\n  13\n  14\n  15\n  16)\n ((0\n   1\n   2\n   3\n   4\n   5\n   6)\n  7\n  8\n  9\n  10\n  11\n  12\n  (13\n   14\n   15\n   16))\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  eight\n  nine)\n #(zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  eight\n  nine\n  .\n  ten)\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  (zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine\n   .\n   ten)\n  eight\n  nine\n  .\n  ten)\n (zero\n  one\n  two\n  three\n  #(zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n  four\n  five\n  six\n  seven\n  eight\n  nine\n  (zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n  ((zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n  ((zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   zero\n   one\n   two\n   three\n   four\n   (zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   five\n   six\n   seven\n   eight\n   nine)\n  ((0\n    1\n    2\n    3\n    4\n    5\n    6)\n   7\n   8\n   9\n   10\n   11\n   12\n   (13\n    14\n    15\n    16))\n  #(#(zero\n      one\n      two\n      three\n      four\n      five\n      six\n      seven\n      eight\n      nine)\n    zero\n    one\n    two\n    three\n    four\n    five\n    six\n    #(zero\n      one\n      two\n      three\n      four\n      five\n      six\n      seven\n      eight\n      nine)\n    seven\n    eight\n    nine)))"))
+  (define s.written
+    (let ((out (port:string:output)))
+      (write x out '(bulky 0))
+      (out 'string)))
+  ;(printf "formatted write:\n~a\n" s.written)
+  (test (list 'write/bulky-thin)
+    s.written
+    s)
+  (test (list 'write/bulky-thin.read)
+    (read (port:string:input s.written))
+    x))
+
 (let* ((codepoints  '(124 133 8232 8233 82330 802330 8020330 80203030))
        (bytess.utf8 (map unicode->utf8 codepoints)))
   (test 'utf8.bytes
