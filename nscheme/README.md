@@ -210,6 +210,32 @@ Racket-compatible bootstrap in more detail:
             * unrestricted
               * must coordinate explicitly (CAS/locks/etc) to prevent races
 
+## Naming conventions
+
+```
+_    = blank
+x-y  = x <space> y     ; for multi-word phrases, e.g., launch-all-missiles
+x/y  = x with y
+x^y  = x superscript y
+x.y  = x subscript y   ; emphasizing grouping by x
+y:x  = x subscript y   ; emphasizing grouping by y, the subscript; e.g., a type
+                       ; y with constructors x, or implementing a common
+                       ; interface of operations x, or other situations where
+                       ; if the context is clear, the y: could be dropped from
+                       ; the name
+x@y  = x at y          ; result of projection or access using address/key y
+x->y = x to y          ; procedure mapping type x to y
+x=>y = x to y          ; finite map (e.g., hash or vector) with key type x
+x&y  = x and y         ; a pair, or sometimes a 2-element list or vector
+x*   = 0 or more xs    ; (typically homogeneous) lists, sometimes vectors
+x?   = x huh           ; x is either a boolean(-ish) value itself, or a
+                       ; predicate (procedure returning a boolean(-ish) value)
+x!   = x bang          ; x may cause important side effects, such as mutation
+                       ; or throwing an error; I/O operations often don't use
+                       ; this convention
+x?!  = assert x        ; a predicate/guard that throws an error if false
+```
+
 ## Old TODO that needs to be reorganized
 
 * store near-source language ASTs as virtualized programs
