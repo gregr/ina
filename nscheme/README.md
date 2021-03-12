@@ -56,7 +56,9 @@ This is a nonstandard Scheme implementation.
 
 ## Run tests
 
-`raco test *.rkt`
+~~`raco test *.rkt`~~
+
+`time racket test.rkt`
 
 ## Bootstrap
 
@@ -64,17 +66,13 @@ TODO
 
 ## TODO
 
-improve write for flonums:
-  * http://www.ryanjuckett.com/programming/printing-floating-point-numbers/
-  * http://www.ryanjuckett.com/programming/printing-floating-point-numbers/part-2/
-
 rough component implementation order for bootstrap:
   * io(?)
   * port
-  * unicode
-  * grammar
-  * read
-  * write
+  * ~~unicode~~
+  * ~~grammar~~ (abandoned for now)
+  * ~~read~~
+  * ~~write~~
   * syntax
   * library
   * parse
@@ -109,21 +107,38 @@ Racket-compatible bootstrap in more detail:
     * read-syntax/write
     * parse/unparse
       * design new AST including case-lambda and dynamic control
-      * environment mapping identifier labels to property lists
-        * identifiers may be associated with multiple properties, e.g., `begin`
-          has (different) parsers/micros in both the expression and definition
-          contexts
-        * example properties:
-          * variable
-            * track lexical/global address?
-          * expression (transformers for typical macros, identifiers, and set!)
-            * application, ref, set!
-          * definition (transformers for definition contexts)
+      * environment maps identifier labels to lists of properties
+        * some identifier properties are for describing parsers applicable to
+          different vocabularies, or classes of syntax.
+          * e.g., `begin` has parsers/micros that allow it to be used in both
+            expression and definition contexts
+        * example syntactic classes and subclasses:
+          * expression (variables, special form parsers, typical macro transformers)
+            * ref (identifier may appear in any expression position)
+            * operator (identifier may be used in operator position)
+          * `set!` (for variables that may be assigned via `set!`)
+            * could make use of both the `match` and `set!` vocabularies
+              to define a pattern-matching assignment operator
+          * definition (operators for declaration/definition contexts)
           * template (for syntax-case pattern variables)
             * track ellipsis level
-          * module (a Chez-style module)
-          * match (a pattern in the match vocabulary (match is a micro))
-          * ... possibly other pattern vocabularies
+          * module (identifies a Chez-style module)
+          * match (a pattern constructor in the match vocabulary (match is a micro))
+          * grammar (name of a production rule constructor in a grammar definition)
+          * formula (name of a logical connective or relation in a logical definition)
+            * e.g., allows overloading `=`, `<`, `and`, `or`, etc. for use in building
+              logical formulas and assertions, without shadowing their typical
+              expression-oriented definitions as operators/procedures, allowing them
+              to retain their usual meaning within formula `terms`
+              * contrived example: `(implies (= #t (= A B)) (= A B))`
+                * the conclusion `(= A B)` uses `=` to construct a logical constraint
+                  that the terms `A` and `B` are equal
+                * the hypothesis's outer use of `=` constructs the constraint that
+                  `#t` is equal to the result of evaluating the term `(= A B)`,
+                  which itself uses `=` as the usual numeric equality procedure
+                * note: depending on the underlying logic, the reverse implication
+                  will not necessarily be a theorem if the `=` used to build equality
+                  constraints is also applicable to types other than numbers
       * hygienic macros
         * syntax pattern matching
         * syntax-case, syntax-rules

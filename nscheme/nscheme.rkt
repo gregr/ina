@@ -220,6 +220,8 @@
 (define (port:tcp:input  port) (port:bytestream:input  (port:tcp port) port))
 (define (port:tcp:output port) (port:bytestream:output (port:tcp port) port))
 
+;; TODO: define a (socket in out) as a full-duplex port aka input-output-port?
+;; return a socket from accept and connect
 (define (tcp:listener listen)
   (lambda/handle-fail
     (lambda (x) x)
