@@ -249,7 +249,8 @@
        (tcp:port in out)))))
 
 ;; TODO: what does a pre-connected udp port object look like?
-;(define (port:udp port) ...)  ;; connected udp ports: udp-send, udp-receive
+;; TODO: what about a not-connected udp port?: udp-bind! udp-connect! udp-send-to
+;(define (udp:port port) ...)  ;; connected udp ports: udp-send, udp-receive
 
 (define (stdio:port:input  port) (bytestream:port:input  (bytestream:port port) port))
 (define (stdio:port:output port) (bytestream:port:output (bytestream:port port) port))
@@ -311,9 +312,10 @@
     ((close)  #t)
     ((flush)  #t)))
 
-;; TODO: vector, mvector ports.
-;; TODO: synchronous channel ports.
-;; TODO: generator ports.
+;; TODO: synchronous channels, generators
+;; NOTE: these are not ports; ports are restricted to transferring bytes
+;; TODO: channels that get from sequences or put to mvectors
+;; TODO: generators that iterate over sequences
 
 (define (racket-eval rkt-datum)
   (define (racket-datum form)
