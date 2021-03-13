@@ -6,6 +6,10 @@
          filesystem console tcp stdio
          string:port:input string:port:output null:port:output
          call-with-input-string call-with-output-string
+         port-close port-flush port-put port-put*
+         port-forget port-get port-peek port-get*! port-peek*!
+         port-truncate port-position port-position-set!
+         port-buffer-mode port-buffer-mode-set!
          method-lambda method-choose method-unknown method-except method-only
          racket-eval)
 
@@ -100,6 +104,25 @@
 (define (call-with-output-string  k) (let ((out (string:port:output)))
                                        (k out)
                                        (out 'string)))
+
+(define (port-close    p)   (p 'close))
+(define (port-flush    p)   (p 'flush))
+(define (port-put      p b) (p 'put  b))
+(define (port-put*     p s) (p 'put* s))
+
+(define (port-forget p amount) (p 'forget amount))
+(define (port-get    p)        (p 'get))
+(define (port-peek   p skip)   (p 'peek skip))
+;; TODO: ideally these would be a general implementation in terms of port-get/peek.
+;; Revisit these when testing compiler optimizations.
+(define (port-get*!  p mv start len)        (p 'get*!  mv start len))
+(define (port-peek*! p mv start skip until) (p 'peek*! mv start skip until))
+
+(define (port-truncate         p)   (p 'truncate))
+(define (port-position         p)   (p 'position-ref))
+(define (port-position-set!    p i) (p 'position-set! i))
+(define (port-buffer-mode      p)   (p 'buffer-mode-ref))
+(define (port-buffer-mode-set! p m) (p 'buffer-mode-set! m))
 
 ;; TODO: model file descriptors and their operations directly?
 
