@@ -142,67 +142,54 @@
     port))
 
 (define (filesystem root)
+  ;; NOTE: this is not a secure abstraction of a subtree of the file system.
+  ;; There is no protection against using ".." to access parent directories.
   (define (path/root path)
-    ;; NOTE: string-split has a weird default, requiring us to use #:trim?.
-    (let loop ((path (if (string? path) (string-split path "/" #:trim? #f)
-                       path)))
-      (cond ((null? path)             root)
-            ((equal? ".." (car path)) (loop (cdr path)))
-            (else                     (append root path)))))
+    (append root (if (string? path)
+                   ;; #:trim? works around weird string-split default behavior
+                   (string-split path "/" #:trim? #f)
+                   path)))
   (define (resolve path) (string-join (path/root path) "/"))
   (lambda/handle-fail
     (lambda (x) x)
     (method-lambda
-      ((filesystem path) (filesystem (path/root path)))
+      ((subsystem path) (filesystem (path/root path)))
 
-      ((open-input path)
-       (file:port:input (open-input-file (resolve path))))
-      ((open-output path exists)
-       (file:port:output (open-output-file (resolve path) #:exists exists)))
-      ((open-input-output path exists)
-       (define-values (in out)
-         (open-input-output-file (resolve path) #:exists exists))
-       (list (file:port:input in) (file:port:output in)))
+      ((open-input        path                ) (file:port:input  (open-input-file  (resolve path))))
+      ((open-output       path (exists 'error)) (file:port:output (open-output-file (resolve path) #:exists exists)))
+      ((open-input-output path (exists 'error)) (define-values (in out)
+                                                  (open-input-output-file (resolve path) #:exists exists))
+                                                (list (file:port:input in) (file:port:output in)))
 
-      ((directory path) (map path->string (directory-list (resolve path))))
+      ((directory              path) (map path->string         (directory-list (resolve path))))
+      ((file-exists?           path) (file-exists?                             (resolve path)))
+      ((directory-exists?      path) (directory-exists?                        (resolve path)))
+      ((link-exists?           path) (link-exists?                             (resolve path)))
+      ((make-directory         path) (make-directory                           (resolve path)))
+      ((make-directory*        path) (make-directory*                          (resolve path)))
+      ((make-parent-directory* path) (make-parent-directory*                   (resolve path)))
+      ((make-link           to path) (make-file-or-directory-link (resolve to) (resolve path)))
+      ((delete-file            path) (delete-file                              (resolve path)))
+      ((delete-directory       path) (delete-directory                         (resolve path)))
+      ((delete-directory/files path) (delete-directory/files                   (resolve path)))
 
-      ((file-exists?      path) (file-exists?      (resolve path)))
-      ((directory-exists? path) (directory-exists? (resolve path)))
-      ((link-exists?      path) (link-exists?      (resolve path)))
-
-      ((make-directory         path) (make-directory         (resolve path)))
-      ((make-directory*        path) (make-directory*        (resolve path)))
-      ((make-parent-directory* path) (make-parent-directory* (resolve path)))
-      ((make-link to path) (make-file-or-directory-link (resolve to)
-                                                        (resolve path)))
-
-      ((delete-file            path) (delete-file            (resolve path)))
-      ((delete-directory       path) (delete-directory       (resolve path)))
-      ((delete-directory/files path) (delete-directory/files (resolve path)))
-      ((rename old new exists-ok?) (rename-file-or-directory
-                                     (resolve old) (resolve new) exists-ok?))
-      ((copy   old new exists-ok?) (copy-file
-                                     (resolve old) (resolve new) exists-ok?))
-      ((copy-directory/files src dest keep-modify-time? keep-links?)
+      ((rename old new (exists-ok? #f)) (rename-file-or-directory (resolve old) (resolve new) exists-ok?))
+      ((copy   old new (exists-ok? #f)) (copy-file                (resolve old) (resolve new) exists-ok?))
+      ((copy-directory/files src dest (keep-modify-time? #f) (keep-links? #f))
        (copy-directory/files (resolve src) (resolve dest)
                              #:keep-modify-seconds? keep-modify-time?
                              #:preserve-links? keep-links?))
 
-      ((size             path)      (file-size (resolve path)))
-      ((permissions-ref  path)      (file-or-directory-permissions
-                                      (resolve path) 'bits))
-      ((permissions-set! path mode) (assert (integer? mode))
-                                    (file-or-directory-permissions
-                                      (resolve path) mode))
-      ((modify-time-ref  path)
-       (file-or-directory-modify-seconds (resolve path)))
-      ((modify-time-set! path seconds)
-       (file-or-directory-modify-seconds (resolve path) seconds))
+      ((size             path)         (file-size                        (resolve path)))
+      ((permissions-ref  path)         (file-or-directory-permissions    (resolve path) 'bits))
+      ((permissions-set! path mode)    (assert (integer? mode))
+                                       (file-or-directory-permissions    (resolve path) mode))
+      ((modify-time-ref  path)         (file-or-directory-modify-seconds (resolve path)))
+      ((modify-time-set! path seconds) (file-or-directory-modify-seconds (resolve path) seconds))
 
-      ((wait path)
-       (define evt (filesystem-change-evt (resolve path)))
-       (sync evt)
-       (filesystem-change-evt-cancel evt)))))
+      ((wait path) (define evt (filesystem-change-evt (resolve path)))
+                   (sync evt)
+                   (filesystem-change-evt-cancel evt)))))
 
 (define (console in out err)
   (lambda/handle-fail (lambda (x) x)
