@@ -251,11 +251,12 @@
 ;; TODO: what does a pre-connected udp port object look like?
 ;(define (port:udp port) ...)  ;; connected udp ports: udp-send, udp-receive
 
-;; TODO: maybe these shouldn't be fully-fledged file ports?
-;; Might want to hide: truncate, position
-(define stdio (console (file:port:input  (current-input-port))
-                       (file:port:output (current-output-port))
-                       (file:port:output (current-error-port))))
+(define (stdio:port:input  port) (bytestream:port:input  (bytestream:port port) port))
+(define (stdio:port:output port) (bytestream:port:output (bytestream:port port) port))
+
+(define stdio (console (stdio:port:input  (current-input-port))
+                       (stdio:port:output (current-output-port))
+                       (stdio:port:output (current-error-port))))
 
 (define (string:port:input s)
   (define v (string->vector s))
