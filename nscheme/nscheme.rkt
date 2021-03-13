@@ -5,6 +5,7 @@
          bitwise-arithmetic-shift << >> & \| ^
          filesystem console tcp stdio
          string:port:input string:port:output null:port:output
+         call-with-input-string call-with-output-string
          method-lambda method-choose method-unknown method-except method-only
          racket-eval)
 
@@ -93,6 +94,12 @@
 (define (mvector-copy!/string mv start src src-start src-end)
   (mvector-copy!/ref mv start src src-start src-end
                      (lambda (s i) (char->integer (string-ref s i)))))
+
+(define (call-with-input-string s k) (k (string:port:input s)))
+;; TODO: consider wrapping out to limit capability given to k
+(define (call-with-output-string  k) (let ((out (string:port:output)))
+                                       (k out)
+                                       (out 'string)))
 
 ;; TODO: model file descriptors and their operations directly?
 

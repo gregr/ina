@@ -1,9 +1,12 @@
 #lang racket/base
 (require "nscheme.rkt"
          profile racket/function racket/include racket/list racket/match
-         racket/port racket/pretty racket/string
+         racket/pretty racket/string
          (for-syntax (except-in racket/base append string-ref string-length
                                 string->list list->string))
+         (rename-in racket/port
+                    (call-with-input-string  racket:call-with-input-string)
+                    (call-with-output-string racket:call-with-output-string))
          (rename-in (except-in racket/base append string-ref string-length
                                string->list list->string)
                     (eof-object? racket:eof-object?)
@@ -52,7 +55,7 @@
 
 (define (read*/string          s) (read*          (string:port:input s)))
 (define (read*/annotate/string s) (read*/annotate (string:port:input s)))
-(define (racket:read*/string   s) (call-with-input-string s racket:read*))
+(define (racket:read*/string   s) (racket:call-with-input-string s racket:read*))
 
 (define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 3-2/3i 4-inf.0i 5@5 #i1@1 1@+2 1@-2 .5 6. #e.75 #b1.1 5e-2 0 0.0 -0.0 #i10/3 1 122 -3 4.0 500010000000.0 67.89 0.00001234")
 (define numbers/errors "5/0 -2/0 0/0 #i1/0 #i-1/0 #i0/0 #e5@5")
