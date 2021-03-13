@@ -220,8 +220,10 @@
                         (local-host local-port remote-host remote-port)
                         (tcp-addresses in #t))
                       (list local-host local-port remote-host remote-port))
-        ((in  . args) (apply a.in  args))
-        ((out . args) (apply a.out args)))))
+        ((in  . args) (if (null? args) (bytestream:port:input  a.in  in)
+                        (apply a.in  args)))
+        ((out . args) (if (null? args) (bytestream:port:output a.out out)
+                        (apply a.out args))))))
   (bytestream:port:output (bytestream:port:input super in) out))
 
 (define (tcp:listener listen)
