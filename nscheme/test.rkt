@@ -50,8 +50,8 @@
                   (racket:read in)))
   (if (racket:eof-object? datum) '() (cons datum (racket:read* in))))
 
-(define (read*/string          s) (read*          (port:string:input s)))
-(define (read*/annotate/string s) (read*/annotate (port:string:input s)))
+(define (read*/string          s) (read*          (string:port:input s)))
+(define (read*/annotate/string s) (read*/annotate (string:port:input s)))
 (define (racket:read*/string   s) (call-with-input-string s racket:read*))
 
 (define numbers "+1nan.0 +nan.0+i -inf.0i 0+1i 1+i -i 2-i 3-2/3i 4-inf.0i 5@5 #i1@1 1@+2 1@-2 .5 6. #e.75 #b1.1 5e-2 0 0.0 -0.0 #i10/3 1 122 -3 4.0 500010000000.0 67.89 0.00001234")
@@ -87,7 +87,7 @@
 
 (define categorized-data.normal
   (read*
-    (port:string:input
+    (string:port:input
       (string-join
         (list numbers numbers/errors symbols comments strings separation quotes)
         " "))))
@@ -95,7 +95,7 @@
 (define categorized-data.annotated
   (read*/annotate
     (lambda (d p0 p1) `#s(annotated ,d ,p0 ,p1))
-    (port:string:input
+    (string:port:input
       (string-join
         (list numbers numbers/errors symbols comments strings separation quotes)
         " "))))
@@ -200,7 +200,7 @@
     ;(define (rx:a^n n) (rx `(seq . ,(make-list n "a"))))
     ;(define (rx:a^n n) (rx `(seq . ,(make-list n '(? "a")))))
     (define (run-test n)
-      (define in (port:string:input (a^n n)))
+      (define in (string:port:input (a^n n)))
       (define r (time (rx:a^n n)))
       (time (r in 0)))
     (not (not (run-test n))))
@@ -208,14 +208,14 @@
 
 (for-each (lambda (x s)
             (define s.written
-              (let ((out (port:string:output)))
+              (let ((out (string:port:output)))
                 (write x out)
                 (out 'string)))
             (test (list 'write x s)
               s.written
               s)
             (test (list 'write.read x s)
-              (read (port:string:input s.written))
+              (read (string:port:input s.written))
               x))
           `(#t
             #f
@@ -326,7 +326,7 @@
 (let ((x data.formatted-writing)
       (s "((0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16) ((0 1 2 3 4 5 6) 7 8 9 10 11 12 (13 14 15 16)) (zero one two three four five six seven eight nine) #(zero one two three four five six seven eight nine) (zero one two three four five six seven eight nine . ten) (zero one two three four five six seven (zero one two three four five six seven eight nine . ten) eight nine . ten) (zero one two three #(zero one two three four five six seven eight nine) four five six seven eight nine (zero one two three four five six seven eight nine) ((zero one two three four five six seven eight nine) zero one two three four five six seven eight nine) ((zero one two three four five six seven eight nine) zero one two three four (zero one two three four five six seven eight nine) five six seven eight nine) ((0 1 2 3 4 5 6) 7 8 9 10 11 12 (13 14 15 16)) #(#(zero one two three four five six seven eight nine) zero one two three four five six #(zero one two three four five six seven eight nine) seven eight nine)))"))
   (define s.written
-    (let ((out (port:string:output)))
+    (let ((out (string:port:output)))
       (write x out)
       (out 'string)))
   ;(printf "formatted write:\n~a\n" s.written)
@@ -334,12 +334,12 @@
     s.written
     s)
   (test (list 'write/default.read)
-    (read (port:string:input s.written))
+    (read (string:port:input s.written))
     x))
 
 (let ((x data.formatted-writing))
   (define s.written
-    (let ((out (port:string:output)))
+    (let ((out (string:port:output)))
       ;(write x out 'pretty)
       (write x out '(pretty 80))
       (out 'string)))
@@ -352,13 +352,13 @@
     s.written
     racket:s.written)
   (test (list 'write/pretty.read)
-    (read (port:string:input s.written))
+    (read (string:port:input s.written))
     x))
 
 (let ((x data.formatted-writing)
       (s "((0\n  1\n  2\n  3\n  4\n  5\n  6\n  7\n  8\n  9\n  10\n  11\n  12\n  13\n  14\n  15\n  16)\n ((0\n   1\n   2\n   3\n   4\n   5\n   6)\n  7\n  8\n  9\n  10\n  11\n  12\n  (13\n   14\n   15\n   16))\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  eight\n  nine)\n #(zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  eight\n  nine\n  .\n  ten)\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  (zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine\n   .\n   ten)\n  eight\n  nine\n  .\n  ten)\n (zero\n  one\n  two\n  three\n  #(zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n  four\n  five\n  six\n  seven\n  eight\n  nine\n  (zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n  ((zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n  ((zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   zero\n   one\n   two\n   three\n   four\n   (zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   five\n   six\n   seven\n   eight\n   nine)\n  ((0\n    1\n    2\n    3\n    4\n    5\n    6)\n   7\n   8\n   9\n   10\n   11\n   12\n   (13\n    14\n    15\n    16))\n  #(#(zero\n      one\n      two\n      three\n      four\n      five\n      six\n      seven\n      eight\n      nine)\n    zero\n    one\n    two\n    three\n    four\n    five\n    six\n    #(zero\n      one\n      two\n      three\n      four\n      five\n      six\n      seven\n      eight\n      nine)\n    seven\n    eight\n    nine)))"))
   (define s.written
-    (let ((out (port:string:output)))
+    (let ((out (string:port:output)))
       (write x out '(pretty 0))
       (out 'string)))
   ;(printf "formatted write:\n~a\n" s.written)
@@ -366,13 +366,13 @@
     s.written
     s)
   (test (list 'write/pretty-thin.read)
-    (read (port:string:input s.written))
+    (read (string:port:input s.written))
     x))
 
 (let ((x data.formatted-writing)
       (s "((0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)\n ((0 1 2 3 4 5 6) 7 8 9 10 11 12 (13 14 15 16))\n (zero one two three four five six seven eight nine)\n #(zero one two three four five six seven eight nine)\n (zero one two three four five six seven eight nine . ten)\n (zero one two three four five six seven\n  (zero one two three four five six seven eight nine . ten) eight nine . ten)\n (zero one two three #(zero one two three four five six seven eight nine) four\n  five six seven eight nine (zero one two three four five six seven eight nine)\n  ((zero one two three four five six seven eight nine) zero one two three four\n   five six seven eight nine)\n  ((zero one two three four five six seven eight nine) zero one two three four\n   (zero one two three four five six seven eight nine) five six seven eight nine)\n  ((0 1 2 3 4 5 6) 7 8 9 10 11 12 (13 14 15 16))\n  #(#(zero one two three four five six seven eight nine) zero one two three four\n    five six #(zero one two three four five six seven eight nine) seven eight\n    nine)))"))
   (define s.written
-    (let ((out (port:string:output)))
+    (let ((out (string:port:output)))
       ;(write x out 'bulky)
       (write x out '(bulky 80))
       (out 'string)))
@@ -381,13 +381,13 @@
     s.written
     s)
   (test (list 'write/bulky.read)
-    (read (port:string:input s.written))
+    (read (string:port:input s.written))
     x))
 
 (let ((x data.formatted-writing)
       (s "((0\n  1\n  2\n  3\n  4\n  5\n  6\n  7\n  8\n  9\n  10\n  11\n  12\n  13\n  14\n  15\n  16)\n ((0\n   1\n   2\n   3\n   4\n   5\n   6)\n  7\n  8\n  9\n  10\n  11\n  12\n  (13\n   14\n   15\n   16))\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  eight\n  nine)\n #(zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  eight\n  nine\n  .\n  ten)\n (zero\n  one\n  two\n  three\n  four\n  five\n  six\n  seven\n  (zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine\n   .\n   ten)\n  eight\n  nine\n  .\n  ten)\n (zero\n  one\n  two\n  three\n  #(zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n  four\n  five\n  six\n  seven\n  eight\n  nine\n  (zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n  ((zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   zero\n   one\n   two\n   three\n   four\n   five\n   six\n   seven\n   eight\n   nine)\n  ((zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   zero\n   one\n   two\n   three\n   four\n   (zero\n    one\n    two\n    three\n    four\n    five\n    six\n    seven\n    eight\n    nine)\n   five\n   six\n   seven\n   eight\n   nine)\n  ((0\n    1\n    2\n    3\n    4\n    5\n    6)\n   7\n   8\n   9\n   10\n   11\n   12\n   (13\n    14\n    15\n    16))\n  #(#(zero\n      one\n      two\n      three\n      four\n      five\n      six\n      seven\n      eight\n      nine)\n    zero\n    one\n    two\n    three\n    four\n    five\n    six\n    #(zero\n      one\n      two\n      three\n      four\n      five\n      six\n      seven\n      eight\n      nine)\n    seven\n    eight\n    nine)))"))
   (define s.written
-    (let ((out (port:string:output)))
+    (let ((out (string:port:output)))
       (write x out '(bulky 0))
       (out 'string)))
   ;(printf "formatted write:\n~a\n" s.written)
@@ -395,7 +395,7 @@
     s.written
     s)
   (test (list 'write/bulky-thin.read)
-    (read (port:string:input s.written))
+    (read (string:port:input s.written))
     x))
 
 (let* ((codepoints  '(124 133 8232 8233 82330 802330 8020330 80203030))
@@ -418,7 +418,7 @@
     codepoints))
 
 (define benchmark
-  (let ((out port:null:output))
+  (let ((out null:port:output))
     (time (for-each (lambda (_)
                       (for-each (lambda (x) (write x out))
                                 '(4.0
@@ -445,7 +445,7 @@
   ;(define datum (read (stdio 'in)))
   ;(when (not (eof-object? datum))
     ;(printf "       write: ~s\nracket:write: ~s\n"
-            ;(let ((out (port:string:output)))
+            ;(let ((out (string:port:output)))
               ;(write datum out)
               ;(out 'string))
             ;(with-output-to-string

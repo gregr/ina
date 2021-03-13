@@ -4,7 +4,7 @@
          string->vector vector->string cons*
          bitwise-arithmetic-shift << >> & \| ^
          filesystem console tcp stdio
-         port:string:input port:string:output port:null:output
+         string:port:input string:port:output null:port:output
          racket-eval)
 
 (require racket/file racket/tcp racket/string racket/struct racket/vector)
@@ -95,12 +95,12 @@
 
 ;; TODO: model file descriptors and their operations directly?
 
-(define (port:bytestream port)
+(define (bytestream:port port)
   (method-lambda
     ((buffer-mode-ref)       (file-stream-buffer-mode port))
     ((buffer-mode-set! mode) (file-stream-buffer-mode port mode))))
 
-(define (port:bytestream:input super port)
+(define (bytestream:port:input super port)
   (define (eof->false d) (if (eof-object? d) #f d))
   (method-lambda
     ((close)     (close-input-port port))
@@ -116,7 +116,7 @@
                      (if bs (bytes-length bs) 0))
     (else        super)))
 
-(define (port:bytestream:output super port)
+(define (bytestream:port:output super port)
   (method-lambda
     ((close)  (close-output-port port))
     ((put b)  (write-byte b port))
@@ -124,17 +124,17 @@
     ((flush)  (flush-output port))
     (else     super)))
 
-(define (port:file port)
-  (define super (port:bytestream port))
+(define (file:port port)
+  (define super (bytestream:port port))
   (method-lambda
     ((position-ref)        (file-position* port))
     ((position-set! index) (file-position* port index))
     (else                  super)))
 
-(define (port:file:input  port) (port:bytestream:input (port:file port) port))
-(define (port:file:output port)
-  (define super (port:file port))
-  (port:bytestream:output
+(define (file:port:input  port) (bytestream:port:input (file:port port) port))
+(define (file:port:output port)
+  (define super (file:port port))
+  (bytestream:port:output
     (method-lambda
       ((truncate size) (file-truncate port size))
       (else            super))
@@ -155,13 +155,13 @@
       ((filesystem path) (filesystem (path/root path)))
 
       ((open-input path)
-       (port:file:input (open-input-file (resolve path))))
+       (file:port:input (open-input-file (resolve path))))
       ((open-output path exists)
-       (port:file:output (open-output-file (resolve path) #:exists exists)))
+       (file:port:output (open-output-file (resolve path) #:exists exists)))
       ((open-input-output path exists)
        (define-values (in out)
          (open-input-output-file (resolve path) #:exists exists))
-       (list (port:file:input in) (port:file:output in)))
+       (list (file:port:input in) (file:port:output in)))
 
       ((directory path) (map path->string (directory-list (resolve path))))
 
@@ -207,9 +207,9 @@
   (lambda/handle-fail (lambda (x) x)
                       (method-lambda ((in) in) ((out) out) ((error) err))))
 
-(define (port:tcp in out)
+(define (tcp:port in out)
   (define (abandoner port)
-    (define super (port:bytestream port))
+    (define super (bytestream:port port))
     (lambda/handle-fail
       (lambda (x) x)
       (method-lambda
@@ -227,7 +227,7 @@
                       (list local-host local-port remote-host remote-port))
         ((in  . args) (apply a.in  args))
         ((out . args) (apply a.out args)))))
-  (port:bytestream:output (port:bytestream:input super in) out))
+  (bytestream:port:output (bytestream:port:input super in) out))
 
 (define (tcp:listener listen)
   (lambda/handle-fail
@@ -236,7 +236,7 @@
       ((close)  (tcp-close listen))
       ((ready?) (tcp-accept-ready? listen))
       ((accept) (define-values (in out) (tcp-accept listen))
-                (port:tcp in out)))))
+                (tcp:port in out)))))
 
 (define tcp
   (lambda/handle-fail
@@ -246,18 +246,18 @@
        (tcp:listener (tcp-listen port max-wait reuse? hostname)))
       ((connect host port (localhost #f) (localport #f))
        (define-values (in out) (tcp-connect host port localhost localport))
-       (port:tcp in out)))))
+       (tcp:port in out)))))
 
 ;; TODO: what does a pre-connected udp port object look like?
 ;(define (port:udp port) ...)  ;; connected udp ports: udp-send, udp-receive
 
 ;; TODO: maybe these shouldn't be fully-fledged file ports?
 ;; Might want to hide: truncate, position
-(define stdio (console (port:file:input  (current-input-port))
-                       (port:file:output (current-output-port))
-                       (port:file:output (current-error-port))))
+(define stdio (console (file:port:input  (current-input-port))
+                       (file:port:output (current-output-port))
+                       (file:port:output (current-error-port))))
 
-(define (port:string:input s)
+(define (string:port:input s)
   (define v (string->vector s))
   (define i 0)
   (define (ref i) (and (< i (vector-length v)) (vector-ref v i)))
@@ -279,7 +279,7 @@
     ((position-ref)        i)
     ((position-set! index) (set! i (min (max index 0) (vector-length v))))))
 
-(define (port:string:output)
+(define (string:port:output)
   (define buffer (make-mvector 32 0))
   (define i 0)
   (define (grow mult)
@@ -303,7 +303,7 @@
     ((position-set! index) (set! i (min (max index 0) i)))
     ((truncate)            (set! i 0) (set! buffer (make-mvector 32 0)))))
 
-(define port:null:output
+(define null:port:output
   (method-lambda
     ((put  _) #t)
     ((put* _) #t)

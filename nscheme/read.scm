@@ -305,7 +305,7 @@
     (else (NumberSign start #f 10 #f #f))))
 
 (define (string->number s)
-  (define in (port:string:input s))
+  (define in (string:port:input s))
   (read-number/symbol (lambda (i) (in 'peek i)) 0
                       (lambda (t v p0 p1) (case t ((datum) v) (else #f)))
                       (lambda (_) #f)))

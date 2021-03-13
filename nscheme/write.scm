@@ -52,7 +52,7 @@
           ((eq? #f     v) "#f")
           ((null?      v) "()")
           ((procedure? v) "#<procedure>")
-          (else (define out (port:string:output))
+          (else (define out (string:port:output))
                 (define (pr s) (out 'put* s))
                 (cond ((number? v) (write-number v out))
                       ((symbol? v) (write-symbol v out))
@@ -184,7 +184,7 @@
         ((integer? n)    (pr-int            n))
         (else            (pr-int (numerator n)) (pr "/") (pr-nat (denominator n)))))
 
-(define (number->string n) (let ((out (port:string:output)))
+(define (number->string n) (let ((out (string:port:output)))
                              (write-number n out)
                              (out 'string)))
 
