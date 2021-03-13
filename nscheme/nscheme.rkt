@@ -78,13 +78,6 @@
      (method-choose ((name) (lambda (_ . param) body ...)) ... (else else-body ...)))
     ((_ body ...) (method-lambda body ... (else method-unknown)))))
 
-;; TODO: model file descriptors and their operations directly?
-
-(define (port:bytestream port)
-  (method-lambda
-    ((buffer-mode-ref)       (file-stream-buffer-mode port))
-    ((buffer-mode-set! mode) (file-stream-buffer-mode port mode))))
-
 (define (mvector-copy!/ref mv start src src-start src-end ref)
   (let loop ((i src-start))
     (cond ((<= src-end i) (- i src-start))
@@ -99,6 +92,13 @@
 (define (mvector-copy!/string mv start src src-start src-end)
   (mvector-copy!/ref mv start src src-start src-end
                      (lambda (s i) (char->integer (string-ref s i)))))
+
+;; TODO: model file descriptors and their operations directly?
+
+(define (port:bytestream port)
+  (method-lambda
+    ((buffer-mode-ref)       (file-stream-buffer-mode port))
+    ((buffer-mode-set! mode) (file-stream-buffer-mode port mode))))
 
 (define (port:bytestream:input super port)
   (define (eof->false d) (if (eof-object? d) #f d))
@@ -133,10 +133,12 @@
 
 (define (port:file:input  port) (port:bytestream:input (port:file port) port))
 (define (port:file:output port)
-  (define super (port:bytestream:output (port:file port) port))
-  (method-lambda
-    ((truncate size) (file-truncate port size))
-    (else            super)))
+  (define super (port:file port))
+  (port:bytestream:output
+    (method-lambda
+      ((truncate size) (file-truncate port size))
+      (else            super))
+    port))
 
 (define (filesystem root)
   (define (path/root path)
