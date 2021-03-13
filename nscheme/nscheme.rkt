@@ -5,6 +5,7 @@
          bitwise-arithmetic-shift << >> & \| ^
          filesystem console tcp stdio
          string:port:input string:port:output null:port:output
+         method-lambda method-choose method-unknown method-except method-only
          racket-eval)
 
 (require racket/file racket/tcp racket/string racket/struct racket/vector)
