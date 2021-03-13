@@ -207,23 +207,28 @@
   (lambda/handle-fail (lambda (x) x)
                       (method-lambda ((in) in) ((out) out) ((error) err))))
 
-(define (port:tcp port)
-  (define super (port:bytestream port))
-  (lambda/handle-fail
-    (lambda (x) x)
-    (method-lambda
-      ((addresses) (define-values
-                     (local-host local-port remote-host remote-port)
-                     (tcp-addresses port #t))
-                   (list local-host local-port remote-host remote-port))
-      ((abandon)   (tcp-abandon-port port))
-      (else        super))))
+(define (port:tcp in out)
+  (define (abandoner port)
+    (define super (port:bytestream port))
+    (lambda/handle-fail
+      (lambda (x) x)
+      (method-lambda
+        ((abandon) (tcp-abandon-port port))
+        (else super))))
+  (define a.in  (abandoner in))
+  (define a.out (abandoner out))
+  (define super
+    (lambda/handle-fail
+      (lambda (x) x)
+      (method-lambda
+        ((addresses)  (define-values
+                        (local-host local-port remote-host remote-port)
+                        (tcp-addresses in #t))
+                      (list local-host local-port remote-host remote-port))
+        ((in  . args) (apply a.in  args))
+        ((out . args) (apply a.out args)))))
+  (port:bytestream:output (port:bytestream:input super in) out))
 
-(define (port:tcp:input  port) (port:bytestream:input  (port:tcp port) port))
-(define (port:tcp:output port) (port:bytestream:output (port:tcp port) port))
-
-;; TODO: define a (socket in out) as a full-duplex port aka input-output-port?
-;; return a socket from accept and connect
 (define (tcp:listener listen)
   (lambda/handle-fail
     (lambda (x) x)
@@ -231,17 +236,17 @@
       ((close)  (tcp-close listen))
       ((ready?) (tcp-accept-ready? listen))
       ((accept) (define-values (in out) (tcp-accept listen))
-                (list (port:tcp:input in) (port:tcp:output out))))))
+                (port:tcp in out)))))
 
 (define tcp
   (lambda/handle-fail
     (lambda (x) x)
     (method-lambda
-      ((listen hostname port max-wait reuse?)
+      ((listen hostname port (max-wait 4) (reuse? #f))
        (tcp:listener (tcp-listen port max-wait reuse? hostname)))
-      ((connect host port localhost localport)
+      ((connect host port (localhost #f) (localport #f))
        (define-values (in out) (tcp-connect host port localhost localport))
-       (list (port:tcp:input in) (port:tcp:output out))))))
+       (port:tcp in out)))))
 
 ;; TODO: what does a pre-connected udp port object look like?
 ;(define (port:udp port) ...)  ;; connected udp ports: udp-send, udp-receive
