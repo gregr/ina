@@ -8,16 +8,16 @@
 
 (define (read in) (read/annotate #f in))
 (define (read/annotate annotate in)
-  (define p   (and annotate (in 'position-ref)))
+  (define p   (and annotate (port-position in)))
   (define ann (and annotate (lambda (v p0 p1) (annotate v (+ p0 p) (+ p1 p)))))
-  (define (return v pos) (in 'forget pos) v)
+  (define (return v pos) (port-forget in pos) v)
   (define (fail msg p0 p1)
     (define mv (make-mvector (- p1 p0) 0))
-    (in 'peek*! mv 0 p0 p1)
+    (port-peek*! in mv 0 p0 p1)
     (define v0 (cons msg (mvector->string mv)))
     (define v (if ann (ann v0 p0 p1) v0))
     (return (thunk v) p1))
-  (let/cps _ (t v p0 p1) (read-datum (lambda (i) (in 'peek i)) 0 ann _)
+  (let/cps _ (t v p0 p1) (read-datum (lambda (i) (port-peek in i)) 0 ann _)
     (case t
       ((datum) (return v   p1))
       ((eof)   (return eof p1))
@@ -305,10 +305,11 @@
     (else (NumberSign start #f 10 #f #f))))
 
 (define (string->number s)
-  (define in (string:port:input s))
-  (read-number/symbol (lambda (i) (in 'peek i)) 0
-                      (lambda (t v p0 p1) (case t ((datum) v) (else #f)))
-                      (lambda (_) #f)))
+  (call-with-input-string
+    s (lambda (in)
+        (read-number/symbol (lambda (i) (port-peek in i)) 0
+                            (lambda (t v p0 p1) (case t ((datum) v) (else #f)))
+                            (lambda (_) #f)))))
 
 ;; TODO: Re-implement reader using this grammar?
 ;; Revisit this if grammar can be compiled to an efficient state machine.

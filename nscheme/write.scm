@@ -3,7 +3,7 @@
 ;; fine-grained writing styles? express write in terms of richer documents?
 
 (define (write v out (format-policy? #f))
-  (define (pr s) (out 'put* s))
+  (define (pr s) (port-put* out s))
   (define (wr+:default x pos _ __) (pr " ") (wr x (+ pos 1) 0))
   (define format-policy
     (match format-policy?
@@ -52,13 +52,13 @@
           ((eq? #f     v) "#f")
           ((null?      v) "()")
           ((procedure? v) "#<procedure>")
-          (else (define out (string:port:output))
-                (define (pr s) (out 'put* s))
-                (cond ((number? v) (write-number v out))
-                      ((symbol? v) (write-symbol v out))
-                      ((string? v) (write-string v out))
-                      (else        (pr "#<unknown>")))
-                (out 'string))))
+          (else (call-with-output-string
+                  (lambda (out)
+                    (define (pr s) (port-put* out s))
+                    (cond ((number? v) (write-number v out))
+                          ((symbol? v) (write-symbol v out))
+                          ((string? v) (write-string v out))
+                          (else        (pr "#<unknown>"))))))))
   (define (wr x pos indent.0)
     (match x
       ((? string?) (pr x) (+ pos (string-length x)))
@@ -80,7 +80,7 @@
   (wr (datum->wunit v) 0 0))
 
 (define (write-string v out)
-  (define (pr s) (out 'put* s))
+  (define (pr s) (port-put* out s))
   (pr "\"")
   (for-each
     (lambda (c)
@@ -97,7 +97,7 @@
   (let* ((punc?       (cset "\\\"#'(),;[]`{}"))
          (bad-symbol? (lambda (c) (or (unicode-space? c) (punc? c)))))
     (lambda (v out)
-      (define (pr s) (out 'put* s))
+      (define (pr s) (port-put* out s))
       (define s (symbol->string v))
       (cond ((eq? v '|.|)       (pr "|.|"))
             ((string->number s) (pr "|") (pr s) (pr "|"))
@@ -118,8 +118,8 @@
 ;;   (real->floating-point-bytes x 8)
 ;;   (floating-point-bytes->real bs)
 (define (write-number n out)
-  (define (pr s)       (out 'put* s))
-  (define (pr-digit d) (out 'put (+ d (char "0"))))
+  (define (pr s)       (port-put* out s))
+  (define (pr-digit d) (port-put  out (+ d (char "0"))))
   (define (pr-nat n)
     (if (eqv? n 0) (pr "0")
       (let loop ((n n) (ds '()))
@@ -184,8 +184,7 @@
         ((integer? n)    (pr-int            n))
         (else            (pr-int (numerator n)) (pr "/") (pr-nat (denominator n)))))
 
-(define (number->string n) (let ((out (string:port:output)))
-                             (write-number n out)
-                             (out 'string)))
+(define (number->string n) (call-with-output-string
+                             (lambda (out) (write-number n out))))
 
 ;; TODO: format, fprintf
