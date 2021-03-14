@@ -3,8 +3,8 @@
          mvector-length mvector-ref mvector-set! mvector-cas!
          string->vector vector->string cons*
          bitwise-arithmetic-shift << >> & \| ^
-         filesystem console tcp stdio
-         string:port:input string:port:output null:port:output
+         stdio filesystem tcp udp
+         console string:port:input string:port:output null:port:output
          call-with-input-string call-with-output-string
          port-close port-flush port-put port-put*
          port-forget port-get port-peek port-get*! port-peek*!
@@ -13,7 +13,8 @@
          method-lambda method-choose method-unknown method-except method-only
          racket-eval)
 
-(require racket/file racket/tcp racket/string racket/struct racket/vector)
+(require racket/file racket/tcp racket/string racket/struct racket/vector
+         racket/udp)
 
 (struct mvector (v)
         #:methods gen:custom-write
@@ -268,9 +269,62 @@
        (define-values (in out) (tcp-connect host port localhost localport))
        (tcp:port in out)))))
 
-;; TODO: what does a pre-connected udp port object look like?
-;; TODO: what about a not-connected udp port?: udp-bind! udp-connect! udp-send-to
-;(define (udp:port port) ...)  ;; connected udp ports: udp-send, udp-receive
+(define udp
+  (lambda/handle-fail
+    (lambda (x) x)
+    (method-lambda
+      ((open host.family port.family (port.local #f) (reuse? #f))
+       (define p (udp:port (udp-open-socket host.family port.family)))
+       (when port.local (p 'bind #f port.local reuse?))
+       p)
+      ((listen host.local port.local (reuse? #f))
+       (define p (udp:port (udp-open-socket host.local port.local)))
+       (p 'bind host.local port.local reuse?)
+       p)
+      ((connect host port (port.local #f) (reuse? #f))
+       (define p (udp:port (udp-open-socket host port)))
+       (when port.local (p 'bind #f port.local reuse?))
+       (p 'connect host port)
+       p))))
+
+(define (udp:port socket)
+  (lambda/handle-fail
+    (lambda (x) x)
+    (method-lambda
+      ((close)                      (udp-close    socket))
+      ((bind host port (reuse? #f)) (udp-bind!    socket host port reuse?))
+      ((connect host port)          (udp-connect! socket host port))
+      ((disconnect)                 (udp-connect! socket #f   #f))
+      ((addresses)                  (define-values
+                                      (host.local port.local host.remote port.remote)
+                                      (udp-addresses socket #t))
+                                    (list host.local port.local host.remote port.remote))
+
+      ((put* s)        (udp-send socket (string->bytes/utf-8 s)))
+      ((aim host port) (lambda/handle-fail
+                         (lambda (x) x)
+                         (method-lambda
+                           ((put* s) (udp-send-to socket host port (string->bytes/utf-8 s))))))
+
+      ;; TODO: omit remote host and port when connected?
+      ((get*! mv start len)
+       (define        bs                 (make-bytes len 0))
+       (define-values (amount host port) (udp-receive! socket bs 0 len))
+       (mvector-copy!/bytes mv start bs 0 amount)
+       (cons amount (cons host port)))
+
+      ((buffer-size-set! amount) (udp-set-receive-buffer-size! socket amount))
+      ((ttl-ref)                 (udp-ttl                      socket))
+      ((ttl-set! ttl)            (udp-set-ttl!                 socket ttl))
+
+      ((multicast-join  addr host.local)    (udp-multicast-join-group!    socket addr host.local))
+      ((multicast-leave addr host.local)    (udp-multicast-leave-group!   socket addr host.local))
+      ((multicast-iface-ref)                (udp-multicast-interface      socket))
+      ((multicast-iface-set! host.local)    (udp-multicast-set-interface! socket      host.local))
+      ((multicast-loopback?-ref)            (udp-multicast-loopback?      socket))
+      ((multicast-loopback?-set! loopback?) (udp-multicast-set-loopback!  socket loopback?))
+      ((multicast-ttl-ref)                  (udp-multicast-ttl            socket))
+      ((multicast-ttl-set! ttl)             (udp-multicast-set-ttl!       socket ttl)))))
 
 (define (stdio:port:input  port) (bytestream:port:input  (bytestream:port port) port))
 (define (stdio:port:output port) (bytestream:port:output (bytestream:port port) port))
