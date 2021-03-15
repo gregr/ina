@@ -11,7 +11,7 @@
          port-truncate port-position port-position-set!
          port-buffer-mode port-buffer-mode-set!
          method-lambda method-choose method-unknown method-except method-only
-         racket-eval)
+         racket:eval)
 
 (require racket/file racket/tcp racket/string racket/struct racket/vector
          racket/udp)
@@ -127,6 +127,10 @@
 
 ;; TODO: model file descriptors and their operations directly?
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Generic bytestream IO
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define (bytestream:port port)
   (method-lambda
     ((buffer-mode-ref)       (file-stream-buffer-mode port))
@@ -156,21 +160,9 @@
     ((flush)  (flush-output port))
     (else     super)))
 
-(define (file:port port)
-  (define super (bytestream:port port))
-  (method-lambda
-    ((position-ref)        (file-position* port))
-    ((position-set! index) (file-position* port index))
-    (else                  super)))
-
-(define (file:port:input  port) (bytestream:port:input (file:port port) port))
-(define (file:port:output port)
-  (define super (file:port port))
-  (bytestream:port:output
-    (method-lambda
-      ((truncate size) (file-truncate port size))
-      (else            super))
-    port))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; File IO
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (filesystem root)
   ;; NOTE: this is not a secure abstraction of a subtree of the file system.
@@ -222,9 +214,44 @@
                    (sync evt)
                    (filesystem-change-evt-cancel evt)))))
 
-(define (console in out err)
-  (lambda/handle-fail (lambda (x) x)
-                      (method-lambda ((in) in) ((out) out) ((error) err))))
+(define (file:port port)
+  (define super (bytestream:port port))
+  (method-lambda
+    ((position-ref)        (file-position* port))
+    ((position-set! index) (file-position* port index))
+    (else                  super)))
+
+(define (file:port:input  port) (bytestream:port:input (file:port port) port))
+(define (file:port:output port)
+  (define super (file:port port))
+  (bytestream:port:output
+    (method-lambda
+      ((truncate size) (file-truncate port size))
+      (else            super))
+    port))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Network communication
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define tcp
+  (lambda/handle-fail
+    (lambda (x) x)
+    (method-lambda
+      ((listen hostname port (max-wait 4) (reuse? #f))
+       (tcp:listener (tcp-listen port max-wait reuse? hostname)))
+      ((connect host port (localhost #f) (localport #f))
+       (define-values (in out) (tcp-connect host port localhost localport))
+       (tcp:port in out)))))
+
+(define (tcp:listener listen)
+  (lambda/handle-fail
+    (lambda (x) x)
+    (method-lambda
+      ((close)  (tcp-close listen))
+      ((ready?) (tcp-accept-ready? listen))
+      ((accept) (define-values (in out) (tcp-accept listen))
+                (tcp:port in out)))))
 
 (define (tcp:port in out)
   (define (abandoner port)
@@ -241,33 +268,14 @@
       (lambda (x) x)
       (method-lambda
         ((addresses)  (define-values
-                        (local-host local-port remote-host remote-port)
+                        (host.local port.local host.remote port.remote)
                         (tcp-addresses in #t))
-                      (list local-host local-port remote-host remote-port))
+                      (list host.local port.local host.remote port.remote))
         ((in  . args) (if (null? args) (bytestream:port:input  a.in  in)
                         (apply a.in  args)))
         ((out . args) (if (null? args) (bytestream:port:output a.out out)
                         (apply a.out args))))))
   (bytestream:port:output (bytestream:port:input super in) out))
-
-(define (tcp:listener listen)
-  (lambda/handle-fail
-    (lambda (x) x)
-    (method-lambda
-      ((close)  (tcp-close listen))
-      ((ready?) (tcp-accept-ready? listen))
-      ((accept) (define-values (in out) (tcp-accept listen))
-                (tcp:port in out)))))
-
-(define tcp
-  (lambda/handle-fail
-    (lambda (x) x)
-    (method-lambda
-      ((listen hostname port (max-wait 4) (reuse? #f))
-       (tcp:listener (tcp-listen port max-wait reuse? hostname)))
-      ((connect host port (localhost #f) (localport #f))
-       (define-values (in out) (tcp-connect host port localhost localport))
-       (tcp:port in out)))))
 
 (define udp
   (lambda/handle-fail
@@ -326,12 +334,31 @@
       ((multicast-ttl-ref)                  (udp-multicast-ttl            socket))
       ((multicast-ttl-set! ttl)             (udp-multicast-set-ttl!       socket ttl)))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Standard IO and consoles
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (console in out err)
+  (lambda/handle-fail (lambda (x) x)
+                      (method-lambda ((in) in) ((out) out) ((error) err))))
+
 (define (stdio:port:input  port) (bytestream:port:input  (bytestream:port port) port))
 (define (stdio:port:output port) (bytestream:port:output (bytestream:port port) port))
 
 (define stdio (console (stdio:port:input  (current-input-port))
                        (stdio:port:output (current-output-port))
                        (stdio:port:output (current-error-port))))
+
+(define null:port:output
+  (method-lambda
+    ((put  _) #t)
+    ((put* _) #t)
+    ((close)  #t)
+    ((flush)  #t)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; String IO
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (string:port:input s)
   (define v (string->vector s))
@@ -379,19 +406,12 @@
     ((position-set! index) (set! i (min (max index 0) i)))
     ((truncate)            (set! i 0) (set! buffer (make-mvector 32 0)))))
 
-(define null:port:output
-  (method-lambda
-    ((put  _) #t)
-    ((put* _) #t)
-    ((close)  #t)
-    ((flush)  #t)))
-
 ;; TODO: synchronous channels, generators
 ;; NOTE: these are not ports; ports are restricted to transferring bytes
 ;; TODO: channels that get from sequences or put to mvectors
 ;; TODO: generators that iterate over sequences
 
-(define (racket-eval rkt-datum)
+(define (racket:eval rkt-datum)
   (define (racket-datum form)
     (define (@ i) (vector-ref form i))
     (cond ((pair? form)         (cons (racket-datum (car form))
