@@ -16,6 +16,10 @@
 (require racket/file racket/tcp racket/string racket/struct racket/vector
          racket/udp)
 
+;; TODO: import new record struct syntax definitions?
+
+;; TODO: Design protocol/prototype-based OO layer on top of procedures
+
 (struct mvector (v)
         #:methods gen:custom-write
         ((define write-proc
@@ -126,6 +130,10 @@
 (define (port-buffer-mode-set! p m) (p 'buffer-mode-set! m))
 
 ;; TODO: model file descriptors and their operations directly?
+
+;; TODO: transitions to/from raw mode via stty?
+
+;; TODO: for simplicity, have get* directly return a string rather than fill a buffer?
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generic bytestream IO

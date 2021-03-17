@@ -67,8 +67,8 @@ TODO
 ## TODO
 
 rough component implementation order for bootstrap:
-  * io(?)
-  * port
+  * ~~io~~ (skip for now, ports are sufficient for prototyping)
+  * ~~port~~
   * ~~unicode~~
   * ~~grammar~~ (abandoned for now)
   * ~~read~~
@@ -84,13 +84,11 @@ rough component implementation order for bootstrap:
 
 Racket-compatible bootstrap in more detail:
   * shallow embedding of nScheme in Racket
-    * .rkt files that include .scm files
-    * simple io capabilities (see platforms for more io): files and stdio
+    * ~~.rkt files that include .scm files~~
+    * ~~simple io capabilities (see platforms for more io): files and stdio~~
     * avoid situations where racket features can be distinguished from nscheme
-      * void values produced by set!, cond, case, when, unless, etc.
       * abort/shift/reset tags and dynamic parameters
         * could avoid their use entirely?  might be hard for dynamic parameters
-      * procedures with non-list parameters
   * base library
     * redefine values, let-values in terms of vectors
     * simple record types
@@ -101,7 +99,7 @@ Racket-compatible bootstrap in more detail:
         if `name` is not special, then (name (field1 x) field2) matches values
         that are `name?` and submatches on `name-field1` and `name-field2`.
       * special names: quote, quasiquote, cons, list, cons*, list*, vector
-    * input/output ports (build on simple io primitives)
+    * ~~input/output ports (build on simple io primitives)~~
   * bootstrap self-applicable compiler
     * syntax objects with source annotations
     * read-syntax/write
@@ -205,7 +203,7 @@ Racket-compatible bootstrap in more detail:
           * multiple concurrency modes
             * effect transactions
               * process may affect the context without race conditions
-            * running uninterruptibly/atomically
+            * running uninterruptibly/atomically/critical-section
               * prevents effect interference by pausing sibling events
             * unrestricted
               * must coordinate explicitly (CAS/locks/etc) to prevent races
@@ -670,6 +668,10 @@ Real-world (effect) interaction/reaction:
     platform-specific?  Racket efficiently supports interruption features that JS can't.
   * high level synchronizable actions interface
     * as in Concurrent ML, or Racket synchronizable events
+    * Instead of `X/enable-break` variants of `X` to safely perform the op or break, but
+      not both, provide a synchronizable event for temporarily enabled breaks, e.g.,
+      `(sync (choice-evt X break-evt))`.
+      Also provide a `timeout-evt` for similar orthogonality.
 
 ### syntax extensions
 * light extensions
