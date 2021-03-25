@@ -2,6 +2,7 @@
   (define (cunit cstx)
     (define c (syntax->datum cstx))
     (cond ((byte? c)                                 c)
+          ;; TODO: do not use string-length or string-ref
           ((and (string? c) (= (string-length c) 1)) (string-ref c 0))
           (else (error "invalid codeunit:" cstx))))
   (syntax-case stx ()

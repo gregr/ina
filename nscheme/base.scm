@@ -7,7 +7,9 @@
 (define (rlist->string cs) (list->string (reverse cs)))
 (define (mvector->list mv) (vector->list (mvector->vector mv)))
 (define (mvector->string mv) (vector->string (mvector->vector mv)))
+;; TODO: this operation should be removed
 (define (string-length s) (vector-length (string->vector s)))
+;; TODO: this operation should be removed
 (define (string-ref s i) (vector-ref (string->vector s) i))
 
 (define (mvector-fill! mv v)
@@ -22,6 +24,7 @@
   (mvector-copy!/ref mv start src src-start src-end mvector-ref))
 (define (mvector-copy!/vector mv start src src-start src-end)
   (mvector-copy!/ref mv start src src-start src-end vector-ref))
+;; TODO: this operation needs to be removed
 (define (mvector-copy!/string mv start src src-start src-end)
   (mvector-copy!/ref mv start src src-start src-end string-ref))
 (define (mvector-copy!/list mv start xs)

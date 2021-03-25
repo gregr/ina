@@ -145,6 +145,7 @@
                     (mvector-set! mv i c) (loop pos (+ i 1)))
                   (define (store* cs pos)
                     (loop pos (+ i (mvector-copy!/list mv i cs))))
+                  ;; TODO: do not use string-ref
                   (define (estore s) (store (string-ref s 0) (+ pos 2)))
                   (if (eqv? pos last-pos)
                     (k 'datum (mvector->string mv) start (+ last-pos 1))

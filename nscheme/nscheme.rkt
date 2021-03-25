@@ -100,6 +100,7 @@
   (mvector-copy!/ref mv start src src-start src-end bytes-ref))
 (define (mvector-copy!/vector mv start src src-start src-end)
   (mvector-copy!/ref mv start src src-start src-end vector-ref))
+;; TODO: this operation needs to be removed
 (define (mvector-copy!/string mv start src src-start src-end)
   (mvector-copy!/ref mv start src src-start src-end
                      (lambda (s i) (char->integer (string-ref s i)))))
@@ -110,16 +111,21 @@
                                        (k out)
                                        (out 'string)))
 
+;; TODO: synchronizable events for ports
+
 (define (port-close    p)   (p 'close))
 (define (port-flush    p)   (p 'flush))
 (define (port-put      p b) (p 'put  b))
+;; TODO: this should take a (byte)vector as input
 (define (port-put*     p s) (p 'put* s))
+;; TODO: define port-put-string separately for convenience
 
 (define (port-forget p amount) (p 'forget amount))
 (define (port-get    p)        (p 'get))
 (define (port-peek   p skip)   (p 'peek skip))
 ;; TODO: ideally these would be a general implementation in terms of port-get/peek.
 ;; Revisit these when testing compiler optimizations.
+;; TODO: also, define non-! versions that return a new (byte)vector for convenience
 (define (port-get*!  p mv start len)        (p 'get*!  mv start len))
 (define (port-peek*! p mv start skip until) (p 'peek*! mv start skip until))
 
@@ -164,6 +170,7 @@
   (method-lambda
     ((close)  (close-output-port port))
     ((put b)  (write-byte b port))
+    ;; TODO: this should take a (byte)vector as input
     ((put* s) (write-string s port))
     ((flush)  (flush-output port))
     (else     super)))
@@ -257,6 +264,7 @@
     (lambda (x) x)
     (method-lambda
       ((close)  (tcp-close listen))
+      ;; TODO: use a synchronizable event instead, based on tcp-accept-evt
       ((ready?) (tcp-accept-ready? listen))
       ((accept) (define-values (in out) (tcp-accept listen))
                 (tcp:port in out)))))
@@ -285,6 +293,7 @@
                         (apply a.out args))))))
   (bytestream:port:output (bytestream:port:input super in) out))
 
+;; TODO: synchronizable events for udp sending, receiving, and readiness
 (define udp
   (lambda/handle-fail
     (lambda (x) x)
@@ -316,10 +325,13 @@
                                       (udp-addresses socket #t))
                                     (list host.local port.local host.remote port.remote))
 
+      ;; TODO: this should take a (byte)vector as input
       ((put* s)        (udp-send socket (string->bytes/utf-8 s)))
       ((aim host port) (lambda/handle-fail
                          (lambda (x) x)
                          (method-lambda
+                           ;; TODO: synchronizable events
+                           ;; TODO: this should take a (byte)vector as input
                            ((put* s) (udp-send-to socket host port (string->bytes/utf-8 s))))))
 
       ;; TODO: omit remote host and port when connected?
@@ -368,6 +380,8 @@
 ;; String IO
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; TODO: these should be built on (byte)vector:port:input/output
+
 (define (string:port:input s)
   (define v (string->vector s))
   (define i 0)
@@ -404,6 +418,8 @@
     ((put b)  (when (= i (mvector-length buffer)) (grow 2))
               (mvector-set! buffer i b)
               (set! i (+ i 1)))
+    ;; TODO: this should take a (byte)vector as input
+    ;; TODO: do not use these string operations
     ((put* s) (define u (- (string-length s) (- (mvector-length buffer) i)))
               (when (< 0 u) (grow (+ (quotient u (mvector-length buffer)) 2)))
               (mvector-copy!/string buffer i s 0 (string-length s))

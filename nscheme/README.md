@@ -30,12 +30,12 @@ This is a nonstandard Scheme implementation.
     * Counter-example: for performance, unsafe compilers may assume no errors
       * Programs crash or exhibit undefined behavior when assumption fails
       * May employ static analyses to rule out errors and provide warnings
-* no special character type, strings are bytevectors instead
-  * utf-8 encoding is intended, but not guaranteed; arbitrary bytes may be stored
-  * useful notion of character depends on context
-    * code units (bytes) suffice for typical string manipulation
-    * characters as grapheme clusters (substrings) for user interaction
-    * characters as code points (like Racket's char type) is rarely useful
+* no primitive character type: a string is indivisible until (utf-8) decoded to a vector
+  * utf-8 encoding is assumed for vector and list conversions
+  * no `string-ref`, since basis of decomposition depends on context
+  * code units (bytes) are not characters, but suffice for low-level string manipulation
+  * code points are not characters, but suffice for some higher-level string manipulation
+  * grapheme clusters (substrings) are the right notion of character for user interaction
 * [m]vectors may be constrained to only contain elements of a specified fixed-width type
   * providing `mvector-set!` with an element of the wrong type is an error
   * `[m]vector`, `[m]vector-length`, `[m]vector-ref`, `mvector-set!` `mvector-cas!` are
@@ -43,7 +43,8 @@ This is a nonstandard Scheme implementation.
     element type, which by default is the usual (tagged value or pointer) Scheme type
     * Various fixed-size (possibly unsigned) integer and floating point types are
       supported
-    * strings are implemented as vectors constrained to contain unsigned bytes
+    * a string is implemented as a view on a vector constrained to contain unsigned bytes
+      * utf-8 encoding assumed, and should be enforced by codec library
     * a low-level representation language exposes these details and is used to implement
       the primitive operations and data types
 * A library for a higher-level Scheme-like language is implemented in terms of the basic

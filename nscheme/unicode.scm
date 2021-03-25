@@ -1,3 +1,4 @@
+;; TODO: rename unicode to codepoint in many places
 (define unicode-min 0)
 (define unicode-max #x7FFFFFFF)
 (define (unicode? i) (and (integer? i) (<= 0 i unicode-max)))
@@ -18,6 +19,7 @@
      #(#x0200000    #x03FFFFFF   #b11111100 #b11111000 24)
      #(#x4000000    ,unicode-max #b11111110 #b11111100 30)))
 
+;; TODO: codepoint->utf8
 (define (unicode->utf8 i)
   (and (integer? i) (<= 0 i)
        (let loop ((ri 0))
@@ -32,6 +34,7 @@
                             '())))
                   (loop (+ ri 1))))))))
 
+;; TODO: utf8->codepoint
 (define (utf8->unicode i0)
   (let loop ((ri 0) (i i0))
     (and (< ri (vector-length unicode-ranges))
@@ -43,6 +46,8 @@
                                (and (= 0 (& inext #xC0))
                                     (loop (+ ri 1) (\| (<< i 6) inext))))))))))
 
+;; TODO: work with (byte)vectors of utf8 codeunits rather than strings.
+;; Can then define a string operator from this.
 (define (string->unicodes s)
   (define result
     (foldl (lambda (b acc) (let ((rps (car acc)) (next ((cdr acc) b)))
@@ -99,11 +104,13 @@
                  (else (if (< i (car r)) (loop start n)
                          (or (<= i (cdr r)) (loop (+ n 1) end)))))))))
 
+;; TODO: codepoints.hspace etc.
 (define unicode-hspace '#(9 (11 . 12) 32 160 (8192 . 8202) 8239 8287 12288))
 (define unicode-vspace '#(10 13 133 8232 8233))
 (define unicode-space (intset-merge unicode-hspace unicode-vspace))
 (define unicode-control '#((0 . 31) (127 . 159)))
 
+;; TODO: codepoint-hspace? etc.
 (define (unicode-hspace?  i) (intset-member? unicode-hspace  i))
 (define (unicode-vspace?  i) (intset-member? unicode-vspace  i))
 (define (unicode-space?   i) (intset-member? unicode-space   i))
@@ -113,5 +120,7 @@
 (define-syntax (char stx)
   (syntax-case stx ()
     ((_ ss) (let ((s (syntax->datum #'ss)))
+            ;; TODO: do not use string-length
               (and (string? s) (= (string-length s) 1)))
+            ;; TODO: do not use string-ref
             (datum->syntax #'_ (string-ref (syntax->datum #'ss) 0)))))

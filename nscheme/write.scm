@@ -30,6 +30,8 @@
       (`(bulky  ,width) width)))
   (define (wunit-width x)
     (match x
+      ;; TODO: do not use strings, use (byte)vectors
+      ;; TODO: do not use string-length
       ((? string?)      (string-length x))
       ((vector w _ _ _) w)))
   (define (datum->wunit v)
