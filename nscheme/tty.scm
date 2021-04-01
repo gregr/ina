@@ -57,41 +57,35 @@
 
 ;; Select Graphic Rendition (SGR) codes
 (define sgr:colors
-  ;; TODO: replace this use of hash
-  (make-immutable-hash
-    (map cons
-         '(default black red green yellow blue magenta cyan white)
-         (cons 9 (range 8)))))
+  (map cons
+       '(default black red green yellow blue magenta cyan white)
+       (cons 9 (range 8))))
 (define (sgr:fg-color i) (+ 30 i))
 (define (sgr:bg-color i) (+ 40 i))
 
-(define sgr:modifiers
-  (hash 'reset       0
-        'bold+       1
-        'bold-      22
-        'underline+  4
-        'underline- 24
-        'blink+      5
-        'blink-     25
-        'invert+     7
-        'invert-    27))
+(define sgr:reset                   0)
+(define (sgr:bold      ?) (if ? 1 22))
+(define (sgr:underline ?) (if ? 4 24))
+(define (sgr:blink     ?) (if ? 5 25))
+(define (sgr:invert    ?) (if ? 7 27))
 
 (define (sgr:codes->string codes)
   (if (null? codes) ""
     (string-append "\e[" (string-join (map number->string codes) ";") "m")))
 
 (define sgr:style.default
-  (hash 'fg-color  (sgr:fg-color (hash-ref sgr:colors 'default))
-        'bg-color  (sgr:bg-color (hash-ref sgr:colors 'default))
-        'bold      (hash-ref sgr:modifiers 'bold-)
-        'underline (hash-ref sgr:modifiers 'underline-)
-        'blink     (hash-ref sgr:modifiers 'blink-)
-        'invert    (hash-ref sgr:modifiers 'invert-)))
+  (plist->alist
+    (list 'fg-color  (sgr:fg-color (alist-ref sgr:colors 'default))
+          'bg-color  (sgr:bg-color (alist-ref sgr:colors 'default))
+          'bold      (sgr:bold      #f)
+          'underline (sgr:underline #f)
+          'blink     (sgr:blink     #f)
+          'invert    (sgr:invert    #f))))
 
 (define (sgr:style-diff-codes s1 s2)
   (foldl (lambda (key codes)
-           (define v.1 (hash-ref s1 key))
-           (define v.2 (hash-ref s2 key))
+           (define v.1 (alist-ref s1 key))
+           (define v.2 (alist-ref s2 key))
            (if (equal? v.1 v.2) codes (cons v.1 codes)))
          '()
          '(invert blink underline bold bg-color fg-color)))
