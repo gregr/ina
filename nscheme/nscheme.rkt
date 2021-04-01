@@ -3,7 +3,7 @@
          mvector-length mvector-ref mvector-set! mvector-cas!
          string->vector vector->string cons*
          bitwise-arithmetic-shift << >> & \| ^
-         stdio filesystem tcp udp
+         stdio filesystem tcp udp tty
          console string:port:input string:port:output null:port:output
          call-with-input-string call-with-output-string
          port-close port-flush port-put port-put*
@@ -13,8 +13,8 @@
          method-lambda method-choose method-unknown method-except method-only
          racket:eval)
 
-(require racket/file racket/tcp racket/string racket/struct racket/vector
-         racket/udp)
+(require racket/file racket/port racket/string racket/struct racket/system
+         racket/tcp racket/udp racket/vector)
 
 ;; TODO: import new record struct syntax definitions?
 
@@ -136,8 +136,6 @@
 (define (port-buffer-mode-set! p m) (p 'buffer-mode-set! m))
 
 ;; TODO: model file descriptors and their operations directly?
-
-;; TODO: transitions to/from raw mode via stty?
 
 ;; TODO: for simplicity, have get* directly return a string rather than fill a buffer?
 
@@ -434,6 +432,32 @@
 ;; NOTE: these are not ports; ports are restricted to transferring bytes
 ;; TODO: channels that get from sequences or put to mvectors
 ;; TODO: generators that iterate over sequences
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; TTY manipulation
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define tty
+  (let ()
+    (define (command name . args)
+      (string-trim
+        (with-output-to-string
+          (lambda () (apply system* (find-executable-path name) args)))))
+    (define (tput arg)    (command "tput" arg))
+    (define (stty . args) (apply command "stty" args))
+    (method-lambda
+      ((lines)      (string->number (string-trim (tput "lines"))))
+      ((columns)    (string->number (string-trim (tput "cols"))))
+      ((clear)       (command "clear")) ; \e[2J
+      ((save)        (tput "smcup"))    ; \e[?47h
+      ((restore)     (tput "rmcup"))    ; \e[?47l
+      ((cursor-show) (tput "cnorm"))    ; \e[?25h
+      ((cursor-hide) (tput "civis"))    ; \e[?25l
+      ((stty-ref)   (stty "-g"))
+      ((stty-set s) (stty s))
+      ((stty-raw)   (stty "raw")))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (racket:eval rkt-datum)
   (define (racket-datum form)
