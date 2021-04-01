@@ -14,8 +14,10 @@
 (define ec:display-clear-line-full   "\e[2K")
 
 ;; Cursor control
-(define ec:cursor-show "\e[?25h")
-(define ec:cursor-hide "\e[?25l")
+(define ec:cursor-save    "\e[s")
+(define ec:cursor-restore "\e[u")
+(define ec:cursor-show    "\e[?25h")
+(define ec:cursor-hide    "\e[?25l")
 ;; Report cursor position <y-digits> <x-digits> on stdin as: \e[<y-digits>;<x-digits>R
 (define ec:cursor-report-position "\e[6n")
 (define (ec:cursor-move-to     x y) (string-append
@@ -56,36 +58,53 @@
 (define ec:mouse-report-2-off "\e[?1015l")
 
 ;; Select Graphic Rendition (SGR) codes
-(define sgr:colors
-  (map cons
-       '(default black red green yellow blue magenta cyan white)
-       (cons 9 (range 8))))
-(define (sgr:fg-color i) (+ 30 i))
-(define (sgr:bg-color i) (+ 40 i))
+(define (sgr:color-fg c) (+ 30 c))
+(define (sgr:color-bg c) (+ 40 c))
 
-(define sgr:reset                   0)
-(define (sgr:bold      ?) (if ? 1 22))
-(define (sgr:underline ?) (if ? 4 24))
-(define (sgr:blink     ?) (if ? 5 25))
-(define (sgr:invert    ?) (if ? 7 27))
+(define sgr:color:default 9)
+(define sgr:color:black   0)
+(define sgr:color:red     1)
+(define sgr:color:green   2)
+(define sgr:color:yellow  3)
+(define sgr:color:blue    4)
+(define sgr:color:magenta 5)
+(define sgr:color:cyan    6)
+(define sgr:color:white   7)
 
-(define (sgr:codes->string codes)
+(define sgr:color:fg:default (sgr:color-fg sgr:color:default))
+(define sgr:color:fg:black   (sgr:color-fg sgr:color:black))
+(define sgr:color:fg:red     (sgr:color-fg sgr:color:red))
+(define sgr:color:fg:green   (sgr:color-fg sgr:color:green))
+(define sgr:color:fg:yellow  (sgr:color-fg sgr:color:yellow))
+(define sgr:color:fg:blue    (sgr:color-fg sgr:color:blue))
+(define sgr:color:fg:magenta (sgr:color-fg sgr:color:magenta))
+(define sgr:color:fg:cyan    (sgr:color-fg sgr:color:cyan))
+(define sgr:color:fg:white   (sgr:color-fg sgr:color:white))
+
+(define sgr:color:bg:default (sgr:color-bg sgr:color:default))
+(define sgr:color:bg:black   (sgr:color-bg sgr:color:black))
+(define sgr:color:bg:red     (sgr:color-bg sgr:color:red))
+(define sgr:color:bg:green   (sgr:color-bg sgr:color:green))
+(define sgr:color:bg:yellow  (sgr:color-bg sgr:color:yellow))
+(define sgr:color:bg:blue    (sgr:color-bg sgr:color:blue))
+(define sgr:color:bg:magenta (sgr:color-bg sgr:color:magenta))
+(define sgr:color:bg:cyan    (sgr:color-bg sgr:color:cyan))
+(define sgr:color:bg:white   (sgr:color-bg sgr:color:white))
+
+(define sgr:reset       0)
+(define sgr:bold+       1)
+(define sgr:underline+  4)
+(define sgr:blink+      5)
+(define sgr:invert+     7)
+(define sgr:bold-      22)
+(define sgr:underline- 24)
+(define sgr:blink-     25)
+(define sgr:invert-    27)
+(define (sgr:bold      ?) (if ? sgr:bold+      sgr:bold-))
+(define (sgr:underline ?) (if ? sgr:underline+ sgr:underline-))
+(define (sgr:blink     ?) (if ? sgr:blink+     sgr:blink-))
+(define (sgr:invert    ?) (if ? sgr:invert+    sgr:invert-))
+
+(define (sgr*->string codes)
   (if (null? codes) ""
     (string-append "\e[" (string-join (map number->string codes) ";") "m")))
-
-(define sgr:style.default
-  (plist->alist
-    (list 'fg-color  (sgr:fg-color (alist-ref sgr:colors 'default))
-          'bg-color  (sgr:bg-color (alist-ref sgr:colors 'default))
-          'bold      (sgr:bold      #f)
-          'underline (sgr:underline #f)
-          'blink     (sgr:blink     #f)
-          'invert    (sgr:invert    #f))))
-
-(define (sgr:style-diff-codes s1 s2)
-  (foldl (lambda (key codes)
-           (define v.1 (alist-ref s1 key))
-           (define v.2 (alist-ref s2 key))
-           (if (equal? v.1 v.2) codes (cons v.1 codes)))
-         '()
-         '(invert blink underline bold bg-color fg-color)))
