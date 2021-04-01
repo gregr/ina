@@ -32,6 +32,25 @@
                                       (else       (mvector-set! mv i (car xs))
                                                   (loop (+ i 1) (cdr xs))))))
 
+(define (alist-ref alist key (default (lambda () (error "alist-ref missing key" alist key))))
+  (match (assoc key alist)
+    ((cons _ v) v)
+    (#f         (if (procedure? default) (default) default))))
+(define (alist-update alist key v->v (default (lambda () (error "alist-ref missing key" alist key))))
+  (let loop ((kvs alist) (prev '()))
+    (cond ((null?        kvs     ) (define v (if (procedure? default) (default) default))
+                                   (cons (cons key (v->v v)) alist))
+          ((equal? (caar kvs) key) (foldl cons (cons (cons key (v->v (cdar kvs))) (cdr kvs)) prev))
+          (else                    (loop (cdr kvs) (cons (car kvs) prev))))))
+(define (alist-set alist key value) (alist-update alist key (lambda (_) value) #f))
+(define (alist-remove alist key)
+  ;; TODO: stop after the first matching key is found
+  (filter (lambda (kv) (not (equal? (car kv) key))) alist))
+
+(define (plist->alist kvs) (if (null? kvs) '()
+                             (cons (cons (car kvs) (cadr kvs))
+                                   (plist->alist (cddr kvs)))))
+
 (define-syntax (define-tuple stx)
   (syntax-case stx ()
     ((_ (name field ...))
