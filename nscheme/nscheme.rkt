@@ -437,6 +437,8 @@
 ;; TTY manipulation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; NOTE: see tty.scm for escape codes
+
 (define tty
   (let ()
     (define (command name . args)
@@ -446,13 +448,15 @@
     (define (tput arg)    (command "tput" arg))
     (define (stty . args) (apply command "stty" args))
     (method-lambda
+      ;; NOTE: ec:display-size can report these, but reading the report may be inconvenient
       ((lines)      (string->number (string-trim (tput "lines"))))
       ((columns)    (string->number (string-trim (tput "cols"))))
-      ((clear)       (command "clear")) ; \e[2J
-      ((save)        (tput "smcup"))    ; \e[?47h
-      ((restore)     (tput "rmcup"))    ; \e[?47l
-      ((cursor-show) (tput "cnorm"))    ; \e[?25h
-      ((cursor-hide) (tput "civis"))    ; \e[?25l
+      ;; NOTE: these don't seem necessary due to existing escape codes
+      ;((clear)       (command "clear")) ; \e[2J
+      ;((save)        (tput "smcup"))    ; \e[?47h
+      ;((restore)     (tput "rmcup"))    ; \e[?47l
+      ;((cursor-show) (tput "cnorm"))    ; \e[?25h
+      ;((cursor-hide) (tput "civis"))    ; \e[?25l
       ((stty-ref)   (stty "-g"))
       ((stty-set s) (stty s))
       ((stty-raw)   (stty "raw")))))
