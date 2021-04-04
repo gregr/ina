@@ -1,5 +1,9 @@
 ;;; Control Sequence Introducer (CSI) codes
 
+;; Title control (title position 0, 1, or 2); some terminals use \e\\ instead of \a ?
+(define (ec:title-set title (position 0))
+  (string-append "\e]" (number->string position) ";" title "\a"))
+
 ;; Display control
 (define ec:display-save    "\e[?47h")
 (define ec:display-restore "\e[?47l")
@@ -71,25 +75,25 @@
 (define sgr:color:cyan    6)
 (define sgr:color:white   7)
 
-(define sgr:color:fg:default (sgr:color-fg sgr:color:default))
-(define sgr:color:fg:black   (sgr:color-fg sgr:color:black))
-(define sgr:color:fg:red     (sgr:color-fg sgr:color:red))
-(define sgr:color:fg:green   (sgr:color-fg sgr:color:green))
-(define sgr:color:fg:yellow  (sgr:color-fg sgr:color:yellow))
-(define sgr:color:fg:blue    (sgr:color-fg sgr:color:blue))
-(define sgr:color:fg:magenta (sgr:color-fg sgr:color:magenta))
-(define sgr:color:fg:cyan    (sgr:color-fg sgr:color:cyan))
-(define sgr:color:fg:white   (sgr:color-fg sgr:color:white))
+(define sgr:color-fg:default (sgr:color-fg sgr:color:default))
+(define sgr:color-fg:black   (sgr:color-fg sgr:color:black))
+(define sgr:color-fg:red     (sgr:color-fg sgr:color:red))
+(define sgr:color-fg:green   (sgr:color-fg sgr:color:green))
+(define sgr:color-fg:yellow  (sgr:color-fg sgr:color:yellow))
+(define sgr:color-fg:blue    (sgr:color-fg sgr:color:blue))
+(define sgr:color-fg:magenta (sgr:color-fg sgr:color:magenta))
+(define sgr:color-fg:cyan    (sgr:color-fg sgr:color:cyan))
+(define sgr:color-fg:white   (sgr:color-fg sgr:color:white))
 
-(define sgr:color:bg:default (sgr:color-bg sgr:color:default))
-(define sgr:color:bg:black   (sgr:color-bg sgr:color:black))
-(define sgr:color:bg:red     (sgr:color-bg sgr:color:red))
-(define sgr:color:bg:green   (sgr:color-bg sgr:color:green))
-(define sgr:color:bg:yellow  (sgr:color-bg sgr:color:yellow))
-(define sgr:color:bg:blue    (sgr:color-bg sgr:color:blue))
-(define sgr:color:bg:magenta (sgr:color-bg sgr:color:magenta))
-(define sgr:color:bg:cyan    (sgr:color-bg sgr:color:cyan))
-(define sgr:color:bg:white   (sgr:color-bg sgr:color:white))
+(define sgr:color-bg:default (sgr:color-bg sgr:color:default))
+(define sgr:color-bg:black   (sgr:color-bg sgr:color:black))
+(define sgr:color-bg:red     (sgr:color-bg sgr:color:red))
+(define sgr:color-bg:green   (sgr:color-bg sgr:color:green))
+(define sgr:color-bg:yellow  (sgr:color-bg sgr:color:yellow))
+(define sgr:color-bg:blue    (sgr:color-bg sgr:color:blue))
+(define sgr:color-bg:magenta (sgr:color-bg sgr:color:magenta))
+(define sgr:color-bg:cyan    (sgr:color-bg sgr:color:cyan))
+(define sgr:color-bg:white   (sgr:color-bg sgr:color:white))
 
 (define sgr:reset       0)
 (define sgr:bold+       1)
@@ -105,6 +109,6 @@
 (define (sgr:blink     ?) (if ? sgr:blink+     sgr:blink-))
 (define (sgr:invert    ?) (if ? sgr:invert+    sgr:invert-))
 
-(define (sgr*->string codes)
-  (if (null? codes) ""
-    (string-append "\e[" (string-join (map number->string codes) ";") "m")))
+(define (sgr*->ec sgr*)
+  (if (null? sgr*) ""
+    (string-append "\e[" (string-join (map number->string sgr*) ";") "m")))

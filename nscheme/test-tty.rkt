@@ -31,9 +31,9 @@
     (lambda () (display ec:cursor-show))))
 
 (define (display/style style s)
-  (display (sgr*->string style))
+  (display (sgr*->ec style))
   (display s)
-  (display (sgr*->string (list sgr:reset))))
+  (display (sgr*->ec (list sgr:reset))))
 
 (define (displayln/style style s)
   (display/style style s)
@@ -43,12 +43,12 @@
   (with-tty-cursor-hidden
     (tty 'stty-raw)
 
-    (define style.0 (list sgr:color:fg:magenta sgr:color:bg:yellow
+    (define style.0 (list sgr:color-fg:magenta sgr:color-bg:yellow
                           sgr:bold+
                           sgr:blink+
                           ))
-    (define style.1 (list sgr:color:fg:green
-                          sgr:color:bg:red
+    (define style.1 (list sgr:color-fg:green
+                          sgr:color-bg:red
                           sgr:underline+
                           sgr:invert+
                           ))
