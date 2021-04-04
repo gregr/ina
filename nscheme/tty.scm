@@ -62,8 +62,8 @@
 (define ec:mouse-report-2-off "\e[?1015l")
 
 ;; Select Graphic Rendition (SGR) codes
-(define (sgr:color-fg c) (+ 30 c))
-(define (sgr:color-bg c) (+ 40 c))
+(define (sgr:color-fg c) (list (+ 30 c)))
+(define (sgr:color-bg c) (list (+ 40 c)))
 
 (define sgr:color:default 9)
 (define sgr:color:black   0)
@@ -95,20 +95,21 @@
 (define sgr:color-bg:cyan    (sgr:color-bg sgr:color:cyan))
 (define sgr:color-bg:white   (sgr:color-bg sgr:color:white))
 
-(define sgr:reset       0)
-(define sgr:bold+       1)
-(define sgr:underline+  4)
-(define sgr:blink+      5)
-(define sgr:invert+     7)
-(define sgr:bold-      22)
-(define sgr:underline- 24)
-(define sgr:blink-     25)
-(define sgr:invert-    27)
+
+(define sgr:reset      (list  0))
+(define sgr:bold+      (list  1))
+(define sgr:underline+ (list  4))
+(define sgr:blink+     (list  5))
+(define sgr:invert+    (list  7))
+(define sgr:bold-      (list 22))
+(define sgr:underline- (list 24))
+(define sgr:blink-     (list 25))
+(define sgr:invert-    (list 27))
 (define (sgr:bold      ?) (if ? sgr:bold+      sgr:bold-))
 (define (sgr:underline ?) (if ? sgr:underline+ sgr:underline-))
 (define (sgr:blink     ?) (if ? sgr:blink+     sgr:blink-))
 (define (sgr:invert    ?) (if ? sgr:invert+    sgr:invert-))
 
-(define (sgr*->ec sgr*)
-  (if (null? sgr*) ""
-    (string-append "\e[" (string-join (map number->string sgr*) ";") "m")))
+(define (sgr->ec sgr)
+  (if (null? sgr) ""
+    (string-append "\e[" (string-join (map number->string sgr) ";") "m")))
