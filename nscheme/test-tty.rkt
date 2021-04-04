@@ -43,19 +43,35 @@
   (with-tty-cursor-hidden
     (tty 'stty-raw)
 
-    (define style.0 (append sgr:color-fg:magenta sgr:color-bg:yellow
-                            sgr:bold+
-                            sgr:blink+
-                            ))
-    (define style.1 (append sgr:color-fg:green
-                            sgr:color-bg:red
-                            sgr:underline+
-                            sgr:invert+
-                            ))
+    (define style.0 (append
+                      sgr:color-fg:magenta
+                      sgr:color-bg:yellow
+                      sgr:bold+
+                      sgr:blink+
+                      ))
+    (define style.1 (append
+                      sgr:color-fg:green
+                      sgr:color-bg:red
+                      sgr:underline+
+                      sgr:invert+
+                      ))
+    (define style.2 (append
+                      (sgr:color-rgb6-fg 3 4 5)
+                      (sgr:color-gray-bg 7)
+                      ))
+    (define style.3 (append
+                      (sgr:color-rgb6-fg 0 0 3)
+                      (sgr:color-rgb6-bg 2 2 0)
+                      sgr:invert+
+                      sgr:blink+
+                      sgr:underline+
+                      ))
 
     (displayln/style '()     "testing (1 2 3)")
     (displayln/style style.0 "testing (1 2 3)")
     (displayln/style style.1 "testing (1 2 3)")
+    (displayln/style style.2 "testing (1 2 3)")
+    (displayln/style style.3 "testing (1 2 3)")
     (displayln/style '()     "testing (1 2 3)")
 
     (displayln/style '() "\r\nHit any key...")

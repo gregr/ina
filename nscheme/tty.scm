@@ -95,6 +95,54 @@
 (define sgr:color-bg:cyan    (sgr:color-bg sgr:color:cyan))
 (define sgr:color-bg:white   (sgr:color-bg sgr:color:white))
 
+(define (sgr:color-bright-fg c) (list (+  90 c)))
+(define (sgr:color-bright-bg c) (list (+ 100 c)))
+
+(define sgr:color-bright-fg:gray    (sgr:color-bright-fg sgr:color:black))
+(define sgr:color-bright-fg:red     (sgr:color-bright-fg sgr:color:red))
+(define sgr:color-bright-fg:green   (sgr:color-bright-fg sgr:color:green))
+(define sgr:color-bright-fg:yellow  (sgr:color-bright-fg sgr:color:yellow))
+(define sgr:color-bright-fg:blue    (sgr:color-bright-fg sgr:color:blue))
+(define sgr:color-bright-fg:magenta (sgr:color-bright-fg sgr:color:magenta))
+(define sgr:color-bright-fg:cyan    (sgr:color-bright-fg sgr:color:cyan))
+(define sgr:color-bright-fg:white   (sgr:color-bright-fg sgr:color:white))
+
+(define sgr:color-bright-bg:gray    (sgr:color-bright-bg sgr:color:black))
+(define sgr:color-bright-bg:red     (sgr:color-bright-bg sgr:color:red))
+(define sgr:color-bright-bg:green   (sgr:color-bright-bg sgr:color:green))
+(define sgr:color-bright-bg:yellow  (sgr:color-bright-bg sgr:color:yellow))
+(define sgr:color-bright-bg:blue    (sgr:color-bright-bg sgr:color:blue))
+(define sgr:color-bright-bg:magenta (sgr:color-bright-bg sgr:color:magenta))
+(define sgr:color-bright-bg:cyan    (sgr:color-bright-bg sgr:color:cyan))
+(define sgr:color-bright-bg:white   (sgr:color-bright-bg sgr:color:white))
+
+(define (sgr:color-256-fg c) (list 38 5 c))
+(define (sgr:color-256-bg c) (list 48 5 c))
+
+(define sgr:color-256-fg:gray    (sgr:color-256-fg (+ 8 sgr:color:black)))
+(define sgr:color-256-fg:red     (sgr:color-256-fg (+ 8 sgr:color:red)))
+(define sgr:color-256-fg:green   (sgr:color-256-fg (+ 8 sgr:color:green)))
+(define sgr:color-256-fg:yellow  (sgr:color-256-fg (+ 8 sgr:color:yellow)))
+(define sgr:color-256-fg:blue    (sgr:color-256-fg (+ 8 sgr:color:blue)))
+(define sgr:color-256-fg:magenta (sgr:color-256-fg (+ 8 sgr:color:magenta)))
+(define sgr:color-256-fg:cyan    (sgr:color-256-fg (+ 8 sgr:color:cyan)))
+(define sgr:color-256-fg:white   (sgr:color-256-fg (+ 8 sgr:color:white)))
+
+(define sgr:color-256-bg:gray    (sgr:color-256-bg (+ 8 sgr:color:black)))
+(define sgr:color-256-bg:red     (sgr:color-256-bg (+ 8 sgr:color:red)))
+(define sgr:color-256-bg:green   (sgr:color-256-bg (+ 8 sgr:color:green)))
+(define sgr:color-256-bg:yellow  (sgr:color-256-bg (+ 8 sgr:color:yellow)))
+(define sgr:color-256-bg:blue    (sgr:color-256-bg (+ 8 sgr:color:blue)))
+(define sgr:color-256-bg:magenta (sgr:color-256-bg (+ 8 sgr:color:magenta)))
+(define sgr:color-256-bg:cyan    (sgr:color-256-bg (+ 8 sgr:color:cyan)))
+(define sgr:color-256-bg:white   (sgr:color-256-bg (+ 8 sgr:color:white)))
+
+;; r, g, b: 0 through 5
+(define (sgr:color-rgb6-fg r g b) (sgr:color-256-fg (+ 16 (* 36 r) (* 6 g) b)))
+(define (sgr:color-rgb6-bg r g b) (sgr:color-256-bg (+ 16 (* 36 r) (* 6 g) b)))
+;; i: intensity 0 through 23
+(define (sgr:color-gray-fg i)     (sgr:color-256-fg (+ 232 i)))
+(define (sgr:color-gray-bg i)     (sgr:color-256-bg (+ 232 i)))
 
 (define sgr:reset      (list  0))
 (define sgr:bold+      (list  1))
