@@ -4,14 +4,15 @@ This is a nonstandard Scheme implementation.
 
 ## Deviations from Scheme
 
-* Strings, pairs, and vectors are immutable
-  * Mutable vectors (i.e., mvectors) are a distinct type of data
+- Strings, pairs, and vectors are immutable
+  - Mutable vectors (i.e., mvectors) are a distinct type of data
+  - Special vectors (i.e., svectors) are a distinct type of immutable vector used
+    for representing immutable records that cannot be mistaken as s-expressions
 * Numbers, strings, pairs, and vectors are not guaranteed to have a stable identity
   * i.e., result of `eq?` is somewhat unpredictable
   * `eqv?` is predictable for numbers
 * Booleans, null, symbols, procedures, and mvectors do have stable identities
   * i.e., using `eq?` is always the same as using `equal?`
-* `integer?` will return `#f` for all inexact numbers
 * variables are immutable by default
   * `set!` only works on variables introduced by special binders
 * The empty symbol `||` binds a parser that defines the meaning of all non-keyword
@@ -23,19 +24,25 @@ This is a nonstandard Scheme implementation.
   * Order of operand evaluation is left-to-right
   * Internal definitions may appear more freely
   * `letrec` behaves like Scheme's `letrec*`
-* Errors are fatal (change to `assert` (is fatal), and allow `error` handling?)
-  * Errors cannot be caught by the object-level program itself
-    * No prescribed object-level error handling model.  You choose your method
-  * Meta-level systems (e.g., REPL, safe compiler) normally still catch errors
-    * Counter-example: for performance, unsafe compilers may assume no errors
-      * Programs crash or exhibit undefined behavior when assumption fails
-      * May employ static analyses to rule out errors and provide warnings
-* no primitive character type: a string is indivisible until (utf-8) decoded to a vector
-  * utf-8 encoding is assumed for vector and list conversions
-  * no `string-ref`, since basis of decomposition depends on context
-  * code units (bytes) are not characters, but suffice for low-level string manipulation
-  * code points are not characters, but suffice for some higher-level string manipulation
-  * grapheme clusters (substrings) are the right notion of character for user interaction
+- No primitive character type: a string is indivisible until it is (utf-8) decoded as a vector
+  - utf-8 encoding is assumed for vector and list conversions
+  - no `string-ref`, since basis of decomposition depends on context
+    - well, we could still support a O(n) `string-ref` based on a stream of code points
+  - code units (bytes) are not characters, but suffice for low-level string manipulation
+  - code points are not characters, but suffice for some higher-level string manipulation
+  - grapheme clusters (substrings) are the right notion of character for user interaction
+- A numerical tower inspired by: https://www.deinprogramm.de/sperber/papers/numerical-tower.pdf
+  - Exact/inexact arithmetic that emphasizes "exactness" on operators rather than values
+    - Floating-point values will still exist, but a mismatch will either be
+      coerced or signal an error
+  - Most of the usual numeric operators will only be applicable to exact numbers
+    - Typical arithmetic operators could coerce to exact
+      - Different from `fx+`, etc., which assume arguments are already in some exact format
+    - A separate set of operators will be provided for manipulating inexact numbers
+      - Possibly `.+`, `.*`, `.<=`, etc., which coerce to inexact
+      - These are different from `fl+`, etc., which assume arguments are already inexact
+  - `integer?` `rational?` etc. will return `#f` for all floating-point numbers
+  - All numeric literals describe exact numbers by default.  Use `#i` for inexact literals.
 * [m]vectors may be constrained to only contain elements of a specified fixed-width type
   * providing `mvector-set!` with an element of the wrong type is an error
   * `[m]vector`, `[m]vector-length`, `[m]vector-ref`, `mvector-set!` `mvector-cas!` are
@@ -47,13 +54,11 @@ This is a nonstandard Scheme implementation.
       * utf-8 encoding assumed, and should be enforced by codec library
     * a low-level representation language exposes these details and is used to implement
       the primitive operations and data types
-* A library for a higher-level Scheme-like language is implemented in terms of the basic
-  language, with user-defined data types expressed by treating basic language procedures
-  as objects.  These types may implement protocols, or common behavioral interfaces
-  * e.g., hashing, equality, ordering, traversal, accessing, updating, conversion,
-    arithmetic, callability, read/write
-  * typical library procedures, such as `map`, are defined to accept any type that
-    implements the appropriate protocols
+- First-class control operators produce continuations that are delimited and one-shot.
+- No prescribed object-level error handling model
+  - You define your own handling using the virtualization primitives
+- Expressions that would typically return `(void)` (like set!, non-matching
+  cond/case, etc.), instead return 0 values (i.e., `(values)`)
 
 ## Run tests
 
