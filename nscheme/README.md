@@ -450,6 +450,24 @@ Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
   - prompt-tags are hierarchically subclassed
     - catch/capture with a parent prompt-tag will catch captures thrown with child prompt-tags
 
+## A possible "environment soup" model for interactive evaluation
+
+For a well-behaved "top-level", make it clear when a group of definitions
+and/or expressions should be evaluated in the same environment, producing a new
+environment.
+
+- An interactive evaluation session works with a collection of these evaluation
+  groups, which may acyclically depend on each other through explicit linking.
+- When a child group depends on one or more parent groups, it means that the
+  environments produced by the parents are sequentially composed, with bindings
+  in later environments shadowing earlier ones, producing the environment that
+  the child group's definitions and expressions are evaluated in.
+  - A child may also filter or rename the bindings inherited from a parent.
+- Definitions can only be mutually recursive with other definitions from the
+  same group.
+- Changes to a group can optionally be propagated to its dependent groups, with
+  live upgrade.
+
 ## Old TODO that needs to be reorganized
 
 * store near-source language ASTs as virtualized programs
