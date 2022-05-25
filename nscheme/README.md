@@ -181,15 +181,38 @@ Racket-compatible bootstrap in more detail:
       * link-preserving library renaming/repointing to support live upgrade
       * relative lib name paths and auto-prefixing child libs; packages
     * virtual systems
-      * virtualization-friendly compilation
-        * handle io requests, signals/interrupts/preemption, and fatal errors
-        * fine-grained process control, resource-budgeting
-        * timers and concurrency via delimited continuations?
-          * reset/timeout? reset/ticks?
-          * optional deterministic scheduling
-        * dynamically-compiled code that may refer to existing heap values
-        * heap/image dumping and resumption
-        * rewinding/undo
+      - for virtualization, we need more than just time limits (alarms), we also need memory limits
+        - a way to asynchronously yield when we're allocating beyond the limit
+        - option to resume with a larger limit
+      - virtualization-friendly compilation
+        - compiler decorates each procedure with metadata retrievable by a special primitive
+          - this primitive can make extensional reasoning about object-level programs unsound by leaking
+            implementation details, so meta-level programs must treat it carefully
+          - metadata includes source information sufficient for helpful tracing
+          - metadata includes a code representation for dynamically recompiling, sufficient to support:
+            - inlining and other interprocedural optimization
+            - live upgrade, including swapping in updated/upgraded dependencies
+            - live migration to a different platform
+            - live migration to a different concurrency/memory model
+            - adding instrumentation for alternative execution semantics
+              - time travel debugging
+              - distributed execution for collaborative, interactive evaluation
+              - incremental/adaptive computation
+              - automatic differentiation
+              - relational evaluation queries
+              - probabilistic programming queries
+              - symbolic evaluation for static analysis and other forms of verification
+          - metadata includes the version of its format
+            - to allow a metaprogram to work with code compiled with different compiler versions
+            - to allow a metaprogram to migrate code with an older format to the new format
+        - handle io requests, signals/interrupts/preemption, and fatal errors
+        - fine-grained process control, resource-budgeting
+        - timers and concurrency via one-shot delimited continuations?
+          - reset/timeout? reset/ticks?
+          - optional deterministic scheduling
+        - dynamically-compiled code that may refer to existing heap values
+        - heap/image dumping and resumption
+        - rewinding/undo
       * a real platform process may run multiple virtual systems at once
         * each may have a different configuration (libraries, devices, etc.)
         * isolation/distribution at the system level
