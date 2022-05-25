@@ -363,6 +363,93 @@ Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
   - symbol
     - the bytevector pointed to is both a valid string, and is the backing data for a symbol
 
+## Ideas about control operators
+
+- efficient delimited continuations and dynamic binding
+  - continuation-procedure-builder for one-shot continuation procedures
+    - multi-shot continuation procedures could be expressed by wrapping the continuation-procedure-builder
+      - but we probably don't want built-in support for multi-shot semantics
+  - maybe we should not implement delimited continuations directly
+    - instead, implement exceptional aborts, nestable pre-emptive multitasking, and threads with synchronous channels
+      - exceptional abort handlers can guarantee cleanup of resource/thread-nursery custodians
+    - one-shot delimited continuations can be expressed by threads
+      - and non-primitive pre-emptive multitasking is awkward to express via delimited continuations
+
+- error handlers that begin in the dynamic context of a signal being raised
+  - supports restarts without needing to abort and then resume
+
+- control operators
+  - call-in-os-thread
+  - delimited
+    - suspend, abort, capture (aka control0)
+    - catch/suspend, catch/abort, catch/capture (aka prompt0)
+    - dynamic context
+      - can use these to implement dynamic binding (aka parameterize)
+      - `(call-with-current-context prompt-tag f)`
+        - `f : context -> any`
+        - for inspecting context marks
+
+- alternative design:
+  - use hierarchically-subclassed prompt-tags
+  - only provide catch, abort, call-with-dynamic-context, are these right?: call-with-interruption (and a fuel/tick count), call-without-interruption, time-until-interruption
+    - but how do we efficiently handle nested interrupts?
+    - previously we could use a tie-back continuation, such that a parent could jump directly to a deeply-nested child computation
+    - can we still do this efficiently by structuring the context/stack according to hierarchical prompt tags?
+    - aside from alarms, interruptions should include garbage collection and possibly other asynchronous signals that may optionally be handled?
+
+- alternative alternative design:
+  - We will provide the catch/suspend catch/abort catch/capture interface to end users.
+  - But we will implement these using:
+    - `catch : tag -> (() -> initial-result) -> (exceptional-request -> exceptional-result) -> (initial-result -> normal-result) -> (normal-result or exceptional-result)`
+    - `abort-to : tag -> _no-return_`
+      - this interface won't make sense, because call-with-delimited-context will end up capturing the abort-to!
+    - `call-with-delimited-context : tag -> delimited-context`
+      - a delimited context is a list of (tagged-frame or parameter-assignment)s
+        - a tagged-frame combines a tag, a delimited continuation, an exception handler, and a success handler
+    - need these unsafe versions instead?
+     - `unsafe-abort-to : undelimited-context -> _no-return_`
+     - `apply-delimited-context : delimited-context -> result-of-delimited-context`
+     - `call-with-unsafe-undelimited-context : () -> undelimited-context`
+       - it is an error to retain and use an undelimited-context after returning or aborting to an earlier point than it represents
+       - i.e., the prefix of that context will have been invalidated, and may unsafely point to bogus memory
+       - unless we don't care about stack-based implementations
+         - heap-based contexts should be safe to retain, though they have call/cc-like abort semantics, which isn't great
+     - `undelimited-context-car -> undelimited-context -> frame`
+     - `undelimited-context-cdr -> undelimited-context -> undelimited-context`
+     - `delimited-context-empty`
+     - `delimited-context-cons : frame -> delimited-context -> delimited-context`
+     - `alarm-start : num-ticks -> ()`, `alarm-stop : () -> num-ticks-remaining`
+     - some way to disable garbage collection and other interrupts
+
+- We should also be able to inspect marks on continuation segments for suspended computations
+- nested engines via a pre-emptive subcomputation scheduling delimiter
+  - `(suspend)`
+  - `(catch/suspend thunk fuel-amount k.suspended k.finished)`
+  - `k.suspended : (() -> any) -> any`
+  - `k.finished  : (fuel-remaining any) -> any`
+  - we can suspend through other delimiter boundaries
+
+- Should we merge abort-catching with capture-catching, via hierarchical prompt-tags?
+  - then the difference between capture and abort would be that abort doesn't bother building a continuation
+- abort-catching handlers for safe resource management
+  - `(abort value)`
+  - `(catch/abort thunk k.aborted k.finished)`
+  - `k.aborted  : any -> any`
+  - `k.finished : any -> any`
+  - we can abort through a `catch/suspend` boundary
+  - we can abort through a `catch/capture` boundary
+
+- multi-prompt multi-shot delimited continuations
+  - note: we probably don't want to support multi-shot continuations
+  - `(capture prompt-tag value)`
+  - `(catch/capture prompt-tag thunk k.captured k.finished)`
+  - `k.capture  : ((any -> any) any) -> any`
+  - `k.finished : any -> any`
+  - we can capture through a `catch/abort` boundary
+  - we cannot capture through a `catch/suspend` boundary
+  - prompt-tags are hierarchically subclassed
+    - catch/capture with a parent prompt-tag will catch captures thrown with child prompt-tags
+
 ## Old TODO that needs to be reorganized
 
 * store near-source language ASTs as virtualized programs
