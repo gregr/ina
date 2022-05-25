@@ -156,11 +156,9 @@
 
   (define (stratified-eval db n*-pending n*-later r*-later r*)
     (define (should-wait? r)
-      (or (ormap
-            (lambda (p) (set-member? n*-pending (predicate-name p)))
-            (rule-negative r)) (set-member? n*-later (rule-name r))
-          (ormap (lambda (p) (set-member? n*-later (predicate-name p)))
-                 (rule-positive r))))
+      (or (set-member? n*-later (rule-name r))
+          (ormap (lambda (p) (set-member? n*-pending (predicate-name p))) (rule-negative r))
+          (ormap (lambda (p) (set-member? n*-later   (predicate-name p))) (rule-positive r))))
     (define r*-wait (filter should-wait? r*))
     (define n*-wait (list->set (map rule-name r*-wait)))
     (define r*-continue (filter (lambda (r) (not (should-wait? r))) r*))
