@@ -235,6 +235,134 @@ x!   = x bang          ; x may cause important side effects, such as mutation
 x?!  = assert x        ; a predicate/guard that throws an error if false
 ```
 
+## Possible low-level type tagging schemes
+
+One possible set of type-tagging scheme:
+- 16-byte-aligned, 64-bit
+  - 2 x fixnum
+  - small immediate constant
+  - other number
+  - closure
+  - code
+  - symbol
+  - cons
+  - string
+  - special-vector
+  - immutable-bytevector
+  - mutable-bytevector
+  - immutable-vector
+  - mutable-vector
+  - immutable-other
+  - mutable-other
+- 8-byte-aligned, 32-bit or 64-bit
+  - 2 x fixnum
+  - immediate constant
+    - () #t #f eof void undefined etc.
+    - single-precision flonum
+    - gc-forwarding-mark
+      - possibly also a gc-locked-mark if we attempt parallel gc
+  - procedure
+    - always a closure, non-closure code will be wrapped like a 0-ary closure
+    - code pointer is tagged like an immediate and appears in 0th position
+      - code embeds closure payload size, among other things
+  - cons
+  - are these good choices?
+    - other number
+      - double-precision flonum
+      - bignum
+      - ratnum
+      - complex-exact
+      - complex-flonum
+    - immutable-other
+      - immutable-vector and special-vector
+        - tagged as 2 x fixnum
+      - string and immutable-bytevector
+        - using at least 2 non-immediate tags (safe because their segments won't be scavenged)
+          - using more tags can support larger lengths
+      - more, using immediate tags if they embed objects, otherwise could use remaining 4 non-immediate tags
+    - mutable-other (or more like, pointer-equivalent-other, or other-with-identity)
+      - mutable-vector
+      - symbol
+        - even though these are not mutable, they are compared via eq
+        - using the same non-immediate tag as a string
+      - mutable-bytevector
+- ideas for hardware-aligned array types (which fall under the "other" category):
+  - use double indirection to ensure data alignment
+    - first indirection finds description paired with data pointer
+    - second indirection into the aligned data pointer
+  - cache-line-aligned arrays
+    - allocated in multiples of cache lines
+  - page-aligned arrays
+    - allocated in multiples of pages
+  - optionally pinned to avoid GC copying
+
+Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
+- 0-least-significant-bit
+  - 2 x fixnum
+  - small immediate constants
+    - () #t #f eof void undefined etc.
+    - single (and maybe half) precision flonums
+  - cons
+- 1-least-significant-bit
+  - secondary type
+    - tertiary type
+      - for safe scavenging use 1 of a 16-byte-aligned-split immediate constant tag
+        - unless all code-headered procedures live in a separate segment, and can use a non-immediate tag
+      - gc-forwarding-mark
+        - possibly also a gc-locked-mark if we attempt parallel gc
+      - ratnum
+        - can we find a good way to promote this to an immediate secondary, stored like a pair?
+          - maybe lift to primary by taking the other split of the 16-byte-aligned-split immediate constant tag
+          - or lift to primary by splitting the cons tag
+        - components may be either fixnums or bignums
+      - high precision floating point numbers
+      - hardware-aligned array/struct types
+        - use double indirection to ensure data alignment
+          - first indirection finds description paired with data pointer
+          - second indirection into the aligned data pointer
+        - cache-line-aligned arrays
+          - allocated in multiples of cache lines
+        - page-aligned arrays
+          - allocated in multiples of pages
+        - optionally pinned to avoid GC copying
+    - code
+      - for safe scavenging use the other 1 of a 16-byte-aligned-split immediate constant tag
+        - or put code-headered procedures in a separate segment
+          - may make sense if the closure includes some untagged data that shouldn't be scavenged
+      - acts as the header of a closure
+        - points to both executable code and a header with closure layout information
+    - 4 x bytevector
+      - may use 4 non-immediate tags, which is safe because bytevector segments won't be scavenged
+        - using more tags supports larger lengths
+      - mutable unless primary tag is immutable, special, or symbol
+    - 1 x vector
+      - using one fixnum tag for safe scavenging
+      - mutable unless primary tag is immutable, or special
+    - non-code procedure
+      - are these even valid?
+        - if a procedure is well-known enough to not need a code pointer, it also shouldn't need dedicated tagging
+          - so it could just be a vector
+          - well, except in the case of storing non-scavengeable data, like unboxed double-precision floats ...
+            - but here we'd need layout info anyway, which might as well come from a code pointer
+      - using the other fixnum tag for safe scavenging
+      - closure length encoded in tag
+      - or put non-code-headered procedures in a separate segment (with code-headered procedures?)
+        - may make sense if the closure includes some untagged data that shouldn't be scavenged
+    - bignum
+      - may use 1 non-immediate tag, which is safe because bignum segments won't be scavenged
+      - encodes size in tag
+  - immutable
+    - signify that the secondary type vector or bytevector referred to is immutable
+    - possibly other uses
+  - special
+    - signifies that either
+      - the secondary type vector is immutable and intended to be interpreted like a record
+      - the secondary type bytevector is immutable and intended to be interpreted like a string
+        - must contain valid utf-8 data for this tagging to be possible
+    - possibly other uses
+  - symbol
+    - the bytevector pointed to is both a valid string, and is the backing data for a symbol
+
 ## Old TODO that needs to be reorganized
 
 * store near-source language ASTs as virtualized programs
