@@ -1,6 +1,23 @@
 # nScheme
 
-This is a nonstandard Scheme implementation.
+This is a nonstandard Scheme for programming portable, performant, image-based
+systems that can run forever.
+
+Compared with standard Scheme, the language semantics and data model have been
+simplified.  This simplification supports more aggressive compiler optimization
+while also simplifying the implementation itself.  A simpler implementation
+is easier to port and adapt to new purposes.
+
+Rather than piling feature on top of feature, nScheme provides a small set of
+virtualization primitives that let the programmer decide how their system works
+at any level.  These primitives allow programs to exert low-level control over
+computing resources, making it feasible to build any kind of application.
+These primitives also provide reflection and introspection capabilities without
+interpretive overhead.  Unlike standard Scheme, nScheme does not prescribe any
+particular form of program organization or approach to metaprogramming.
+Transformations and features that would typically be built into a complex,
+ahead-of-time compilation model can instead be achieved at runtime in a
+straightforward way by manipulating programs and live processes as data.
 
 ## Deviations from Scheme
 
