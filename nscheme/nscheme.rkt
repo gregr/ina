@@ -27,6 +27,10 @@
              (lambda (mv) 'mvector)
              (lambda (mv) (vector->list (mvector-v mv)))))))
 
+;; TODO: unsafe non-copying coercion to vector
+;(define (mvector-freeze mv)
+  ;)
+
 (define (make-mvector k x)          (mvector (make-vector k x)))
 (define (mvector->vector mv)        (vector-copy   (mvector-v mv)))
 (define (mvector-length mv)         (vector-length (mvector-v mv)))

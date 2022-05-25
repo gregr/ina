@@ -89,6 +89,43 @@ TODO
 
 ## TODO
 
+- consider supporting Olin's multi-return function calls
+
+- Examine these procedural macro test cases:
+  - or (introducing temporary variables)
+    - can lambda/thunkify subexpressions to avoid needing fresh temporaries
+  - consistently-generated names for struct/record field accessors
+  - let[rec]-syntax within definition contexts
+    - a macro that references some "x" defined in the same context
+      - have to eval the macro procedure, and somehow give it access to the *final* env/context to get "x" from
+    - sibling expansion
+    - child expansion
+  - macro-generating macros
+  - pattern matching sublanguage
+  - module exports of macros
+
+- Reader notes:
+  - `#;#;` comments two expressions
+  - `#<symbol>` and `#<symbol>(...)` programmable reader
+
+- read-doc write-doc
+  - recognize/preserve comments in doc structure
+  - recognize/preserve formatting/styles
+    - e.g., whether a pair of a list is explicitly dotted, #-based headers in
+      #header(a b c ...) forms, numeric literal forms, etc.
+    - indentation and alignment
+
+- terminology: IO device vs. port
+
+- TUI widget ideas: https://github.com/chjj/blessed
+
+- posix-y platform process environment interface
+  - command line arguments
+  - environment variables
+  - run system commands
+  -   direct or via subprocess controller
+  - other process information (e.g., PID)
+
 rough component implementation order for bootstrap:
   * ~~io~~ (skip for now, ports are sufficient for prototyping)
   * ~~port~~

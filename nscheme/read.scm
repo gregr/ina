@@ -1,6 +1,10 @@
 ;; TODO: numeric operations
 ;; expt make-rectangular make-polar exact->inexact inexact->exact exact?
 
+;; TODO: match Racket's behavior, which does not treat # as a separator?
+
+;; TODO: support #symbol and #symbol(...) reader extensions
+
 (define (read-error? d) (and (procedure? d) (not (read-eof? d))))
 (define (read-eof? d)   (and (procedure? d) (eq? 'eof (d))))
 (define (eof-object? d) (read-eof? d))
@@ -85,7 +89,8 @@
     (define (datum  value)     (k 'datum     value pos (+ pos 2)))
     (define (lbrack value len) (k 'hlbracket value pos (+ pos len)))
     (define (tag    value len) (k 'tag       value pos (+ pos len)))
-    ;; TODO: #<<EOS
+    ;; TODO: here string:
+    ;; #<<EOS
     ;; ...string...
     ;; EOS
     (case/char (get (+ pos 1))
