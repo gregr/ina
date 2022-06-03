@@ -1,8 +1,17 @@
 #lang racket/base
-(provide make-mvector mvector? mvector->vector
-         mvector-length mvector-ref mvector-set! mvector-cas!
-         string->vector vector->string cons*
+(provide vector->svector svector->vector svector? svector-length svector-ref
+         mvector->vector make-mvector mvector? mvector-length mvector-ref mvector-set!
+         utf8->string string->utf8 bytevector? bytevector-length bytevector-ref
+         mbytevector->bytevector make-mbytevector mbytevector? mbytevector-length mbytevector-ref mbytevector-set!
          bitwise-arithmetic-shift << >> & \| ^
+         case-clause-param case-clause-body
+         code-source-info code-captured-variables code-case-clauses
+         procedure-metadata:closure? procedure-metadata:closure-code procedure-metadata:closure-captured-values
+         procedure-metadata:primitive? procedure-metadata:primitive-name
+         procedure-metadata:io? procedure-metadata:io-name procedure-metadata:io-descriptor
+         procedure-metadata
+         procedure-primitive! procedure-io! procedure-closure!
+         string->vector vector->string cons*
          stdio filesystem tcp udp tty
          console string:port:input string:port:output null:port:output
          call-with-input-string call-with-output-string
@@ -12,44 +21,150 @@
          port-buffer-mode port-buffer-mode-set!
          method-lambda method-choose method-unknown method-except method-only
          racket:eval)
-
 (require racket/file racket/port racket/string racket/struct racket/system
          racket/tcp racket/udp racket/vector)
 
-;; TODO: import new record struct syntax definitions?
+;;;;;;;;;;;;;;;;;;;;;;;
+;;; Data primitives ;;;
+;;;;;;;;;;;;;;;;;;;;;;;
 
-;; TODO: Design protocol/prototype-based OO layer on top of procedures
+;; - small constant: eof null boolean
+;; - number:
+;;   - exact rational
+;;     - integer
+;;       - fixnum
+;;       - bignum
+;;     - ratnum
+;;   - inexact
+;;     - flonum (various precisions)
+;;   - machine [unsigned] integer (various precisions)
+;; - symbol, string, bytevector, vector, pair
+;; - svector (special, distinct immutable vector type)
+;; - mvector, mbytevector (mutable)
+;; - procedure:
+;;   - primitive
+;;   - io controller
+;;   - closure
 
-(struct mvector (v)
-        #:methods gen:custom-write
-        ((define write-proc
-           (make-constructor-style-printer
-             (lambda (mv) 'mvector)
-             (lambda (mv) (vector->list (mvector-v mv)))))))
+(struct mbytevector (bv))
+(struct mvector     (v))
+(struct svector     (v) #:prefab)
 
-;; TODO: unsafe non-copying coercion to vector
-;(define (mvector-freeze mv)
-  ;)
+(define (vector->svector v) (svector v))
 
-(define (make-mvector k x)          (mvector (make-vector k x)))
-(define (mvector->vector mv)        (vector-copy   (mvector-v mv)))
-(define (mvector-length mv)         (vector-length (mvector-v mv)))
-(define (mvector-ref mv i)          (vector-ref    (mvector-v mv) i))
-(define (mvector-set! mv i x)       (vector-set!   (mvector-v mv) i x))
-(define (mvector-cas! mv i old new) (vector-cas!   (mvector-v mv) i old new))
+(define (svector->vector sv)  (svector-v sv))
+(define (svector-length sv i) (vector-length (svector->vector sv)))
+(define (svector-ref    sv i) (vector-ref    (svector->vector sv) i))
 
-(define (string->vector s)
-  (list->vector (bytes->list (string->bytes/utf-8 s))))
-(define (vector->string v)
-  (bytes->string/utf-8 (list->bytes (vector->list v))))
-(define cons* list*)
+(define (make-mvector          len x)  (mvector       (make-vector len x)))
+(define (mvector-length        mv)     (vector-length (mvector-v mv)))
+(define (mvector-ref           mv i)   (vector-ref    (mvector-v mv) i))
+(define (mvector-set!          mv i x) (vector-set!   (mvector-v mv) i x))
+(define (mvector->vector       mv)     (vector-copy   (mvector-v mv)))
+(define (unsafe-mvector-freeze mv)     (mvector-v mv))
 
+(define (utf8->string bv) (bytes->string/utf-8 bv))
+(define (string->utf8 s)  (string->bytes/utf-8 s))
+
+(define (bytevector?       bv)   (bytes?       bv))
+(define (bytevector-length bv)   (bytes-length bv))
+(define (bytevector-ref    bv i) (bytes-ref    bv i))
+
+(define (make-mbytevector          len b)   (mbytevector       (make-bytes len b)))
+(define (mbytevector-length        mbv i)   (bytevector-length (mbytevector-bv mbv)))
+(define (mbytevector-ref           mbv i)   (bytevector-ref    (mbytevector-bv mbv) i))
+(define (mbytevector-set!          mbv i b) (bytes-set!        (mbytevector-bv mbv) i b))
+(define (mbytevector->bytevector   mbv)     (bytes-copy (mbytevector-bv mbv)))
+(define (unsafe-mbytevector-freeze mbv)     (mbytevector-bv mbv))
+
+;; TODO: define primitive fixnum/macnum operations?
 (define (bitwise-arithmetic-shift a b) (arithmetic-shift a b))
 (define (<< i s) (bitwise-arithmetic-shift i s))
 (define (>> i s) (bitwise-arithmetic-shift i (- s)))
 (define (& a b)  (bitwise-and a b))
 (define (\| a b) (bitwise-ior a b))
 (define (^ a b)  (bitwise-xor a b))
+
+(define (make-case-clause param body) (vector param body))
+(define (case-clause-param cc)        (vector-ref cc 0))
+(define (case-clause-body  cc)        (vector-ref cc 1))
+
+(define (make-code sinfo cvars case-clauses) (vector sinfo cvars case-clauses))
+(define (code-source-info        c)          (vector-ref c 0))
+(define (code-captured-variables c)          (vector-ref c 1))
+(define (code-case-clauses       c)          (vector-ref c 2))
+
+(define (procedure-metadata:closure code cvalues)       (vector 'closure code cvalues))
+(define (procedure-metadata:closure?                pm) (eq? (vector-ref pm 0) 'closure))
+(define (procedure-metadata:closure-code            pm) (vector-ref pm 1))
+(define (procedure-metadata:closure-captured-values pm) (vector-ref pm 2))
+;; A primitive is an operation that is implemented directly in the platform
+;; layer.  These operations will typically be portable, but it is possible to
+;; define platform-specific operations.  To remain portable when snapshotting
+;; part of a system, code that makes use of a platform-specific operation
+;; should factor out any values that refer to the operation, so they can be
+;; marked as shared values.  When the snapshot is built, shared values will be
+;; omitted, and a host which loads the snapshot is responsible for supplying
+;; substitutes for these values.  This is analogous to dynamic linking with a
+;; shared library in mainstream operating systems.  A substitute would be
+;; implemented in a way that is both consistent with the original, and
+;; compatible with the new host, solving the portability issue.
+(define (procedure-metadata:primitive name)    (vector 'primitive name))
+(define (procedure-metadata:primitive?     pm) (eq? (vector-ref pm 0) 'primitive))
+(define (procedure-metadata:primitive-name pm) (vector-ref pm 1))
+;; An io controller is a transient, host-specific input/output capability.  In
+;; some cases, particularly when the capability maps to a virtual io device, a
+;; system can optionally persist the corresponding device state and package it
+;; with a program snapshot.  But more often, when a host loads the snapshot,
+;; this capability will be attached to a new io device of the host's choosing.
+(define (procedure-metadata:io name desc)     (vector 'io name desc))
+(define (procedure-metadata:io?           pm) (eq? (vector-ref pm 0) 'primitive))
+(define (procedure-metadata:io-name       pm) (vector-ref pm 1))
+(define (procedure-metadata:io-descriptor pm) (vector-ref pm 2))
+
+;; Procedure metadata is stored as a thunk.  This laziness simplifies the
+;; generated Racket code for attaching metadata to a procedure, allowing the
+;; attachment to occur immediately after construction of the procedure itself.
+;; This immediate attachment would not always be possible without the laziness,
+;; particularly when a procedure is bound in a recursive context, such as a
+;; letrec, while capturing other values bound in the same letrec.  The problem
+;; is these captured values are a component of the metadata, and may not have
+;; been initialized by the time the procedure is constructed.  By wrapping the
+;; metadata in a thunk, we no longer need to worry about initialization order.
+(define procedure=>metadata (make-weak-hash))
+(define (procedure-metadata p) ((hash-ref procedure=>metadata p (lambda () (error "procedure has no metadata" p)))))
+
+;; These operations are Racket-specific.  The above procedure-metadata:X
+;; constructors should also only appear in Racket code.  However,
+;; procedure-metadata and the procedure-metadata:X accessors are actual nscheme
+;; operations, and are not Racket-specific.
+(define (procedure-metadata-set! p pmeta)      (hash-set! procedure=>metadata p pmeta))
+(define (procedure-primitive!    p name)       (procedure-metadata-set! p (lambda () (procedure-metadata:primitive name))))
+(define (procedure-io!           p name desc)  (procedure-metadata-set! p (lambda () (procedure-metadata:io        name desc))))
+(define (procedure-closure!      p code cvals) (procedure-metadata-set! p (lambda () (procedure-metadata:closure   code cvals))))
+
+(define-syntax-rule (declare-primitives! name ...)
+  (for-each procedure-primitive! (list name ...) '(name ...)))
+
+(declare-primitives!
+  eq? eqv? eof-object? null? procedure? pair? cons car cdr
+  string->symbol symbol->string symbol? string? vector vector? vector-length vector-ref
+  vector->svector svector->vector svector? svector-length svector-ref
+  mvector->vector make-mvector mvector? mvector-length mvector-ref mvector-set!
+  utf8->string string->utf8 bytevector? bytevector-length bytevector-ref
+  mbytevector->bytevector make-mbytevector mbytevector? mbytevector-length mbytevector-ref mbytevector-set!
+  number? exact? integer? inexact? = <= < + - * / quotient remainder truncate integer-length
+  bitwise-arithmetic-shift << >> & \| ^)
+
+;; TODO: we don't want these operations.  Use bytevectors instead.
+(define (string->vector s)
+  (list->vector (bytes->list (string->bytes/utf-8 s))))
+(define (vector->string v)
+  (bytes->string/utf-8 (list->bytes (vector->list v))))
+
+
+(define cons* list*)
+
 
 (define-syntax assert
   (syntax-rules ()
