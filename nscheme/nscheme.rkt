@@ -187,18 +187,18 @@
 
 (struct snapshot (primitive* io* value* initialization* root))
 
-(define (snapshot-binding-pairs ss ast:primitive ast:io)
-  (append (map (lambda (name pname)      (ast:binding-pair name (ast:primitive pname)))
-               (map car (snapshot-primitive* ss))
-               (map cdr (snapshot-primitive* ss)))
-          (map (lambda (name pname&desc) (ast:binding-pair name (ast:io (car pname&desc) (cdr pname&desc))))
-               (map car (snapshot-io* ss))
-               (map cdr (snapshot-io* ss)))
-          (snapshot-value* ss)))
-
 (define (snapshot-ast ss ast:primitive ast:io external-binding-pairs)
-  `#(letrec ,(append external-binding-pairs (snapshot-binding-pairs ss ast:primitive ast:io))
-      `#(begin ,(snapshot-initialization* ss) ,(snapshot-root ss))))
+  `#(letrec ,external-binding-pairs  ; This is just used as a let.  There should be no recursion.
+      `#(letrec ,(append (map (lambda (name pname)
+                                (ast:binding-pair name (ast:primitive pname)))
+                              (map car (snapshot-primitive* ss))
+                              (map cdr (snapshot-primitive* ss)))
+                         (map (lambda (name pname&desc)
+                                (ast:binding-pair name (ast:io (car pname&desc) (cdr pname&desc))))
+                              (map car (snapshot-io* ss))
+                              (map cdr (snapshot-io* ss)))
+                         (snapshot-value* ss))
+          `#(begin ,(snapshot-initialization* ss) ,(snapshot-root ss)))))
 
 (define (make-snapshot value.root id->name external-value=>name)
   (let ((value=>name      (make-hasheq))
