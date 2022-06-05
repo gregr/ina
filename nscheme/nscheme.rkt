@@ -160,6 +160,17 @@
 ;;; Snapshot saving and loading ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (ast:quote v)                      `#(quote ,v))
+(define (ast:ref name)                     `#(ref ,name))
+(define (ast:if ast.c ast.t ast.f)         `#(if ,ast.c ,ast.t ,ast.f))
+(define (ast:begin ast.effect* ast.result) `#(begin ,ast.effect* ,ast.result))
+(define (ast:call ast.proc . ast.args)     `#(call #f ,ast.proc ,ast.args))
+(define (ast:case-lambda sinfo clause*)    `#(case-lambda ,sinfo ,clause*))
+(define (ast:letrec bpair* body)           `#(letrec ,bpair* ,body))
+(define (ast:lambda sinfo param ast.body)  (ast:case-lambda sinfo (list (make-case-clause param ast.body))))
+(define (ast:let bpair* body)              (apply ast:call (ast:lambda #f (map car bpair*) body) (map cdr bpair*)))
+(define (ast:list ast*)                    (apply ast:call (ast:lambda #f 'xs (ast:ref 'xs)) ast*))
+
 (define (ast:binding-pair lhs rhs)   (cons lhs rhs))
 (define (ast:binding-pair-lhs bpair) (car bpair))
 (define (ast:binding-pair-rhs bpair) (cdr bpair))
@@ -168,37 +179,37 @@
   (let loop ((ast ast))
     (match ast
       (`#(quote ,value)                         (if (or pair? vector? svector? mvector? mbytevector? procedure?)
-                                                  `#(ref ,(value->name value))
+                                                  (ast:ref (value->name value))
                                                   ast))
       (`#(ref ,name)                            ast)
-      (`#(if ,condition ,body.true ,body.false) `#(if ,(loop condition) ,(loop body.true) ,(loop body.false)))
-      (`#(begin ,effect* ,result)               `#(begin ,(map loop effect*) ,(loop result)))
-      (`#(call ,sinfo ,proc ,arg*)              `#(call ,sinfo ,(loop proc) ,(map loop arg*)))
-      (`#(case-lambda ,sinfo ,case-clause*)     `#(case-lambda ,sinfo
-                                                               ,(map (lambda (cc) (make-case-clause
-                                                                                    (case-clause-param cc)
-                                                                                    (loop (case-clause-body cc))))
-                                                                     case-clause*)))
-      (`#(letrec ,bpairs ,body)                 `#(letrec ,(map (lambda (bp) (ast:binding-pair
-                                                                               (ast:binding-pair-lhs bp)
-                                                                               (loop (ast:binding-pair-rhs bp))))
-                                                                bpairs)
-                                                    ,(loop body))))))
+      (`#(if ,condition ,body.true ,body.false) (ast:if (loop condition) (loop body.true) (loop body.false)))
+      (`#(begin ,effect* ,result)               (ast:begin (map loop effect*) (loop result)))
+      (`#(call ,sinfo ,proc ,arg*)              (ast:call sinfo (loop proc) (map loop arg*)))
+      (`#(case-lambda ,sinfo ,case-clause*)     (ast:case-lambda sinfo
+                                                                 (map (lambda (cc) (make-case-clause
+                                                                                     (case-clause-param cc)
+                                                                                     (loop (case-clause-body cc))))
+                                                                      case-clause*)))
+      (`#(letrec ,bpair* ,body)                 (ast:letrec (map (lambda (bp) (ast:binding-pair
+                                                                                (ast:binding-pair-lhs bp)
+                                                                                (loop (ast:binding-pair-rhs bp))))
+                                                                 bpair*)
+                                                            (loop body))))))
 
 (struct snapshot (primitive* io* value* initialization* root))
 
 (define (snapshot-ast ss ast:primitive ast:io external-binding-pairs)
-  `#(letrec ,external-binding-pairs  ; This is just used as a let.  There should be no recursion.
-      `#(letrec ,(append (map (lambda (name pname)
-                                (ast:binding-pair name (ast:primitive pname)))
-                              (map car (snapshot-primitive* ss))
-                              (map cdr (snapshot-primitive* ss)))
-                         (map (lambda (name pname&desc)
-                                (ast:binding-pair name (ast:io (car pname&desc) (cdr pname&desc))))
-                              (map car (snapshot-io* ss))
-                              (map cdr (snapshot-io* ss)))
-                         (snapshot-value* ss))
-          `#(begin ,(snapshot-initialization* ss) ,(snapshot-root ss)))))
+  (ast:let external-binding-pairs
+           (ast:letrec (append (map (lambda (name pname)
+                                      (ast:binding-pair name (ast:primitive pname)))
+                                    (map car (snapshot-primitive* ss))
+                                    (map cdr (snapshot-primitive* ss)))
+                               (map (lambda (name pname&desc)
+                                      (ast:binding-pair name (ast:io (car pname&desc) (cdr pname&desc))))
+                                    (map car (snapshot-io* ss))
+                                    (map cdr (snapshot-io* ss)))
+                               (snapshot-value* ss))
+                       (ast:begin (snapshot-initialization* ss) (snapshot-root ss)))))
 
 (define (make-snapshot value.root id->name external-value=>name)
   (let ((value=>name      (make-hasheq))
@@ -208,11 +219,6 @@
         (other*           '())
         (initialization** '()))
     (define (ast:prim   p)                    (ast:ref (loop p)))
-    (define (ast:quote  v)                    `#(quote ,v))
-    (define (ast:ref    name)                 `#(ref ,name))
-    (define (ast:call   ast.proc . ast.args)  `#(call #f ,ast.proc ,(list->vector ast.args)))
-    (define (ast:case-lambda sinfo clause*)   `#(case-lambda ,sinfo ,clause*))
-    (define (ast:lambda sinfo param ast.body) (ast:case-lambda sinfo (list (make-case-clause param ast.body))))
     (define (args-name)      (id->name (- -1 (hash-count value=>name))))
     (define (gen-name value) (let ((name (id->name (hash-count value=>name))))
                                (hash-set! value=>name value name)
