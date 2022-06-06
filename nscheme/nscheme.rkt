@@ -199,7 +199,7 @@
                                           bpair*)
                                      (loop body))))))
 
-(struct snapshot (primitive* io* value* initialization* root))
+(struct snapshot (value=>name primitive* io* value* initialization* root))
 
 (define (snapshot-ast ss ast:primitive ast:io external-binding-pairs)
   (ast:let external-binding-pairs
@@ -214,7 +214,7 @@
                                (snapshot-value* ss))
                        (ast:begin (snapshot-initialization* ss) (snapshot-root ss)))))
 
-(define (make-snapshot value.root id->name external-value=>name)
+(define (make-snapshot library? value.root id->name external-value=>name)
   (let ((value=>name      (make-hasheq))
         (primitive*       '())
         (io*              '())
@@ -291,11 +291,21 @@
                         (push! other* name ast))))
                  (ast:ref name))))))
     (let ((ast.root (loop value.root)))
-      (snapshot (reverse primitive*)
+      (snapshot value=>name
+                (reverse primitive*)
                 (reverse io*)
                 (append (reverse procedure*) (reverse other*))
                 (foldl append '() initialization**)
-                ast.root))))
+                (if library?
+                  (let ((names (hash-values value=>name)))
+                    (if (null? names)
+                      (loop '())
+                      (let ((ast.cons (loop cons)))
+                        (foldr (lambda (name ast)
+                                 (ast:call ast.cons (ast:call ast.cons (ast:quote name) (ast:ref name)) ast))
+                               (loop '())
+                               names))))
+                  ast.root)))))
 
 
 ;;; TODO: reorganize the remainder of this file.
