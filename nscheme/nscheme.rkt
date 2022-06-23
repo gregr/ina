@@ -1,7 +1,7 @@
 #lang racket/base
 (provide vector->svector svector->vector svector? svector-length svector-ref
          mvector->vector make-mvector mvector? mvector-length mvector-ref mvector-set!
-         utf8->string string->utf8 bytevector? bytevector-length bytevector-ref
+         utf8->string string->utf8 bytevector bytevector? bytevector-length bytevector-ref
          mbytevector->bytevector make-mbytevector mbytevector? mbytevector-length mbytevector-ref mbytevector-set!
          bitwise-arithmetic-shift << >> & \| ^
          case-clause-param case-clause-body
@@ -66,6 +66,7 @@
 (define (utf8->string bv) (bytes->string/utf-8 bv))
 (define (string->utf8 s)  (string->bytes/utf-8 s))
 
+(define (bytevector . bs)        (apply bytes bs))
 (define (bytevector?       bv)   (bytes?       bv))
 (define (bytevector-length bv)   (bytes-length bv))
 (define (bytevector-ref    bv i) (bytes-ref    bv i))
@@ -151,7 +152,7 @@
   string->symbol symbol->string symbol? string? vector vector? vector-length vector-ref
   vector->svector svector->vector svector? svector-length svector-ref
   mvector->vector make-mvector mvector? mvector-length mvector-ref mvector-set!
-  utf8->string string->utf8 bytevector? bytevector-length bytevector-ref
+  utf8->string string->utf8 bytevector bytevector? bytevector-length bytevector-ref
   mbytevector->bytevector make-mbytevector mbytevector? mbytevector-length mbytevector-ref mbytevector-set!
   number? exact? integer? inexact? = <= < + - * / quotient remainder truncate integer-length
   bitwise-arithmetic-shift << >> & \| ^)
