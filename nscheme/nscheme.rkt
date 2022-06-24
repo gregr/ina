@@ -11,6 +11,7 @@
          procedure-metadata:io? procedure-metadata:io-name procedure-metadata:io-descriptor
          procedure-metadata
          procedure-primitive! procedure-io! procedure-closure!
+         procedure->continuation call-with-escape-continuation call/ec
          string->vector vector->string cons*
          stdio filesystem tcp udp tty
          console string:port:input string:port:output null:port:output
@@ -21,7 +22,7 @@
          port-buffer-mode port-buffer-mode-set!
          method-lambda method-choose method-unknown method-except method-only
          racket:eval)
-(require racket/file racket/list racket/match racket/port racket/string racket/struct
+(require racket/control racket/file racket/list racket/match racket/port racket/string racket/struct
          racket/system racket/tcp racket/udp racket/vector)
 
 ;;;;;;;;;;;;;;;;;;;;;;;
@@ -156,6 +157,111 @@
   mbytevector->bytevector make-mbytevector mbytevector? mbytevector-length mbytevector-ref mbytevector-set!
   number? exact? integer? inexact? = <= < + - * / quotient remainder truncate integer-length
   bitwise-arithmetic-shift << >> & \| ^)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Asynchronous signals, dynamic environment, continuations ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; TODO:
+;; - Racket platform implementations for dynamic bindings, interrupts and scheduling
+;;   - cases that need to be handled:
+;;     - normal return
+;;     - aborting return (subsumes cooperative yield)
+;;     - alarm (ticks, memory, or other resource budget)
+;;     - other interrupt/signal (ctrl-c, ctrl-z, ctrl-\, etc.)
+;;       - may or may not be fatal (fatal does not need to save a continuation)
+;;       - may or may not "suspend" (abort while saving continuation)
+;;         - may not even have to abort at all if a handler can work "in-place" and then resume normally
+;;   - need primitives for manipulating global handlers for alarm/timer and
+;;     other async signal interrupts.
+;;   - Should we emulate nScheme dynamic environments, or use Racket
+;;     parameters directly?  If we use Racket parameters, how do we make them
+;;     compatible with system snapshots?
+;; When running on the Racket platform, it probably makes more sense to use
+;; Racket's facilities for these directly rather than emulating future native
+;; platform abstractions.  But until the native platform is implemented, these
+;; definitions will be useful for clarifying its design.
+
+;;; Continuations
+;;
+;; In nScheme, all first-class continuations are one-shot, and are either
+;; escapes or disjoint context switches.  For these semantics, stack copying is
+;; unnecessary.
+;;
+;; This implementation emulates nScheme continuations directly in Racket.
+;; Unfortunately it involves copying.  It might be more efficient to implement
+;; what we want directly via CPS.  The downside is that we would no longer be
+;; able to write Racket that emulates nScheme.  We would have to compile CPSed
+;; nScheme to Racket instead.
+(define-values (procedure->continuation call-with-escape-continuation)
+  (let ((previous-invalidator (make-parameter #f)))
+    ;; Create a disjoint, one-shot continuation that will call the given
+    ;; procedure, then halt the current platform-level thread of execution.
+    ;; Because it is disjoint, calling this continuation will not invalidate any
+    ;; existing escape continuations.  The intended use of this operator is in
+    ;; implementing control structures involving context switches, such as
+    ;; generators, coroutines, engines, and threads.
+    ;;
+    ;; When implementing control structures that share a single platform thread,
+    ;; it is expected that the given procedure will typically never return.  If
+    ;; it were to return it would halt the entire platform thread, causing
+    ;; everything it cooperates with to also halt.  When implementing a control
+    ;; structure that runs on an independent platform thread, this is not an
+    ;; issue.
+    (define (procedure->continuation proc)
+      (control k (parameterize ((previous-invalidator #f))
+                   (call-with-values
+                     (lambda ()
+                       (call/cc (lambda (k.new)
+                                  (let ((valid? #t))
+                                    (k (lambda args
+                                         (unless (procedure-arity-includes? proc (length args))
+                                           (raise (exn:fail:contract:arity
+                                                    (format "~s: arity mismatch\n expected: ~s\n given: ~s\n"
+                                                            proc (procedure-arity proc) (length args))
+                                                    (current-continuation-marks))))
+                                         (unless valid? (error "called an expired continuation"))
+                                         (set! valid? #f)
+                                         (apply k.new args)))))))
+                     proc))))
+
+    ;; Call the given procedure with the current continuation.  This one-shot
+    ;; continuation is only valid until control returns to it, or to one of its
+    ;; ancestors.  This operator is intended for setting up escapes to exception
+    ;; guards, finalizers, and restarts, as well as setting up for resumption
+    ;; right before performing a context switch.
+    ;;
+    ;; We cannot leverage Racket's operator with the same name because it is not
+    ;; compatible with calling the disjoint continuations produced by
+    ;; procedure->continuation.
+    (define (call-with-escape-continuation proc)
+      (let ((box.invalidate-next! (box #t)))
+        (define (invalidate!)
+          (let ((invalidate-next! (unbox box.invalidate-next!)))
+            (when (procedure? invalidate-next!)
+              (set-box! box.invalidate-next! #f)
+              (invalidate-next!))))
+        (let ((prev (previous-invalidator)))
+          (when (box? prev) (set-box! prev invalidate!)))
+        (call/cc (lambda (k)
+                   (parameterize ((previous-invalidator box.invalidate-next!))
+                     (proc (lambda args
+                             (unless (procedure-arity-includes? k (length args))
+                               (raise (exn:fail:contract:arity
+                                        (format "~s: arity mismatch\n expected: ~s\n given: ~s\n"
+                                                k (procedure-arity k) (length args))
+                                        (current-continuation-marks))))
+                             (unless (unbox box.invalidate-next!)
+                               (error "called an expired continuation"))
+                             (invalidate!)
+                             (apply k args))))))))
+
+    (values procedure->continuation call-with-escape-continuation)))
+
+(define call/ec call-with-escape-continuation)
+
+(declare-primitives!
+  procedure->continuation call-with-escape-continuation)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Snapshot saving and loading ;;;
