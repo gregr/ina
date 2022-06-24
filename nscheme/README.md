@@ -21,26 +21,31 @@ straightforward way by manipulating programs and live processes as data.
 
 ## Deviations from Scheme
 
-- Strings, pairs, and vectors are immutable
-  - Mutable vectors (i.e., mvectors) are a distinct type of data
-  - Special vectors (i.e., svectors) are a distinct type of immutable vector used
-    for representing immutable records that cannot be mistaken as s-expressions
-* Numbers, strings, pairs, and vectors are not guaranteed to have a stable identity
-  * i.e., result of `eq?` is somewhat unpredictable
-  * `eqv?` is predictable for numbers
-* Booleans, null, symbols, procedures, and mvectors do have stable identities
-  * i.e., using `eq?` is always the same as using `equal?`
-* variables are immutable by default
-  * `set!` only works on variables introduced by special binders
-* The empty symbol `||` binds a parser that defines the meaning of all non-keyword
-  syntax, including literals, variable references, and procedure application
-  * `5` is parsed as `(|| 5)`
-  * a normal variable reference `x` is parsed as `(|| x)`
-  * `(f e ...)` where `f` is not a syntactic keyword, is parsed as `(|| (f e ...))`
-* Convenient conventions from Racket are adopted:
-  * Order of operand evaluation is left-to-right
-  * Internal definitions may appear more freely
-  * `letrec` behaves like Scheme's `letrec*`
+- Some conventions from Racket are adopted:
+  - Order of evaluation is left-to-right
+    - e.g., in a procedure application, first the operator is evaluated, then
+      the operands are evaluated in the order they appear.
+  - Internal definitions may appear after expressions
+  - `letrec` behaves like Scheme's `letrec*`
+- Expressions that would typically return `(void)` (like set!, non-matching
+  cond/case, etc.), instead return 0 values (i.e., `(values)`)
+- variables are immutable by default
+  - `set!` is only supported for variables introduced by special binders
+- All S-expression types are immutable
+  - This even includes pairs, strings, bytevectors, and vectors
+  - Mutable vectors and bytevectors (i.e., mvectors and mbytevectors) are a
+    distinct type of data
+  - Special vectors (i.e., svectors) are a distinct type of immutable vector.
+    These are used to represent immutable record types that are disjoint from
+    the s-expression types.
+- Numbers, pairs, strings, bytevectors, and vectors don't have stable identities
+  - i.e., result of `eq?` on these types is unpredictable for structurally
+    identical values
+    - the result will always be `#f` for values that differ structurally
+  - `eqv?` will return `#t` for structurally identical numbers
+- Booleans, null, symbols, procedures, mbytevectors, and mvectors do have stable
+  identities
+  - i.e., the behavior of `eq?` is analogous to its behavior in R7RS Scheme
 - No primitive character type: a string is indivisible until it is (utf-8) decoded as a vector
   - utf-8 encoding is assumed for vector and list conversions
   - no `string-ref`, since basis of decomposition depends on context
@@ -58,24 +63,18 @@ straightforward way by manipulating programs and live processes as data.
     - A separate set of operators will be provided for manipulating inexact numbers
       - Possibly `.+`, `.*`, `.<=`, etc., which coerce to inexact
       - These are different from `fl+`, etc., which assume arguments are already inexact
-  - `integer?` `rational?` etc. will return `#f` for all floating-point numbers
+  - `integer?` `rational?` etc. will return `#f` for all inexact numbers.
   - All numeric literals describe exact numbers by default.  Use `#i` for inexact literals.
-* [m]vectors may be constrained to only contain elements of a specified fixed-width type
-  * providing `mvector-set!` with an element of the wrong type is an error
-  * `[m]vector`, `[m]vector-length`, `[m]vector-ref`, `mvector-set!` `mvector-cas!` are
-    implemented in terms of lower-level typed [m]vector operations that specify an assumed
-    element type, which by default is the usual (tagged value or pointer) Scheme type
-    * Various fixed-size (possibly unsigned) integer and floating point types are
-      supported
-    * a string is implemented as a view on a vector constrained to contain unsigned bytes
-      * utf-8 encoding assumed, and should be enforced by codec library
-    * a low-level representation language exposes these details and is used to implement
-      the primitive operations and data types
+  - If built-in complex numbers are provided, they will always be inexact.
 - First-class control operators produce continuations that are delimited and one-shot.
-- No prescribed object-level error handling model
-  - You define your own handling using the virtualization primitives
-- Expressions that would typically return `(void)` (like set!, non-matching
-  cond/case, etc.), instead return 0 values (i.e., `(values)`)
+- There is no prescribed object-level error handling model.
+  - You can define your own handling using the virtualization primitives.
+- The empty symbol `||` is used as an implicit keyword for all non-keyword
+  syntax, including literals, variable references, and procedure application.
+  - The behavior of these forms can be changed by redefining this keyword.
+  - `5` is parsed as `(|| 5)`
+  - a normal variable reference `x` is parsed as `(|| x)`
+  - `(f e ...)` where `f` is not a syntactic keyword, is parsed as `(|| (f e ...))`
 
 ## Run tests
 
