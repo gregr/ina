@@ -348,6 +348,12 @@
                       (`#(primitive ,pname) (push! primitive* name pname))
                       (`#(io ,pname ,desc)  (push! io*        name (cons pname desc)))
                       (`#(closure ,code ,cvalues)
+                        ;; We want to avoid duplicating code shared by multiple closures.  To accomplish
+                        ;; this, we need to build a separate case-lambda corresponding to the potentially-
+                        ;; shared code, and have each closure reference it.  However, each closure may bind a
+                        ;; different set of values for the captured variables.  To handle these, the shared
+                        ;; code must be abstracted over the captured variables, and each closure must inject
+                        ;; its own captured values.
                         (let* ((sinfo (code-source-info code))
                                (name.code
                                  (or (hash-ref value=>name          code #f)
@@ -362,13 +368,25 @@
                                                                             (ast-lift-complex-values
                                                                               (case-clause-body cc) loop)))
                                                              (code-case-clauses code)))))
-                                       name)))
-                               (name.args (args-name)))
-                          (push! procedure* name (ast:lambda sinfo name.args
-                                                             (ast:call (loop apply)
-                                                                       (apply ast:call (ast:ref name.code)
-                                                                              (map loop cvalues))
-                                                                       (ast:ref name.args))))))))
+                                       name))))
+                          (push! procedure* name
+                                 (if (null? cvalues)
+                                   ;; When there are no cvalues, there is nothing to inject, so it is safe to
+                                   ;; immediately unwrap the shared code procedure.
+                                   (ast:call (ast:ref name.code))
+                                   ;; Because closures and captured values may reference each other
+                                   ;; recursively, if we inject captured values naively, we may mistakenly
+                                   ;; reference a snapshotted value before it has been evaluated.  To avoid
+                                   ;; this problem we eta expand the closure, i.e., turn it into a variadic
+                                   ;; lambda.  Each time the closure's procedure is applied, it will perform
+                                   ;; the injection just-in-time, and then forward its arguments to the
+                                   ;; resulting shared-code procedure.
+                                   (let ((name.args (args-name)))
+                                     (ast:lambda sinfo name.args
+                                                 (ast:call (loop apply)
+                                                           (apply ast:call (ast:ref name.code)
+                                                                  (map loop cvalues))
+                                                           (ast:ref name.args))))))))))
                    ((? mvector?)
                     (push! other* name (ast:call (loop make-mvector) (loop (mvector-length value)) (loop 0)))
                     (set! initialization**
