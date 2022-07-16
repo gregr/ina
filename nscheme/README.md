@@ -25,10 +25,12 @@ straightforward way by manipulating programs and live processes as data.
   - Order of evaluation is left-to-right
     - e.g., in a procedure application, first the operator is evaluated, then
       the operands are evaluated in the order they appear.
-  - Internal definitions may appear after expressions
+  - Internal definitions may be interleaved with expressions
   - `letrec` behaves like Scheme's `letrec*`
-- Expressions that would typically return `(void)` (like set!, non-matching
-  cond/case, etc.), instead return 0 values (i.e., `(values)`)
+- Expressions that would typically return `(void)` (like `set!`, non-matching
+  `cond` or `case`, etc.), instead return 0 values (i.e., `(values)`)
+- `(begin e0 ... e1)` expects each `e0`, which is only evaluated for effect, to return 0 values
+  - `(begin* e0 ... e1)` is more relaxed, allowing each `e0` to return any number of values
 - variables are immutable by default
   - `set!` is only supported for variables introduced by special binders
 - All S-expression types are immutable
@@ -46,10 +48,9 @@ straightforward way by manipulating programs and live processes as data.
 - Booleans, null, symbols, procedures, mbytevectors, and mvectors do have stable
   identities
   - i.e., the behavior of `eq?` is analogous to its behavior in R7RS Scheme
-- No primitive character type: a string is indivisible until it is (utf-8) decoded as a vector
-  - utf-8 encoding is assumed for vector and list conversions
+- No primitive character type: a string is indivisible until it is decoded as a bytevector
+  - e.g., `string->utf8` and `utf8->string`
   - no `string-ref`, since basis of decomposition depends on context
-    - well, we could still support a O(n) `string-ref` based on a stream of code points
   - code units (bytes) are not characters, but suffice for low-level string manipulation
   - code points are not characters, but suffice for some higher-level string manipulation
   - grapheme clusters (substrings) are the right notion of character for user interaction
