@@ -1,8 +1,8 @@
 #lang racket/base
-(provide vector->svector svector->vector svector? svector-length svector-ref
-         mvector->vector make-mvector mvector? mvector-length mvector-ref mvector-set!
+(provide vector->svector svector->vector svector svector? svector-length svector-ref
+         mvector->vector mvector make-mvector mvector? mvector-length mvector-ref mvector-set!
          utf8->string string->utf8 bytevector bytevector? bytevector-length bytevector-ref
-         mbytevector->bytevector make-mbytevector mbytevector? mbytevector-length mbytevector-ref mbytevector-set!
+         mbytevector->bytevector make-mbytevector mbytevector mbytevector? mbytevector-length mbytevector-ref mbytevector-set!
          bitwise-arithmetic-shift << >> & \| ^
          case-clause-param case-clause-body
          code-source-info code-captured-variables code-case-clauses
@@ -47,17 +47,20 @@
 ;;   - io controller
 ;;   - closure
 
-(struct mbytevector (bv))
-(struct mvector     (v))
-(struct svector     (v) #:prefab)
+(struct mbytevector (bv)      #:name mbytevector-struct #:constructor-name mbytevector:new)
+(struct mvector     (v)       #:name mvector-struct     #:constructor-name mvector:new)
+(struct svector     (>vector) #:name svector-struct     #:constructor-name svector:new #:prefab)
 
-(define (vector->svector v) (svector v))
+(define (vector->svector v)
+  (unless (vector? v) (error "svector cannot be built from a non-vector" v))
+  (svector:new v))
 
-(define (svector->vector sv)  (svector-v sv))
-(define (svector-length sv i) (vector-length (svector->vector sv)))
-(define (svector-ref    sv i) (vector-ref    (svector->vector sv) i))
+(define (svector        . args) (svector:new (apply vector args)))
+(define (svector-length sv)     (vector-length (svector->vector sv)))
+(define (svector-ref    sv i)   (vector-ref    (svector->vector sv) i))
 
-(define (make-mvector          len x)  (mvector       (make-vector len x)))
+(define (mvector               . args) (mvector:new (apply vector args)))
+(define (make-mvector          len x)  (mvector:new   (make-vector len x)))
 (define (mvector-length        mv)     (vector-length (mvector-v mv)))
 (define (mvector-ref           mv i)   (vector-ref    (mvector-v mv) i))
 (define (mvector-set!          mv i x) (vector-set!   (mvector-v mv) i x))
@@ -72,7 +75,8 @@
 (define (bytevector-length bv)   (bytes-length bv))
 (define (bytevector-ref    bv i) (bytes-ref    bv i))
 
-(define (make-mbytevector          len b)   (mbytevector       (make-bytes len b)))
+(define (mbytevector               . args)  (mbytevector:new   (apply bytes args)))
+(define (make-mbytevector          len b)   (mbytevector:new   (make-bytes len b)))
 (define (mbytevector-length        mbv i)   (bytevector-length (mbytevector-bv mbv)))
 (define (mbytevector-ref           mbv i)   (bytevector-ref    (mbytevector-bv mbv) i))
 (define (mbytevector-set!          mbv i b) (bytes-set!        (mbytevector-bv mbv) i b))
@@ -151,10 +155,10 @@
 (declare-primitives!
   eq? eqv? eof-object? null? procedure? pair? cons car cdr
   string->symbol symbol->string symbol? string? vector vector? vector-length vector-ref
-  vector->svector svector->vector svector? svector-length svector-ref
-  mvector->vector make-mvector mvector? mvector-length mvector-ref mvector-set!
+  vector->svector svector->vector svector svector? svector-length svector-ref
+  mvector->vector mvector make-mvector mvector? mvector-length mvector-ref mvector-set!
   utf8->string string->utf8 bytevector bytevector? bytevector-length bytevector-ref
-  mbytevector->bytevector make-mbytevector mbytevector? mbytevector-length mbytevector-ref mbytevector-set!
+  mbytevector->bytevector make-mbytevector mbytevector mbytevector? mbytevector-length mbytevector-ref mbytevector-set!
   number? exact? integer? inexact? = <= < + - * / quotient remainder truncate integer-length
   bitwise-arithmetic-shift << >> & \| ^)
 
