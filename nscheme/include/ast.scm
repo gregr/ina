@@ -30,22 +30,13 @@
 (define (ast:list        pv ast*)                  (apply ast:call pv (ast:lambda #f 'xs (ast:ref #f 'xs))
                                                           ast*))
 
-(define (alist->env alist)
-  (let ((param (map car alist)))
-    (cons (cenv-extend cenv.empty param)
-          ((make-renv-extend (param->rparam param) (length alist))
-           renv.empty (map cdr alist)))))
-
-(define (env-cenv env) (car env))
-(define (env-renv env) (cdr env))
-
 (define cenv.empty '())
 (define renv.empty '())
 
 (define (cenv-ref cenv.0 addr)
   (let loop ((j 0) (cenv.1 cenv.0))
     (match cenv.1
-      ('() (error "unbound reference" addr))
+      ('() (error "unbound or out-of-phase reference" addr))
       ((cons (cons rec? (cons variadic? addrs)) cenv)
        (let find ((i 0) (a* addrs))
          (match a*
@@ -125,4 +116,4 @@
               (for-each (lambda (loc s) (set-box! loc (s renv))) loc*.arg s*.arg)
               (s.body (renv-extend renv rparam (map unbox loc*.arg))))))))))
 
-(define (ast-eval ast env) ((ast-stage ast (env-cenv env)) (env-renv env)))
+(define (ast-eval ast) ((ast-stage ast cenv.empty) renv.empty))
