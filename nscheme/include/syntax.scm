@@ -106,17 +106,17 @@
 
 (define (fresh-address description) (mvector description))
 
-(define (env:inherit env.next env.first)
+(define (env-extend env env.first)
   (lambda (method)
     (case method
       ((address)    (lambda (id)         (or (env-address env.first id)
-                                             (env-address env.next  id))))
+                                             (env-address env       id))))
       ((ref)        (lambda (vocab addr) (or (env-ref env.first vocab addr)
-                                             (env-ref env.next  vocab addr))))
+                                             (env-ref env       vocab addr))))
       ((bind! set!) (error "invalid immutable environment operation" method))
       (else         (error "invalid environment operation"           method)))))
 
-(define (env:unmark env m)
+(define (env-unmark env m)
   (lambda (method)
     (case method
       ((address)    (lambda (id)         (and (identifier? id)
@@ -126,7 +126,7 @@
       ((bind! set!) (error "invalid immutable environment operation" method))
       (else         (error "invalid environment operation"           method)))))
 
-(define (env:scope)
+(define (make-env)
   (let ((id=>addr (make-hash)) (addr=>vocab=>value (make-hash)))
     (lambda (method)
       (case method
