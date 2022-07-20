@@ -246,7 +246,7 @@
                               (else (error "not syntax or transcription procedure" transcription))))
          (m             (fresh-mark))
          (stx           (syntax-mark stx m)))
-    (parse (env-extend (env-unmark env.transcribe m) env.use) stx)))
+    (parse (env-extend (env-mark env.transcribe m) env.use) stx)))
 
 (define (transcribe-and-parse-expression env env.op op stx)
   (transcribe-and-parse parse env env.op op stx))

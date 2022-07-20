@@ -116,7 +116,7 @@
       ((bind! set!) (error "invalid immutable environment operation" method))
       (else         (error "invalid environment operation"           method)))))
 
-(define (env-unmark env m)
+(define (env-mark env m)
   (lambda (method)
     (case method
       ((address)    (lambda (id)         (and (identifier? id)
