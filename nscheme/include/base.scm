@@ -141,3 +141,9 @@
     (cond ((null? xs) '())
           ((pair? xs) (cons (f (car xs)) (loop (cdr xs))))
           (else       (f xs)))))
+
+(define (memp ? xs)
+  (let loop ((xs xs))
+    (and (not (null? xs))
+         (cond ((? (car xs)) xs)
+               (else         (loop (cdr xs)))))))

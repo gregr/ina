@@ -36,14 +36,8 @@
   (define (syntax-provenance-add s pv) (syntax-provenance-set s (provenance-combine
                                                                   pv (syntax-provenance s))))
 
-  (define (identifier?   s) (and (syntax-wrapped? s) (symbol? (syntax-datum s))))
-  (define (identifier?!  s) (has-type?! identifier? 'identifier? s))
-  (define (identifier-id s)
-    (identifier?! s)
-    (let ((m* (syntax-marks s)))
-      (if (null? m*) (syntax-datum s) (cons (syntax-datum s) m*))))
-
-  (define (bound-identifier=? a b) (equal? (identifier-id a) (identifier-id b)))
+  (define (identifier?  s) (and (syntax-wrapped? s) (symbol? (syntax-datum s))))
+  (define (identifier?! s) (has-type?! identifier? 'identifier? s))
 
   (define (free-identifier=?  env a b)
     (identifier?! a) (identifier?! b)
@@ -51,6 +45,17 @@
       (if (or addr.a addr.b)
         (eq? addr.a addr.b)
         (eq? (syntax-datum a) (syntax-datum b)))))
+
+  (define (bound-identifier=? a b)
+    (identifier?! a) (identifier?! b)
+    (and (eq?    (syntax-datum a) (syntax-datum b))
+         (equal? (syntax-marks a) (syntax-marks b))))
+
+  (define (bound-identifiers-unique? ids)
+    (or (null? ids)
+        (and (bound-identifiers-unique? (cdr ids))
+             (let ((id.0 (car ids)))
+               (not (memp (lambda (id) (bound-identifier=? id id.0)) (cdr ids)))))))
 
   (define (datum->syntax context datum)
     (identifier?! context)
@@ -124,9 +129,9 @@
 (define (env-extend env env.first)
   (lambda (method)
     (case method
-      ((address)    (lambda (k ident)      ((env.first 'address)
-                                            (lambda (ident) ((env 'address) k ident))
-                                            ident)))
+      ((address)    (lambda (k id)         ((env.first 'address)
+                                            (lambda (id) ((env 'address) k id))
+                                            id)))
       ((ref)        (lambda (k vocab addr) ((env.first 'ref)
                                             (lambda (vocab addr) ((env 'ref) k vocab addr))
                                             vocab addr)))
@@ -136,9 +141,8 @@
 (define (env-mark env m)
   (lambda (method)
     (case method
-      ((address)    (lambda (k ident)      (let ((i (and (identifier? ident)
-                                                         (syntax-unmark ident m))))
-                                             (if i ((env 'address) k i) (k ident)))))
+      ((address)    (lambda (k id)         (let ((i (and (identifier? id) (syntax-unmark id m))))
+                                             (if i ((env 'address) k i) (k id)))))
       ((ref)        (lambda (k vocab addr) (env-ref env vocab addr)))
       ((bind! set!) (error "invalid immutable environment operation" method))
       (else         (error "invalid environment operation"           method)))))
@@ -147,10 +151,10 @@
   (let ((id=>addr (make-hash)) (addr=>vocab=>value (make-hash)))
     (lambda (method)
       (case method
-        ((address) (lambda (k ident)      (hash-ref id=>addr ident (lambda () (k ident)))))
+        ((address) (lambda (k id)         (hash-ref id=>addr id (lambda () (k id)))))
         ((ref)     (lambda (k vocab addr) (hash-ref (hash-ref addr=>vocab=>value addr (hash))
                                                     vocab (lambda () (k vocab addr)))))
-        ((bind!)   (lambda (ident addr)   (hash-set! id=>addr ident addr)))
+        ((bind!)   (lambda (id addr)      (hash-set! id=>addr id addr)))
         ((set!)    (lambda (vocab addr value)
                      (unless addr (error "invalid environment address" addr))
                      (hash-update!
@@ -162,14 +166,15 @@
 (define env.empty
   (lambda (method)
     (case method
-      ((address)    (lambda (k ident)      (syntax->datum ident)))
+      ((address)    (lambda (k id)         (syntax->datum id)))
       ((ref)        (lambda (k vocab addr) (k vocab addr)))
       ((bind! set!) (error "invalid immutable environment operation" method))
       (else         (error "invalid environment operation"           method)))))
 
-(define (env-address env ident)        ((env 'address) (lambda (ident) #f) ident))
+(define (env-address env id)           ((env 'address) (lambda (id) #f)
+                                                       (syntax-provenance-set id #f)))
 (define (env-ref     env vocab addr)   ((env 'ref)     (lambda (vocab addr) #f) vocab addr))
-(define (env-ref^    env vocab ident)  (let ((addr (env-address env ident)))
+(define (env-ref^    env vocab id)     (let ((addr (env-address env id)))
                                          (and addr (env-ref env vocab addr))))
-(define (env-bind!   env ident addr)   ((env 'bind!)   ident addr))
+(define (env-bind!   env id addr)      ((env 'bind!)   id addr))
 (define (env-set!    env vocab addr v) ((env 'set!)    vocab addr v))

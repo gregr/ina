@@ -19,8 +19,6 @@
 ;; Parsing
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (unique? xs) (= (set-count (list->set xs)) (length xs)))
-
 (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
 
 (define (expression-parser proc)    (svector 'expression-parser proc))
@@ -110,10 +108,9 @@
                       (raise-syntax-error "formal parameter names must be identifiers" (car e*)))
                     (when (null? (cdr e*))
                       (raise-syntax-error "case-lambda clause cannot have an empty body" e.cc))
-                    (unless (unique? (map identifier-id e*.param))
+                    (unless (bound-identifiers-unique? e*.param)
                       (raise-syntax-error "duplicate formal parameter names" (car e*)))
-                    (let* ((param (improper-list-map (lambda (e) (fresh-address (identifier-id e)))
-                                                     e*~.param))
+                    (let* ((param (improper-list-map (lambda (e) (fresh-address e)) e*~.param))
                            (addr* (improper-list->list param)))
                       (let ((env.scope (make-env)))
                         (for-each (lambda (i a) (env-bind! env.scope i a)) e*.param addr*)
@@ -130,12 +127,11 @@
                                (raise-syntax-error "not an identifier" stx.id)))
             stx*.id)
   (map (lambda (stx.id)
-         (let ((id (identifier-id stx.id)))
-           (when (env-address env.scope id)
-             (raise-syntax-error "name defined multiple times" stx.id))
-           (let ((addr (fresh-address id)))
-             (env-bind! env.scope id addr)
-             addr)))
+         (when (env-address env.scope stx.id)
+           (raise-syntax-error "name defined multiple times" stx.id))
+         (let ((addr (fresh-address stx.id)))
+           (env-bind! env.scope stx.id addr)
+           addr))
        stx*.id))
 
 (define (defstate)
