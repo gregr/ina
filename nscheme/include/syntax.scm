@@ -148,19 +148,36 @@
       (else         (error "invalid environment operation"           method)))))
 
 (define (make-env)
-  (let ((id=>addr (make-hash)) (addr=>vocab=>value (make-hash)))
+  (let ((id=>addr '()) (addr=>vocab=>value '()))
     (lambda (method)
       (case method
-        ((address) (lambda (k id)         (hash-ref id=>addr id (lambda () (k id)))))
-        ((ref)     (lambda (k vocab addr) (hash-ref (hash-ref addr=>vocab=>value addr (hash))
-                                                    vocab (lambda () (k vocab addr)))))
-        ((bind!)   (lambda (id addr)      (hash-set! id=>addr id addr)))
+        ((address) (lambda (k id)
+                     (let ((entry (assp (lambda (id.key) (bound-identifier=? id.key id)) id=>addr)))
+                       (if entry (cdr entry) (k id)))))
+        ((ref)     (lambda (k vocab addr)
+                     (let ((entry (assoc addr addr=>vocab=>value)))
+                       (if entry
+                           (let ((entry (assoc addr (cdr entry))))
+                             (if entry (cdr entry) (k vocab addr)))
+                           (k vocab addr)))))
+        ((bind!)   (lambda (id addr) (set! id=>addr (cons (cons id addr) id=>addr))))
         ((set!)    (lambda (vocab addr value)
                      (unless addr (error "invalid environment address" addr))
-                     (hash-update!
-                       addr=>vocab=>value addr
-                       (lambda (vocab=>value) (hash-set vocab=>value vocab value))
-                       (hash))))
+                     (set! addr=>vocab=>value
+                       (let ((entry.addr (assoc addr addr=>vocab=>value)))
+                         (if entry.addr
+                             (let* ((entry.vocab  (assoc vocab (cdr entry.addr)))
+                                    (vocab=>value (cons (cons vocab value)
+                                                        (if entry.vocab
+                                                            (rem1p (lambda (entry)
+                                                                     (equal? vocab (car entry)))
+                                                                   (cdr entry.addr))
+                                                            (cdr entry.addr)))))
+                               (cons (cons addr vocab=>value)
+                                     (rem1p (lambda (entry) (eq? addr (car entry)))
+                                            addr=>vocab=>value)))
+                             (cons (cons addr (list (cons vocab value)))
+                                   addr=>vocab=>value))))))
         (else      (error "invalid environment operation" method))))))
 
 (define env.empty
@@ -171,8 +188,7 @@
       ((bind! set!) (error "invalid immutable environment operation" method))
       (else         (error "invalid environment operation"           method)))))
 
-(define (env-address env id)           ((env 'address) (lambda (id) #f)
-                                                       (syntax-provenance-set id #f)))
+(define (env-address env id)           ((env 'address) (lambda (id) #f) id))
 (define (env-ref     env vocab addr)   ((env 'ref)     (lambda (vocab addr) #f) vocab addr))
 (define (env-ref^    env vocab id)     (let ((addr (env-address env id)))
                                          (and addr (env-ref env vocab addr))))

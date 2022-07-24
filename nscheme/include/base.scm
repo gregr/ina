@@ -53,13 +53,21 @@
 ;;; Association and property lists ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; TODO: no optional parameters
-(define (alist-ref alist key (default (lambda () (error "alist-ref missing key" alist key))))
+(define (assp ? alist)
+  (let loop ((alist alist))
+    (and (not (null? alist))
+         (let ((kv (car alist)))
+           (cond ((? (car kv)) kv)
+                 (else         (loop (cdr alist))))))))
+
+(define (assoc key alist) (assp (lambda (k) (equal? k key)) alist))
+
+(define (alist-ref alist key default)
   (match (assoc key alist)
     ((cons _ v) v)
     (#f         (if (procedure? default) (default) default))))
 
-(define (alist-update alist key v->v (default (lambda () (error "alist-ref missing key" alist key))))
+(define (alist-update alist key v->v default)
   (let loop ((kvs alist) (prev '()))
     (cond ((null?        kvs     ) (define v (if (procedure? default) (default) default))
                                    (cons (cons key (v->v v)) alist))
@@ -147,3 +155,9 @@
     (and (not (null? xs))
          (cond ((? (car xs)) xs)
                (else         (loop (cdr xs)))))))
+
+(define (rem1p ? xs)
+  (let loop ((xs xs))
+    (cond ((null? xs)   '())
+          ((? (car xs)) (cdr xs))
+          (else         (cons (car xs) (loop (cdr xs)))))))
