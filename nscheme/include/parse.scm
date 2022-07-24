@@ -241,8 +241,9 @@
                                                           (syntax-provenance (cdr x)))))))))
                         (else      (raise-syntax-error "not a definable form" e.lhs))))))))
 
-;; The right-hand-side expression of declare-parser must evaluate to a procedure which takes the current
-;; environment, and produces a parser.  This gives the parser access to its definition environment.
+;; The right-hand-side expression of declare-parser must evaluate to a procedure which takes the
+;; current environment, and produces a parser.  This gives the parser access to its definition
+;; environment.
 (define (parse-declare-parser dst env.scope env e.vocab e.lhs . e*.rhs)
   (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))
     (cond ((identifier? e.lhs)
@@ -266,14 +267,13 @@
   (define ((lookup/env env) vocab e.id) (env-ref env vocab (env-address env e.id)))
   (let* ((transcription (op (syntax-mark stx antimark)))
          (stx           (syntax-provenance-add
-                          (cond ((syntax?    transcription) transcription)
-                                ((procedure? transcription) (transcription (lookup/env env.transcribe)
-                                                                           (lookup/env env.use)))
-                                (else (error "not syntax or transcription procedure" transcription)))
-                          stx))
-         (m             (fresh-mark))
-         (stx           (syntax-mark stx m)))
-    (parse (env-extend (env-mark env.transcribe m) env.use) stx)))
+                          (if (procedure? transcription)
+                              (transcription (lookup/env env.op) (lookup/env env.use))
+                              transcription)
+                          stx)))
+    (unless (hygienic? stx) (error "unhygienic transcription" stx))
+    (let ((m (fresh-mark)))
+      (parse (env-extend (env-mark env.op m) env.use) (syntax-mark stx m)))))
 
 (define (transcribe-and-parse-expression env env.op op stx)
   (transcribe-and-parse parse env env.op op stx))
