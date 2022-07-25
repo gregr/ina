@@ -40,7 +40,7 @@
 (define (parse env expr)
   (define (default)
     (let ((op.default (env-ref env vocab.expression '||)))
-      (cond ((procedure? op.default)   ((op.default env (datum->syntax #f `(#f ,expr)))))
+      (cond ((procedure? op.default)   ((op.default env `(#f ,expr))))
             ((identifier? expr)        (parse-unbound-identifier env expr))
             ((pair? (syntax-unwrap e)) (raise-syntax-error "invalid procedure application context" expr))
             (else                      (raise-syntax-error "invalid literal context" expr)))))
@@ -221,12 +221,11 @@
              (defstate-define dst addr (lambda () (parse env (car e*.rhs))))))
           (else (let ((x (syntax-unwrap e.lhs)))
                   (cond ((pair? x) (loop (car x)
-                                         (list (datum->syntax
-                                                 #f (expression-parser
-                                                      (lambda (env)
-                                                        (ast-provenance-add
-                                                          (apply parse-lambda env (cdr x) e*.rhs)
-                                                          (syntax-provenance (cdr x)))))))))
+                                         (list (expression-parser
+                                                 (lambda (env)
+                                                   (ast-provenance-add
+                                                     (apply parse-lambda env (cdr x) e*.rhs)
+                                                     (syntax-provenance (cdr x))))))))
                         (else      (raise-syntax-error "not a definable form" e.lhs))))))))
 
 ;; The right-hand-side expression of declare-parser must evaluate to a procedure which takes the
@@ -243,12 +242,11 @@
              (env-set! env.scope vocab addr parser)))
           (else (let ((x (syntax-unwrap e.lhs)))
                   (cond ((pair? x) (loop (car x)
-                                         (list (datum->syntax
-                                                 #f (expression-parser
-                                                      (lambda (env)
-                                                        (ast-provenance-add
-                                                          (apply parse-lambda env (cdr x) e*.rhs)
-                                                          (syntax-provenance (cdr x)))))))))
+                                         (list (expression-parser
+                                                 (lambda (env)
+                                                   (ast-provenance-add
+                                                     (apply parse-lambda env (cdr x) e*.rhs)
+                                                     (syntax-provenance (cdr x))))))))
                         (else      (raise-syntax-error "not a definable form" e.lhs)))))))
   dst)
 
@@ -279,23 +277,22 @@
            (env-introduce env.scope e.lhs)
            (let ((op (ast-eval (parse env (car e*.rhs)))))
              (parse-declare-parser
-               dst (parse-quote env (datum->syntax #f vocab.expression))
+               dst (parse-quote env vocab.expression)
                e.lhs (lambda (env.op)
                        (lambda (env.use stx)
                          (transcribe-and-parse-expression env.use env.op op stx))))
              (parse-declare-parser
-               dst (parse-quote env (datum->syntax #f vocab.definition))
+               dst (parse-quote env vocab.definition)
                e.lhs (lambda (env.op)
                        (lambda (dst.use env.scope env.use stx)
                          (transcribe-and-parse-definition dst.use env.scope env.use env.op op stx))))))
           (else (let ((x (syntax-unwrap e.lhs)))
                   (cond ((pair? x) (loop (car x)
-                                         (list (datum->syntax
-                                                 #f (expression-parser
-                                                      (lambda (env)
-                                                        (ast-provenance-add
-                                                          (apply parse-lambda env (cdr x) e*.rhs)
-                                                          (syntax-provenance (cdr x)))))))))
+                                         (list (expression-parser
+                                                 (lambda (env)
+                                                   (ast-provenance-add
+                                                     (apply parse-lambda env (cdr x) e*.rhs)
+                                                     (syntax-provenance (cdr x))))))))
                         (else      (raise-syntax-error "not a definable form" e.lhs)))))))
   dst)
 
@@ -346,10 +343,8 @@
       (apply parse-begin-definition dst env.scope (env-extend env env.scope.inner) stx*))))
 
 (define (parse-splicing-expression parse-splicing env . args)
-  (parse-let env (datum->syntax #f '())
-             (datum->syntax #f (definition-parser
-                                 (lambda (dst env.scope env)
-                                   (apply parse-splicing dst env.scope env args))))))
+  (parse-let env '() (definition-parser (lambda (dst env.scope env)
+                                          (apply parse-splicing dst env.scope env args)))))
 (define (parse-splicing-local-expression env . args)
   (parse-splicing-expression parse-splicing-local-definition env args))
 (define (parse-splicing-let-expression env . args)
@@ -362,10 +357,9 @@
   (let ((_ (parse-binding-pairs e.bpairs)))
     (let loop ((dst dst) (env.scope env.scope) (env env) (e.bpairs e.bpairs))
       (let ((x (syntax-unwrap e.bpairs)))
-        (cond ((null? x) (apply parse-splicing-let-definition dst env.scope env
-                                (datum->syntax #f '()) stx*))
+        (cond ((null? x) (apply parse-splicing-let-definition dst env.scope env '() stx*))
               (else      (apply parse-splicing-let-definition dst env.scope env
-                                (datum->syntax #f (list (car x)))
+                                (list (car x))
                                 (definition-parser (lambda (dst env.scope env)
                                                      (loop dst env.scope env (cdr x)))))))))))
 (define (parse-splicing-let*-expression env . args)
@@ -377,21 +371,17 @@
 (define (parse-let env e0 e1 . e*)
   (cond ((identifier? e0)
          (let ((bpair* (parse-binding-pairs e1)))
-           (let ((e.proc (expression-parser
-                           ;;  TODO: provenance
-                           (lambda (env) (apply parse-lambda env
-                                                (datum->syntax #f (map car bpair*)) e*)))))
-             (apply ast:call #f (parse-letrec* env (datum->syntax #f (list e0 e.proc)) e0)
+           (let ((e.proc (expression-parser (lambda (env)
+                                              (apply parse-lambda env (map car bpair*) e*)))))
+             (apply ast:call #f (parse-letrec* env (list e0 e.proc) e0)
                     (parse* env (map cdr bpair*))))))
         (else (let ((bpair* (parse-binding-pairs e0)))
-                (apply ast:call #f (apply parse-lambda env
-                                          (datum->syntax #f (map car bpair*)) e1 e*)
+                (apply ast:call #f (apply parse-lambda env (map car bpair*) e1 e*)
                        (parse* env (map cdr bpair*)))))))
 
 ;; TODO: could define these via macro
 (define (parse-non-splicing-expression parse-splicing env e0 e*)
-  (apply parse-splicing env e0 (expression-parser
-                                 (lambda (env) (apply parse-let env (datum->syntax #f '()) e*)))))
+  (apply parse-splicing env e0 (expression-parser (lambda (env) (apply parse-let env '() e*)))))
 (define (parse-let* env e.bpairs . e*.body)
   (parse-non-splicing-expression parse-splicing-let*-expression env e.bpairs e*.body))
 (define (parse-let-syntax env e.bpairs . e*.body)
@@ -406,24 +396,20 @@
 
 (define (parse-letrec* env e.bpairs . e*.body)
   (let ((bpair* (parse-binding-pairs e.bpairs)))
-    (apply parse-local
-           (datum->syntax
-             #f (map (lambda (e.lhs e.rhs)
-                       (definition-parser
-                         (lambda (dst env.scope env)
-                           (parse-define dst env.scope env e.lhs e.rhs))))
-                     (map car bpair*) (map cdr bpair*)))
+    (apply parse-local (map (lambda (e.lhs e.rhs)
+                              (definition-parser
+                                (lambda (dst env.scope env)
+                                  (parse-define dst env.scope env e.lhs e.rhs))))
+                            (map car bpair*) (map cdr bpair*))
            e*.body)))
 
 (define (parse-letrec-syntax env e.bpairs . e*.body)
   (let ((bpair* (parse-binding-pairs e.bpairs)))
-    (apply parse-local
-           (datum->syntax
-             #f (map (lambda (e.lhs e.rhs)
-                       (definition-parser
-                         (lambda (dst env.scope env)
-                           (parse-define-syntax dst env.scope env e.lhs e.rhs))))
-                     (map car bpair*) (map cdr bpair*)))
+    (apply parse-local (map (lambda (e.lhs e.rhs)
+                              (definition-parser
+                                (lambda (dst env.scope env)
+                                  (parse-define-syntax dst env.scope env e.lhs e.rhs))))
+                            (map car bpair*) (map cdr bpair*))
            e*.body)))
 
 (define initial.expression
