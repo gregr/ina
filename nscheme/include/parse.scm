@@ -42,8 +42,9 @@
     (let ((op.default (env-ref env vocab.expression '||)))
       (cond ((procedure? op.default)   ((op.default env `(#f ,expr))))
             ((identifier? expr)        (parse-unbound-identifier env expr))
-            ((pair? (syntax-unwrap e)) (raise-syntax-error "invalid procedure application context" expr))
-            (else                      (raise-syntax-error "invalid literal context" expr)))))
+            ((pair? (syntax-unwrap e)) (raise-syntax-error
+                                         "invalid context for procedure application" expr))
+            (else                      (raise-syntax-error "invalid context for literal" expr)))))
   (define (operate e.op)
     (let ((op (env-ref^ env vocab.expression e.op)))
       (if (procedure? op)
@@ -63,8 +64,10 @@
       pv)))
 
 (define (parse-unbound-identifier env e)
-  ;; TODO: first look for a restart to invoke
-  (raise-syntax-error "unbound identifier" e))
+  (if (env-address env e)
+      (raise-syntax-error "cannot be used in an expression context" e)
+      ;; TODO: first look for a restart to invoke
+      (raise-syntax-error "unbound identifier" e)))
 
 (define (parse-default env e)
   (define (fail) (raise-syntax-error "not a literal or procedure application form" e))
@@ -262,8 +265,8 @@
     (let ((m (fresh-mark)))
       (parse (env-extend (env-mark env.op m) env.use) (syntax-mark stx m)))))
 
-(define (transcribe-and-parse-expression env env.op op stx)
-  (transcribe-and-parse parse env env.op op stx))
+(define (transcribe-and-parse-expression env.use env.op op stx)
+  (transcribe-and-parse parse env.use env.op op stx))
 
 (define (transcribe-and-parse-definition dst env.scope env.use env.op op stx)
   (transcribe-and-parse (lambda (env stx) (parse-definition dst env.scope env stx))
@@ -524,5 +527,3 @@
 
     ;'splicing-letrec-syntax
     ))
-
-;; TODO: automate populating definition and quasiquote syntax with parse-invalid-expression
