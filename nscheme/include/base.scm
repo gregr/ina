@@ -16,8 +16,8 @@
 (define (has-type?! type? expected value)
   (unless (type? value) (raise-type-error expected value)))
 
-(define (raise-syntax-error expr description)
-  (raise (make-error 'syntax `(expression ,expr description ,description))))
+(define (raise-syntax-error description . stx*)
+  (raise (make-error 'syntax `(description ,description syntax ,stx*))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Mutable vector and bytevector transformation ;;;
@@ -156,8 +156,16 @@
          (cond ((? (car xs)) xs)
                (else         (loop (cdr xs)))))))
 
+(define (member y xs) (memp (lambda (x) (equal? x y)) xs))
+
 (define (rem1p ? xs)
   (let loop ((xs xs))
     (cond ((null? xs)   '())
           ((? (car xs)) (cdr xs))
           (else         (cons (car xs) (loop (cdr xs)))))))
+
+(define (iota n)
+  (unless (and (integer? n) (<= 0 n)) (error "not a nonnegative integer" n))
+  (let loop ((i 0))
+    (cond ((= i n) '())
+          (else    (cons i (loop (+ i 1)))))))
