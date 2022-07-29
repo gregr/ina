@@ -38,13 +38,19 @@
 (define (parse* env e*) (map (lambda (e) (parse env e)) e*))
 
 (define (parse env expr)
+  (define (unbound)
+    (if (env-address env expr)
+        (raise-syntax-error "cannot be used in an expression context" expr)
+        ;; TODO: first look for a restart to invoke
+        (raise-syntax-error "unbound identifier" expr)))
   (define (default)
-    (let ((op.default (env-ref env vocab.expression '||)))
-      (cond ((procedure? op.default)   ((op.default env `(#f ,expr))))
-            ((identifier? expr)        (parse-unbound-identifier env expr))
-            ((pair? (syntax-unwrap e)) (raise-syntax-error
-                                         "invalid context for procedure application" expr))
-            (else                      (raise-syntax-error "invalid context for literal" expr)))))
+    (define (fail) (raise-syntax-error "not a literal or procedure application form" expr))
+    (cond ((syntax->list? expr) => (lambda (e*)
+                                     (when (null? e*) (fail))
+                                     (apply ast:call #f (parse* env e*))))
+          ((identifier?   expr) (unbound))
+          (else                 (let ((x (syntax-unwrap expr)))
+                                  (if (literal? x) (ast:quote #f x) (fail))))))
   (define (operate e.op)
     (let ((op (env-ref^ env vocab.expression e.op)))
       (if (procedure? op)
@@ -61,24 +67,6 @@
                           ((literal?           x) (default))
                           ((expression-parser? x) ((expression-parser-proc x) env))
                           (else                   (raise-syntax-error "not an expression" expr))))))
-      pv)))
-
-(define (parse-unbound-identifier env e)
-  (if (env-address env e)
-      (raise-syntax-error "cannot be used in an expression context" e)
-      ;; TODO: first look for a restart to invoke
-      (raise-syntax-error "unbound identifier" e)))
-
-(define (parse-default env e)
-  (define (fail) (raise-syntax-error "not a literal or procedure application form" e))
-  (let ((pv (syntax-provenance e)))
-    (ast-provenance-add
-      (cond ((syntax->list? e) => (lambda (e*)
-                                    (when (null? e*) (fail))
-                                    (apply ast:call #f (parse* env e*))))
-            ((identifier?   e) (parse-unbound-identifier env e))
-            (else              (let ((x (syntax-unwrap e)))
-                                 (if (literal? x) (ast:quote #f x) (fail)))))
       pv)))
 
 (define ((keyword-expression-parser parser argc.min argc.max) env expr)
@@ -417,7 +405,6 @@
 
 (define initial.expression
   (list
-    '||              (keyword-expression-parser parse-default       1 1)
     'quote           (keyword-expression-parser parse-quote         1 1)
     'quote-syntax    (keyword-expression-parser parse-quote-syntax  1 1)
     'if              (keyword-expression-parser parse-if            3 3)
