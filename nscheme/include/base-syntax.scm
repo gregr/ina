@@ -1,13 +1,12 @@
-(introduce current-environment)
-;(declare-parser
-  ;vocab.expression
+;(introduce current-environment)
+;(declare-parser vocab.expression
   ;((current-environment env.op) env.use stx)
   ;(define (op env stx)
     ;(let ((top (syntax-unwrap stx)))
       ;(if (not (pair? top))
           ;(raise-syntax-error "must be used as an operator" stx)
           ;(if (not (null? (syntax-unwrap (cdr top))))
-              ;(raise-syntax-error "expected no arguments" (cdr top))
+              ;(raise-syntax-error "more than 0 arguments" (cdr top))
               ;(list (quote-syntax quote) env.use)))))
   ;(transcribe-and-parse-expression env.use env.op op stx))
 
@@ -25,8 +24,7 @@
      (define vocab.expression 'expression)))
 
   (introduce define-syntax)
-  (declare-parser
-    vocab.definition
+  (declare-parser vocab.definition
     ((define-syntax env.op) dst.use env.scope env.use stx)
     (define (op env stx)
       (define (def stx.lhs stx.rhs)
@@ -312,9 +310,8 @@
                       (free-identifier=? stx.qq (quote-syntax unquote-splicing))
                       (free-identifier=? stx.qq (quote-syntax quasiquote))))
              (raise-syntax-error "misplaced keyword" stx.qq))
-            ((vector?  qq)     (quasiquote-syntax
-                                 (vector . #,(map (lambda (stx.qq) (loop stx.qq level))
-                                                  (vector->list qq)))))
+            ((vector? qq) (quasiquote-syntax (vector . #,(map (lambda (stx.qq) (loop stx.qq level))
+                                                              (vector->list qq)))))
             (else (syntax-dismantle stx.qq
                     ((stx.qqa . stx.qqd)
                      (define (j1)
@@ -348,12 +345,12 @@
     (syntax-dismantle stx
       ((_ lhs* rhs)
        (quasiquote-syntax
-         (begin
-           (define vec.value* (call-with-values #,rhs (case-lambda (#,lhs* (vector . #,lhs*)))))
-           . #,(let ((lhs* (syntax->list lhs*)))
-                 (map (lambda (i lhs) (quasiquote-syntax
-                                        (define #,lhs (vector-ref vec.value* #,i))))
-                      (iota (length lhs*)) lhs*)))))))
+         (begin (define vec.value* (call-with-values (lambda () #,rhs)
+                                                     (case-lambda (#,lhs* (vector . #,lhs*)))))
+                . #,(let ((lhs* (syntax->list lhs*)))
+                      (map (lambda (i lhs) (quasiquote-syntax
+                                             (define #,lhs (vector-ref vec.value* #,i))))
+                           (iota (length lhs*)) lhs*)))))))
 
   (splicing-local
     ((begin-meta
