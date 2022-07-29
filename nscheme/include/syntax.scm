@@ -39,7 +39,7 @@
   (define (identifier?  s) (and (syntax-wrapped? s) (symbol? (syntax-datum s))))
   (define (identifier?! s) (has-type?! identifier? 'identifier? s))
 
-  (define (free-identifier=?  env a b)
+  (define (free-identifier=?/env env a b)
     (identifier?! a) (identifier?! b)
     (let ((addr.a (env-address env a)) (addr.b (env-address env b)))
       (if (or addr.a addr.b)

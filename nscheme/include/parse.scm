@@ -242,16 +242,19 @@
   dst)
 
 (define (transcribe-and-parse parse env.use env.op op stx)
-  (define ((lookup/env env) vocab e.id) (env-ref env vocab (env-address env e.id)))
-  (let* ((transcription (op (syntax-mark stx antimark)))
-         (stx           (syntax-provenance-add
-                          (if (procedure? transcription)
-                              (transcription (lookup/env env.op) (lookup/env env.use))
-                              transcription)
-                          stx)))
+  (let* ((result (op (syntax-mark stx antimark)))
+         (m      (fresh-mark))
+         (env    (env-extend (env-mark env.op m) env.use))
+         (stx    (syntax-provenance-add
+                   (if (procedure? result)
+                       (let ((lookup    (lambda (vocab e.id) (env-ref^ env vocab e.id)))
+                             (free-id=? (lambda (a b) (free-identifier=?/env
+                                                        env (syntax-mark a m) (syntax-mark b m)))))
+                         (result lookup free-id=?))
+                       result)
+                   stx)))
     (unless (hygienic? stx) (error "unhygienic transcription" stx))
-    (let ((m (fresh-mark)))
-      (parse (env-extend (env-mark env.op m) env.use) (syntax-mark stx m)))))
+    (parse env (syntax-mark stx m))))
 
 (define (transcribe-and-parse-expression env.use env.op op stx)
   (transcribe-and-parse parse env.use env.op op stx))
