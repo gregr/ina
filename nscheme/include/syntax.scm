@@ -15,114 +15,112 @@
                    (cond ((null? m*) (cdr m*.inner))
                          (else       (cons m (loop (car m*) (cdr m*)))))))))
 
-   (define (make-syntax marks datum provenance) (svector 'syntax marks datum provenance))
-
-   (define (syntax-marks s) (if (syntax-wrapped? s) (svector-ref s 1) '()))
-   (define (syntax-datum s) (if (syntax-wrapped? s) (svector-ref s 2) s))
-
-   (define (syntax-mark* s m*)
-     (if (syntax-wrapped? s)
-         (make-syntax (marks-append m* (syntax-marks s))
-                      (syntax-datum s)
-                      (syntax-provenance s))
-         (make-syntax m* s #f))))
+   (define (make-syntax mark* datum provenance) (svector 'syntax mark* datum provenance)))
 
   (define (syntax-wrapped? x) (and (svector? x)
                                    (= (svector-length x) 4)
                                    (eq? (svector-ref x 0) 'syntax)))
 
+  (define (syntax-mark*          s)    (if  (syntax-wrapped? s) (svector-ref s 1) '()))
+  (define (syntax-peek           s)    (if  (syntax-wrapped? s) (svector-ref s 2) s))
   (define (syntax-provenance     s)    (and (syntax-wrapped? s) (svector-ref s 3)))
-  (define (syntax-provenance-set s pv) (if pv (make-syntax (syntax-marks s) (syntax-datum s) pv) s))
+  (define (syntax-provenance-set s pv) (if pv (make-syntax (syntax-mark* s) (syntax-peek s) pv) s))
   (define (syntax-provenance-add s pv) (syntax-provenance-set s (provenance-combine
                                                                   pv (syntax-provenance s))))
 
-  (define (identifier?  s) (and (syntax-wrapped? s) (symbol? (syntax-datum s))))
-  (define (identifier?! s) (has-type?! identifier? 'identifier? s))
-
-  (define (free-identifier=?/env env a b)
-    (identifier?! a) (identifier?! b)
-    (let ((addr.a (env-address env a)) (addr.b (env-address env b)))
-      (if (or addr.a addr.b)
-        (eq? addr.a addr.b)
-        (eq? (syntax-datum a) (syntax-datum b)))))
-
-  (define (bound-identifier=? a b)
-    (identifier?! a) (identifier?! b)
-    (and (eq?    (syntax-datum a) (syntax-datum b))
-         (equal? (syntax-marks a) (syntax-marks b))))
-
-  (define (bound-identifiers-unique? ids)
-    (or (null? ids)
-        (and (bound-identifiers-unique? (cdr ids))
-             (let ((id.0 (car ids)))
-               (not (memp (lambda (id) (bound-identifier=? id id.0)) (cdr ids)))))))
-
-  (define (datum->syntax context datum)
-    (identifier?! context)
-    (syntax-mark* datum (syntax-marks context)))
-
-  (define (syntax->datum x)
-    (let loop ((x x))
-      (let strip ((d0 (if (syntax-wrapped? x) (syntax-datum x) x)))
-        (cond ((pair?   d0) (cons (loop (car d0)) (loop (cdr d0))))
-              ((vector? d0) (vector-map loop d0))
-              (else         d0)))))
-
-  (define (syntax-mark s m) (syntax-mark* s (list m)))
-
-  (define (syntax-unmark s m)
-    (and (syntax-wrapped? s)
-         (let ((m* (syntax-marks s)))
-           (and (pair? m*)
-                (equal? (car m*) m)
-                (make-syntax (cdr m*) (syntax-datum s) (syntax-provenance s))))))
+  (define (syntax-wrap s m*)
+    (if (syntax-wrapped? s)
+        (make-syntax (marks-append m* (syntax-mark* s))
+                     (syntax-peek s)
+                     (syntax-provenance s))
+        (make-syntax m* s #f)))
 
   (define (syntax-unwrap s)
     (if (syntax-wrapped? s)
-        (let ((d (syntax-datum s)) (m* (syntax-marks s)))
-          (define (wrap x) (if (syntax-wrapped? x) (syntax-mark* x m*) (make-syntax m* x #f)))
+        (let ((d (syntax-peek s)) (m* (syntax-mark* s)))
+          (define (wrap x) (if (syntax-wrapped? x) (syntax-wrap x m*) (make-syntax m* x #f)))
           (cond ((pair?   d) (cons (wrap (car d)) (wrap (cdr d))))
                 ((vector? d) (vector-map wrap d))
                 (else        d)))
         s))
 
-  (define (syntax->improper-list s)
+  (define (syntax-remove-mark? s m)
+    (let ((m* (syntax-mark* s)))
+      (and (pair? m*)
+           (equal? (car m*) m)
+           (make-syntax (cdr m*) (syntax-peek s) (syntax-provenance s))))))
+
+(define (syntax-add-mark s m) (syntax-wrap s (list m)))
+
+(define (identifier?  s) (and (syntax-wrapped? s) (symbol? (syntax-peek s))))
+(define (identifier?! s) (has-type?! identifier? 'identifier? s))
+
+(define (free-identifier=?/env env a b)
+  (identifier?! a) (identifier?! b)
+  (let ((addr.a (env-address env a)) (addr.b (env-address env b)))
+    (if (or addr.a addr.b)
+        (eq? addr.a addr.b)
+        (eq? (syntax-peek a) (syntax-peek b)))))
+
+(define (bound-identifier=? a b)
+  (identifier?! a) (identifier?! b)
+  (and (eq?    (syntax-peek a) (syntax-peek b))
+       (equal? (syntax-mark* a) (syntax-mark* b))))
+
+(define (bound-identifiers-unique? ids)
+  (or (null? ids)
+      (and (bound-identifiers-unique? (cdr ids))
+           (let ((id.0 (car ids)))
+             (not (memp (lambda (id) (bound-identifier=? id id.0)) (cdr ids)))))))
+
+(define (datum->syntax context datum)
+  (identifier?! context)
+  (syntax-wrap datum (syntax-mark* context)))
+
+(define (syntax->datum x)
+  (let loop ((x x))
+    (let strip ((d0 (if (syntax-wrapped? x) (syntax-peek x) x)))
+      (cond ((pair?   d0) (cons (loop (car d0)) (loop (cdr d0))))
+            ((vector? d0) (vector-map loop d0))
+            (else         d0)))))
+
+(define (syntax->improper-list s)
+  (let ((x (syntax-unwrap s)))
+    (if (pair? x)
+        (cons (car x) (syntax->improper-list (cdr x)))
+        x)))
+
+(define (syntax->list? s)
+  (let loop ((s s) (parts '()))
     (let ((x (syntax-unwrap s)))
-      (if (pair? x)
-          (cons (car x) (syntax->improper-list (cdr x)))
-          x)))
+      (if (null? x)
+          (reverse parts)
+          (and (pair? x)
+               (loop (cdr x) (cons (car x) parts)))))))
 
-  (define (syntax->list? s)
-    (let loop ((s s) (parts '()))
-      (let ((x (syntax-unwrap s)))
-        (if (null? x)
-            (reverse parts)
-            (and (pair? x)
-                 (loop (cdr x) (cons (car x) parts)))))))
+(define (syntax->list s) (or (syntax->list? s) (raise-syntax-error "not a list" s)))
 
-  ;; hygienic? should be used to ensure that no raw symbols or unmarked
-  ;; identifiers appear anywhere in a hygienic transcription output.
-  ;;
-  ;; Raw symbols are dangerous to produce during hygienic transcription.  If the
-  ;; definition of a syntax transformer that produces a raw symbol was itself
-  ;; produced by a hygienic transcription, the raw symbol produced will not
-  ;; retain the mark from that transcription which produced the definition.
-  ;; This means a raw symbol will not reliably refer to an identifier bound in
-  ;; the transformer definition's environment.
-  ;;
-  ;; Additionally, all intended identifiers, including those that have not been
-  ;; produced during hygienic transcription, should include at least one mark.
-  ;; Any unmarked identifier encountered is assumed to have been produced
-  ;; inadvertently from a raw symbol, and should also be ruled out.
-  (define (hygienic? x)
-    (cond ((pair?           x) (and (hygienic? (car x)) (hygienic? (cdr x))))
-          ((vector?         x) (hygienic? (vector->list x)))
-          ((syntax-wrapped? x) (or (pair? (syntax-marks x)) (hygienic? (syntax-datum x))))
-          (else                (not (symbol? x))))))
+;; hygienic? should be used to ensure that no raw symbols or unmarked identifiers appear anywhere
+;; in a hygienic transcription output.
+;;
+;; Raw symbols are dangerous to produce during hygienic transcription.  If the definition of a
+;; syntax transformer that produces a raw symbol was itself produced by a hygienic transcription,
+;; the raw symbol produced will not retain the mark from that transcription which produced the
+;; definition.  This means a raw symbol will not reliably refer to an identifier bound in the
+;; transformer definition's environment.
+;;
+;; Additionally, all intended identifiers, including those that have not been produced during
+;; hygienic transcription, should include at least one mark.  Any unmarked identifier encountered is
+;; assumed to have been produced inadvertently from a raw symbol, and should also be ruled out.
+(define (hygienic? x)
+  (cond ((pair?           x) (and (hygienic? (car x)) (hygienic? (cdr x))))
+        ((vector?         x) (hygienic? (vector->list x)))
+        ((syntax-wrapped? x) (or (pair? (syntax-mark* x)) (hygienic? (syntax-peek x))))
+        (else                (not (symbol? x)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Environments with vocabularies ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Environments with vocabularies ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (fresh-address description) (mvector description))
 
@@ -138,10 +136,11 @@
       ((bind! set!) (error "invalid immutable environment operation" method))
       (else         (error "invalid environment operation"           method)))))
 
-(define (env-mark env m)
+(define (env-add-mark env m)
   (lambda (method)
     (case method
-      ((address)    (lambda (k id)         (let ((i (and (identifier? id) (syntax-unmark id m))))
+      ((address)    (lambda (k id)         (let ((i (and (identifier? id)
+                                                         (syntax-remove-mark? id m))))
                                              (if i ((env 'address) k i) (k id)))))
       ((ref)        (lambda (k vocab addr) (env-ref env vocab addr)))
       ((bind! set!) (error "invalid immutable environment operation" method))
