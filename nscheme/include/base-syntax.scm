@@ -16,12 +16,103 @@
 
 (define (void . args) (values))
 
+;; TODO: bootstrap dependencies
+;; - primitive
+;;   - begin define splicing-local begin-meta introduce declare-parser
+;;   - quote quote-syntax if case-lambda lambda let
+;;     - can we define let, or at least the named let variant?
+;;   - apply values call-with-values
+;;   - = + -
+;;   - null? pair? vector?
+;;   - cons car cdr
+;;   - vector (?)
+;; - non-primitive
+;;   - vector->list cadr cddr
+;;   - raise-syntax-error
+;;   - identifier? bound-identifier=? syntax-unwrap syntax->list? syntax->list
+;;   - transcribe-and-parse-expression transcribe-and-parse-definition
+;;   - append reverse map iota length memp member equal?
+
+;; TODO: declare-parser (and define-syntax implicitly) require ast-eval
+;; Can we bootstrap in a way that doesn't depend on ast-eval until much later?
+;; - This means all of these syntax definitions have to be provided up front by the bootstrapper
+;;   - Using the bootstrapper's pre-evaluated procedures
+;; - Pros:
+;;   - We can use the full langauge to define the base library, including syntax (more convenient)
+;;   - After a single bootstrapping circuit, we will have flushed all bootstrap dependencies
+;; - Cons:
+;;   - We will have to define Racket versions of any nScheme syntax we use during bootstrap
+;;     - using our new kind of syntax object
+;;     - quote-syntax quasiquote-syntax syntax-dismantle
+;;       - We could do better than syntax-dismantle, but it means investing more in Racket-specific code
+;;         - Probably not worth it
+;;       - Probably not necessary to implement begin-meta in Racket, which would be painful
+
 (introduce else =>)
 
 (splicing-local
   ((begin-meta
      (define vocab.definition 'definition)
      (define vocab.expression 'expression)))
+
+  ;; TODO: one annoying thing about the implicit term-rewriting (typical macro expansion) approach
+  ;; to parsing is that we have to capture the entire environment during a transformer's definition.
+  ;; Unlike how procedures close over a syntactically-distinguishable portion of their definition
+  ;; environment, there isn't a clear way to tell what portion of a transformer environment we will
+  ;; need, since the transformer computation is free to build any syntax, which may reference any
+  ;; portion of the environment once parsed.  This leakage is an issue with every implementation of
+  ;; a typical Scheme macro system that exports macros for re-use across multiple compilation units.
+  ;; An example of the generality that causes this leakage, in the context of R6RS libraries, is
+  ;; given in Ghuloum and Dybvig's: "Implicit Phasing for R6RS Libraries" with the definition of the
+  ;; cteval macro.
+  ;;
+  ;; But parsers don't have to use implicit term-rewriting, and non-rewriting-based parsers can be
+  ;; normal procedures that close over only the variables they reference, and invoke other parsers
+  ;; directly by calling them as procedures.  The downside of this low-tech approach is the
+  ;; cognitive overhead of explicitly managing a parsing computation compared to the implicit
+  ;; management provided by a term-rewriting notation.  Could we mitigate this with a notation for
+  ;; making the explicit approach a little more implicit?  It seems possible if we extend the notion
+  ;; of an identifier slightly.
+  ;;
+  ;; Working from the current model of injecting expression-parser (and definition-parser), we could
+  ;; generalize this to a notion of qualified identifiers, which are like normal identifiers, but
+  ;; also include a slice of environment corresponding to the "vocab=>value" mapping that should be
+  ;; used as a fallback when interpreting this identifier in an environment that doesn't bind it.
+  ;; For example, when such an identifier appears in operator position, but is not bound in the
+  ;; current environment, we will invoke a parser packaged in its "vocab=>value" mapping for the
+  ;; current vocabulary.  If this identifier instead appears in a binding position, we ignore the
+  ;; mapping packaged with it and install a binding for the usual part of the identifier (its marks
+  ;; and symbol), allowing it to bind any other bound-identifier=? identifier, regardless of whether
+  ;; it's qualified in the same way, or at all.
+  ;;
+  ;; This idea has some similarity with syntactic closures, except that in our case, the
+  ;; qualification mapping only acts as a fallback, not an override, for any binding in the current
+  ;; environment.  This difference makes it safe and intuitive to use qualified identifiers
+  ;; alongside unqualified identifiers, so we don't have to commit to either approach, and can use
+  ;; whichever is best in a given situation.  Also note that this difference does not jeopardize our
+  ;; protection against macro-use-site shadowing of macro-definition-site bindings, because our
+  ;; transcription process still wraps a macro's output with a fresh mark, distinguishing any
+  ;; introduced identifiers, ensuring they will not be bound in the use-site environment
+  ;; unintentionally (even within an internal definition context).
+  ;;
+  ;; For a transcription that guarantees that all introduced identifiers are qualified, we can also
+  ;; continue parsing the output in the usage environment alone.  Because qualified identifiers
+  ;; are packaged with their slice of the definition environment, there's no need to compose the
+  ;; two environments as we do with fully-implicit transcription.  And if the qualified identifiers
+  ;; can be computed before computing the syntax transformer procedure definition, the transformer
+  ;; procedure will close over the qualified identifiers, and will not need to close over the entire
+  ;; definition environment, eliminating the leak we were originally motivated by.
+  ;;
+  ;; Finally, we can define a notation, analogous to quote-syntax and quasiquote-syntax, that
+  ;; automatically qualifies all quoted identifiers using the current (definition) environment.
+  ;; This notation seems to have similar cognitive overhead to using just quote-syntax and
+  ;; quasiquote-syntax.  It's not a perfect solution, because when an introduced identifier is not
+  ;; used as an operator, but happens to coincide with one, that operator definition will be
+  ;; retained and leaked.  But this implicit solution should still be substantially less leaky in
+  ;; general.  This small tradeoff in exchange for a simple notation might be reasonable most of the
+  ;; time.  And it's possible to eliminate the tradeoff for non-operator identifiers with either
+  ;; careful choice of name, or by manually escaping with unsyntax and injecting an unqualified
+  ;; identifier using quote-syntax.
 
   (introduce define-syntax)
   (declare-parser vocab.definition
@@ -280,6 +371,7 @@
                                                               (let () . #,body*)
                                                               (#,^fail)))))
                 (else (raise-syntax-error "not a list" literals)))))))
+    ;; TODO: (case key ((d ...) => proc1) ... (else => proc2)) forms
     (define-syntax (case stx)
       (lambda (lookup free-identifier=?)
         (syntax-dismantle stx
@@ -322,10 +414,10 @@
                                            (if (= level 0)
                                                stx.arg
                                                (quasiquote-syntax
-                                                 (unquote #,(loop stx.arg (- level 1))))))
+                                                 (list 'unquote #,(loop stx.arg (- level 1))))))
                                           ((free-identifier=? stx.keyword (quote-syntax quasiquote))
                                            (quasiquote-syntax
-                                             (quasiquote #,(loop stx.arg (+ level 1)))))
+                                             (list 'quasiquote #,(loop stx.arg (+ level 1)))))
                                           (else (j2))))
                          (_ (j2))))
                      (syntax-dismantle stx.qqa
@@ -335,7 +427,8 @@
                               ((= level 0) (quasiquote-syntax
                                              (append #,stx.qqa #,(loop stx.qqd level))))
                               (else        (quasiquote-syntax
-                                             ((unquote-splicing #,(loop stx.spliced (- level 1)))
+                                             ((list 'unquote-splicing
+                                                    #,(loop stx.spliced (- level 1)))
                                               . #,(loop stx.qqd level))))))
                        (_ (j1))))
                     (_ (quasiquote-syntax (quote #,stx.qq))))))))
@@ -458,4 +551,6 @@
     (syntax-dismantle stx ((_ . args) (quasiquote-syntax (letrec* . #,args)))))
   (define-syntax (letrec-values stx)
     (syntax-dismantle stx ((_ . args) (quasiquote-syntax (letrec*-values . #,args)))))
+
+  ;; TODO: parameterize
   )
