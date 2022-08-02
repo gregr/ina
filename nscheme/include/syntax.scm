@@ -15,23 +15,32 @@
                    (cond ((null? m*) (cdr m*.inner))
                          (else       (cons m (loop (car m*) (cdr m*)))))))))
 
-   (define (make-syntax mark* datum provenance) (svector 'syntax mark* datum provenance)))
+   (define (make-qualified x vocab=>value) (svector 'qualified x vocab=>value))
+   (define (qualified?             x)      (and (svector? x)
+                                                (= (svector-length x) 3)
+                                                (eq? (svector-ref x 0) 'qualified)))
+   (define (qualified-datum        q)      (svector-ref q 1))
+   (define (qualified-vocab=>value q)      (svector-ref q 2))
 
-  (define (syntax-wrapped? x) (and (svector? x)
-                                   (= (svector-length x) 4)
-                                   (eq? (svector-ref x 0) 'syntax)))
+   (define (make-syntax mark* datum provenance) (svector 'syntax mark* datum provenance))
 
+   (define (syntax-peek0 s) (if (syntax-wrapped? s) (svector-ref s 2) s)))
+
+  (define (syntax-wrapped?       x)    (and (svector? x)
+                                            (= (svector-length x) 4)
+                                            (eq? (svector-ref x 0) 'syntax)))
   (define (syntax-mark*          s)    (if  (syntax-wrapped? s) (svector-ref s 1) '()))
-  (define (syntax-peek           s)    (if  (syntax-wrapped? s) (svector-ref s 2) s))
   (define (syntax-provenance     s)    (and (syntax-wrapped? s) (svector-ref s 3)))
-  (define (syntax-provenance-set s pv) (if pv (make-syntax (syntax-mark* s) (syntax-peek s) pv) s))
+  (define (syntax-provenance-set s pv) (if pv (make-syntax (syntax-mark* s) (syntax-peek0 s) pv) s))
   (define (syntax-provenance-add s pv) (syntax-provenance-set s (provenance-combine
                                                                   pv (syntax-provenance s))))
+  (define (syntax-peek           s)    (let ((d (syntax-peek0 s)))
+                                         (if (qualified? d) (qualified-datum d) d)))
 
   (define (syntax-wrap s m*)
     (if (syntax-wrapped? s)
         (make-syntax (marks-append m* (syntax-mark* s))
-                     (syntax-peek s)
+                     (syntax-peek0 s)
                      (syntax-provenance s))
         (make-syntax m* s #f)))
 
@@ -48,12 +57,33 @@
     (let ((m* (syntax-mark* s)))
       (and (pair? m*)
            (equal? (car m*) m)
-           (make-syntax (cdr m*) (syntax-peek s) (syntax-provenance s))))))
+           (make-syntax (cdr m*) (syntax-peek0 s) (syntax-provenance s)))))
+
+  (define (identifier?  s) (and (syntax-wrapped? s) (symbol? (syntax-peek s))))
+  (define (identifier?! s) (has-type?! identifier? 'identifier? s))
+
+  (define (identifier-qualifier id)
+    (identifier?! id)
+    (let ((x (syntax-peek0 id))) (and (qualified? x) (qualified-vocab=>value x))))
+
+  (define (identifier-unqualify id)
+    (if (identifier-qualifier id)
+        (make-syntax (syntax-mark* id) (syntax-peek id) (syntax-provenance id))
+        id))
+
+  (define (identifier-qualify id vocab=>value)
+    (if (identifier-qualifier id)
+        id
+        (make-syntax (syntax-mark* id)
+                     (make-qualified (syntax-peek id) vocab=>value)
+                     (syntax-provenance id)))))
+
+(define (fresh-identifier name)
+  (let ((name (syntax-peek name)))
+    (unless (symbol? name) (error "not a symbol" name))
+    (syntax-add-mark name (fresh-mark))))
 
 (define (syntax-add-mark s m) (syntax-wrap s (list m)))
-
-(define (identifier?  s) (and (syntax-wrapped? s) (symbol? (syntax-peek s))))
-(define (identifier?! s) (has-type?! identifier? 'identifier? s))
 
 (define (free-identifier=?/env env a b)
   (identifier?! a) (identifier?! b)
@@ -133,16 +163,19 @@
       ((ref)        (lambda (k vocab addr) ((env.first 'ref)
                                             (lambda (vocab addr) ((env 'ref) k vocab addr))
                                             vocab addr)))
+      ((qualify)    (lambda (k v* addr)    ((env.first 'qualify)
+                                            (lambda (v* addr) ((env 'qualify) k v* addr))
+                                            v* addr)))
       ((bind! set!) (error "invalid immutable environment operation" method))
       (else         (error "invalid environment operation"           method)))))
 
 (define (env-add-mark env m)
   (lambda (method)
     (case method
-      ((address)    (lambda (k id)         (let ((i (and (identifier? id)
-                                                         (syntax-remove-mark? id m))))
-                                             (if i ((env 'address) k i) (k id)))))
-      ((ref)        (lambda (k vocab addr) (env-ref env vocab addr)))
+      ((address)    (lambda (k id) (let ((i (and (identifier? id) (syntax-remove-mark? id m))))
+                                     (if i ((env 'address) k i) (k id)))))
+      ((ref)        (env 'ref))
+      ((qualify)    (env 'qualify))
       ((bind! set!) (error "invalid immutable environment operation" method))
       (else         (error "invalid environment operation"           method)))))
 
@@ -156,12 +189,22 @@
         ((ref)     (lambda (k vocab addr)
                      (let ((entry (assoc addr addr=>vocab=>value)))
                        (if entry
-                           (let ((entry (assoc addr (cdr entry))))
+                           (let ((entry (assoc vocab (cdr entry))))
                              (if entry (cdr entry) (k vocab addr)))
                            (k vocab addr)))))
+        ((qualify) (lambda (k v*.seen addr)
+                     (let ((entry (assoc addr addr=>vocab=>value)))
+                       (if entry
+                           (let loop ((v=>v (cdr entry)) (v* v*.seen))
+                             (cond
+                               ((null? v=>v)                 (k v* addr))
+                               ((member (caar v=>v) v*.seen) (loop (cdr v=>v) v*))
+                               (else
+                                 (cons (car v=>v) (loop (cdr v=>v) (cons (caar v=>v) v*))))))
+                           (k v*.seen addr)))))
         ((bind!)   (lambda (id addr) (set! id=>addr (cons (cons id addr) id=>addr))))
         ((set!)    (lambda (vocab addr value)
-                     (unless addr (error "invalid environment address" addr))
+                     (unless addr (error "invalid environment address" vocab value))
                      (set! addr=>vocab=>value
                        (let ((entry.addr (assoc addr addr=>vocab=>value)))
                          (if entry.addr
@@ -189,7 +232,17 @@
 
 (define (env-address env id)           ((env 'address) (lambda (id) #f) id))
 (define (env-ref     env vocab addr)   ((env 'ref)     (lambda (vocab addr) #f) vocab addr))
-(define (env-ref^    env vocab id)     (let ((addr (env-address env id)))
-                                         (and addr (env-ref env vocab addr))))
-(define (env-bind!   env id addr)      ((env 'bind!)   id addr))
+(define (env-ref^    env vocab id)     (or (let ((addr (env-address env id)))
+                                             (and addr (env-ref env vocab addr)))
+                                           (qualifier-ref (identifier-qualifier id) vocab)))
+(define (env-bind!   env id addr)      ((env 'bind!)   (identifier-unqualify id) addr))
 (define (env-set!    env vocab addr v) ((env 'set!)    vocab addr v))
+(define (env-qualify env id)           (if (identifier-qualifier id)
+                                           id
+                                           (let ((addr (env-address env id)))
+                                             (identifier-qualify
+                                               id (if addr
+                                                      ((env 'qualify) (lambda (a v*) '()) '() addr)
+                                                      '())))))
+
+(define (qualifier-ref q vocab) (and q (let ((entry (assoc vocab q))) (and entry (cdr entry)))))
