@@ -1,5 +1,5 @@
 ;(introduce current-environment)
-;(declare-parser vocab.expression
+;(declare-parser vocab.expression:operator
   ;((current-environment env.op) env.use stx)
   ;(define (op env stx)
     ;(let ((top (syntax-unwrap stx)))
@@ -53,7 +53,9 @@
 (splicing-local
   ((begin-meta
      (define vocab.definition 'definition)
-     (define vocab.expression 'expression)))
+     (define vocab.definition:operator 'definition:operator)
+     (define vocab.expression 'expression)
+     (define vocab.expression:operator 'expression:operator)))
 
   ;; TODO: one annoying thing about the implicit term-rewriting (typical macro expansion) approach
   ;; to parsing is that we have to capture the entire environment during a transformer's definition.
@@ -115,19 +117,19 @@
   ;; identifier using quote-syntax.
 
   (introduce define-syntax)
-  (declare-parser vocab.definition
+  (declare-parser vocab.definition:operator
     ((define-syntax env.op) dst.use env.scope env.use stx)
     (define (op env stx)
       (define (def stx.lhs stx.rhs)
         (list (quote-syntax begin)
               (list (quote-syntax introduce) stx.lhs)
-              (list (quote-syntax declare-parser) vocab.expression stx.lhs
+              (list (quote-syntax declare-parser) vocab.expression:operator stx.lhs
                     (list (quote-syntax lambda) (quote-syntax (env.op))
                           (list (quote-syntax lambda) (quote-syntax (env.use stx))
                                 (list (quote-syntax let) (list (list (quote-syntax op) stx.rhs))
                                       (quote-syntax
                                         (transcribe-and-parse-expression env.use env.op op stx))))))
-              (list (quote-syntax declare-parser) vocab.definition stx.lhs
+              (list (quote-syntax declare-parser) vocab.definition:operator stx.lhs
                     (list (quote-syntax lambda) (quote-syntax (env.op))
                           (list (quote-syntax lambda) (quote-syntax (dst.use env.scope env.use stx))
                                 (list (quote-syntax let) (list (list (quote-syntax op) stx.rhs))
