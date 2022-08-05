@@ -237,12 +237,23 @@
                                            (qualifier-ref (identifier-qualifier id) vocab)))
 (define (env-bind!   env id addr)      ((env 'bind!)   (identifier-unqualify id) addr))
 (define (env-set!    env vocab addr v) ((env 'set!)    vocab addr v))
-(define (env-qualify env id)           (if (identifier-qualifier id)
-                                           id
-                                           (let ((addr (env-address env id)))
-                                             (identifier-qualify
-                                               id (if addr
-                                                      ((env 'qualify) (lambda (a v*) '()) '() addr)
-                                                      '())))))
+
+(define (syntax-qualify s env)
+  (define (antimarked? s) (let ((m* (syntax-mark* s))) (and (pair? m*) (not (car m*)))))
+  (let loop ((s s))
+    (cond ((antimarked? s) s)
+          ((identifier? s) (if (identifier-qualifier s)
+                               s
+                               (let ((addr (env-address env s)))
+                                 (identifier-qualify
+                                   s (if addr
+                                         ((env 'qualify) (lambda (a v*) '()) '() addr)
+                                         '())))))
+          (else (let ((pv (syntax-provenance s)) (x (syntax-unwrap s)))
+                  (syntax-provenance-set
+                    (cond ((pair?   x) (cons (loop (car x)) (loop (cdr x))))
+                          ((vector? x) (vector-map loop x))
+                          (else        s))
+                    pv))))))
 
 (define (qualifier-ref q vocab) (and q (let ((entry (assoc vocab q))) (and entry (cdr entry)))))
