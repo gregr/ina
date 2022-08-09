@@ -22,7 +22,10 @@
    (define (qualified-datum        q)      (svector-ref q 1))
    (define (qualified-vocab=>value q)      (svector-ref q 2))
 
-   (define (make-syntax mark* datum provenance) (svector 'syntax mark* datum provenance))
+   (define (make-syntax mark* datum provenance)
+     (if (and (null? mark*) (not provenance))
+         datum
+         (svector 'syntax mark* datum provenance)))
 
    (define (syntax-peek0 s) (if (syntax-wrapped? s) (svector-ref s 2) s)))
 
@@ -59,7 +62,7 @@
            (equal? (car m*) m)
            (make-syntax (cdr m*) (syntax-peek0 s) (syntax-provenance s)))))
 
-  (define (identifier?  s) (and (syntax-wrapped? s) (symbol? (syntax-peek s))))
+  (define (identifier?  s) (symbol? (syntax-peek s)))
   (define (identifier?! s) (has-type?! identifier? 'identifier? s))
 
   (define (identifier-qualifier id)
@@ -109,7 +112,7 @@
 
 (define (syntax->datum x)
   (let loop ((x x))
-    (let strip ((d0 (if (syntax-wrapped? x) (syntax-peek x) x)))
+    (let strip ((d0 (syntax-peek x)))
       (cond ((pair?   d0) (cons (loop (car d0)) (loop (cdr d0))))
             ((vector? d0) (vector-map loop d0))
             (else         d0)))))
@@ -128,25 +131,7 @@
           (and (pair? x)
                (loop (cdr x) (cons (car x) parts)))))))
 
-(define (syntax->list s) (or (syntax->list? s) (raise-syntax-error "not a list" s)))
-
-;; hygienic? should be used to ensure that no raw symbols or unmarked identifiers appear anywhere
-;; in a hygienic transcription output.
-;;
-;; Raw symbols are dangerous to produce during hygienic transcription.  If the definition of a
-;; syntax transformer that produces a raw symbol was itself produced by a hygienic transcription,
-;; the raw symbol produced will not retain the mark from that transcription which produced the
-;; definition.  This means a raw symbol will not reliably refer to an identifier bound in the
-;; transformer definition's environment.
-;;
-;; Additionally, all intended identifiers, including those that have not been produced during
-;; hygienic transcription, should include at least one mark.  Any unmarked identifier encountered is
-;; assumed to have been produced inadvertently from a raw symbol, and should also be ruled out.
-(define (hygienic? x)
-  (cond ((pair?           x) (and (hygienic? (car x)) (hygienic? (cdr x))))
-        ((vector?         x) (hygienic? (vector->list x)))
-        ((syntax-wrapped? x) (or (pair? (syntax-mark* x)) (hygienic? (syntax-peek x))))
-        (else                (not (symbol? x)))))
+(define (syntax->list s) (or (syntax->list? s) (raise-syntax-error "not a list" s))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Environments with vocabularies ;;;

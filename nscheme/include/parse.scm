@@ -239,7 +239,6 @@
                          (result lookup free-id=?))
                        result)
                    stx)))
-    (unless (hygienic? stx) (error "unhygienic transcription" stx))
     (parse env.use (syntax-add-mark (syntax-qualify stx env.op) m))))
 
 (define (transcribe-and-parse-expression env.use env.op op stx)
