@@ -1,6 +1,6 @@
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Syntax with lazy mark-based renaming ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Syntax with lazy mark-based renaming and qualified identifiers ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (fresh-mark) (mvector))
 (define antimark     #f)
@@ -15,12 +15,12 @@
                    (cond ((null? m*) (cdr m*.inner))
                          (else       (cons m (loop (car m*) (cdr m*)))))))))
 
-   (define (make-qualified x vocab=>value) (svector 'qualified x vocab=>value))
-   (define (qualified?             x)      (and (svector? x)
-                                                (= (svector-length x) 3)
-                                                (eq? (svector-ref x 0) 'qualified)))
-   (define (qualified-datum        q)      (svector-ref q 1))
-   (define (qualified-vocab=>value q)      (svector-ref q 2))
+   (define (make-qualified         x q) (svector 'qualified x q))
+   (define (qualified-datum        q)   (svector-ref q 1))
+   (define (qualified-vocab=>value q)   (svector-ref q 2))
+   (define (qualified?             x)   (and (svector? x)
+                                             (= (svector-length x) 3)
+                                             (eq? (svector-ref x 0) 'qualified)))
 
    (define (make-syntax mark* datum provenance)
      (if (and (null? mark*) (not provenance))
@@ -67,19 +67,15 @@
 
   (define (identifier-qualifier id)
     (identifier?! id)
-    (let ((x (syntax-peek0 id))) (and (qualified? x) (qualified-vocab=>value x))))
+    (let ((x (syntax-peek0 id))) (if (qualified? x) (qualified-vocab=>value x) qualifier.empty)))
 
-  (define (identifier-unqualify id)
-    (if (identifier-qualifier id)
-        (make-syntax (syntax-mark* id) (syntax-peek id) (syntax-provenance id))
-        id))
+  (define (identifier-unqualify id) (identifier-qualify id qualifier.empty))
 
-  (define (identifier-qualify id vocab=>value)
-    (if (identifier-qualifier id)
-        id
-        (make-syntax (syntax-mark* id)
-                     (make-qualified (syntax-peek id) vocab=>value)
-                     (syntax-provenance id)))))
+  (define (identifier-qualify id q)
+    (define (wrap x) (make-syntax (syntax-mark* id) x (syntax-provenance id)))
+    (cond ((not (qualifier-empty? q))                   (wrap (make-qualified (syntax-peek id) q)))
+          ((qualifier-empty? (identifier-qualifier id)) id)
+          (else                                         (wrap (syntax-peek id)))))
 
 (define (fresh-identifier name)
   (let ((name (syntax-peek name)))
@@ -207,10 +203,18 @@
                                    addr=>vocab=>value))))))
         (else      (error "invalid environment operation" method))))))
 
-(define env.empty
+(define env.identity
   (lambda (method)
     (case method
       ((address)    (lambda (k id)         (syntax->datum id)))
+      ((ref)        (lambda (k vocab addr) (k vocab addr)))
+      ((bind! set!) (error "invalid immutable environment operation" method))
+      (else         (error "invalid environment operation"           method)))))
+
+(define env.empty
+  (lambda (method)
+    (case method
+      ((address)    (lambda (k id)         (k id)))
       ((ref)        (lambda (k vocab addr) (k vocab addr)))
       ((bind! set!) (error "invalid immutable environment operation" method))
       (else         (error "invalid environment operation"           method)))))
@@ -227,18 +231,21 @@
   (define (antimarked? s) (let ((m* (syntax-mark* s))) (and (pair? m*) (not (car m*)))))
   (let loop ((s s))
     (cond ((antimarked? s) s)
-          ((identifier? s) (if (identifier-qualifier s)
-                               s
-                               (let ((addr (env-address env s)))
+          ((identifier? s) (let ((addr (env-address env s)))
+                             (if addr
+                                 (identifier-unqualify s)
                                  (identifier-qualify
-                                   s (if addr
-                                         ((env 'qualify) (lambda (a v*) '()) '() addr)
-                                         '())))))
+                                   s ((env 'qualify) (lambda (a v*) '()) '() addr)))))
           (else (let ((pv (syntax-provenance s)) (x (syntax-unwrap s)))
                   (syntax-provenance-set
                     (cond ((pair?   x) (cons (loop (car x)) (loop (cdr x))))
                           ((vector? x) (vector-map loop x))
                           (else        s))
                     pv))))))
+
+(define (syntax-unqualify s) (syntax-qualify s env.empty))
+
+(define qualifier.empty '())
+(define qualifier-empty? null?)
 
 (define (qualifier-ref q vocab) (and q (let ((entry (assoc vocab q))) (and entry (cdr entry)))))
