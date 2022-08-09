@@ -1,6 +1,6 @@
-;;;;;;;;;;;;;;;;;;;
-;; Vocabularies ;;;
-;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;
+;;; Vocabularies ;;;
+;;;;;;;;;;;;;;;;;;;;
 
 (define vocab.definition          'definition)
 (define vocab.definition:operator 'definition:operator)
@@ -18,9 +18,74 @@
 ;(define vocab.formula    'formula)
 ;(define vocab.term       'term)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Parsing
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Program construction ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (fresh-parameter-address p) (fresh-address (identifier-unqualify p)))
+
+(define ($quote value)       (ast:quote #f value))
+(define ($ref   addr)        (ast:ref   #f addr))
+(define ($call  proc . args) (ast:call  #f proc args))
+(define ($if    c t f)       (ast:if #f c t f))
+
+(define ($case-lambda-clause param*~ addr*->body)
+  (let ((addr*~ (improper-list-map identifier->fresh-address param*~)))
+    (case-lambda-clause addr*~ (apply addr*->body (improper-list->list addr*~)))))
+
+(define ($case-lambda . cc*)
+  (ast:case-lambda #f (map (lambda (cc) ($case-lambda-clause (car cc) (cdr cc))) cc*)))
+
+(define ($lambda param*~     addr*->body) ($case-lambda (cons param*~ addr*->body)))
+(define ($let    param* rhs* addr*->body) (apply $call ($lambda param* addr*->body) rhs*))
+(define ($letrec param* addr*->rhs*&body)
+  (let* ((addr*     (map identifier->fresh-address param*))
+         (rhs*&body (apply addr*->rhs*&body addr*)))
+    (ast:letrec #f (map binding-pair addr* (car rhs*&body)) (cdr rhs*&body))))
+
+(define $and
+  (case-lambda
+    (()       ($quote #t))
+    ((a . a*) (let loop ((a a) (a* a*))
+                (cond ((null? a*) a)
+                      (else       ($if a (loop (car a*) (cdr a*)) ($quote #f))))))))
+
+(define $or
+  (case-lambda
+    (()       ($quote #f))
+    ((a . a*) (let loop ((a a) (a* a*))
+                (cond ((null? a*) a)
+                      (else ($let '(t) (list a)
+                                  (lambda (addr.t)
+                                    ($if ($ref addr.t)
+                                         ($ref addr.t)
+                                         (loop (car a*) (cdr a*)))))))))))
+
+(define ($when   c body . body*) ($if c (apply $begin body body*) ($call ($quote values))))
+(define ($unless c body . body*) (apply $when ($not c) body body*))
+
+(define ($not  x) ($if x ($quote #f) ($quote #t)))
+(define ($pcall prim . args) (apply $call ($quote prim) args))
+
+(define ($begin  a . a*) (foldr (lambda (a0 a1) ($pcall call-with-values ($lambda '() a0)
+                                                        ($lambda '() (lambda _ a1))))
+                                a a*))
+(define ($begin* a . a*) (foldr (lambda (a0 a1) ($pcall call-with-values ($lambda '() a0)
+                                                        ($lambda #f  (lambda _ a1))))
+                                a a*))
+
+(define ($null? x)    ($pcall null? x))
+(define ($pair? x)    ($pcall pair? x))
+(define ($cons  x)    ($pcall cons  x))
+(define ($car   x)    ($pcall car   x))
+(define ($cdr   x)    ($pcall cdr   x))
+(define ($list  . x*) (let loop ((x* x*))
+                       (cond ((null? x*) ($quote '()))
+                             (else       ($cons (car x*) (loop (cdr x*)))))))
+
+;;;;;;;;;;;;;;;
+;;; Parsing ;;;
+;;;;;;;;;;;;;;;
 
 (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
 
@@ -47,7 +112,7 @@
                               ((syntax->list? expr)
                                => (lambda (e*)
                                     (when (null? e*) (raise-syntax-error "not an expression" expr))
-                                    (apply ast:call #f (parse* env e*))))
+                                    (ast:call #f (parse* env e*))))
                               (else (raise-syntax-error "not a proper list" expr)))))
         ((literal? x) (ast:quote #f x))
         (else         (raise-syntax-error "not an expression" expr)))
@@ -68,34 +133,36 @@
 
 (define (parse-quote        env e)           (ast:quote (syntax-provenance e) (syntax->datum e)))
 (define (parse-quote-syntax env e)           (ast:quote (syntax-provenance e) e))
-(define (parse-if           env e.c e.t e.f) (ast:if #f (parse env e.c) (parse env e.t) (parse env e.f)))
+(define (parse-if           env e.c e.t e.f) ($if (parse env e.c) (parse env e.t) (parse env e.f)))
 (define (parse-lambda       env param . e*)  (parse-case-lambda env (cons param e*)))
 
+(define (env:scope param* addr*)
+  (let ((env.scope (make-env)))
+    (unless (andmap identifier? param*)
+      (raise-syntax-error "formal parameter names must be identifiers" param*))
+    (unless (bound-identifiers-unique? param*)
+      (raise-syntax-error "duplicate formal parameter names" param*))
+    (for-each (lambda (p a)
+                (env-bind! env.scope p a)
+                (env-set!  env.scope vocab.expression a (parse-variable-ref/address a)))
+              param* addr*)
+    env.scope))
+
+(define (env-extend-scope env param* addr*) (env-extend env (env:scope param* addr*)))
+
 (define (parse-case-lambda env . e*.cc)
-  (define (fail) (raise-syntax-error "not a case-lambda clause" e.cc))
-  (define (parse-case-lambda-clause env e.cc)
+  (define (parse-case-lambda-clause e.cc)
+    (define (fail) (raise-syntax-error "not a case-lambda clause" e.cc))
     (cond ((syntax->list? e.cc)
            => (lambda (e*)
                 (when (or (null? e*) (null? (cdr e*))) (fail))
-                (let ((e*~.param (syntax->improper-list (car e*)))
-                      (e.body    (cdr (syntax-unwrap e.cc))))
-                  (let ((e*.param (improper-list->list e*~.param)))
-                    (unless (andmap identifier? e*.param)
-                      (raise-syntax-error "formal parameter names must be identifiers" (car e*)))
-                    (when (null? (cdr e*))
-                      (raise-syntax-error "case-lambda clause cannot have an empty body" e.cc))
-                    (unless (bound-identifiers-unique? e*.param)
-                      (raise-syntax-error "duplicate formal parameter names" (car e*)))
-                    (let* ((param (improper-list-map (lambda (e) (fresh-address e)) e*~.param))
-                           (addr* (improper-list->list param)))
-                      (let ((env.scope (make-env)))
-                        (for-each (lambda (i a) (env-bind! env.scope i a)) e*.param addr*)
-                        (for-each (lambda (a)   (env-set!  env.scope vocab.expression
-                                                           a (parse-variable-ref/address a)))
-                                  addr*)
-                        (case-clause param (parse-body (env-extend env env.scope) e.body))))))))
+                (let ((param*~ (syntax->improper-list (car e*))))
+                  (define (addr*->body . addr*)
+                    (parse-body (env-extend-scope env (improper-list->list param*~) addr*)
+                                (cdr e*)))
+                  ($case-lambda-clause param*~ addr*->body))))
           (else (fail))))
-  (ast:case-lambda #f (map (lambda (e.cc) (parse-case-lambda-clause env e.cc)) e*.cc)))
+  (ast:case-lambda #f (map parse-case-lambda-clause e*.cc)))
 
 (define (env-introduce  env.scope stx.id) (car (env-introduce* env.scope (list stx.id))))
 (define (env-introduce* env.scope stx*.id)
@@ -105,7 +172,7 @@
   (map (lambda (stx.id)
          (when (env-address env.scope stx.id)
            (raise-syntax-error "name defined multiple times" stx.id))
-         (let ((addr (fresh-address stx.id)))
+         (let ((addr (identifier->fresh-address stx.id)))
            (env-bind! env.scope stx.id addr)
            addr))
        stx*.id))
@@ -119,8 +186,7 @@
 (define (defstate-define dst addr ^ast)
   (if (or (null? dst) (caar dst))
       (cons (cons addr ^ast) dst)
-      (cons (cons addr (let ((^ast.prev (cdar dst)))
-                         (lambda () (ast:seq #f (^ast.prev) (^ast)))))
+      (cons (cons addr (let ((^ast.prev (cdar dst))) (lambda () ($begin (^ast.prev) (^ast)))))
             (cdr dst))))
 
 (define (definitions->binding-pairs defs)
@@ -136,19 +202,22 @@
                                     (apply parser dst env.scope env (cdr stx*)))))
         (else (raise-syntax-error "not a list" stx))))
 
-(define (parse-body env e.body)
-  (let ((stx* (syntax->list? e.body)))
-    (if (null? (cdr stx*))
-        (parse env (car stx*))
-        (let* ((env.scope (make-env))
-               (env       (env-extend env env.scope))
-               (dst       (foldl (lambda (stx dst) (parse-definition dst env.scope env stx))
-                                 defstate.empty stx*)))
-          (unless (defstate-expression dst)
-            (raise-syntax-error "no expression after definitions" e.body))
-          (ast:letrec (syntax-provenance e.body)
-                      (definitions->binding-pairs (defstate-definitions dst))
-                      ((defstate-expression dst)))))))
+(define (parse-body env stx.body)
+  (cond ((syntax->list? stx.body)
+         => (lambda (stx*)
+              (cond ((null? stx*)       (raise-syntax-error "no expression" stx.body))
+                    ((null? (cdr stx*)) (parse env (car stx*)))
+                    (else (let* ((env.scope (make-env))
+                                 (env       (env-extend env env.scope))
+                                 (dst       (foldl (lambda (stx dst)
+                                                     (parse-definition dst env.scope env stx))
+                                                   defstate.empty stx*)))
+                            (unless (defstate-expression dst)
+                              (raise-syntax-error "no expression after definitions" e.body))
+                            (ast:letrec (syntax-provenance e.body)
+                                        (definitions->binding-pairs (defstate-definitions dst))
+                                        ((defstate-expression dst))))))))
+        (else (raise-syntax-error "not a list" stx.body))))
 
 (define (parse-definition dst env.scope env stx)
   (define (default) (defstate-add-expression dst (lambda () (parse env stx))))
@@ -173,9 +242,9 @@
                        (addr*   (map binding-pair-lhs bpair*))
                        (result* (ast-eval (ast:letrec
                                             (syntax-provenance stx) bpair*
-                                            (ast:seq #f ((defstate-expression dst))
-                                                     (ast:list #f (map (lambda (a) (ast:ref #f a))
-                                                                       addr*)))))))
+                                            ($begin ((defstate-expression dst))
+                                                    (ast:list #f (map (lambda (a) (ast:ref #f a))
+                                                                      addr*)))))))
                   (for-each (lambda (addr result)
                               (env-set! env.scope vocab.expression addr
                                         (parse-variable-quote/value result)))
@@ -281,7 +350,7 @@
 (define (parse-begin-expression env . e*)
   (let loop ((e (car e*)) (e* (cdr e*)))
     (cond ((null? e*) (parse env e))
-          (else       (ast:seq #f (parse env e) (loop (car e*) (cdr e*)))))))
+          (else       ($begin (parse env e) (loop (car e*) (cdr e*)))))))
 
 (define (parse-splicing-local-definition dst env.scope env local-body . stx*)
   (cond ((syntax->list? local-body)
@@ -352,11 +421,11 @@
          (let ((bpair* (parse-binding-pairs e1)))
            (let ((e.proc (expression-parser (lambda (env _)
                                               (apply parse-lambda env (map car bpair*) e*)))))
-             (apply ast:call #f (parse-letrec* env (list e0 e.proc) e0)
-                    (parse* env (map cdr bpair*))))))
+             (ast:call #f (parse-letrec* env (list e0 e.proc) e0)
+                       (parse* env (map cdr bpair*))))))
         (else (let ((bpair* (parse-binding-pairs e0)))
-                (apply ast:call #f (apply parse-lambda env (map car bpair*) e1 e*)
-                       (parse* env (map cdr bpair*)))))))
+                (ast:call #f (apply parse-lambda env (map car bpair*) e1 e*)
+                          (parse* env (map cdr bpair*)))))))
 
 ;; TODO: could define these via macro
 (define (parse-non-splicing-expression parse-splicing env e0 e*)
