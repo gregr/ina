@@ -294,28 +294,12 @@
                         (else      (raise-syntax-error "not a definable form" e.lhs)))))))
   dst)
 
-(define (transcribe-and-parse parse env.use env.op op stx)
-  (let* ((result (op (syntax-add-mark stx antimark)))
-         (m      (fresh-mark))
-         (stx    (syntax-provenance-add
-                   (if (procedure? result)
-                       (let* ((env       (env-extend (env-add-mark env.op m) env.use))
-                              (lookup    (lambda (vocab e.id)
-                                           (env-ref^ env vocab (syntax-add-mark e.id m))))
-                              (free-id=? (lambda (a b)
-                                           (free-identifier=?/env
-                                             env (syntax-add-mark a m) (syntax-add-mark b m)))))
-                         (result lookup free-id=?))
-                       result)
-                   stx)))
-    (parse env.use (syntax-add-mark (syntax-qualify stx env.op) m))))
 
 (define (transcribe-and-parse-expression env.use env.op op stx)
-  (transcribe-and-parse parse env.use env.op op stx))
+  (parse env.use (transcribe env.op op env.use stx)))
 
 (define (transcribe-and-parse-definition dst env.scope env.use env.op op stx)
-  (transcribe-and-parse (lambda (env stx) (parse-definition dst env.scope env stx))
-                        env.use env.op op stx))
+  (parse-definition dst env.scope env.use (transcribe env.op op env.use stx)))
 
 (define (parse-define-syntax dst env.scope env e.lhs . e*.rhs)
   (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))

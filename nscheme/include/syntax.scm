@@ -249,3 +249,19 @@
 (define qualifier-empty? null?)
 
 (define (qualifier-ref q vocab) (and q (let ((entry (assoc vocab q))) (and entry (cdr entry)))))
+
+(define (transcribe env.op op env.use stx)
+  (let* ((result (op (syntax-add-mark stx antimark)))
+         (m      (fresh-mark))
+         (stx    (syntax-provenance-add
+                   (if (procedure? result)
+                       (let* ((env       (env-extend (env-add-mark env.op m) env.use))
+                              (lookup    (lambda (vocab id)
+                                           (env-ref^ env vocab (syntax-add-mark id m))))
+                              (free-id=? (lambda (a b)
+                                           (free-identifier=?/env
+                                             env (syntax-add-mark a m) (syntax-add-mark b m)))))
+                         (result lookup free-id=?))
+                       result)
+                   stx)))
+    (syntax-add-mark (syntax-qualify stx env.op) m)))
