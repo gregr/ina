@@ -1,23 +1,94 @@
 #lang racket/base
-(require "nscheme.rkt" racket/include racket/match racket/splicing racket/vector)
+(require "nscheme.rkt" racket/include racket/match racket/splicing racket/vector
+         (for-syntax racket/base))
+;; TODO: move base.scm definitions to a later stage base-N-source.scm
 (include "include/base.scm")
-(include "include/syntax.scm")
 (include "include/ast.scm")
+(include "include/syntax.scm")
+
+(define-syntax (quote-syntax stx)
+  (syntax-case stx ()
+    ((_ stx)
+     (let loop ((stx #'stx))
+       (define (remap x)
+         (cond ((pair?   x) #`(cons #,(loop (car x)) #,(loop (cdr x))))
+               ((vector? x) #`(vector . #,(map loop (vector->list x))))
+               (else        #`'#,x)))
+       (if (syntax? stx)
+           #`(syntax-provenance-set #,(remap (syntax-e stx))
+                                    '#,(list (cons 'source   (syntax-source   stx))
+                                             (cons 'position (syntax-position stx))
+                                             (cons 'span     (syntax-span     stx))
+                                             (cons 'line     (syntax-line     stx))
+                                             (cons 'column   (syntax-column   stx))))
+           (remap stx))))))
+
+(define-syntax (quasiquote-syntax stx)
+  (syntax-case stx ()
+    ((_ qq.0)
+     (let loop ((qq #'qq.0) (level 0))
+       (define (stx->pv stx)
+         (list (cons 'source   (syntax-source   stx))
+               (cons 'position (syntax-position stx))
+               (cons 'span     (syntax-span     stx))
+               (cons 'line     (syntax-line     stx))
+               (cons 'column   (syntax-column   stx))))
+       (syntax-case qq (quasiquote-syntax unsyntax unsyntax-splicing)
+         ((quasiquote-syntax q)        #`(syntax-provenance-set
+                                           (list (quote-syntax #,#'quasiquote-syntax)
+                                                 #,(loop #'q (+ level 1)))
+                                           '#,(stx->pv qq)))
+         ((unsyntax e)                 (if (= level 0)
+                                           #'e
+                                           #`(syntax-provenance-set
+                                               (list (quote-syntax #,#'unsyntax)
+                                                     #,(loop #'e (- level 1)))
+                                               '#,(stx->pv qq))))
+         (((unsyntax-splicing e) . qd) (if (= level 0)
+                                           #`(append (syntax->list e) #,(loop #'qd level))
+                                           #`(syntax-provenance-set
+                                               (cons (list (quote-syntax #,#'unsyntax-splicing)
+                                                           #,(loop #'e (- level 1)))
+                                                     #,(loop #'qd level))
+                                               '#,(stx->pv qq))))
+         ((quasiquote-syntax . _)      (error "invalid use of keyword" qq))
+         ((unsyntax          . _)      (error "invalid use of keyword" qq))
+         ((unsyntax-splicing . _)      (error "invalid use of keyword" qq))
+         ((qq.a . qq.d)                #`(syntax-provenance-set
+                                           (cons #,(loop #'qq.a level) #,(loop #'qq.d level))
+                                           '#,(stx->pv qq)))
+         (quasiquote-syntax            (error "invalid use of keyword" qq))
+         (unsyntax                     (error "invalid use of keyword" qq))
+         (unsyntax-splicing            (error "invalid use of keyword" qq))
+         (_                            (if (vector? (syntax-e qq))
+                                           #`(syntax-provenance-set
+                                               (vector . #,(map (lambda (qq) (loop qq level))
+                                                                (vector->list (syntax-e qq))))
+                                               '#,(stx->pv qq))
+                                           #`(quote-syntax #,qq))))))))
+
+;(include "include/parse.scm")
+;(include "include/base-0-parse.scm")
 (include "include/ast-eval.scm")
-(include "include/parse.scm")
+;; TODO: read, parse, and ast-eval "include/base-1-source.scm"
+;; TODO: pass ast.base-1 into:
+;(include "include/base-2-parse.scm")
+;; TODO: read, parse, and ast-eval "include/syntax.scm"
+;; TODO: pass ast.syntax into:
+;(include "include/base-3-parse.scm")
 
 ;; TODO: bootstrap sequence:
 ;; - bootstrap syntax.scm
 ;; - bootstrap ast.scm
 ;; - bootstrap parse.scm
-;; - bootstrap base-1-parse.scm
+;; - bootstrap base-0-parse.scm
 ;;   - will depend on Racket-simulated quote-syntax quasiquote-syntax syntax-dismantle
-;;   - produce all operators needed by base-0-source.scm (operators that don't embed procedure references)
+;;   - produce all operators needed by base-1-source.scm (operators that don't embed procedure references)
 ;; - bootstrap ast-eval.scm
 ;;   - can be used to produce "final" versions
 ;;   - should be metacircular for target-agnostic bootstrapping
 ;;     - use a privileged primitive to assign new procedure metadata
-;; - final base-0-source.scm
+;; - final base-1-source.scm
 ;;   - not equal? append memp member errors etc.
 ;; - bootstrap base-2-parse.scm
 ;;   - case quasiquote etc.
