@@ -1,9 +1,7 @@
 #lang racket/base
 (require "nscheme.rkt" racket/include racket/match racket/splicing racket/vector
          (for-syntax racket/base))
-;; TODO: move some base.scm definitions to appropriate base-N-source.scm
-(include "include/base.scm")
-;(include "include/base-1-source.scm")
+(include "include/base-1-source.scm")
 (include "include/ast.scm")
 (include "include/syntax.scm")
 
