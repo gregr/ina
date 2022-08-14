@@ -1,8 +1,9 @@
 #lang racket/base
 (require "nscheme.rkt" racket/include racket/match racket/splicing racket/vector
          (for-syntax racket/base))
-;; TODO: move base.scm definitions to a later stage base-N-source.scm
+;; TODO: move some base.scm definitions to appropriate base-N-source.scm
 (include "include/base.scm")
+;(include "include/base-1-source.scm")
 (include "include/ast.scm")
 (include "include/syntax.scm")
 
@@ -67,8 +68,8 @@
                                                '#,(stx->pv qq))
                                            #`(quote-syntax #,qq))))))))
 
-;(include "include/parse.scm")
-;(include "include/base-0-parse.scm")
+(include "include/parse.scm")
+(include "include/base-0-parse.scm")
 (include "include/ast-eval.scm")
 ;; TODO: read, parse, and ast-eval "include/base-1-source.scm"
 ;; TODO: pass ast.base-1 into:
