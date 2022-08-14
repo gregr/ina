@@ -1,8 +1,10 @@
+(define (parse-identifier id) (unless (identifier? id) (raise-syntax-error "not an identifier" id)))
+
 (define (parse-binding-pairs e.bpairs)
   (define (parse-binding-pair e.bpair)
     (let ((e* (syntax->list e.bpair)))
       (unless (= (length e*) 2) (raise-syntax-error "binding pair without 2 elements" e.bpair))
-      (unless (identifier? (car e*)) (raise-syntax-error "not an identifier" (car e*) e.bpair))
+      (parse-identifier (car e*))
       (cons (car e*) (cadr e*))))
   (map parse-binding-pair (syntax->list e.bpairs)))
 
@@ -105,6 +107,13 @@
 
 (define (parse-introduce dst env.scope env . stx*) (env-introduce* env.scope stx*) dst)
 
+(define (parse-introduce-alias dst env.scope env id.lhs id.rhs)
+  (parse-identifier id.lhs)
+  (parse-identifier id.rhs)
+  (let ((addr (env-address env id.rhs)))
+    (unless addr (raise-syntax-error "unbound identifier" id.rhs))
+    (env-bind! env.scope id.lhs addr)))
+
 (define (parse-define dst env.scope env lhs . stx*.rhs)
   (let loop ((lhs lhs) (stx*.rhs stx*.rhs))
     (cond ((identifier? lhs)
@@ -205,9 +214,10 @@
             integer-length bitwise-arithmetic-shift << >> & \| ^))
         (b*.expr-aux '(=> else))
         (b*.def
-          (list (cons 'define        (keyword-definition-parser parse-define        2 #f))
-                (cons 'define-values (keyword-definition-parser parse-define-values 2 #f))
-                (cons 'introduce     (keyword-definition-parser parse-introduce     0 #f))))
+          (list (cons 'define          (keyword-definition-parser parse-define          2 #f))
+                (cons 'define-values   (keyword-definition-parser parse-define-values   2 #f))
+                (cons 'introduce       (keyword-definition-parser parse-introduce       0 #f))
+                (cons 'introduce-alias (keyword-definition-parser parse-introduce-alias 2 #f))))
         (b*.expr
           (list
             (cons 'quote          (keyword-expression-parser parse-quote          1 1))
