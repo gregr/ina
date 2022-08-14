@@ -105,22 +105,17 @@
 
 (define (parse-introduce dst env.scope env . stx*) (env-introduce* env.scope stx*) dst)
 
-(define (parse-define dst env.scope env e.lhs . e*.rhs)
-  (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))
-    (cond ((identifier? e.lhs)
-           (unless (= (length e*.rhs) 1)
-             (raise-syntax-error "multiple expressions in definition body" e*.rhs))
-           (let ((addr (env-introduce env.scope e.lhs)))
+(define (parse-define dst env.scope env lhs . stx*.rhs)
+  (let loop ((lhs lhs) (stx*.rhs stx*.rhs))
+    (cond ((identifier? lhs)
+           (unless (and (pair? stx*.rhs) (null? (cdr stx*.rhs)))
+             (raise-syntax-error "not a single expression" stx*.rhs))
+           (let ((addr (env-introduce env.scope lhs)))
              (env-set! env.scope vocab.expression addr (parse-variable-ref/address addr))
-             (defstate-define dst addr (lambda () (parse env (car e*.rhs))))))
-          (else (let ((x (syntax-unwrap e.lhs)))
-                  (cond ((pair? x) (loop (car x)
-                                         (list (expression-parser
-                                                 (lambda (env _)
-                                                   (ast-provenance-add
-                                                     (apply parse-lambda env (cdr x) e*.rhs)
-                                                     (syntax-provenance (cdr x))))))))
-                        (else      (raise-syntax-error "not a definable form" e.lhs))))))))
+             (defstate-define dst addr (lambda () (parse env (car stx*.rhs))))))
+          (else (let ((x (syntax-unwrap lhs)))
+                  (cond ((pair? x) (loop (car x) (list `(,%lambda ,(cdr x) . ,stx*.rhs))))
+                        (else      (raise-syntax-error "not a definable form" lhs))))))))
 
 (define (parse-define-values dst env.scope env stx.lhs* e.rhs)
   (let* ((lhs*        (syntax->list stx.lhs*))
