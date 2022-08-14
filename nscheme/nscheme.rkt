@@ -9,7 +9,7 @@
          procedure-metadata:closure? procedure-metadata:closure-code procedure-metadata:closure-captured-values
          procedure-metadata:primitive? procedure-metadata:primitive-name
          procedure-metadata:io? procedure-metadata:io-name procedure-metadata:io-descriptor
-         procedure-metadata
+         procedure-metadata procedure-metadata-set!
          procedure-primitive! procedure-io! procedure-closure!
          procedure->continuation call-with-escape-continuation call/ec
          string->vector vector->string cons*
@@ -153,6 +153,7 @@
   (for-each procedure-primitive! (list name ...) '(name ...)))
 
 (declare-primitives!
+  procedure-metadata procedure-metadata-set!
   eq? eqv? eof-object? null? procedure? pair? cons car cdr
   string->symbol symbol->string symbol? string? vector vector? vector-length vector-ref
   vector->svector svector->vector svector svector? svector-length svector-ref
