@@ -1,3 +1,7 @@
+(define (void . args) (values))
+(define (list . x*)   x*)
+(define (not  x)      (if x #f #t))
+
 ;;;;;;;;;;;;;;
 ;;; Errors ;;;
 ;;;;;;;;;;;;;;
@@ -11,13 +15,13 @@
 (define (error?!       x)            (has-type?! error? 'error? x))
 
 (define (raise-type-error expected value)
-  (raise (make-error 'type `(expected ,expected actual ,value))))
+  (raise (make-error 'type (list 'expected expected 'actual value))))
 
 (define (has-type?! type? expected value)
   (unless (type? value) (raise-type-error expected value)))
 
 (define (raise-syntax-error description . stx*)
-  (raise (make-error 'syntax `(description ,description syntax ,stx*))))
+  (raise (make-error 'syntax (list 'description description 'syntax stx*))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Mutable vector and bytevector transformation ;;;
@@ -29,10 +33,9 @@
   (unless (and (<= 0 start) (<= start end) (<= end (mvector-length mv)))
     (error "invalid mvector range"
            'length (mvector-length mv) 'start start 'end end))
-  (let loop ((i start))
-    (when (< i end)
-      (mvector-set! mv i (f i))
-      (loop (+ i 1)))))
+  (let loop ((i start)) (when (< i end)
+                          (mvector-set! mv i (f i))
+                          (loop (+ i 1)))))
 
 (define (mvector-fill! mv v)
   (mvector-transform-range! mv 0 (mvector-length mv) (lambda (_) v)))
@@ -48,41 +51,6 @@
       (error "invalid source range" 'length (length src) 'start start.src 'end end.src))
     (mvector-transform-range! mv start (+ start (- end.src start.src))
                               (lambda (i) (ref src (+ start.src (- i start)))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Association and property lists ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (assp ? alist)
-  (let loop ((alist alist))
-    (and (not (null? alist))
-         (let ((kv (car alist)))
-           (cond ((? (car kv)) kv)
-                 (else         (loop (cdr alist))))))))
-
-(define (assoc key alist) (assp (lambda (k) (equal? k key)) alist))
-
-(define (alist-ref alist key default)
-  (match (assoc key alist)
-    ((cons _ v) v)
-    (#f         (if (procedure? default) (default) default))))
-
-(define (alist-update alist key v->v default)
-  (let loop ((kvs alist) (prev '()))
-    (cond ((null?        kvs     ) (define v (if (procedure? default) (default) default))
-                                   (cons (cons key (v->v v)) alist))
-          ((equal? (caar kvs) key) (foldl cons (cons (cons key (v->v (cdar kvs))) (cdr kvs)) prev))
-          (else                    (loop (cdr kvs) (cons (car kvs) prev))))))
-
-(define (alist-set alist key value) (alist-update alist key (lambda (_) value) #f))
-
-(define (alist-remove alist key)
-  ;; TODO: stop after the first matching key is found
-  (filter (lambda (kv) (not (equal? (car kv) key))) alist))
-
-(define (plist->alist kvs) (if (null? kvs) '()
-                             (cons (cons (car kvs) (cadr kvs))
-                                   (plist->alist (cddr kvs)))))
 
 ;;;;;;;;;;;;;;;;
 ;;; Equality ;;;
@@ -129,43 +97,58 @@
 ;;;;;;;;;;;;;
 
 (splicing-local
-  ((define (append2 xs y)
-     (cond ((null? xs) y)
-           (else       (cons (car xs) (append2 (cdr xs) y))))))
+  ((define (append2 x* y)
+     (cond ((null? x*) y)
+           (else       (cons (car x*) (append2 (cdr x*) y))))))
   (define append
     (case-lambda
       (()          '())
-      ((xs . rest) (let loop ((xs xs) (rest rest))
-                     (cond ((null? rest) xs)
-                           (else         (append2 xs (loop (car rest) (cdr rest))))))))))
+      ((x* . rest) (let loop ((x* x*) (rest rest))
+                     (cond ((null? rest) x*)
+                           (else         (append2 x* (loop (car rest) (cdr rest))))))))))
 
-(define (improper-list->list xs)
-  (cond ((null? xs) '())
-        ((pair? xs) (cons (car xs) (improper-list->list (cdr xs))))
-        (else       (list xs))))
+(define (improper-list->list x*)
+  (cond ((null? x*) '())
+        ((pair? x*) (cons (car x*) (improper-list->list (cdr x*))))
+        (else       (list x*))))
 
-(define (improper-list-map f xs)
-  (let loop ((xs xs))
-    (cond ((null? xs) '())
-          ((pair? xs) (cons (f (car xs)) (loop (cdr xs))))
-          (else       (f xs)))))
+(define (improper-list-map f x*)
+  (let loop ((x* x*))
+    (cond ((null? x*) '())
+          ((pair? x*) (cons (f (car x*)) (loop (cdr x*))))
+          (else       (f x*)))))
 
-(define (memp ? xs)
-  (let loop ((xs xs))
-    (and (not (null? xs))
-         (cond ((? (car xs)) xs)
-               (else         (loop (cdr xs)))))))
+(define (memp ? x*)
+  (let loop ((x* x*))
+    (and (not (null? x*))
+         (cond ((? (car x*)) x*)
+               (else         (loop (cdr x*)))))))
 
-(define (member y xs) (memp (lambda (x) (equal? x y)) xs))
+(define (member y x*) (memp (lambda (x) (equal? x y)) x*))
 
-(define (rem1p ? xs)
-  (let loop ((xs xs))
-    (cond ((null? xs)   '())
-          ((? (car xs)) (cdr xs))
-          (else         (cons (car xs) (loop (cdr xs)))))))
+(define (rem1p ? x*)
+  (let loop ((x* x*))
+    (cond ((null? x*)   '())
+          ((? (car x*)) (cdr x*))
+          (else         (cons (car x*) (loop (cdr x*)))))))
+
+(define (remove1 y x*) (rem1p (lambda (x) (equal? x y)) x*))
 
 (define (iota n)
   (unless (and (integer? n) (<= 0 n)) (error "not a nonnegative integer" n))
   (let loop ((i 0))
     (cond ((= i n) '())
           (else    (cons i (loop (+ i 1)))))))
+
+(define (assp ? alist)
+  (let loop ((alist alist))
+    (and (not (null? alist))
+         (let ((kv (car alist)))
+           (cond ((? (car kv)) kv)
+                 (else         (loop (cdr alist))))))))
+
+(define (assoc key alist) (assp (lambda (k) (equal? k key)) alist))
+
+(define (plist->alist kvs) (cond ((null? kvs) '())
+                                 (else        (cons (cons (car kvs) (cadr kvs))
+                                                    (plist->alist (cddr kvs))))))
