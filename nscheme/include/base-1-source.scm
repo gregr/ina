@@ -29,8 +29,6 @@
 ;;; Mutable vector and bytevector transformation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; TODO: define analogous operators for mbytevector
-
 (define (mvector-transform-range! mv start end f)
   (unless (and (<= 0 start) (<= start end) (<= end (mvector-length mv)))
     (error "invalid mvector range"
@@ -52,9 +50,30 @@
     (mvector-transform-range! mv start (+ start (- end.src start.src))
                               (lambda (i) (ref src (+ start.src (- i start)))))))
 
-;;;;;;;;;;;;;;;
-;;; Vectors ;;;
-;;;;;;;;;;;;;;;
+(define (mbytevector-transform-range! m start end f)
+  (unless (and (<= 0 start) (<= start end) (<= end (mbytevector-length m)))
+    (error "invalid mvector range"
+           'length (mbytevector-length m) 'start start 'end end))
+  (let loop ((i start)) (when (< i end)
+                          (mbytevector-u8-set! m i (f i))
+                          (loop (+ i 1)))))
+
+(define (mbytevector-fill! m v)
+  (mbytevector-transform-range! m 0 (mbytevector-length m) (lambda (_) v)))
+
+(define (mbytevector-copy! m start src start.src end.src)
+  (let-values (((ref length)
+                (cond ((mbytevector? src) (values mbytevector-u8-ref mbytevector-length))
+                      ((bytevector?  src) (values bytevector-u8-ref  bytevector-length))
+                      (else (error "invalid source for mbytevector-copy!" src)))))
+    (unless (and (<= 0 start.src) (<= start.src end.src) (<= end.src (length src)))
+      (error "invalid source range" 'length (length src) 'start start.src 'end end.src))
+    (mbytevector-transform-range! m start (+ start (- end.src start.src))
+                                  (lambda (i) (ref src (+ start.src (- i start)))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Vectors and bytevectors ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (list->vector x*) (apply vector x*))
 
@@ -64,17 +83,21 @@
       (cond ((= i len) '())
             (else      (cons (vector-ref x i) (loop (+ i 1))))))))
 
-(define (vector-append a b)
-  (let* ((l.a (vector-length a))
-         (l.b (vector-length b))
-         (m   (make-mvector (+ l.a l.b) 0)))
-    (mvector-copy! m 0   a 0 l.a)
-    (mvector-copy! m l.a b 0 l.b)
-    (mvector->vector m)))
+(define (vector-append . x*) (list->vector (apply append (map vector->list x*))))
 
 (define (vector-for-each f x . x*) (apply for-each f (vector->list x) (map vector->list x*)))
 (define (vector-map      f x . x*) (list->vector
                                      (apply map f (vector->list x) (map vector->list x*))))
+
+(define (u8-list->bytevector x*) (apply bytevector x*))
+
+(define (bytevector->u8-list x)
+  (let ((len (bytevector-length x)))
+    (let loop ((i 0))
+      (cond ((= i len) '())
+            (else      (cons (bytevector-u8-ref x i) (loop (+ i 1))))))))
+
+(define (bytevector-append . x*) (u8-list->bytevector (apply append (map bytevector->u8-list x*))))
 
 ;;;;;;;;;;;;;;;;
 ;;; Equality ;;;
@@ -346,3 +369,9 @@
                           (let ((m (* a (/ b (gcd a b)))))
                             (cond ((null? x*) m)
                                   (else       (loop m (abs (car x*)) (cdr x*)))))))))))
+
+;;;;;;;;;;;;;;;
+;;; Strings ;;;
+;;;;;;;;;;;;;;;
+
+(define (string-append . x*) (utf8->string (apply bytevector-append (map string->utf8 x*))))
