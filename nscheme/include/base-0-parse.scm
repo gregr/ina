@@ -207,9 +207,9 @@
             string->symbol symbol->string symbol? string? vector vector? vector-length vector-ref
             vector->svector svector->vector svector svector? svector-length svector-ref
             mvector->vector mvector make-mvector mvector? mvector-length mvector-ref mvector-set!
-            utf8->string string->utf8 bytevector bytevector? bytevector-length bytevector-ref
+            utf8->string string->utf8 bytevector bytevector? bytevector-length bytevector-u8-ref
             mbytevector->bytevector make-mbytevector mbytevector mbytevector?
-            mbytevector-length mbytevector-ref mbytevector-set!
+            mbytevector-length mbytevector-u8-ref mbytevector-u8-set!
             number? exact? integer? inexact? = <= < + - * / quotient remainder truncate
             integer-length bitwise-arithmetic-shift << >> & \| ^))
         (b*.expr-aux '(=> else))

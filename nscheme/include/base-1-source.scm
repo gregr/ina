@@ -44,10 +44,8 @@
 
 (define (mvector-copy! mv start src start.src end.src)
   (let-values (((ref length)
-                (cond ((mvector?     src) (values mvector-ref     mvector-length))
-                      ((vector?      src) (values vector-ref      vector-length))
-                      ((mbytevector? src) (values mbytevector-ref mbytevector-length))
-                      ((bytevector?  src) (values bytevector-ref  bytevector-length))
+                (cond ((mvector? src) (values mvector-ref mvector-length))
+                      ((vector?  src) (values vector-ref  vector-length))
                       (else (error "invalid source for mvector-copy!" src)))))
     (unless (and (<= 0 start.src) (<= start.src end.src) (<= end.src (length src)))
       (error "invalid source range" 'length (length src) 'start start.src 'end end.src))
@@ -101,7 +99,7 @@
        (let ((end (bytevector-length a)))
          (let loop ((i 0))
            (or (= i end)
-               (and (equal? (bytevector-ref a i) (bytevector-ref b i))
+               (and (equal? (bytevector-u8-ref a i) (bytevector-u8-ref b i))
                     (loop (+ i 1))))))))
 
 (define (string=? a b)

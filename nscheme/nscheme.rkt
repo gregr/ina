@@ -1,8 +1,10 @@
 #lang racket/base
 (provide vector->svector svector->vector svector svector? svector-length svector-ref
          mvector->vector mvector make-mvector mvector? mvector-length mvector-ref mvector-set!
-         utf8->string string->utf8 bytevector bytevector? bytevector-length bytevector-ref
-         mbytevector->bytevector make-mbytevector mbytevector mbytevector? mbytevector-length mbytevector-ref mbytevector-set!
+         utf8->string string->utf8 bytevector bytevector? bytevector-length
+         bytevector-u8-ref
+         mbytevector->bytevector make-mbytevector mbytevector mbytevector? mbytevector-length
+         mbytevector-u8-ref mbytevector-u8-set!
          bitwise-arithmetic-shift << >> & \| ^
          case-clause-param case-clause-body
          code-source-info code-captured-variables code-case-clauses
@@ -65,7 +67,6 @@
 (define (mvector-ref           mv i)   (vector-ref    (mvector-v mv) i))
 (define (mvector-set!          mv i x) (vector-set!   (mvector-v mv) i x))
 (define (mvector->vector       mv)     (vector-copy   (mvector-v mv)))
-(define (unsafe-mvector-freeze mv)     (mvector-v mv))
 
 (define (utf8->string bv) (bytes->string/utf-8 bv))
 (define (string->utf8 s)  (string->bytes/utf-8 s))
@@ -73,15 +74,14 @@
 (define (bytevector . bs)        (apply bytes bs))
 (define (bytevector?       bv)   (bytes?       bv))
 (define (bytevector-length bv)   (bytes-length bv))
-(define (bytevector-ref    bv i) (bytes-ref    bv i))
+(define (bytevector-u8-ref bv i) (bytes-ref    bv i))
 
 (define (mbytevector               . args)  (mbytevector:new   (apply bytes args)))
 (define (make-mbytevector          len b)   (mbytevector:new   (make-bytes len b)))
 (define (mbytevector-length        mbv i)   (bytevector-length (mbytevector-bv mbv)))
-(define (mbytevector-ref           mbv i)   (bytevector-ref    (mbytevector-bv mbv) i))
-(define (mbytevector-set!          mbv i b) (bytes-set!        (mbytevector-bv mbv) i b))
-(define (mbytevector->bytevector   mbv)     (bytes-copy (mbytevector-bv mbv)))
-(define (unsafe-mbytevector-freeze mbv)     (mbytevector-bv mbv))
+(define (mbytevector-u8-ref        mbv i)   (bytevector-u8-ref (mbytevector-bv mbv) i))
+(define (mbytevector-u8-set!       mbv i b) (bytes-set!        (mbytevector-bv mbv) i b))
+(define (mbytevector->bytevector   mbv)     (bytes-copy        (mbytevector-bv mbv)))
 
 ;; TODO: define primitive fixnum/macnum operations?
 (define (bitwise-arithmetic-shift a b) (arithmetic-shift a b))
@@ -158,8 +158,10 @@
   string->symbol symbol->string symbol? string? vector vector? vector-length vector-ref
   vector->svector svector->vector svector svector? svector-length svector-ref
   mvector->vector mvector make-mvector mvector? mvector-length mvector-ref mvector-set!
-  utf8->string string->utf8 bytevector bytevector? bytevector-length bytevector-ref
-  mbytevector->bytevector make-mbytevector mbytevector mbytevector? mbytevector-length mbytevector-ref mbytevector-set!
+  utf8->string string->utf8 bytevector bytevector? bytevector-length
+  bytevector-u8-ref
+  mbytevector->bytevector make-mbytevector mbytevector mbytevector? mbytevector-length
+  mbytevector-u8-ref mbytevector-u8-set!
   number? exact? integer? inexact? = <= < + - * / quotient remainder truncate integer-length
   bitwise-arithmetic-shift << >> & \| ^)
 
@@ -396,9 +398,9 @@
                     (push! other* name (ast:call (loop make-mvector) (loop (mvector-length value)) (loop 0)))
                     (set! initialization**
                       (cons (map (lambda (i)
-                                   (ast:call (loop mbytevector-set!)
+                                   (ast:call (loop mbytevector-u8-set!)
                                              (ast:ref name) (loop i)
-                                             (loop (mbytevector-ref value i))))
+                                             (loop (mbytevector-u8-ref value i))))
                                  (range (mbytevector-length value)))
                             initialization**)))
                    (_ (let ((ast (match value
@@ -409,9 +411,9 @@
                                                              (loop (svector->vector value))))
                                    ((? mbytevector?)
                                     (set! initialization**
-                                      (cons (map (lambda (i) (ast:call (loop mbytevector-set!)
+                                      (cons (map (lambda (i) (ast:call (loop mbytevector-u8-set!)
                                                                        (ast:ref name) (loop i)
-                                                                       (loop (mbytevector-ref value i))))
+                                                                       (loop (mbytevector-u8-ref value i))))
                                                  (range (mbytevector-length value)))
                                             initialization**))
                                     (ast:call (loop make-mbytevector)
