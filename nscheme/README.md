@@ -41,9 +41,8 @@ straightforward way by manipulating programs and live processes as data.
     These are used to represent immutable record types that are disjoint from
     the s-expression types.
 - Numbers, pairs, strings, bytevectors, and vectors don't have stable identities
-  - i.e., result of `eq?` on these types is unpredictable for structurally
-    identical values
-    - the result will always be `#f` for values that differ structurally
+  - `eq?` on these types may not always return `#t` in cases where it is expected in Scheme
+  - the result of `eq?` on these types is still always `#f` for values that differ structurally
   - `eqv?` will return `#t` for structurally identical numbers
 - Booleans, null, symbols, procedures, mbytevectors, and mvectors do have stable
   identities
@@ -54,6 +53,7 @@ straightforward way by manipulating programs and live processes as data.
   - code units (bytes) are not characters, but suffice for low-level string manipulation
   - code points are not characters, but suffice for some higher-level string manipulation
   - grapheme clusters (substrings) are the right notion of character for user interaction
+- No primitive eof-object type: IO operations may return `#f` or `(values)` instead
 - A numerical tower inspired by: https://www.deinprogramm.de/sperber/papers/numerical-tower.pdf
   - Exact/inexact arithmetic that emphasizes "exactness" on operators rather than values
     - Floating-point values will still exist, but a mismatch will either be
@@ -65,17 +65,21 @@ straightforward way by manipulating programs and live processes as data.
       - Possibly `.+`, `.*`, `.<=`, etc., which coerce to inexact
       - These are different from `fl+`, etc., which assume arguments are already inexact
   - `integer?` `rational?` etc. will return `#f` for all inexact numbers.
-  - All numeric literals describe exact numbers by default.  Use `#i` for inexact literals.
-  - If built-in complex numbers are provided, they will always be inexact.
-- First-class control operators produce continuations that are delimited and one-shot.
+  - All numeric literals describe exact numbers by default.
+    - Inexact literals are distinguished by a suffix, not the `#i` prefix found in Scheme.
+      - Bit-sized floating point suffixes: #f32 #f64 (maybe also #f16 and #f8 ?)
+        - e.g. 3.14#f32
+  - Optional decimal representation for fractions, with repeating portion prefixed by ~
+    - e.g., 0.~3 for 1/3, 0.~17 for 17/99, etc.
+  - Arbitrary sums-and-differences representation for rationals, for convenience
+    - Motivated by a desire to textually specify proper fractions, but more general
+    - e.g., 5/3 could be written as 1+2/3, or as 1+1/3+1/3, or as +18-20+3+7/3-3/3-2/3e0
+  - Complex numbers are not built in.
+- First-class control operators produce continuations that are one-shot.
+  - No primitive operators produce multi-shot, delimited continuations.
+  - These operators only produce virtual threads and same-thread escape continuations.
 - There is no prescribed object-level error handling model.
-  - You can define your own handling using the virtualization primitives.
-- The empty symbol `||` is used as an implicit keyword for all non-keyword
-  syntax, including literals, variable references, and procedure application.
-  - The behavior of these forms can be changed by redefining this keyword.
-  - `5` is parsed as `(|| 5)`
-  - a normal variable reference `x` is parsed as `(|| x)`
-  - `(f e ...)` where `f` is not a syntactic keyword, is parsed as `(|| (f e ...))`
+  - You can define your own handling using escape continuations and dynamically-scoped parameters.
 
 ## Run tests
 
@@ -89,7 +93,6 @@ TODO
 
 ## TODO
 
-- consider supporting Olin's multi-return function calls
 
 - Examine these procedural macro test cases:
   - or (introducing temporary variables)
@@ -106,7 +109,6 @@ TODO
 
 - Reader notes:
   - `#;#;` comments two expressions
-  - `#<symbol>` and `#<symbol>(...)` programmable reader
 
 - read-doc write-doc
   - recognize/preserve comments in doc structure
@@ -339,7 +341,7 @@ One possible set of type-tagging scheme:
 - 8-byte-aligned, 32-bit or 64-bit
   - 2 x fixnum
   - immediate constant
-    - () #t #f eof void undefined etc.
+    - () #t #f undefined etc.
     - single-precision flonum
     - gc-forwarding-mark
       - possibly also a gc-locked-mark if we attempt parallel gc
@@ -382,7 +384,7 @@ Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
 - 0-least-significant-bit
   - 2 x fixnum
   - small immediate constants
-    - () #t #f eof void undefined etc.
+    - () #t #f undefined etc.
     - single (and maybe half) precision flonums
   - cons
 - 1-least-significant-bit
@@ -445,92 +447,111 @@ Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
   - symbol
     - the bytevector pointed to is both a valid string, and is the backing data for a symbol
 
-## Ideas about control operators
+## Control operators
 
-- efficient delimited continuations and dynamic binding
-  - continuation-procedure-builder for one-shot continuation procedures
-    - multi-shot continuation procedures could be expressed by wrapping the continuation-procedure-builder
-      - but we probably don't want built-in support for multi-shot semantics
-  - maybe we should not implement delimited continuations directly
-    - instead, implement exceptional aborts, nestable pre-emptive multitasking, and threads with synchronous channels
-      - exceptional abort handlers can guarantee cleanup of resource/thread-nursery custodians
-    - one-shot delimited continuations can be expressed by threads
-      - and non-primitive pre-emptive multitasking is awkward to express via delimited continuations
+- No first-class control operator will copy any part of the current continuation/stack
+  - An escape continuation references an earlier point on the current stack
+    - Invoking an escape continuation will unwind the current stack to the point of its creation
+  - Creating a virtual thread produces a new stack with no connection to the current one
+    - Invoking a virtual thread jumps directly to its stack, computes until the given resource
+      budget is exhausted, then jumps back to the invoking stack
+  - Nonvirtual threads do not involve transfers of control and are not first-class values
 
-- error handlers that begin in the dynamic context of a signal being raised
-  - supports restarts without needing to abort and then resume
+- Dynamically-scoped parameters implemented via a thread-local register
+  - `(thread-register) (set-thread-register! new-register-value)`
 
-- control operators
-  - call-in-os-thread
-  - delimited
-    - suspend, abort, capture (aka control0)
-    - catch/suspend, catch/abort, catch/capture (aka prompt0)
-    - dynamic context
-      - can use these to implement dynamic binding (aka parameterize)
-      - `(call-with-current-context prompt-tag f)`
-        - `f : context -> any`
-        - for inspecting context marks
+- Nestable pre-emptive and cooperative multitasking via virtual threads
+  - `(make-virtual-thread thunk)` produces a controller procedure with this signature:
+    `(controller budget-ticks-or-#f budget-pages-or-#f)`
+    - returns `(values done? ticks-remaining pages-remaining)` with these possibilities:
+      | circumstance           | done?        | ticks-remaining | pages-remaining |
+      |------------------------|--------------|-----------------|-----------------|
+      | successful return      | #t           | non-0           | non-0           |
+      | cooperative yield      | #f           | non-0           | non-0           |
+      | exhausted time budget  | #f           | 0               | _               |
+      | exhausted space budget | #f           | _               | _               |  ; TODO: pages requested
+      | panic                  | <panic-val*> | _               | _               |
+      - `<panic-val*>` is the list of arguments passed to `panic`
+    - resuming after a successful return will panic
+    - resuming normally after a panic is futile as it will panic again
+      - to resume successfully, the controller should be adjusted with debugger-like capabilities
+    - the `thunk` passed to `make-virtual-thread` must return `(values)` when finished
+      - any desired communication must occur via side channel, such as an `mvector`
+  - Can be used to express threads, generators, coroutines
+  - Alternative implementation of this interface in terms of lower-level primitives
+    - `(panic-handler) (set-panic-handler! proc)`
+    - `(time-exceeded-handler) (set-time-exceeded-interrupt-handler! thunk)`
+      - `(set-time-budget ticks) ==> previous-ticks`
+    - `(space-exceeded-handler) (set-space-exceeded-interrupt-handler! proc)`
+      - `proc : (pages-remaining pages-requested) => _`
+      - `(set-space-budget pages) ==> previous-pages`
+    - `(enable-interrupts) ==> decremented-disable-count`
+    - `(disable-interrupts) ==> incremented-disable-count`
+    - `(call-with-escape-continuation proc) (call-in-empty-context thunk)`
 
-- alternative design:
-  - use hierarchically-subclassed prompt-tags
-  - only provide catch, abort, call-with-dynamic-context, are these right?: call-with-interruption (and a fuel/tick count), call-without-interruption, time-until-interruption
-    - but how do we efficiently handle nested interrupts?
-    - previously we could use a tie-back continuation, such that a parent could jump directly to a deeply-nested child computation
-    - can we still do this efficiently by structuring the context/stack according to hierarchical prompt tags?
-    - aside from alarms, interruptions should include garbage collection and possibly other asynchronous signals that may optionally be handled?
+- Parallel processing
+  - Platform-specific primitives for spawning parallel threads/processes
+  - `(mvector-cas! mv i expected new) ==> boolean`
+  - High-level synchronizable actions interface
+    - as in Concurrent ML and Racket synchronizable events
 
-- alternative alternative design:
-  - We will provide the catch/suspend catch/abort catch/capture interface to end users.
-  - But we will implement these using:
-    - `catch : tag -> (() -> initial-result) -> (exceptional-request -> exceptional-result) -> (initial-result -> normal-result) -> (normal-result or exceptional-result)`
-    - `abort-to : tag -> _no-return_`
-      - this interface won't make sense, because call-with-delimited-context will end up capturing the abort-to!
-    - `call-with-delimited-context : tag -> delimited-context`
-      - a delimited context is a list of (tagged-frame or parameter-assignment)s
-        - a tagged-frame combines a tag, a delimited continuation, an exception handler, and a success handler
-    - need these unsafe versions instead?
-     - `unsafe-abort-to : undelimited-context -> _no-return_`
-     - `apply-delimited-context : delimited-context -> result-of-delimited-context`
-     - `call-with-unsafe-undelimited-context : () -> undelimited-context`
-       - it is an error to retain and use an undelimited-context after returning or aborting to an earlier point than it represents
-       - i.e., the prefix of that context will have been invalidated, and may unsafely point to bogus memory
-       - unless we don't care about stack-based implementations
-         - heap-based contexts should be safe to retain, though they have call/cc-like abort semantics, which isn't great
-     - `undelimited-context-car -> undelimited-context -> frame`
-     - `undelimited-context-cdr -> undelimited-context -> undelimited-context`
-     - `delimited-context-empty`
-     - `delimited-context-cons : frame -> delimited-context -> delimited-context`
-     - `alarm-start : num-ticks -> ()`, `alarm-stop : () -> num-ticks-remaining`
-     - some way to disable garbage collection and other interrupts
+- A system interrupt/signal is a meta-level concept and should not be dispatched as an exception.
+  - Particularly, we should not raise interrupts asynchronously in user programs.  Instead, provide
+    an input channel/stream that we can choose to synchronously listen to for interrupts/signals.
+    - e.g., we can have a thread that blocks on this channel, and translates incoming signals
+      to events that can be consumed by other threads, possibly downstream.
+  - Interrupts/signals are handled top-down, not bottom-up.  The host system sees them first, and
+    optionally delegates their handling to subprocesses via channels as described above.
+    - e.g., consider a main meta-level program (such as an IDE or debugger) that is virtually
+      evaluating an object-level program when a "break" is signaled.  This meta-level program should
+      be designed as an event loop that evaluates the object-level program in time slices as a
+      virtual-thread, while listening for possible interrupts/signals.  When it receives the break,
+      it responds by pausing its evaluation of the object-level program.
 
-- We should also be able to inspect marks on continuation segments for suspended computations
-- nested engines via a pre-emptive subcomputation scheduling delimiter
-  - `(suspend)`
-  - `(catch/suspend thunk fuel-amount k.suspended k.finished)`
-  - `k.suspended : (() -> any) -> any`
-  - `k.finished  : (fuel-remaining any) -> any`
-  - we can suspend through other delimiter boundaries
+- Programming mistakes should panic, not raise
+  - Examples of programming mistakes:
+    - assertion violations
+    - type violations
+    - procedure arity violations
+    - accessing an out-of-bounds index
+    - accessing an uninitialized variable (possible with letrec)
+    - dividing an exact integer by zero
+  - The compiler will generate code for implicit error-checking that calls panic upon failure
+    - This implicit error-checking will take place inside primitive operator definitions, sites that
+      call unknown procedures, arity-checking preludes of non-primitive procedure definitions, and
+      sites that reference variables whose initialization status is unknown (possible with letrec)
+  - A panic does not trigger typical error handling, restart handling, or finalization
+    - But a panic only suspends the current virtual-thread, so a virtual-thread caller can respond
+    - Resuming a panicked virtual-thread will just panic again, unless privileged reflection and
+      program modification capabilities, like those in a debugger, are used.
+      - Such capabilities can also surgically perform finalization if resource cleanup is needed
+- Errors that are not programming mistakes should raise
+  - Unlike panic, raise is not a primitive, it can be defined in a library
+  - This library should support error handling with restarts and finalization, built on top of
+    escape continuations and dynamic parameters
 
-- Should we merge abort-catching with capture-catching, via hierarchical prompt-tags?
-  - then the difference between capture and abort would be that abort doesn't bother building a continuation
-- abort-catching handlers for safe resource management
-  - `(abort value)`
-  - `(catch/abort thunk k.aborted k.finished)`
-  - `k.aborted  : any -> any`
-  - `k.finished : any -> any`
-  - we can abort through a `catch/suspend` boundary
-  - we can abort through a `catch/capture` boundary
+## Numbers
 
-- multi-prompt multi-shot delimited continuations
-  - note: we probably don't want to support multi-shot continuations
-  - `(capture prompt-tag value)`
-  - `(catch/capture prompt-tag thunk k.captured k.finished)`
-  - `k.capture  : ((any -> any) any) -> any`
-  - `k.finished : any -> any`
-  - we can capture through a `catch/abort` boundary
-  - we cannot capture through a `catch/suspend` boundary
-  - prompt-tags are hierarchically subclassed
-    - catch/capture with a parent prompt-tag will catch captures thrown with child prompt-tags
+- Primitive numeric types: `rational integer f32 f64`
+  - A `rational` is an exact, arbitrary-precision integer or fraction.
+  - `integer` is a subtype of `rational`.  An `integer` is an exact, arbitrary-precision integer.
+    - Primitive operators for `integer` values include:
+      `integer-rshift integer-lshift integer-not integer-and integer-ior integer-xor integer-floor-divmod`
+      - For consistency with bitwise arithmetic shifting on negative integers,
+        `integer-floor-divmod` performs a flooring division/modulo operation rather than the typical
+        truncating operation.
+        - To understand the motivation for this choice, see:
+          [Arithmetic Shifting Considered Harmful](https://dspace.mit.edu/bitstream/handle/1721.1/6090/AIM-378.pdf?sequence=2&isAllowed=y)
+  - A `f32` or `f64` is an inexact, IEEE 754 floating-point value represented with 32 or 64 bits.
+    - Primitive operators for `fN` values include:
+      `fN-nan? fN-cmp fN-floor fN-ceiling fN-truncate fN-round fN+ fN- fN* fN/`
+
+- Low-level arithmetic on fixed-length bitvector subtypes: `b8 b16 b32 b64`
+  - `bN-arshift bN-rshift bN-lshift bN-not bN-and bN-ior bN-xor bN-cmp bN-divmod bN+ bN- bN*`
+    operate on nonnegative `integer` values that can be represented with `N` bits.
+  - These operators return arithmetic flag bits (i.e., `b1`) in addition to the main result.
+    - Flags include: sign, zero, carry, overflow
+    - Some operators will return multiple main result values: `bN* bN-divmod`
 
 ## A possible "environment soup" model for interactive evaluation
 
@@ -947,47 +968,6 @@ Real-world (effect) interaction/reaction:
 * independent processes communicating via shared mvectors
   * arbitrary topology; can support true paralllelism
   * can reason about host system as a concurrent, black box process
-
-### control extensions
-* implement tag-aware delimited continuation operators in base language
-  * e.g., reset/tag, shift/tag, abort/tag
-* delimited control:
-  * programs not making use of delimited control should incur no additional overhead
-  * for more precise resource control, replace shift/reset with: prompt0, control0, abort
-    * should dynamic-put, dynamic-get be primitives for tail call efficient parameterize?
-    * maybe exclude delimited control from base language, and implement via CPS-ing
-      embedded interpreter; aggressive inlining can recover native stack-like efficiency
-  * higher level continuation interface
-    * support restartable error handlers (particularly important for REPL support)
-    * aborting w/ specific tags
-    * parameterize
-    * dynamic-wind (but be wary of spurious exit/re-enter cycling
-      * should forward dynamic parameters, to avoid exit/re-enter for parent lookup
-        * what other kinds of aborts should/can be pre-empted by dynamic-wind in this way?
-    * what does Racket really do?
-      * exceptions/errors, break (and other interrupts)
-        * asynchronous exceptions, like break, don't really make sense
-          * Interrupts make more sense in terms of parallel processing, and should be
-            designed for explicitly.  An interrupted program that does not explicitly
-            ask to handle interrupts should terminate, not raise an exception in an
-            arbitrary thread.
-          * concepts like "break" belong to the meta-level, not in object-level programs
-            * e.g., a main meta-level program (such as an IDE or debugger) is evaluating
-              an object-level program when a "break" is signaled.  The interrupt handling
-              behaves like a separate thread which communicates a break message to the
-              main program thread.  The main program has been designed as an event loop
-              that listens for interrupt messages such as "break", and responds by
-              suspending its evaluation of the object-level program.
-* parallel processing: spawn, (mvector-cas! mv i expected new) => boolean?
-  * Is spawn necessary for equational reasoning with multiple processes?  If not, we can
-    just expose a threading interface via procedures.  Would such an interface have to be
-    platform-specific?  Racket efficiently supports interruption features that JS can't.
-  * high level synchronizable actions interface
-    * as in Concurrent ML, or Racket synchronizable events
-    * Instead of `X/enable-break` variants of `X` to safely perform the op or break, but
-      not both, provide a synchronizable event for temporarily enabled breaks, e.g.,
-      `(sync (choice-evt X break-evt))`.
-      Also provide a `timeout-evt` for similar orthogonality.
 
 ### syntax extensions
 * light extensions

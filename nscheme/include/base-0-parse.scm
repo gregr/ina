@@ -203,7 +203,7 @@
         (primitive*
           (list
             procedure-metadata procedure-metadata-set!
-            eq? eqv? eof-object? null? procedure? pair? cons car cdr
+            eq? eqv? null? procedure? pair? cons car cdr
             string->symbol symbol->string symbol? string? vector vector? vector-length vector-ref
             vector->svector svector->vector svector svector? svector-length svector-ref
             mvector->vector mvector make-mvector mvector? mvector-length mvector-ref mvector-set!

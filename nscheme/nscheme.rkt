@@ -31,7 +31,7 @@
 ;;; Data primitives ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;
 
-;; - small constant: eof null boolean
+;; - small constant: null boolean
 ;; - number:
 ;;   - exact rational
 ;;     - integer
@@ -154,7 +154,7 @@
 
 (declare-primitives!
   procedure-metadata procedure-metadata-set!
-  eq? eqv? eof-object? null? procedure? pair? cons car cdr
+  eq? eqv? null? procedure? pair? cons car cdr
   string->symbol symbol->string symbol? string? vector vector? vector-length vector-ref
   vector->svector svector->vector svector svector? svector-length svector-ref
   mvector->vector mvector make-mvector mvector? mvector-length mvector-ref mvector-set!
@@ -241,6 +241,8 @@
     ;; We cannot leverage Racket's operator with the same name because it is not
     ;; compatible with calling the disjoint continuations produced by
     ;; procedure->continuation.
+    ;; TODO: also make sure an escape continuation is only invoked from a direct
+    ;; descendent, not a disjoint continuation.
     (define (call-with-escape-continuation proc)
       (let ((box.invalidate-next! (box #t)))
         (define (invalidate!)
@@ -347,7 +349,7 @@
                           (hash-ref external-value=>name value #f))))
             (and name (ast:ref name)))
           (match value
-            ((or '() #f #t (? fixnum?) (? eof-object?)) (ast:quote value))
+            ((or '() #f #t (? fixnum?)) (ast:quote value))
             (_ (let ((name (gen-name value)))
                  (match value
                    ((? procedure?)
@@ -553,6 +555,7 @@
     ((buffer-mode-ref)       (file-stream-buffer-mode port))
     ((buffer-mode-set! mode) (file-stream-buffer-mode port mode))))
 
+;; TODO: IO operations should return (values) or #f instead of eof-object
 (define (bytestream:port:input super port)
   (define (eof->false d) (if (eof-object? d) #f d))
   (method-lambda
