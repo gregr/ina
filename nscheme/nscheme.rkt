@@ -1,31 +1,59 @@
 #lang racket/base
-(provide vector->svector svector->vector svector svector? svector-length svector-ref
-         mvector->vector mvector make-mvector mvector? mvector-length mvector-ref mvector-set!
-         utf8->string string->utf8 bytevector bytevector? bytevector-length
-         bytevector-u8-ref
-         mbytevector->bytevector make-mbytevector mbytevector mbytevector? mbytevector-length
-         mbytevector-u8-ref mbytevector-u8-set!
-         bitwise-arithmetic-shift << >> & \| ^
-         case-clause-param case-clause-body
-         code-source-info code-captured-variables code-case-clauses
-         procedure-metadata:closure? procedure-metadata:closure-code procedure-metadata:closure-captured-values
-         procedure-metadata:primitive? procedure-metadata:primitive-name
-         procedure-metadata:io? procedure-metadata:io-name procedure-metadata:io-descriptor
-         procedure-metadata procedure-metadata-set!
-         procedure-primitive! procedure-io! procedure-closure!
-         procedure->continuation call-with-escape-continuation call/ec
-         string->vector vector->string cons*
-         stdio filesystem tcp udp tty
-         console string:port:input string:port:output null:port:output
-         call-with-input-string call-with-output-string
-         port-close port-flush port-put port-put*
-         port-forget port-get port-peek port-get*! port-peek*!
-         port-truncate port-position port-position-set!
-         port-buffer-mode port-buffer-mode-set!
-         method-lambda method-choose method-unknown method-except method-only
-         racket:eval)
-(require racket/control racket/file racket/list racket/match racket/port racket/string racket/struct
-         racket/system racket/tcp racket/udp racket/vector)
+(provide
+  ;; privileged primitives
+  ;call-with-escape-continuation call-in-empty-context
+  ;thread-register set-thread-register!
+  ;panic-handler set-panic-handler!
+  ;set-time-budget time-exceeded-handler set-time-exceeded-handler!
+  ;set-space-budget space-exceeded-handler set-space-exceeded-handler!
+  procedure-metadata set-procedure-metadata!
+  svector? svector->vector vector->svector
+  string->bytevector bytevector->string
+
+  panic apply call-with-values values
+  eq? eqv? null? procedure? symbol? string? rational? integer? f32? f64?
+  pair? vector? mvector? bytevector? mbytevector?
+  string->symbol symbol->string
+  cons car cdr
+  vector-length vector-ref
+  make-mvector mvector->vector mvector-length mvector-ref mvector-set!
+  bytevector-length bytevector-b8-ref bytevector-b16-native-ref bytevector-b32-native-ref bytevector-b64-native-ref
+  make-mbytevector mbytevector->bytevector mbytevector-length
+  mbytevector-b8-ref mbytevector-b16-native-ref mbytevector-b32-native-ref mbytevector-b64-native-ref
+  mbytevector-b8-set! mbytevector-b16-native-set! mbytevector-b32-native-set! mbytevector-b64-native-set!
+  native-big-endian?
+  bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
+  bitwise-not bitwise-and bitwise-ior bitwise-xor integer-floor-divmod
+  numerator denominator cmp + - * /
+  f32->f64 f64->f32
+  f32->rational rational->f32 f64->rational rational->f64
+  f32->b32 b32->f32 f64->b64 b64->f64
+  f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
+  f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/
+
+  case-clause-param case-clause-body
+  code-source-info code-captured-variables code-case-clauses
+  procedure-metadata:closure? procedure-metadata:closure-code procedure-metadata:closure-captured-values
+  procedure-metadata:primitive? procedure-metadata:primitive-name
+  procedure-metadata:io? procedure-metadata:io-name procedure-metadata:io-descriptor
+  procedure-primitive! procedure-io! procedure-closure!
+
+  stdio filesystem tcp udp tty
+  console string:port:input string:port:output null:port:output
+  call-with-input-string call-with-output-string
+  port-close port-flush port-put port-put*
+  port-forget port-get port-peek port-get*! port-peek*!
+  port-truncate port-position port-position-set!
+  port-buffer-mode port-buffer-mode-set!
+  method-lambda method-choose method-unknown method-except method-only
+  racket:eval)
+(require racket/control racket/file racket/flonum racket/list racket/match racket/port racket/string
+         racket/struct racket/system racket/tcp racket/udp racket/vector (prefix-in rkt: racket/base))
+
+;; TODO: redefine to use panic-handler
+(define (panic . args) (raise (vector 'panic args)))
+
+(define-syntax-rule (assert test ...) (begin (unless test (panic 'assertion-violation 'test)) ...))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Data primitives ;;;
@@ -49,6 +77,71 @@
 ;;   - io controller
 ;;   - closure
 
+(define (native-big-endian?) (system-big-endian?))
+
+(define (rational? x) (and (rkt:rational? x) (exact? x)))
+(define (integer?  x) (rkt:exact-integer? x))
+(define (f32?      x) (single-flonum? x))
+(define (f64?      x) (double-flonum? x))
+
+(define (b32? x) (and (integer? x) (<= 0 x #xffffffff)))
+(define (b64? x) (and (integer? x) (<= 0 x #xffffffffffffffff)))
+
+(define (f32->f64      n) (assert (f32? n)) (* 1.0 n))
+(define (f64->f32      n) (assert (f64? n)) (flsingle n))
+(define (f32->rational n) (assert (f32? n)) (inexact->exact n))
+(define (f64->rational n) (assert (f64? n)) (inexact->exact n))
+(define (rational->f32 n) (assert (rational? n)) (real->single-flonum n))
+(define (rational->f64 n) (assert (rational? n)) (real->double-flonum n))
+
+(define (f32->b32 n) (assert (f32? n)) (integer-bytes->integer (real->floating-point-bytes n 4) #f))
+(define (f64->b64 n) (assert (f64? n)) (integer-bytes->integer (real->floating-point-bytes n 8) #f))
+;;; NOTE: Any NaNs produced have already been automatically quieted by these operations.
+(define (b32->f32 n) (assert (b32? n)) (floating-point-bytes->real (integer->integer-bytes n 4 #f)))
+(define (b64->f64 n) (assert (b64? n)) (floating-point-bytes->real (integer->integer-bytes n 8 #f)))
+
+(define (cmp a b)
+  (assert (rational? a) (rational? b))
+  (cond ((< a b) -1)
+        ((> a b)  1)
+        (else     0)))
+(define (f32-cmp a b)
+  (assert (f32? a) (f32? b))
+  (cond ((< a b) -1)
+        ((> a b)  1)
+        (else     0)))
+(define (f64-cmp a b)
+  (assert (f64? a) (f64? b))
+  (cond ((< a b) -1)
+        ((> a b)  1)
+        (else     0)))
+
+(define (f32-floor    n) (assert (f32? n)) (flfloor    n))
+(define (f32-ceiling  n) (assert (f32? n)) (flceiling  n))
+(define (f32-truncate n) (assert (f32? n)) (fltruncate n))
+(define (f32-round    n) (assert (f32? n)) (flround    n))
+(define (f64-floor    n) (assert (f64? n)) (flfloor    n))
+(define (f64-ceiling  n) (assert (f64? n)) (flceiling  n))
+(define (f64-truncate n) (assert (f64? n)) (fltruncate n))
+(define (f64-round    n) (assert (f64? n)) (flround    n))
+
+(define (f32+ a b) (assert (f32? a) (f32? b)) (fl+ a b))
+(define (f32- a b) (assert (f32? a) (f32? b)) (fl- a b))
+(define (f32* a b) (assert (f32? a) (f32? b)) (fl* a b))
+(define (f32/ a b) (assert (f32? a) (f32? b)) (fl/ a b))
+(define (f64+ a b) (assert (f64? a) (f64? b)) (fl+ a b))
+(define (f64- a b) (assert (f64? a) (f64? b)) (fl- a b))
+(define (f64* a b) (assert (f64? a) (f64? b)) (fl* a b))
+(define (f64/ a b) (assert (f64? a) (f64? b)) (fl/ a b))
+
+(define (bitwise-arithmetic-shift-left  n k) (rkt:arithmetic-shift n    k))
+(define (bitwise-arithmetic-shift-right n k) (rkt:arithmetic-shift n (- k)))
+
+(define (integer-floor-divmod dividend divisor)
+  (assert (integer? dividend) (integer? divisor))
+  (let ((q (rkt:floor (/ dividend divisor))))
+    (values q (- dividend (* q divisor)))))
+
 (struct mbytevector (bv)      #:name mbytevector-struct #:constructor-name mbytevector:new)
 (struct mvector     (v)       #:name mvector-struct     #:constructor-name mvector:new)
 (struct svector     (>vector) #:name svector-struct     #:constructor-name svector:new #:prefab)
@@ -57,39 +150,52 @@
   (unless (vector? v) (error "svector cannot be built from a non-vector" v))
   (svector:new v))
 
+;; TODO: library
 (define (svector        . args) (svector:new (apply vector args)))
 (define (svector-length sv)     (vector-length (svector->vector sv)))
 (define (svector-ref    sv i)   (vector-ref    (svector->vector sv) i))
 
-(define (mvector               . args) (mvector:new (apply vector args)))
-(define (make-mvector          len x)  (mvector:new   (make-vector len x)))
-(define (mvector-length        mv)     (vector-length (mvector-v mv)))
-(define (mvector-ref           mv i)   (vector-ref    (mvector-v mv) i))
-(define (mvector-set!          mv i x) (vector-set!   (mvector-v mv) i x))
-(define (mvector->vector       mv)     (vector-copy   (mvector-v mv)))
+;; TODO: library
+(define (mvector . args) (mvector:new (apply vector args)))
 
-(define (utf8->string bv) (bytes->string/utf-8 bv))
-(define (string->utf8 s)  (string->bytes/utf-8 s))
+(define (make-mvector    len x)  (mvector:new   (make-vector len x)))
+(define (mvector-length  mv)     (vector-length (mvector-v mv)))
+(define (mvector-ref     mv i)   (vector-ref    (mvector-v mv) i))
+(define (mvector-set!    mv i x) (vector-set!   (mvector-v mv) i x))
+(define (mvector->vector mv)     (vector-copy   (mvector-v mv)))
 
-(define (bytevector . bs)        (apply bytes bs))
-(define (bytevector?       bv)   (bytes?       bv))
+(define (bytevector->string bv) (bytes->string/utf-8 bv))
+(define (string->bytevector bv) (string->bytes/utf-8 bv))
+
+;; TODO: library
+;(define (utf8->string bv) (assert (utf8? bv)) (bytevector->string bv))
+;(define (string->utf8 s)  (string->bytevector s))
+
+;; TODO: library
+(define (bytevector . bs) (apply bytes bs))
+
+(define (bytevector?       x)    (bytes?       x))
 (define (bytevector-length bv)   (bytes-length bv))
-(define (bytevector-u8-ref bv i) (bytes-ref    bv i))
 
-(define (mbytevector               . args)  (mbytevector:new   (apply bytes args)))
-(define (make-mbytevector          len b)   (mbytevector:new   (make-bytes len b)))
-(define (mbytevector-length        mbv i)   (bytevector-length (mbytevector-bv mbv)))
-(define (mbytevector-u8-ref        mbv i)   (bytevector-u8-ref (mbytevector-bv mbv) i))
-(define (mbytevector-u8-set!       mbv i b) (bytes-set!        (mbytevector-bv mbv) i b))
-(define (mbytevector->bytevector   mbv)     (bytes-copy        (mbytevector-bv mbv)))
+(define (bytevector-b8-ref         bv i) (bytes-ref              bv                         i))
+(define (bytevector-b16-native-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 2)))
+(define (bytevector-b32-native-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 4)))
+(define (bytevector-b64-native-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 8)))
 
-;; TODO: define primitive fixnum/macnum operations?
-(define (bitwise-arithmetic-shift a b) (arithmetic-shift a b))
-(define (<< i s) (bitwise-arithmetic-shift i s))
-(define (>> i s) (bitwise-arithmetic-shift i (- s)))
-(define (& a b)  (bitwise-and a b))
-(define (\| a b) (bitwise-ior a b))
-(define (^ a b)  (bitwise-xor a b))
+;; TODO: library
+(define (mbytevector . args) (mbytevector:new (apply bytes args)))
+
+(define (make-mbytevector            len n)   (mbytevector:new (make-bytes len n)))
+(define (mbytevector->bytevector     mbv)     (bytes-copy                (mbytevector-bv mbv)))
+(define (mbytevector-length          mbv i)   (bytevector-length         (mbytevector-bv mbv)))
+(define (mbytevector-b8-ref          mbv i)   (bytevector-b8-ref         (mbytevector-bv mbv) i))
+(define (mbytevector-b16-native-ref  mbv i)   (bytevector-b16-native-ref (mbytevector-bv mbv) i))
+(define (mbytevector-b32-native-ref  mbv i)   (bytevector-b32-native-ref (mbytevector-bv mbv) i))
+(define (mbytevector-b64-native-ref  mbv i)   (bytevector-b64-native-ref (mbytevector-bv mbv) i))
+(define (mbytevector-b8-set!         mbv i n) (bytes-set!                (mbytevector-bv mbv) i n))
+(define (mbytevector-b16-native-set! mbv i n) (integer->integer-bytes n 2 #f (system-big-endian?) (mbytevector-bv mbv) i))
+(define (mbytevector-b32-native-set! mbv i n) (integer->integer-bytes n 4 #f (system-big-endian?) (mbytevector-bv mbv) i))
+(define (mbytevector-b64-native-set! mbv i n) (integer->integer-bytes n 8 #f (system-big-endian?) (mbytevector-bv mbv) i))
 
 (define (make-case-clause param body) (vector param body))
 (define (case-clause-param cc)        (vector-ref cc 0))
@@ -144,50 +250,20 @@
 ;; constructors should also only appear in Racket code.  However,
 ;; procedure-metadata and the procedure-metadata:X accessors are actual nscheme
 ;; operations, and are not Racket-specific.
-(define (procedure-metadata-set! p pmeta)      (hash-set! procedure=>metadata p pmeta))
-(define (procedure-primitive!    p name)       (procedure-metadata-set! p (lambda () (procedure-metadata:primitive name))))
-(define (procedure-io!           p name desc)  (procedure-metadata-set! p (lambda () (procedure-metadata:io        name desc))))
-(define (procedure-closure!      p code cvals) (procedure-metadata-set! p (lambda () (procedure-metadata:closure   code cvals))))
+(define (set-procedure-metadata! p pmeta)      (hash-set! procedure=>metadata p pmeta))
+(define (procedure-primitive!    p name)       (set-procedure-metadata! p (lambda () (procedure-metadata:primitive name))))
+(define (procedure-io!           p name desc)  (set-procedure-metadata! p (lambda () (procedure-metadata:io        name desc))))
+(define (procedure-closure!      p code cvals) (set-procedure-metadata! p (lambda () (procedure-metadata:closure   code cvals))))
 
-(define-syntax-rule (declare-primitives! name ...)
-  (for-each procedure-primitive! (list name ...) '(name ...)))
-
-(declare-primitives!
-  procedure-metadata procedure-metadata-set!
-  eq? eqv? null? procedure? pair? cons car cdr
-  string->symbol symbol->string symbol? string? vector vector? vector-length vector-ref
-  vector->svector svector->vector svector svector? svector-length svector-ref
-  mvector->vector mvector make-mvector mvector? mvector-length mvector-ref mvector-set!
-  utf8->string string->utf8 bytevector bytevector? bytevector-length
-  bytevector-u8-ref
-  mbytevector->bytevector make-mbytevector mbytevector mbytevector? mbytevector-length
-  mbytevector-u8-ref mbytevector-u8-set!
-  number? exact? integer? inexact? = <= < + - * / quotient remainder truncate integer-length
-  bitwise-arithmetic-shift << >> & \| ^)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Asynchronous signals, dynamic environment, continuations ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Resource budget interrupts, thread register, continuations ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; TODO:
-;; - Racket platform implementations for dynamic bindings, interrupts and scheduling
-;;   - cases that need to be handled:
-;;     - normal return
-;;     - aborting return (subsumes cooperative yield)
-;;     - alarm (ticks, memory, or other resource budget)
-;;     - other interrupt/signal (ctrl-c, ctrl-z, ctrl-\, etc.)
-;;       - may or may not be fatal (fatal does not need to save a continuation)
-;;       - may or may not "suspend" (abort while saving continuation)
-;;         - may not even have to abort at all if a handler can work "in-place" and then resume normally
-;;   - need primitives for manipulating global handlers for alarm/timer and
-;;     other async signal interrupts.
+;; - Racket platform implementations for thread register and budget handlers.
 ;;   - Should we emulate nScheme dynamic environments, or use Racket
 ;;     parameters directly?  If we use Racket parameters, how do we make them
 ;;     compatible with system snapshots?
-;; When running on the Racket platform, it probably makes more sense to use
-;; Racket's facilities for these directly rather than emulating future native
-;; platform abstractions.  But until the native platform is implemented, these
-;; definitions will be useful for clarifying its design.
 
 ;;; Continuations
 ;;
@@ -200,77 +276,111 @@
 ;; what we want directly via CPS.  The downside is that we would no longer be
 ;; able to write Racket that emulates nScheme.  We would have to compile CPSed
 ;; nScheme to Racket instead.
-(define-values (procedure->continuation call-with-escape-continuation)
-  (let ((previous-invalidator (make-parameter #f)))
-    ;; Create a disjoint, one-shot continuation that will call the given
-    ;; procedure, then halt the current platform-level thread of execution.
-    ;; Because it is disjoint, calling this continuation will not invalidate any
-    ;; existing escape continuations.  The intended use of this operator is in
-    ;; implementing control structures involving context switches, such as
-    ;; generators, coroutines, engines, and threads.
-    ;;
-    ;; When implementing control structures that share a single platform thread,
-    ;; it is expected that the given procedure will typically never return.  If
-    ;; it were to return it would halt the entire platform thread, causing
-    ;; everything it cooperates with to also halt.  When implementing a control
-    ;; structure that runs on an independent platform thread, this is not an
-    ;; issue.
-    (define (procedure->continuation proc)
-      (control k (parameterize ((previous-invalidator #f))
-                   (call-with-values
-                     (lambda ()
-                       (call/cc (lambda (k.new)
-                                  (let ((valid? #t))
-                                    (k (lambda args
-                                         (unless (procedure-arity-includes? proc (length args))
-                                           (raise (exn:fail:contract:arity
-                                                    (format "~s: arity mismatch\n expected: ~s\n given: ~s\n"
-                                                            proc (procedure-arity proc) (length args))
-                                                    (current-continuation-marks))))
-                                         (unless valid? (error "called an expired continuation"))
-                                         (set! valid? #f)
-                                         (apply k.new args)))))))
-                     proc))))
+;(define-values (procedure->continuation call-with-escape-continuation)
+;  (let ((previous-invalidator (make-parameter #f)))
+;    ;; Create a disjoint, one-shot continuation that will call the given
+;    ;; procedure, then halt the current platform-level thread of execution.
+;    ;; Because it is disjoint, calling this continuation will not invalidate any
+;    ;; existing escape continuations.  The intended use of this operator is in
+;    ;; implementing control structures involving context switches, such as
+;    ;; generators, coroutines, engines, and threads.
+;    ;;
+;    ;; When implementing control structures that share a single platform thread,
+;    ;; it is expected that the given procedure will typically never return.  If
+;    ;; it were to return it would halt the entire platform thread, causing
+;    ;; everything it cooperates with to also halt.  When implementing a control
+;    ;; structure that runs on an independent platform thread, this is not an
+;    ;; issue.
+;    (define (procedure->continuation proc)
+;      (control k (parameterize ((previous-invalidator #f))
+;                   (call-with-values
+;                     (lambda ()
+;                       (call/cc (lambda (k.new)
+;                                  (let ((valid? #t))
+;                                    (k (lambda args
+;                                         (unless (procedure-arity-includes? proc (length args))
+;                                           (raise (exn:fail:contract:arity
+;                                                    (format "~s: arity mismatch\n expected: ~s\n given: ~s\n"
+;                                                            proc (procedure-arity proc) (length args))
+;                                                    (current-continuation-marks))))
+;                                         (unless valid? (error "called an expired continuation"))
+;                                         (set! valid? #f)
+;                                         (apply k.new args)))))))
+;                     proc))))
+;
+;    ;; Call the given procedure with the current continuation.  This one-shot
+;    ;; continuation is only valid until control returns to it, or to one of its
+;    ;; ancestors.  This operator is intended for setting up escapes to exception
+;    ;; guards, finalizers, and restarts, as well as setting up for resumption
+;    ;; right before performing a context switch.
+;    ;;
+;    ;; We cannot leverage Racket's operator with the same name because it is not
+;    ;; compatible with calling the disjoint continuations produced by
+;    ;; procedure->continuation.
+;    (define (call-with-escape-continuation proc)
+;      (let ((box.invalidate-next! (box #t)))
+;        (define (invalidate!)
+;          (let ((invalidate-next! (unbox box.invalidate-next!)))
+;            (when (procedure? invalidate-next!)
+;              (set-box! box.invalidate-next! #f)
+;              (invalidate-next!))))
+;        (let ((prev (previous-invalidator)))
+;          (when (box? prev) (set-box! prev invalidate!)))
+;        (call/cc (lambda (k)
+;                   (parameterize ((previous-invalidator box.invalidate-next!))
+;                     (proc (lambda args
+;                             (unless (procedure-arity-includes? k (length args))
+;                               (raise (exn:fail:contract:arity
+;                                        (format "~s: arity mismatch\n expected: ~s\n given: ~s\n"
+;                                                k (procedure-arity k) (length args))
+;                                        (current-continuation-marks))))
+;                             (unless (unbox box.invalidate-next!)
+;                               (error "called an expired continuation"))
+;                             (invalidate!)
+;                             (apply k args))))))))
+;
+;    (values procedure->continuation call-with-escape-continuation)))
 
-    ;; Call the given procedure with the current continuation.  This one-shot
-    ;; continuation is only valid until control returns to it, or to one of its
-    ;; ancestors.  This operator is intended for setting up escapes to exception
-    ;; guards, finalizers, and restarts, as well as setting up for resumption
-    ;; right before performing a context switch.
-    ;;
-    ;; We cannot leverage Racket's operator with the same name because it is not
-    ;; compatible with calling the disjoint continuations produced by
-    ;; procedure->continuation.
-    ;; TODO: also make sure an escape continuation is only invoked from a direct
-    ;; descendent, not a disjoint continuation.
-    (define (call-with-escape-continuation proc)
-      (let ((box.invalidate-next! (box #t)))
-        (define (invalidate!)
-          (let ((invalidate-next! (unbox box.invalidate-next!)))
-            (when (procedure? invalidate-next!)
-              (set-box! box.invalidate-next! #f)
-              (invalidate-next!))))
-        (let ((prev (previous-invalidator)))
-          (when (box? prev) (set-box! prev invalidate!)))
-        (call/cc (lambda (k)
-                   (parameterize ((previous-invalidator box.invalidate-next!))
-                     (proc (lambda args
-                             (unless (procedure-arity-includes? k (length args))
-                               (raise (exn:fail:contract:arity
-                                        (format "~s: arity mismatch\n expected: ~s\n given: ~s\n"
-                                                k (procedure-arity k) (length args))
-                                        (current-continuation-marks))))
-                             (unless (unbox box.invalidate-next!)
-                               (error "called an expired continuation"))
-                             (invalidate!)
-                             (apply k args))))))))
+(define (call-in-empty-context thunk)
+  (error "TODO: call-in-empty-context"))
 
-    (values procedure->continuation call-with-escape-continuation)))
+(define (call-with-escape-continuation proc)
+  (proc (lambda _ (error "TODO: call-with-escape-continuation"))))
 
-(define call/ec call-with-escape-continuation)
+(define-syntax-rule (declare-primitives! name ...)
+  (for-each procedure-primitive! (list name ...) '(name ...)))
 
 (declare-primitives!
-  procedure->continuation call-with-escape-continuation)
+  ;; privileged primitives
+  ;call-with-escape-continuation call-in-empty-context
+  ;thread-register set-thread-register!
+  ;panic-handler set-panic-handler!
+  ;set-time-budget time-exceeded-handler set-time-exceeded-handler!
+  ;set-space-budget space-exceeded-handler set-space-exceeded-handler!
+  procedure-metadata set-procedure-metadata!
+  svector? svector->vector vector->svector
+  string->bytevector bytevector->string
+
+  panic apply call-with-values values
+  eq? eqv? null? procedure? symbol? string? rational? integer? f32? f64?
+  pair? vector? mvector? bytevector? mbytevector?
+  string->symbol symbol->string
+  cons car cdr
+  vector-length vector-ref
+  make-mvector mvector->vector mvector-length mvector-ref mvector-set!
+  bytevector-length bytevector-b8-ref bytevector-b16-native-ref bytevector-b32-native-ref bytevector-b64-native-ref
+  make-mbytevector mbytevector->bytevector mbytevector-length
+  mbytevector-b8-ref mbytevector-b16-native-ref mbytevector-b32-native-ref mbytevector-b64-native-ref
+  mbytevector-b8-set! mbytevector-b16-native-set! mbytevector-b32-native-set! mbytevector-b64-native-set!
+  native-big-endian?
+  bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
+  bitwise-not bitwise-and bitwise-ior bitwise-xor integer-floor-divmod
+  numerator denominator cmp + - * /
+  f32->f64 f64->f32
+  f32->rational rational->f32 f64->rational rational->f64
+  f32->b32 b32->f32 f64->b64 b64->f64
+  f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
+  f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Snapshot saving and loading ;;;
@@ -400,9 +510,9 @@
                     (push! other* name (ast:call (loop make-mvector) (loop (mvector-length value)) (loop 0)))
                     (set! initialization**
                       (cons (map (lambda (i)
-                                   (ast:call (loop mbytevector-u8-set!)
+                                   (ast:call (loop mbytevector-b8-set!)
                                              (ast:ref name) (loop i)
-                                             (loop (mbytevector-u8-ref value i))))
+                                             (loop (mbytevector-b8-ref value i))))
                                  (range (mbytevector-length value)))
                             initialization**)))
                    (_ (let ((ast (match value
@@ -413,9 +523,9 @@
                                                              (loop (svector->vector value))))
                                    ((? mbytevector?)
                                     (set! initialization**
-                                      (cons (map (lambda (i) (ast:call (loop mbytevector-u8-set!)
+                                      (cons (map (lambda (i) (ast:call (loop mbytevector-b8-set!)
                                                                        (ast:ref name) (loop i)
-                                                                       (loop (mbytevector-u8-ref value i))))
+                                                                       (loop (mbytevector-b8-ref value i))))
                                                  (range (mbytevector-length value)))
                                             initialization**))
                                     (ast:call (loop make-mbytevector)
@@ -443,22 +553,6 @@
 
 
 ;;; TODO: reorganize the remainder of this file.
-
-;; TODO: we don't want these operations.  Use bytevectors instead.
-(define (string->vector s)
-  (list->vector (bytes->list (string->bytes/utf-8 s))))
-(define (vector->string v)
-  (bytes->string/utf-8 (list->bytes (vector->list v))))
-
-
-(define cons* list*)
-
-
-(define-syntax assert
-  (syntax-rules ()
-    ((_ condition ...)
-     (begin (unless condition
-              (error "assertion failed:" 'condition '(condition ...))) ...))))
 
 (define (lambda/handle-fail handle inner)
   (define (fail x datum) (handle (vector 'fail datum (exn-message x))))
@@ -787,6 +881,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; TODO: these should be built on (byte)vector:port:input/output
+
+;; TODO: we don't want these operations.  Use bytevectors instead.
+(define (string->vector s)
+  (list->vector (bytes->list (string->bytes/utf-8 s))))
+(define (vector->string v)
+  (bytes->string/utf-8 (list->bytes (vector->list v))))
 
 (define (string:port:input s)
   (define v (string->vector s))

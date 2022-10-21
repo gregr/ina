@@ -536,22 +536,15 @@ Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
   - A `rational` is an exact, arbitrary-precision integer or fraction.
   - `integer` is a subtype of `rational`.  An `integer` is an exact, arbitrary-precision integer.
     - Primitive operators for `integer` values include:
-      `integer-rshift integer-lshift integer-not integer-and integer-ior integer-xor integer-floor-divmod`
+      `bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right bitwise-not bitwise-and bitwise-ior bitwise-xor integer-floor-divmod`
       - For consistency with bitwise arithmetic shifting on negative integers,
         `integer-floor-divmod` performs a flooring division/modulo operation rather than the typical
         truncating operation.
         - To understand the motivation for this choice, see:
-          [Arithmetic Shifting Considered Harmful](https://dspace.mit.edu/bitstream/handle/1721.1/6090/AIM-378.pdf?sequence=2&isAllowed=y)
+          [Arithmetic Shifting Considered Harmful](https://dspace.mit.edu/bitstream/handle/1721.1/6090/AIM-378.pdf)
   - A `f32` or `f64` is an inexact, IEEE 754 floating-point value represented with 32 or 64 bits.
     - Primitive operators for `fN` values include:
-      `fN-nan? fN-cmp fN-floor fN-ceiling fN-truncate fN-round fN+ fN- fN* fN/`
-
-- Low-level arithmetic on fixed-length bitvector subtypes: `b8 b16 b32 b64`
-  - `bN-arshift bN-rshift bN-lshift bN-not bN-and bN-ior bN-xor bN-cmp bN-divmod bN+ bN- bN*`
-    operate on nonnegative `integer` values that can be represented with `N` bits.
-  - These operators return arithmetic flag bits (i.e., `b1`) in addition to the main result.
-    - Flags include: sign, zero, carry, overflow
-    - Some operators will return multiple main result values: `bN* bN-divmod`
+      `fN-cmp fN-floor fN-ceiling fN-truncate fN-round fN+ fN- fN* fN/`
 
 ## A possible "environment soup" model for interactive evaluation
 
