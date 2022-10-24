@@ -150,14 +150,6 @@
   (unless (vector? v) (error "svector cannot be built from a non-vector" v))
   (svector:new v))
 
-;; TODO: library
-(define (svector        . args) (svector:new (apply vector args)))
-(define (svector-length sv)     (vector-length (svector->vector sv)))
-(define (svector-ref    sv i)   (vector-ref    (svector->vector sv) i))
-
-;; TODO: library
-(define (mvector . args) (mvector:new (apply vector args)))
-
 (define (make-mvector    len x)  (mvector:new   (make-vector len x)))
 (define (mvector-length  mv)     (vector-length (mvector-v mv)))
 (define (mvector-ref     mv i)   (vector-ref    (mvector-v mv) i))
@@ -167,13 +159,6 @@
 (define (bytevector->string bv) (bytes->string/utf-8 bv))
 (define (string->bytevector bv) (string->bytes/utf-8 bv))
 
-;; TODO: library
-;(define (utf8->string bv) (assert (utf8? bv)) (bytevector->string bv))
-;(define (string->utf8 s)  (string->bytevector s))
-
-;; TODO: library
-(define (bytevector . bs) (apply bytes bs))
-
 (define (bytevector?       x)    (bytes?       x))
 (define (bytevector-length bv)   (bytes-length bv))
 
@@ -181,9 +166,6 @@
 (define (bytevector-b16-native-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 2)))
 (define (bytevector-b32-native-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 4)))
 (define (bytevector-b64-native-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 8)))
-
-;; TODO: library
-(define (mbytevector . args) (mbytevector:new (apply bytes args)))
 
 (define (make-mbytevector            len n)   (mbytevector:new (make-bytes len n)))
 (define (mbytevector->bytevector     mbv)     (bytes-copy                (mbytevector-bv mbv)))

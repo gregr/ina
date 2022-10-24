@@ -1,0 +1,6 @@
+(define (mbytevector . args)
+  (let ((x (make-mbytevector (length args) 0)))
+    (let loop ((i 0) (args args))
+      (cond ((null? args) x)
+            (else         (mbytevector-b8-set! x i (car args))
+                          (loop (+ i 1) (cdr args)))))))

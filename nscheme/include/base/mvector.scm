@@ -1,0 +1,6 @@
+(define (mvector . args)
+  (let ((x (make-mvector (length args) 0)))
+    (let loop ((i 0) (args args))
+      (cond ((null? args) x)
+            (else         (mvector-set! x i (car args))
+                          (loop (+ i 1) (cdr args)))))))
