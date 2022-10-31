@@ -1,11 +1,6 @@
 #lang racket/base
 (require "nscheme.rkt" racket/include racket/match racket/splicing racket/vector
          (for-syntax racket/base))
-(include "include/boot/svector.scm")
-(include "include/base/mvector.scm")
-(include "include/base/mbytevector.scm")
-(include "include/base/bytevector.scm")
-(include "include/base/string.scm")
 (include "include/base-1-source.scm")
 (include "include/ast.scm")
 (include "include/syntax.scm")

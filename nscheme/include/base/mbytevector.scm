@@ -4,3 +4,24 @@
       (cond ((null? args) x)
             (else         (mbytevector-b8-set! x i (car args))
                           (loop (+ i 1) (cdr args)))))))
+
+(define (mbytevector-transform-range! m start end f)
+  (unless (and (<= 0 start) (<= start end) (<= end (mbytevector-length m)))
+    (error "invalid mvector range"
+           'length (mbytevector-length m) 'start start 'end end))
+  (let loop ((i start)) (when (< i end)
+                          (mbytevector-b8-set! m i (f i))
+                          (loop (+ i 1)))))
+
+(define (mbytevector-fill! m v)
+  (mbytevector-transform-range! m 0 (mbytevector-length m) (lambda (_) v)))
+
+(define (mbytevector-copy! m start src start.src end.src)
+  (let-values (((ref length)
+                (cond ((mbytevector? src) (values mbytevector-b8-ref mbytevector-length))
+                      ((bytevector?  src) (values bytevector-b8-ref  bytevector-length))
+                      (else (error "invalid source for mbytevector-copy!" src)))))
+    (unless (and (<= 0 start.src) (<= start.src end.src) (<= end.src (length src)))
+      (error "invalid source range" 'length (length src) 'start start.src 'end end.src))
+    (mbytevector-transform-range! m start (+ start (- end.src start.src))
+                                  (lambda (i) (ref src (+ start.src (- i start)))))))
