@@ -67,6 +67,7 @@
                                            #`(quote-syntax #,qq))))))))
 
 (include "include/parse.scm")
+(include "include/boot/env-primitive.scm")
 (include "include/base-0-parse.scm")
 (include "include/ast-eval.scm")
 ;; TODO: read, parse, and ast-eval "include/base-1-source.scm"

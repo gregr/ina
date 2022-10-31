@@ -23,7 +23,7 @@
         ;panic-handler set-panic-handler!
         ;set-time-budget time-exceeded-handler set-time-exceeded-handler!
         ;set-space-budget space-exceeded-handler set-space-exceeded-handler!
-        procedure-metadata set-procedure-metadata!
+        procedure-metadata
         svector? svector->vector vector->svector
         ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
         string->bytevector bytevector->string)))

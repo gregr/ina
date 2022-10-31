@@ -6,7 +6,13 @@
   ;panic-handler set-panic-handler!
   ;set-time-budget time-exceeded-handler set-time-exceeded-handler!
   ;set-space-budget space-exceeded-handler set-space-exceeded-handler!
-  procedure-metadata set-procedure-metadata!
+  ;; procedure-metadata should return a vector with one of these shapes:
+  ;;   #(case-lambda ,stx ,vector-of-case-clauses ,vector-of-captured-values)
+  ;;   #(io          ,name ,descriptor)
+  ;;   #(primitive   ,name)
+  ;; This operator can implicitly allocate the vector (which will hopefully be unboxed during
+  ;; optimization), populating it based on a low-level code/closure representation.
+  procedure-metadata
   svector? svector->vector vector->svector
   string->bytevector bytevector->string
 
@@ -30,13 +36,6 @@
   f32->b32 b32->f32 f64->b64 b64->f64
   f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
   f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/
-
-  case-clause-param case-clause-body
-  code-source-info code-captured-variables code-case-clauses
-  procedure-metadata:closure? procedure-metadata:closure-code procedure-metadata:closure-captured-values
-  procedure-metadata:primitive? procedure-metadata:primitive-name
-  procedure-metadata:io? procedure-metadata:io-name procedure-metadata:io-descriptor
-  procedure-primitive! procedure-io! procedure-closure!
 
   stdio filesystem tcp udp tty
   console string:port:input string:port:output null:port:output
@@ -183,38 +182,10 @@
 (define (case-clause-param cc)        (vector-ref cc 0))
 (define (case-clause-body  cc)        (vector-ref cc 1))
 
-(define (make-code sinfo cvars case-clauses) (vector sinfo cvars case-clauses))
-(define (code-source-info        c)          (vector-ref c 0))
-(define (code-captured-variables c)          (vector-ref c 1))
-(define (code-case-clauses       c)          (vector-ref c 2))
-
-(define (procedure-metadata:closure code cvalues)       (vector 'closure code cvalues))
-(define (procedure-metadata:closure?                pm) (eq? (vector-ref pm 0) 'closure))
-(define (procedure-metadata:closure-code            pm) (vector-ref pm 1))
-(define (procedure-metadata:closure-captured-values pm) (vector-ref pm 2))
-;; A primitive is an operation that is implemented directly in the platform
-;; layer.  These operations will typically be portable, but it is possible to
-;; define platform-specific operations.  To remain portable when snapshotting
-;; part of a system, code that makes use of a platform-specific operation
-;; should factor out any values that refer to the operation, so they can be
-;; marked as shared values.  When the snapshot is built, shared values will be
-;; omitted, and a host which loads the snapshot is responsible for supplying
-;; substitutes for these values.  This is analogous to dynamic linking with a
-;; shared library in mainstream operating systems.  A substitute would be
-;; implemented in a way that is both consistent with the original, and
-;; compatible with the new host, solving the portability issue.
-(define (procedure-metadata:primitive name)    (vector 'primitive name))
-(define (procedure-metadata:primitive?     pm) (eq? (vector-ref pm 0) 'primitive))
-(define (procedure-metadata:primitive-name pm) (vector-ref pm 1))
-;; An io controller is a transient, host-specific input/output capability.  In
-;; some cases, particularly when the capability maps to a virtual io device, a
-;; system can optionally persist the corresponding device state and package it
-;; with a program snapshot.  But more often, when a host loads the snapshot,
-;; this capability will be attached to a new io device of the host's choosing.
-(define (procedure-metadata:io name desc)     (vector 'io name desc))
-(define (procedure-metadata:io?           pm) (eq? (vector-ref pm 0) 'primitive))
-(define (procedure-metadata:io-name       pm) (vector-ref pm 1))
-(define (procedure-metadata:io-descriptor pm) (vector-ref pm 2))
+(define (make-code prov case-clauses cvar-count) (vector prov case-clauses cvar-count))
+(define (code-provenance              c)         (vector-ref c 0))
+(define (code-case-clauses            c)         (vector-ref c 1))
+(define (code-captured-variable-count c)         (vector-ref c 2))
 
 ;; Procedure metadata is stored as a thunk.  This laziness simplifies the
 ;; generated Racket code for attaching metadata to a procedure, allowing the
@@ -228,14 +199,30 @@
 (define procedure=>metadata (make-weak-hash))
 (define (procedure-metadata p) ((hash-ref procedure=>metadata p (lambda () (error "procedure has no metadata" p)))))
 
-;; These operations are Racket-specific.  The above procedure-metadata:X
-;; constructors should also only appear in Racket code.  However,
-;; procedure-metadata and the procedure-metadata:X accessors are actual nscheme
-;; operations, and are not Racket-specific.
+;; These operations are Racket-specific.
 (define (set-procedure-metadata! p pmeta)      (hash-set! procedure=>metadata p pmeta))
-(define (procedure-primitive!    p name)       (set-procedure-metadata! p (lambda () (procedure-metadata:primitive name))))
-(define (procedure-io!           p name desc)  (set-procedure-metadata! p (lambda () (procedure-metadata:io        name desc))))
-(define (procedure-closure!      p code cvals) (set-procedure-metadata! p (lambda () (procedure-metadata:closure   code cvals))))
+;; A primitive is an operation that is implemented directly in the platform
+;; layer.  These operations will typically be portable, but it is possible to
+;; define platform-specific operations.  To remain portable when snapshotting
+;; part of a system, code that makes use of a platform-specific operation
+;; should factor out any values that refer to the operation, so they can be
+;; marked as shared values.  When the snapshot is built, shared values will be
+;; omitted, and a host which loads the snapshot is responsible for supplying
+;; substitutes for these values.  This is analogous to dynamic linking with a
+;; shared library in mainstream operating systems.  A substitute would be
+;; implemented in a way that is both consistent with the original, and
+;; compatible with the new host, solving the portability issue.
+(define (procedure-primitive!    p name)       (set-procedure-metadata! p (lambda () (vector 'primitive name))))
+;; An io controller is a transient, host-specific input/output capability.  In
+;; some cases, particularly when the capability maps to a virtual io device, a
+;; system can optionally persist the corresponding device state and package it
+;; with a program snapshot.  But more often, when a host loads the snapshot,
+;; this capability will be attached to a new io device of the host's choosing.
+(define (procedure-io!           p name desc)  (set-procedure-metadata! p (lambda () (vector 'io        name desc))))
+(define (procedure-closure!      p code cvals) (set-procedure-metadata! p (lambda () (vector 'case-lambda
+                                                                                             (code-provenance code)
+                                                                                             (code-case-clauses code)
+                                                                                             (mvector->vector cvals)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Resource budget interrupts, thread register, continuations ;;;
@@ -339,7 +326,7 @@
   ;panic-handler set-panic-handler!
   ;set-time-budget time-exceeded-handler set-time-exceeded-handler!
   ;set-space-budget space-exceeded-handler set-space-exceeded-handler!
-  procedure-metadata set-procedure-metadata!
+  procedure-metadata
   svector? svector->vector vector->svector
   string->bytevector bytevector->string
 
@@ -448,6 +435,12 @@
                     (match (procedure-metadata value)
                       (`#(primitive ,pname) (push! primitive* name pname))
                       (`#(io ,pname ,desc)  (push! io*        name (cons pname desc)))
+                      ;; TODO: redefine this to use new metadata shape:
+                      ;;   `#(case-lambda ,stx ,vector-of-case-clauses ,vector-of-captured-values)
+                      ;; The new case-clauses will correspond to a later-stage language AST that
+                      ;; references variables using lexical addresses rather than parsed names.
+                      ;; This means the code representation only needs a captured variable count,
+                      ;; not a list of captured names.
                       (`#(closure ,code ,cvalues)
                         ;; We want to avoid duplicating code shared by multiple closures.  To accomplish
                         ;; this, we need to build a separate case-lambda corresponding to the potentially-
@@ -455,20 +448,20 @@
                         ;; different set of values for the captured variables.  To handle these, the shared
                         ;; code must be abstracted over the captured variables, and each closure must inject
                         ;; its own captured values.
-                        (let* ((sinfo (code-source-info code))
+                        (let* ((prov (code-provenance code))
                                (name.code
                                  (or (hash-ref value=>name          code #f)
                                      (hash-ref external-value=>name code #f)
                                      (let ((name (gen-name code)))
                                        (push! procedure* name
                                               (ast:lambda
-                                                sinfo (code-captured-variables code)
+                                                prov (error "TODO: replace this section") ;(code-captured-variables code)
                                                 (ast:case-lambda
-                                                  sinfo (map (lambda (cc) (make-case-clause
-                                                                            (case-clause-param cc)
-                                                                            (ast-lift-complex-values
-                                                                              (case-clause-body cc) loop)))
-                                                             (code-case-clauses code)))))
+                                                  prov (map (lambda (cc) (make-case-clause
+                                                                           (case-clause-param cc)
+                                                                           (ast-lift-complex-values
+                                                                             (case-clause-body cc) loop)))
+                                                            (code-case-clauses code)))))
                                        name))))
                           (push! procedure* name
                                  (if (null? cvalues)
@@ -483,7 +476,7 @@
                                    ;; the injection just-in-time, and then forward its arguments to the
                                    ;; resulting shared-code procedure.
                                    (let ((name.args (args-name)))
-                                     (ast:lambda sinfo name.args
+                                     (ast:lambda prov name.args
                                                  (ast:call (loop apply)
                                                            (apply ast:call (ast:ref name.code)
                                                                   (map loop cvalues))
