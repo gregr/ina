@@ -126,15 +126,15 @@
                   (cond ((pair? x) (loop (car x) (list `(,%lambda ,(cdr x) . ,stx*.rhs))))
                         (else      (raise-syntax-error "not a definable form" lhs))))))))
 
-(define (parse-define-values dst env.scope env stx.lhs* e.rhs)
-  (let* ((lhs*        (syntax->list stx.lhs*))
+(define (parse-define-values dst env.scope env stx.lhs*~ e.rhs)
+  (let* ((lhs*~       (syntax->improper-list stx.lhs*~))
+         (lhs*        (improper-list->list lhs*~))
          (%vec.value* (fresh-identifier 'vec.value*))
          (%rhs        (expression-parser
                         (lambda (env _)
                           ($pcall call-with-values ($lambda '() (lambda () (parse env e.rhs)))
-                                  ($case-lambda
-                                    (cons lhs* (lambda addr*
-                                                 (apply $pcall vector (map $ref addr*))))))))))
+                                  ($lambda lhs*~ (lambda addr*
+                                                   (apply $pcall vector (map $ref addr*)))))))))
     (parse-definition
       dst env.scope env
       `(,%begin
