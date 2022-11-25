@@ -3,6 +3,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (fresh-mark) (mvector))
+(define mark=?       equal?)
+(define mark*=?      equal?)
 (define antimark     #f)
 
 (splicing-local
@@ -59,7 +61,7 @@
   (define (syntax-remove-mark? s m)
     (let ((m* (syntax-mark* s)))
       (and (pair? m*)
-           (equal? (car m*) m)
+           (mark=? (car m*) m)
            (make-syntax (cdr m*) (syntax-peek0 s) (syntax-provenance s)))))
 
   (define (identifier?  s) (symbol? (syntax-peek s)))
@@ -88,13 +90,13 @@
   (identifier?! a) (identifier?! b)
   (let ((addr.a (env-address env a)) (addr.b (env-address env b)))
     (if (or addr.a addr.b)
-        (eq? addr.a addr.b)
+        (addr=? addr.a addr.b)
         (eq? (syntax-peek a) (syntax-peek b)))))
 
 (define (bound-identifier=? a b)
   (identifier?! a) (identifier?! b)
-  (and (eq?    (syntax-peek a) (syntax-peek b))
-       (equal? (syntax-mark* a) (syntax-mark* b))))
+  (and (eq? (syntax-peek a) (syntax-peek b))
+       (mark*=? (syntax-mark* a) (syntax-mark* b))))
 
 (define (bound-identifiers-unique? ids)
   (or (null? ids)
@@ -134,6 +136,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (fresh-address description) (mvector description))
+(define addr=? equal?)
 
 (define (env-extend env env.first)
   (lambda (method)
@@ -180,8 +183,9 @@
                              (cond
                                ((null? v=>v)                 (k v* addr))
                                ((member (caar v=>v) v*.seen) (loop (cdr v=>v) v*))
-                               (else
-                                 (cons (car v=>v) (loop (cdr v=>v) (cons (caar v=>v) v*))))))
+                               (else                         (cons (car v=>v)
+                                                                   (loop (cdr v=>v)
+                                                                         (cons (caar v=>v) v*))))))
                            (k v*.seen addr)))))
         ((bind!)   (lambda (id addr) (set! id=>addr (cons (cons id addr) id=>addr))))
         ((set!)    (lambda (vocab addr value)
@@ -197,25 +201,18 @@
                                                                    (cdr entry.addr))
                                                             (cdr entry.addr)))))
                                (cons (cons addr vocab=>value)
-                                     (rem1p (lambda (entry) (eq? addr (car entry)))
+                                     (rem1p (lambda (entry) (addr=? addr (car entry)))
                                             addr=>vocab=>value)))
                              (cons (cons addr (list (cons vocab value)))
                                    addr=>vocab=>value))))))
         (else      (error "invalid environment operation" method))))))
-
-(define env.identity
-  (lambda (method)
-    (case method
-      ((address)    (lambda (k id)         (syntax->datum id)))
-      ((ref)        (lambda (k vocab addr) (k vocab addr)))
-      ((bind! set!) (error "invalid immutable environment operation" method))
-      (else         (error "invalid environment operation"           method)))))
 
 (define env.empty
   (lambda (method)
     (case method
       ((address)    (lambda (k id)         (k id)))
       ((ref)        (lambda (k vocab addr) (k vocab addr)))
+      ((qualify)    (lambda (k v* addr)    (k v* addr)))
       ((bind! set!) (error "invalid immutable environment operation" method))
       (else         (error "invalid environment operation"           method)))))
 
@@ -233,9 +230,9 @@
     (cond ((antimarked? s) s)
           ((identifier? s) (let ((addr (env-address env s)))
                              (if addr
-                                 (identifier-unqualify s)
                                  (identifier-qualify
-                                   s ((env 'qualify) (lambda (a v*) '()) '() addr)))))
+                                   s ((env 'qualify) (lambda (v* a) '()) '() addr))
+                                 s)))
           (else (let ((pv (syntax-provenance s)) (x (syntax-unwrap s)))
                   (syntax-provenance-set
                     (cond ((pair?   x) (cons (loop (car x)) (loop (cdr x))))
