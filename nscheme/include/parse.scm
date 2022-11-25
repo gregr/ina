@@ -3,10 +3,10 @@
 ;;;;;;;;;;;;;;;;;;;;
 
 (define vocab.definition          'definition)
-(define vocab.definition:operator 'definition:operator)
+(define vocab.definition-operator 'definition-operator)
 (define vocab.expression          'expression)
-(define vocab.expression:operator 'expression:operator)
-(define vocab.expression:keyword  'expression:keyword)
+(define vocab.expression-operator 'expression-operator)
+(define vocab.expression-keyword  'expression-keyword)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Program construction ;;;
@@ -95,7 +95,7 @@
 (define (transcribe-and-parse-expression env.use env.op op stx)
   (parse env.use (transcribe env.op op env.use stx)))
 
-(define (expression-keyword? kw env stx) (equal? (env-ref^ env vocab.expression:keyword stx) kw))
+(define (expression-keyword? kw env stx) (equal? (env-ref^ env vocab.expression-keyword stx) kw))
 
 (define (expression-parser parse) (identifier-qualify (fresh-identifier '||)
                                                       (list (cons vocab.expression parse))))
@@ -114,7 +114,7 @@
                  (else                   (raise-syntax-error "unbound identifier" expr)))))
         ((pair?    x) (let* ((e.op (car x))
                              (op   (and (identifier? e.op)
-                                        (env-ref^ env vocab.expression:operator e.op))))
+                                        (env-ref^ env vocab.expression-operator e.op))))
                         (if (procedure? op)
                             (op env expr)
                             (ast:call #f (parse* env (syntax->list expr))))))
@@ -122,10 +122,10 @@
         (else         (raise-syntax-error "not an expression" expr)))
       pv)))
 
-(define ((keyword-expression-parser parser argc.min argc.max) env expr)
+(define ((expression-operator-parser parser argc.min argc.max) env expr)
   (let* ((e* (syntax->list expr)) (argc (- (length e*) 1)))
-    (unless (<= argc.min argc)           (raise-syntax-error "too few keyword arguments"  expr))
-    (unless (<= argc (or argc.max argc)) (raise-syntax-error "too many keyword arguments" expr))
+    (unless (<= argc.min argc)           (raise-syntax-error "too few operator arguments"  expr))
+    (unless (<= argc (or argc.max argc)) (raise-syntax-error "too many operator arguments" expr))
     (apply parser env (cdr e*))))
 
 (define ((parse-variable-ref/address addr)  env e) (ast:ref   (syntax-provenance e) addr))
@@ -181,14 +181,14 @@
                                    (default))))
           ((pair? x)         (let* ((stx.op (car x))
                                     (op     (and (identifier? stx.op)
-                                                 (env-ref^ env vocab.definition:operator stx.op))))
+                                                 (env-ref^ env vocab.definition-operator stx.op))))
                                (if (procedure? op)
                                    (op dst env.scope env stx)
                                    (default))))
           (else              (default)))))
 
-(define ((keyword-definition-parser parser argc.min argc.max) dst env.scope env stx)
+(define ((definition-operator-parser parser argc.min argc.max) dst env.scope env stx)
   (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
-    (unless (<= argc.min argc)           (raise-syntax-error "too few keyword arguments"  stx))
-    (unless (<= argc (or argc.max argc)) (raise-syntax-error "too many keyword arguments" stx))
+    (unless (<= argc.min argc)           (raise-syntax-error "too few operator arguments"  stx))
+    (unless (<= argc (or argc.max argc)) (raise-syntax-error "too many operator arguments" stx))
     (apply parser dst env.scope env (cdr stx*))))
