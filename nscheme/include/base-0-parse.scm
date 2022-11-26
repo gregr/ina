@@ -72,14 +72,21 @@
     (cond ((null? e*) (parse env e))
           (else       ($begin (parse env e) (loop (car e*) (cdr e*)))))))
 
-(define (splicing->expression-operator-parser ^%id.splicing)
-  (expression-operator-parser
-    (lambda (env stx.def* . stx*)
-      (parse env `(,%let () (,(^%id.splicing) ,stx.def* (,%let () . ,stx*)))))
-    2 #f))
+(splicing-local
+  ((define (etc-splicing-expression-operator-parser $splicing stx*->^body)
+     (expression-operator-parser
+       (lambda (env stx.def* . stx*)
+         ($body env (lambda (dst scope env) ($splicing dst scope env stx.def* (stx*->^body stx*)))))
+       2 #f)))
 
-(define ((definition->expression-operator-parser ^%id.def) env . stx*)
-  (parse env `(,%let () (,(^%id.def) . ,stx*))))
+  (define (nonsplicing-expression-operator-parser $splicing)
+    (etc-splicing-expression-operator-parser $splicing (lambda (stx*) (lambda (_ __ env)
+                                                                        (parse-body env stx*)))))
+
+  (define (splicing-expression-operator-parser $splicing)
+    (etc-splicing-expression-operator-parser
+      $splicing (lambda (stx*) (lambda (dst scope env)
+                                 (apply parse-begin-definition dst scope env stx*))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;
@@ -89,15 +96,12 @@
   (let ((stx* (syntax->list stx.body)))
     (cond ((null? stx*)       (raise-syntax-error "no expression" stx.body))
           ((null? (cdr stx*)) (parse env (car stx*)))
-          (else (let* ((env.scope (make-env))
-                       (env       (env-extend env env.scope))
-                       (dst       (foldl (lambda (stx dst) (parse-definition dst env.scope env stx))
-                                         defstate.empty stx*)))
-                  (unless (defstate-expression dst)
-                    (raise-syntax-error "no expression after definitions" stx.body))
-                  (ast:letrec (syntax-provenance stx.body)
-                              (definitions->binding-pairs (defstate-definitions dst))
-                              ((defstate-expression dst))))))))
+          (else (define (^def dst scope env)
+                  (let ((dst (foldl (lambda (s dst) (parse-definition dst scope env s)) dst stx*)))
+                    (unless (defstate-expression dst)
+                      (raise-syntax-error "no expression after definitions" stx.body))
+                    dst))
+                (ast-provenance-add ($body env ^def) (syntax-provenance stx.body))))))
 
 (define (parse-begin-definition dst env.scope env . stx*)
   (foldl (lambda (stx dst) (parse-definition dst env.scope env stx)) dst stx*))
@@ -139,46 +143,60 @@
            (iota (length lhs*))
            lhs*)))
 
-(define (parse-splicing-local dst env.scope env stx.def* . stx*)
-  (let* ((stx*.local-body (syntax->list stx.def*))
-         (env.scope.inner (make-env))
+(define ($splicing-rec dst env.scope env ^def ^body)
+  (let* ((env.scope.inner (make-env))
          (env             (env-extend env env.scope.inner))
-         (dst             (apply parse-begin-definition dst env.scope.inner env stx*.local-body)))
-    (apply parse-begin-definition dst env.scope env stx*)))
+         (dst             (^def dst env.scope.inner env)))
+    (^body dst env.scope env)))
+
+(define ($splicing-nonrec dst env.scope env ^def ^body)
+  (let ((env.scope.inner (make-env)))
+    (^body (^def dst env.scope.inner env) env.scope (env-extend env env.scope.inner))))
+
+(define ($splicing-local dst env.scope env stx.def* ^body)
+  (let ((def* (syntax->list stx.def*)))
+    ($splicing-rec dst env.scope env
+                   (lambda (dst scope env) (apply parse-begin-definition dst scope env def*))
+                   ^body)))
 
 (splicing-local
-  ((define (etc parse-def dst env.scope env stx.bpair* . stx*)
+  ((define ($splicing $splicing-etc parse-def dst env.scope env stx.bpair* ^body)
      (let ((bpair* (parse-binding-pairs stx.bpair*)))
-       (let* ((env.scope.inner (make-env))
-              (dst (foldl (lambda (lhs rhs dst) (parse-def dst env.scope.inner env lhs rhs))
-                          dst (map car bpair*) (map cdr bpair*))))
-         (apply parse-begin-definition dst env.scope (env-extend env env.scope.inner) stx*)))))
-  (define (parse-splicing-let        . a*) (apply etc parse-define        a*))
-  (define (parse-splicing-let-values . a*) (apply etc parse-define-values a*)))
+       ($splicing-etc dst env.scope env
+                      (lambda (dst scope env)
+                        (foldl (lambda (lhs rhs dst) (parse-def dst scope env lhs rhs))
+                               dst (map car bpair*) (map cdr bpair*)))
+                      ^body))))
+  (define ($splicing-let            . a*) (apply $splicing $splicing-nonrec parse-define        a*))
+  (define ($splicing-let-values     . a*) (apply $splicing $splicing-nonrec parse-define-values a*))
+  (define ($splicing-letrec*        . a*) (apply $splicing $splicing-rec parse-define        a*))
+  (define ($splicing-letrec*-values . a*) (apply $splicing $splicing-rec parse-define-values a*)))
 
 (splicing-local
-  ((define (etc %splicing-let-etc dst env.scope env stx.bpair* . stx*)
-     (parse-definition
-       dst env.scope env
-       (let loop ((bpair* (parse-binding-pairs stx.bpair*)))
-         (cond ((null? bpair*) `(,%splicing-let-etc ()              . ,stx*))
-               (else           `(,%splicing-let-etc (,(car bpair*)) ,(loop (cdr bpair*)))))))))
-  (define (parse-splicing-let*        . a*) (apply etc %splicing-let        a*))
-  (define (parse-splicing-let*-values . a*) (apply etc %splicing-let-values a*)))
+  ((define ($splicing $splicing-etc dst env.scope env stx.bpair* ^body)
+     (let loop ((bpair* (parse-binding-pairs stx.bpair*)) (dst dst) (scope env.scope) (env env))
+       (cond ((null? bpair*) (^body dst scope env))
+             (else ($splicing-etc dst scope env (list (car bpair*))
+                                  (lambda (dst scope env) (loop (cdr bpair*) dst scope env))))))))
+  (define ($splicing-let*        . a*) (apply $splicing $splicing-let        a*))
+  (define ($splicing-let*-values . a*) (apply $splicing $splicing-let-values a*)))
 
 (splicing-local
-  ((define (etc %define-etc dst env.scope env stx.bpair* . stx*)
-     (let ((bpair* (parse-binding-pairs stx.bpair*)))
-       (parse-definition dst env.scope env
-                         `(,%splicing-local ,(map (lambda (lhs rhs) `(,%define-etc ,lhs ,rhs))
-                                                  (map car bpair*) (map cdr bpair*))
-                                            . ,stx*)))))
-  (define (parse-splicing-letrec*        . a*) (apply etc %define        a*))
-  (define (parse-splicing-letrec*-values . a*) (apply etc %define-values a*)))
+  ((define (parse-splicing $splicing dst env.scope env stx.def* . stx*)
+     ($splicing dst env.scope env stx.def*
+                (lambda (dst scope env) (apply parse-begin-definition dst scope env stx*)))))
+  (define (parse-splicing-local          . a*) (apply parse-splicing $splicing-local          a*))
+  (define (parse-splicing-let            . a*) (apply parse-splicing $splicing-let            a*))
+  (define (parse-splicing-let-values     . a*) (apply parse-splicing $splicing-let-values     a*))
+  (define (parse-splicing-let*           . a*) (apply parse-splicing $splicing-let*           a*))
+  (define (parse-splicing-let*-values    . a*) (apply parse-splicing $splicing-let*-values    a*))
+  (define (parse-splicing-letrec*        . a*) (apply parse-splicing $splicing-letrec*        a*))
+  (define (parse-splicing-letrec*-values . a*) (apply parse-splicing $splicing-letrec*-values a*)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Environment and qualified identifiers ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Pre-base language syntax environment ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 (define env.base-0
   (let ((env.scope (make-env))
@@ -212,15 +230,13 @@
             (cons 'cond           (expression-operator-parser parse-cond         1 #f))
             (cons 'case-lambda    (expression-operator-parser parse-case-lambda  0 #f))
             (cons 'lambda         (expression-operator-parser parse-lambda       2 #f))
-            (cons 'local          (splicing->expression-operator-parser (lambda () %splicing-local)))
-            (cons 'let            (expression-operator-parser parse-let          2 #f))
-            (cons 'let*           (splicing->expression-operator-parser (lambda () %splicing-let*)))
-            (cons 'letrec*        (splicing->expression-operator-parser (lambda () %splicing-letrec*)))
-            (cons 'letrec         (splicing->expression-operator-parser (lambda () %splicing-letrec)))
-            (cons 'let-values     (splicing->expression-operator-parser (lambda () %splicing-let-values)))
-            (cons 'let*-values    (splicing->expression-operator-parser (lambda () %splicing-let*-values)))
-            (cons 'letrec*-values (splicing->expression-operator-parser (lambda () %splicing-letrec*-values)))
-            (cons 'letrec-values  (splicing->expression-operator-parser (lambda () %splicing-letrec-values)))))
+            (cons 'local          (nonsplicing-expression-operator-parser $splicing-local))
+            (cons 'let*           (nonsplicing-expression-operator-parser $splicing-let*))
+            (cons 'letrec*        (nonsplicing-expression-operator-parser $splicing-letrec*))
+            (cons 'let-values     (nonsplicing-expression-operator-parser $splicing-let-values))
+            (cons 'let*-values    (nonsplicing-expression-operator-parser $splicing-let*-values))
+            (cons 'letrec*-values (nonsplicing-expression-operator-parser $splicing-letrec*-values))
+            (cons 'let            (expression-operator-parser parse-let          2 #f))))
         (b*.def-and-expr
           (list
             (list 'begin
@@ -228,31 +244,25 @@
                   (expression-operator-parser parse-begin-expression 1 #f))
             (list 'splicing-local
                   (definition-operator-parser parse-splicing-local 2 #f)
-                  (definition->expression-operator-parser (lambda () %splicing-local)))
+                  (splicing-expression-operator-parser $splicing-local))
             (list 'splicing-let
                   (definition-operator-parser parse-splicing-let 2 #f)
-                  (definition->expression-operator-parser (lambda () %splicing-let)))
+                  (splicing-expression-operator-parser $splicing-let))
             (list 'splicing-let*
                   (definition-operator-parser parse-splicing-let* 2 #f)
-                  (definition->expression-operator-parser (lambda () %splicing-let*)))
+                  (splicing-expression-operator-parser $splicing-let*))
             (list 'splicing-letrec*
                   (definition-operator-parser parse-splicing-letrec* 2 #f)
-                  (definition->expression-operator-parser (lambda () %splicing-letrec*)))
-            (list 'splicing-letrec
-                  (definition-operator-parser parse-splicing-letrec* 2 #f)
-                  (definition->expression-operator-parser (lambda () %splicing-letrec)))
+                  (splicing-expression-operator-parser $splicing-letrec*))
             (list 'splicing-let-values
                   (definition-operator-parser parse-splicing-let-values 2 #f)
-                  (definition->expression-operator-parser (lambda () %splicing-let-values)))
+                  (splicing-expression-operator-parser $splicing-let-values))
             (list 'splicing-let*-values
                   (definition-operator-parser parse-splicing-let*-values 2 #f)
-                  (definition->expression-operator-parser (lambda () %splicing-let*-values)))
+                  (splicing-expression-operator-parser $splicing-let*-values))
             (list 'splicing-letrec*-values
                   (definition-operator-parser parse-splicing-letrec*-values 2 #f)
-                  (definition->expression-operator-parser (lambda () %splicing-letrec*-values)))
-            (list 'splicing-letrec-values
-                  (definition-operator-parser parse-splicing-letrec*-values 2 #f)
-                  (definition->expression-operator-parser (lambda () %splicing-letrec-values))))))
+                  (splicing-expression-operator-parser $splicing-letrec*-values)))))
     (for-each (lambda (id)
                 (let ((addr (identifier->fresh-address id)))
                   (env-bind! env.scope id addr)
@@ -286,24 +296,3 @@
                   (env-set!  env.scope vocab.expression-operator addr op)))
               (map car b*.expr) (map cdr b*.expr))
     (env-extend env.empty env.scope)))
-
-(define-values
-  (%=> %else %begin %quote %quote-syntax %if %and %or %when %unless %cond
-       %case-lambda %lambda %local
-       %let %let* %letrec* %letrec %let-values %let*-values %letrec*-values %letrec-values
-       %define %define-values %introduce
-       %splicing-local %splicing-let %splicing-let* %splicing-letrec* %splicing-letrec
-       %splicing-let-values %splicing-let*-values
-       %splicing-letrec*-values %splicing-letrec-values)
-  (apply
-    values
-    (syntax->list
-      (syntax-qualify
-        '(=> else begin quote quote-syntax if and or when unless cond
-             case-lambda lambda local
-             let let* letrec* letrec let-values let*-values letrec*-values letrec-values
-             define define-values introduce
-             splicing-local splicing-let splicing-let* splicing-letrec* splicing-letrec
-             splicing-let-values splicing-let*-values
-             splicing-letrec*-values splicing-letrec-values)
-        env.base-0))))

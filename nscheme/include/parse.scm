@@ -80,6 +80,33 @@
                         (cond ((null? x*) ($quote '()))
                               (else       ($cons (car x*) (loop (cdr x*)))))))
 
+(define defstate.empty '())
+
+(define (defstate-definitions    dst)      (reverse (if (caar dst) dst (cdr dst))))
+(define (defstate-expression     dst)      (if (caar dst) #f (cdar dst)))
+(define (defstate-add-expression dst ^ast) (defstate-define dst #f ^ast))
+
+(define (defstate-define dst addr ^ast)
+  (if (or (null? dst) (caar dst))
+      (cons (cons addr ^ast) dst)
+      (cons (cons addr (let ((^ast.prev (cdar dst))) (lambda () ($begin (^ast.prev) (^ast)))))
+            (cdr dst))))
+
+(define (definitions->binding-pairs defs)
+  (map binding-pair (map car defs) (map (lambda (^ast) (^ast)) (map cdr defs))))
+
+(define ($define dst env.scope lhs ^rhs)
+  (let ((addr (env-introduce env.scope lhs)))
+    (env-set! env.scope vocab.expression addr (parse-variable-ref/address addr))
+    (defstate-define dst addr ^rhs)))
+
+(define ($body env ^def)
+  (let* ((env.scope (make-env))
+         (env       (env-extend env env.scope))
+         (dst       (^def defstate.empty env.scope env)))
+    (ast:letrec #f (definitions->binding-pairs (defstate-definitions dst))
+                ((defstate-expression dst)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -156,26 +183,6 @@
 
 (define (transcribe-and-parse-definition dst env.scope env.use env.op op stx)
   (parse-definition dst env.scope env.use (transcribe env.op op env.use stx)))
-
-(define defstate.empty '())
-
-(define (defstate-definitions    dst)      (reverse (if (caar dst) dst (cdr dst))))
-(define (defstate-expression     dst)      (if (caar dst) #f (cdar dst)))
-(define (defstate-add-expression dst ^ast) (defstate-define dst #f ^ast))
-
-(define (defstate-define dst addr ^ast)
-  (if (or (null? dst) (caar dst))
-      (cons (cons addr ^ast) dst)
-      (cons (cons addr (let ((^ast.prev (cdar dst))) (lambda () ($begin (^ast.prev) (^ast)))))
-            (cdr dst))))
-
-(define (definitions->binding-pairs defs)
-  (map binding-pair (map car defs) (map (lambda (^ast) (^ast)) (map cdr defs))))
-
-(define ($define dst env.scope lhs ^rhs)
-  (let ((addr (env-introduce env.scope lhs)))
-    (env-set! env.scope vocab.expression addr (parse-variable-ref/address addr))
-    (defstate-define dst addr ^rhs)))
 
 (define (parse-definition dst env.scope env stx)
   (define (default) (defstate-add-expression dst (lambda () (parse env stx))))
