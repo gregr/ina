@@ -19,19 +19,26 @@
 (define ($call  proc . args) (ast:call  #f proc args))
 (define ($if    c t f)       (ast:if #f c t f))
 
-(define ($case-lambda-clause param*~ addr*->body)
-  (let ((addr*~ (improper-list-map identifier->fresh-address param*~)))
-    (case-lambda-clause addr*~ (apply addr*->body (improper-list->list addr*~)))))
+(define (ast:lambda pv param   body) (ast:case-lambda pv (list (case-lambda-clause param body))))
+(define (ast:let    pv p* rhs* body) (ast:call        pv (ast:lambda #f p* body) rhs*))
 
-(define ($case-lambda . cc*)
-  (ast:case-lambda #f (map (lambda (cc) ($case-lambda-clause (car cc) (cdr cc))) cc*)))
+(define ($case-lambda-clause env param*~ env&addr*->body)
+  (let* ((addr*~ (improper-list-map identifier->fresh-address param*~))
+         (addr*  (improper-list->list addr*~))
+         (env    (env-extend-scope env (improper-list->list param*~) addr*)))
+    (case-lambda-clause addr*~ (apply env&addr*->body env addr*))))
 
-(define ($lambda param*~     addr*->body) ($case-lambda (cons param*~ addr*->body)))
-(define ($let    param* rhs* addr*->body) (apply $call ($lambda param* addr*->body) rhs*))
-(define ($letrec param* addr*->rhs*&body)
+(define ($case-lambda env . cc*)
+  (ast:case-lambda #f (map (lambda (cc) ($case-lambda-clause env (car cc) (cdr cc))) cc*)))
+
+(define ($lambda env param*~     ^body) ($case-lambda env (cons param*~ ^body)))
+(define ($let    env param* rhs* ^body) (apply $call ($lambda env param* ^body) rhs*))
+
+(define ($letrec env param* env&addr*->rhs*&body)
   (let* ((addr*     (map identifier->fresh-address param*))
-         (rhs*&body (apply addr*->rhs*&body addr*)))
-    (ast:letrec #f (map binding-pair addr* (car rhs*&body)) (cdr rhs*&body))))
+         (env       (env-extend-scope env param* addr*)))
+    (let-values ((($rhs* $body) (apply env&addr*->rhs*&body env addr*)))
+      (ast:letrec #f (map binding-pair addr* $rhs*) $body))))
 
 (define $and
   (case-lambda
@@ -45,29 +52,28 @@
     (()       ($quote #f))
     ((a . a*) (let loop ((a a) (a* a*))
                 (cond ((null? a*) a)
-                      (else ($let '(t) (list a)
-                                  (lambda (addr.t)
-                                    ($if ($ref addr.t)
-                                         ($ref addr.t)
-                                         (loop (car a*) (cdr a*)))))))))))
+                      (else (ast:let #f '(t ^rest)
+                                     (list a (ast:lambda #f '() (loop (car a*) (cdr a*))))
+                                     ($if ($ref 't) ($ref 't) ($call ($ref '^rest))))))))))
+
+(define ($not  x) ($if x ($quote #f) ($quote #t)))
 
 (define ($when   c body . body*) ($if c (apply $begin body body*) ($call ($quote values))))
 (define ($unless c body . body*) (apply $when ($not c) body body*))
 
-(define ($not  x) ($if x ($quote #f) ($quote #t)))
 (define ($pcall prim . args) (apply $call ($quote prim) args))
 
-(define ($begin  a . a*) (foldr (lambda (a0 a1) ($pcall call-with-values ($lambda '() a0)
-                                                        ($lambda '() (lambda _ a1))))
-                                a a*))
-(define ($begin* a . a*) (foldr (lambda (a0 a1) ($pcall call-with-values ($lambda '() a0)
-                                                        ($lambda #f  (lambda _ a1))))
-                                a a*))
+(define ($begin  a . a*)
+  (foldr (lambda (a1 a0) ($pcall call-with-values (ast:lambda #f '() a0) (ast:lambda #f '() a1)))
+         a a*))
+(define ($begin* a . a*)
+  (foldr (lambda (a1 a0) ($pcall call-with-values (ast:lambda #f '() a0) (ast:lambda #f #f  a1)))
+         a a*))
 
 (define $void         ($pcall values))
 (define ($null? x)    ($pcall null? x))
 (define ($pair? x)    ($pcall pair? x))
-(define ($cons  x)    ($pcall cons  x))
+(define ($cons  a b)  ($pcall cons  a b))
 (define ($car   x)    ($pcall car   x))
 (define ($cdr   x)    ($pcall cdr   x))
 (define ($list  . x*) (let loop ((x* x*))
