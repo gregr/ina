@@ -81,9 +81,9 @@
 (define (env:scope param* addr*)
   (let ((env.scope (make-env)))
     (unless (andmap identifier? param*)
-      (raise-syntax-error "formal parameter names must be identifiers" param*))
+      (raise-syntax-error "parameter names must be identifiers" param*))
     (unless (bound-identifiers-unique? param*)
-      (raise-syntax-error "duplicate formal parameter names" param*))
+      (raise-syntax-error "duplicate parameter names" param*))
     (for-each (lambda (p a)
                 (env-bind! env.scope p a)
                 (env-set!  env.scope vocab.expression a (parse-variable-ref/address a)))
@@ -96,9 +96,6 @@
   (parse env.use (transcribe env.op op env.use stx)))
 
 (define (expression-keyword? kw env stx) (equal? (env-ref^ env vocab.expression-keyword stx) kw))
-
-(define (expression-parser parse) (identifier-qualify (fresh-identifier '||)
-                                                      (list (cons vocab.expression parse))))
 
 (define (parse* env e*) (map (lambda (e) (parse env e)) e*))
 
@@ -154,9 +151,6 @@
 (define (transcribe-and-parse-definition dst env.scope env.use env.op op stx)
   (parse-definition dst env.scope env.use (transcribe env.op op env.use stx)))
 
-(define (definition-parser parse) (identifier-qualify (fresh-identifier '||)
-                                                      (list (cons vocab.definition parse))))
-
 (define defstate.empty '())
 
 (define (defstate-definitions    dst)      (reverse (if (caar dst) dst (cdr dst))))
@@ -171,6 +165,11 @@
 
 (define (definitions->binding-pairs defs)
   (map binding-pair (map car defs) (map (lambda (^ast) (^ast)) (map cdr defs))))
+
+(define ($define dst env.scope lhs ^rhs)
+  (let ((addr (env-introduce env.scope lhs)))
+    (env-set! env.scope vocab.expression addr (parse-variable-ref/address addr))
+    (defstate-define dst addr ^rhs)))
 
 (define (parse-definition dst env.scope env stx)
   (define (default) (defstate-add-expression dst (lambda () (parse env stx))))

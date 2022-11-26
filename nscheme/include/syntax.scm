@@ -79,11 +79,6 @@
           ((qualifier-empty? (identifier-qualifier id)) id)
           (else                                         (wrap (syntax-peek id)))))
 
-(define (fresh-identifier name)
-  (let ((name (syntax-peek name)))
-    (unless (symbol? name) (error "not a symbol" name))
-    (syntax-add-mark name (fresh-mark))))
-
 (define (syntax-add-mark s m) (syntax-wrap s (list m)))
 
 (define (free-identifier=?/env env a b)

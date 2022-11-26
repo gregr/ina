@@ -116,35 +116,34 @@
     (env-bind! env.scope id.lhs addr)))
 
 (define (parse-define dst env.scope env lhs . stx*.rhs)
-  (let loop ((lhs lhs) (stx*.rhs stx*.rhs))
-    (cond ((identifier? lhs)
-           (unless (and (pair? stx*.rhs) (null? (cdr stx*.rhs)))
-             (raise-syntax-error "not a single expression" stx*.rhs))
-           (let ((addr (env-introduce env.scope lhs)))
-             (env-set! env.scope vocab.expression addr (parse-variable-ref/address addr))
-             (defstate-define dst addr (lambda () (parse env (car stx*.rhs))))))
-          (else (let ((x (syntax-unwrap lhs)))
-                  (cond ((pair? x) (loop (car x) (list `(,%lambda ,(cdr x) . ,stx*.rhs))))
-                        (else      (raise-syntax-error "not a definable form" lhs))))))))
+  (cond
+    ((identifier? lhs) (unless (and (pair? stx*.rhs) (null? (cdr stx*.rhs)))
+                         (raise-syntax-error "not a single expression" stx*.rhs))
+                       ($define dst env.scope lhs (lambda () (parse env (car stx*.rhs)))))
+    (else (let loop ((lhs lhs) (^rhs (lambda (env) (parse-body env stx*.rhs))))
+            (let ((x (syntax-unwrap lhs)))
+              (cond ((pair? x)
+                     (let* ((param*~ (syntax->improper-list (cdr x)))
+                            (p*      (improper-list->list param*~)))
+                       (loop (car x) (lambda (env)
+                                       ($lambda param*~
+                                                (lambda a* (^rhs (env-extend-scope env p* a*))))))))
+                    ((identifier? x) ($define dst env.scope x (lambda () (^rhs env))))
+                    (else            (raise-syntax-error "not a definable form" lhs))))))))
 
 (define (parse-define-values dst env.scope env stx.lhs*~ e.rhs)
-  (let* ((lhs*~       (syntax->improper-list stx.lhs*~))
-         (lhs*        (improper-list->list lhs*~))
-         (%vec.value* (fresh-identifier 'vec.value*))
-         (%rhs        (expression-parser
-                        (lambda (env _)
-                          ($pcall call-with-values ($lambda '() (lambda () (parse env e.rhs)))
-                                  ($lambda lhs*~ (lambda addr*
-                                                   (apply $pcall vector (map $ref addr*)))))))))
-    (parse-definition
-      dst env.scope env
-      `(,%begin
-         (,%define ,%vec.value* ,%rhs)
-         . ,(map (lambda (i lhs)
-                   `(,%define ,lhs (expression-parser
-                                     (lambda (env _)
-                                       ($pcall vector-ref (parse env %vec.value*) ($quote i))))))
-                 (iota (length lhs*)) lhs*)))))
+  (let* ((lhs*~   (syntax->improper-list stx.lhs*~))
+         (lhs*    (improper-list->list lhs*~))
+         (v*.^rhs (lambda ()
+                    ($pcall call-with-values ($lambda '() (lambda () (parse env e.rhs)))
+                            ($lambda lhs*~ (lambda addr* (apply $pcall vector (map $ref addr*)))))))
+         (v*.addr (fresh-address 'vec.value*))
+         ($v*     ($ref v*.addr)))
+    (foldl (lambda (i lhs dst)
+             ($define dst env.scope lhs (lambda () ($pcall vector-ref $v* ($quote i)))))
+           (defstate-define dst v*.addr v*.^rhs)
+           (iota (length lhs*))
+           lhs*)))
 
 (define (parse-splicing-local dst env.scope env stx.def* . stx*)
   (let* ((stx*.local-body (syntax->list stx.def*))
@@ -153,47 +152,35 @@
          (dst             (apply parse-begin-definition dst env.scope.inner env stx*.local-body)))
     (apply parse-begin-definition dst env.scope env stx*)))
 
-(define (parse-splicing-let dst env.scope env stx.bpair* . stx*)
-  (let ((bpair* (parse-binding-pairs stx.bpair*)))
-    (let* ((env.scope.inner (make-env))
-           (dst (foldl (lambda (lhs rhs dst) (parse-define dst env.scope.inner env lhs rhs))
-                       dst (map car bpair*) (map cdr bpair*))))
-      (apply parse-begin-definition dst env.scope (env-extend env env.scope.inner) stx*))))
+(splicing-local
+  ((define (etc parse-def dst env.scope env stx.bpair* . stx*)
+     (let ((bpair* (parse-binding-pairs stx.bpair*)))
+       (let* ((env.scope.inner (make-env))
+              (dst (foldl (lambda (lhs rhs dst) (parse-def dst env.scope.inner env lhs rhs))
+                          dst (map car bpair*) (map cdr bpair*))))
+         (apply parse-begin-definition dst env.scope (env-extend env env.scope.inner) stx*)))))
+  (define (parse-splicing-let        . a*) (apply etc parse-define        a*))
+  (define (parse-splicing-let-values . a*) (apply etc parse-define-values a*)))
 
-(define (parse-splicing-let-values dst env.scope env stx.bpair* . stx*)
-  (let ((bpair* (parse-binding-pairs stx.bpair*)))
-    (let* ((env.scope.inner (make-env))
-           (dst (foldl (lambda (lhs rhs dst) (parse-define-values dst env.scope.inner env lhs rhs))
-                       dst (map car bpair*) (map cdr bpair*))))
-      (apply parse-begin-definition dst env.scope (env-extend env env.scope.inner) stx*))))
+(splicing-local
+  ((define (etc %splicing-let-etc dst env.scope env stx.bpair* . stx*)
+     (parse-definition
+       dst env.scope env
+       (let loop ((bpair* (parse-binding-pairs stx.bpair*)))
+         (cond ((null? bpair*) `(,%splicing-let-etc ()              . ,stx*))
+               (else           `(,%splicing-let-etc (,(car bpair*)) ,(loop (cdr bpair*)))))))))
+  (define (parse-splicing-let*        . a*) (apply etc %splicing-let        a*))
+  (define (parse-splicing-let*-values . a*) (apply etc %splicing-let-values a*)))
 
-(define (parse-splicing-let* dst env.scope env stx.bpair* . stx*)
-  (parse-definition
-    dst env.scope env
-    (let loop ((bpair* (parse-binding-pairs stx.bpair*)))
-      (cond ((null? bpair*) `(%splicing-let ()              . ,stx*))
-            (else           `(%splicing-let (,(car bpair*)) ,(loop (cdr bpair*))))))))
-
-(define (parse-splicing-let*-values dst env.scope env stx.bpair* . stx*)
-  (parse-definition
-    dst env.scope env
-    (let loop ((bpair* (parse-binding-pairs stx.bpair*)))
-      (cond ((null? bpair*) `(%splicing-let-values ()              . ,stx*))
-            (else           `(%splicing-let-values (,(car bpair*)) ,(loop (cdr bpair*))))))))
-
-(define (parse-splicing-letrec* dst env.scope env stx.bpair* . stx*)
-  (let ((bpair* (parse-binding-pairs stx.bpair*)))
-    (parse-definition dst env.scope env
-                      `(,%splicing-local ,(map (lambda (lhs rhs) `(,%define ,lhs ,rhs))
-                                               (map car bpair*) (map cdr bpair*))
-                                         . ,stx*))))
-
-(define (parse-splicing-letrec*-values dst env.scope env stx.bpair* . stx*)
-  (let ((bpair* (parse-binding-pairs stx.bpair*)))
-    (parse-definition dst env.scope env
-                      `(,%splicing-local ,(map (lambda (lhs rhs) `(,%define-values ,lhs ,rhs))
-                                               (map car bpair*) (map cdr bpair*))
-                                         . ,stx*))))
+(splicing-local
+  ((define (etc %define-etc dst env.scope env stx.bpair* . stx*)
+     (let ((bpair* (parse-binding-pairs stx.bpair*)))
+       (parse-definition dst env.scope env
+                         `(,%splicing-local ,(map (lambda (lhs rhs) `(,%define-etc ,lhs ,rhs))
+                                                  (map car bpair*) (map cdr bpair*))
+                                            . ,stx*)))))
+  (define (parse-splicing-letrec*        . a*) (apply etc %define        a*))
+  (define (parse-splicing-letrec*-values . a*) (apply etc %define-values a*)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Environment and qualified identifiers ;;;
