@@ -2,11 +2,11 @@
 ;;; Vocabularies ;;;
 ;;;;;;;;;;;;;;;;;;;;
 
-(define vocab.definition          'definition)
-(define vocab.definition-operator 'definition-operator)
-(define vocab.expression          'expression)
-(define vocab.expression-operator 'expression-operator)
-(define vocab.expression-keyword  'expression-keyword)
+(define vocab.definition           'definition)
+(define vocab.definition-operator  'definition-operator)
+(define vocab.expression           'expression)
+(define vocab.expression-operator  'expression-operator)
+(define vocab.expression-auxiliary 'expression-auxiliary)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Program construction ;;;
@@ -128,7 +128,7 @@
 (define (transcribe-and-parse-expression env.use env.op op stx)
   (parse env.use (transcribe env.op op env.use stx)))
 
-(define (expression-keyword? kw env stx) (equal? (env-ref^ env vocab.expression-keyword stx) kw))
+(define (expression-auxiliary? a env stx) (equal? (env-ref^ env vocab.expression-auxiliary stx) a))
 
 (define (parse* env e*) (map (lambda (e) (parse env e)) e*))
 
