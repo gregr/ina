@@ -197,21 +197,8 @@
 ;;; Pre-base language syntax environment ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 (define env.base-0
   (let ((env.scope (make-env))
-        (primitive*
-          (list
-            procedure-metadata procedure-metadata-set!
-            eq? eqv? null? procedure? pair? cons car cdr
-            string->symbol symbol->string symbol? string? vector vector? vector-length vector-ref
-            vector->svector svector->vector svector svector? svector-length svector-ref
-            mvector->vector mvector make-mvector mvector? mvector-length mvector-ref mvector-set!
-            utf8->string string->utf8 bytevector bytevector? bytevector-length bytevector-u8-ref
-            mbytevector->bytevector make-mbytevector mbytevector mbytevector?
-            mbytevector-length mbytevector-u8-ref mbytevector-u8-set!
-            number? exact? integer? inexact? = <= < + - * / quotient remainder truncate
-            integer-length bitwise-arithmetic-shift << >> & \| ^))
         (b*.expr-aux '(=> else))
         (b*.def
           (list (cons 'define          (definition-operator-parser parse-define          2 #f))
@@ -268,17 +255,6 @@
                   (env-bind! env.scope id addr)
                   (env-set!  env.scope vocab.expression-auxiliary addr (syntax-peek id))))
               b*.expr-aux)
-    (for-each (lambda (p) (let* ((pm   (procedure-metadata p))
-                                 (id   (if (and (vector? pm)
-                                                (= (vector-length pm) 2)
-                                                (eq? (vector-ref pm 0) 'primitive))
-                                           (vector-ref pm 1)
-                                           (error "not a primitive" p)))
-                                 (addr (identifier->fresh-address id)))
-                            (env-bind! env.scope id addr)
-                            (env-set!  env.scope vocab.expression addr
-                                       (parse-variable-ref/address addr))))
-              primitive*)
     (for-each (lambda (id op)
                 (let ((addr (identifier->fresh-address id)))
                   (env-bind! env.scope id addr)
