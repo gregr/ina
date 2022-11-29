@@ -64,9 +64,6 @@
 (define ($pcall prim . args) (apply $call ($quote prim) args))
 
 (define ($begin  a . a*)
-  (foldr (lambda (a1 a0) ($pcall call-with-values (ast:lambda #f '() a0) (ast:lambda #f '() a1)))
-         a a*))
-(define ($begin* a . a*)
   (foldr (lambda (a1 a0) ($pcall call-with-values (ast:lambda #f '() a0) (ast:lambda #f #f  a1)))
          a a*))
 

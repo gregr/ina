@@ -29,8 +29,6 @@ straightforward way by manipulating programs and live processes as data.
   - `letrec` behaves like Scheme's `letrec*`
 - Expressions that would typically return `(void)` (like `set!`, non-matching
   `cond` or `case`, etc.), instead return 0 values (i.e., `(values)`)
-- `(begin e0 ... e1)` expects each `e0`, which is only evaluated for effect, to return 0 values
-  - `(begin* e0 ... e1)` is more relaxed, allowing each `e0` to return any number of values
 - variables are immutable by default
   - `set!` is only supported for variables introduced by special binders
 - All S-expression types are immutable
