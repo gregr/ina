@@ -123,13 +123,13 @@
 (define (env-extend-scope env param* addr*) (env-extend env (env:scope param* addr*)))
 
 (define (transcribe-and-parse-expression env.use env.op op stx)
-  (parse env.use (transcribe env.op op env.use stx)))
+  (parse-expression env.use (transcribe env.op op env.use stx)))
 
 (define (expression-auxiliary? a env stx) (equal? (env-ref^ env vocab.expression-auxiliary stx) a))
 
-(define (parse* env e*) (map (lambda (e) (parse env e)) e*))
+(define (parse-expression* env e*) (map (lambda (e) (parse-expression env e)) e*))
 
-(define (parse env expr)
+(define (parse-expression env expr)
   (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
   (let ((pv (syntax-provenance expr)) (x (syntax-unwrap expr)))
     (ast-provenance-add
@@ -144,7 +144,7 @@
                                         (env-ref^ env vocab.expression-operator e.op))))
                         (if (procedure? op)
                             (op env expr)
-                            (ast:call #f (parse* env (syntax->list expr))))))
+                            (ast:call #f (parse-expression* env (syntax->list expr))))))
         ((literal? x) (ast:quote #f x))
         (else         (raise-syntax-error "not an expression" expr)))
       pv)))
@@ -182,7 +182,7 @@
   (parse-definition dst env.scope env.use (transcribe env.op op env.use stx)))
 
 (define (parse-definition dst env.scope env stx)
-  (define (default) (defstate-add-expression dst (lambda () (parse env stx))))
+  (define (default) (defstate-add-expression dst (lambda () (parse-expression env stx))))
   (let ((x (syntax-unwrap stx)))
     (cond ((identifier? stx) (let ((op (env-ref^ env vocab.definition stx)))
                                (if (procedure? op)
