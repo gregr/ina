@@ -79,23 +79,40 @@
 
 (define defstate.empty '())
 
-(define (defstate-definitions    dst)      (reverse (if (caar dst) dst (cdr dst))))
-(define (defstate-expression     dst)      (if (caar dst) #f (cdar dst)))
-(define (defstate-add-expression dst ^ast) (defstate-define dst #f ^ast))
+(define (defstate-entry addr ^ast assign!) (vector addr ^ast assign!))
+(define (defstate-entry-address  entry)    (vector-ref entry 0))
+(define (defstate-entry-^ast     entry)    (vector-ref entry 1))
+(define (defstate-entry-assigner entry)    (vector-ref entry 2))
+
+(define (defstate-definitions dst) (reverse (if (defstate-entry-address (car dst)) dst (cdr dst))))
+(define (defstate-expression  dst) (and (not (defstate-entry-address (car dst)))
+                                        (defstate-entry-^ast (car dst))))
+
+(define (defstate-define/assign! dst addr ^ast assign!)
+  (if (or (null? dst) (defstate-entry-address (car dst)))
+      (cons (defstate-entry addr ^ast assign!) dst)
+      (let ((^ast (let ((^ast.prev (defstate-entry-^ast (car dst))))
+                    (lambda () ($begin (^ast.prev) (^ast))))))
+        (cons (defstate-entry addr ^ast assign!) (cdr dst)))))
 
 (define (defstate-define dst addr ^ast)
-  (if (or (null? dst) (caar dst))
-      (cons (cons addr ^ast) dst)
-      (cons (cons addr (let ((^ast.prev (cdar dst))) (lambda () ($begin (^ast.prev) (^ast)))))
-            (cdr dst))))
+  (defstate-define/assign! dst addr ^ast (lambda (v) (values))))
 
-(define (definitions->binding-pairs defs)
-  (map binding-pair (map car defs) (map (lambda (^ast) (^ast)) (map cdr defs))))
+(define (defstate-add-expression dst ^ast) (defstate-define dst #f ^ast))
+
+(define (definitions->binding-pairs def*)
+  (map binding-pair
+       (map defstate-entry-address def*)
+       (map (lambda (^ast) (^ast)) (map defstate-entry-^ast def*))))
+
+(define (definitions->assigners def*) (map defstate-entry-assigner def*))
 
 (define ($define dst env.scope lhs ^rhs)
-  (let ((addr (env-introduce env.scope lhs)))
-    (env-set! env.scope vocab.expression addr (parse-variable-ref/address addr))
-    (defstate-define dst addr ^rhs)))
+  (let* ((addr    (env-introduce env.scope lhs))
+         (parser  (parse-variable-ref/address addr))
+         (assign! (lambda (value) (set! parser (parse-variable-quote/value value)))))
+    (env-set! env.scope vocab.expression addr (lambda arg* (apply parser arg*)))
+    (defstate-define/assign! dst addr ^rhs assign!)))
 
 (define ($body env ^def)
   (let* ((env.scope (make-env))
