@@ -109,9 +109,9 @@
 
 (define ($define dst env.scope lhs ^rhs)
   (let* ((addr    (env-introduce env.scope lhs))
-         (parser  (parse-variable-ref/address addr))
-         (assign! (lambda (value) (set! parser (parse-variable-quote/value value)))))
-    (env-set! env.scope vocab.expression addr (lambda arg* (apply parser arg*)))
+         (parser  (mvector (parse-variable-ref/address addr)))
+         (assign! (lambda (value) (mvector-set! parser 0 (parse-variable-quote/value value)))))
+    (env-set! env.scope vocab.expression addr (lambda arg* (apply (mvector-ref parser 0) arg*)))
     (defstate-define/assign! dst addr ^rhs assign!)))
 
 (define ($body env ^def)
