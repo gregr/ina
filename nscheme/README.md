@@ -175,9 +175,9 @@ TODO
 ### Design improvements
 
 - Eliminate aliases
-
-- Eliminate qualified identifiers
-  - Replace with environment composition, like before
+  - Replace with "bindings", which are vocab dicts
+    - vocab dict can include a vocab for comparing identifiers, which contains a "free-identity" key
+  - environment maps identifier directly to binding
 
 - Define something like a `($provenance STX AST-VALUE)` helper
 

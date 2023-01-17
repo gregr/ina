@@ -12,7 +12,7 @@
 ;;; Program construction ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (identifier->fresh-address p) (fresh-address (identifier-unqualify p)))
+(define (identifier->fresh-address p) (fresh-address p))
 
 (define ($quote value)       (ast:quote #f value))
 (define ($ref   addr)        (ast:ref   #f addr))
@@ -140,7 +140,8 @@
 (define (env-extend-scope env param* addr*) (env-extend env (env:scope param* addr*)))
 
 (define (transcribe-and-parse-expression env.use env.op op stx)
-  (parse-expression env.use (transcribe env.op op env.use stx)))
+  (let-values (((env.use stx) (transcribe env.op op env.use stx)))
+    (parse-expression env.use stx)))
 
 (define (expression-auxiliary? a env stx) (equal? (env-ref^ env vocab.expression-auxiliary stx) a))
 
@@ -196,7 +197,8 @@
        stx*.id))
 
 (define (transcribe-and-parse-definition dst env.scope env.use env.op op stx)
-  (parse-definition dst env.scope env.use (transcribe env.op op env.use stx)))
+  (let-values (((env.use stx) (transcribe env.op op env.use stx)))
+    (parse-definition dst env.scope env.use stx)))
 
 (define (parse-definition dst env.scope env stx)
   (define (default) (defstate-add-expression dst (lambda () (parse-expression env stx))))
