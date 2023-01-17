@@ -1,6 +1,6 @@
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Syntax with lazy mark-based renaming ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Syntax with lazy mark propagation ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (fresh-mark) (mvector))
 (define mark=?       equal?)
@@ -17,42 +17,59 @@
                    (cond ((null? m*) (cdr m*.inner))
                          (else       (cons m (loop (car m*) (cdr m*)))))))))
 
-   (define (make-syntax mark* datum provenance)
-     (if (and (null? mark*) (not provenance))
-         datum
-         (svector 'syntax mark* datum provenance))))
+   (define (annotated-syntax form provenance)
+     (if (not provenance)
+         form
+         (svector 'annotated-syntax form provenance)))
 
-  (define (syntax-wrapped?       x)    (and (svector? x)
-                                            (= (svector-length x) 4)
-                                            (eq? (svector-ref x 0) 'syntax)))
-  (define (syntax-peek           s)    (if (syntax-wrapped? s) (svector-ref s 2) s))
-  (define (syntax-mark*          s)    (if (syntax-wrapped? s) (svector-ref s 1) '()))
-  (define (syntax-provenance     s)    (and (syntax-wrapped? s) (svector-ref s 3)))
-  (define (syntax-provenance-set s pv) (if pv (make-syntax (syntax-mark* s) (syntax-peek s) pv) s))
+   (define (marked-syntax mark* stx)
+     (if (null? mark*)
+         stx
+         (svector 'marked-syntax mark* stx)))
+
+   (define (annotated-syntax? x) (and (svector? x)
+                                      (= (svector-length x) 3)
+                                      (eq? (svector-ref x 0) 'annotated-syntax)))
+   (define (marked-syntax?    x) (and (svector? x)
+                                      (= (svector-length x) 3)
+                                      (eq? (svector-ref x 0) 'marked-syntax)))
+
+   (define (marked-syntax-mark*               s) (svector-ref s 1))
+   (define (marked-syntax-syntax              s) (svector-ref s 2))
+   (define (maybe-annotated-syntax-form       s) (if (annotated-syntax? s) (svector-ref s 1) s))
+   (define (maybe-annotated-syntax-provenance s) (if (annotated-syntax? s) (svector-ref s 2) s)))
+
+  (define (syntax-mark*          s)    (if (marked-syntax? s) (marked-syntax-mark* s) '()))
+  (define (syntax-peek           s)    (maybe-annotated-syntax-form
+                                         (if (marked-syntax? s) (marked-syntax-syntax s) s)))
+  (define (syntax-provenance     s)    (maybe-annotated-syntax-provenance
+                                         (if (marked-syntax? s) (marked-syntax-syntax s) s)))
+  (define (syntax-provenance-set s pv) (if pv
+                                           (marked-syntax (syntax-mark* s)
+                                                          (annotated-syntax (syntax-peek s) pv))
+                                           s))
   (define (syntax-provenance-add s pv) (syntax-provenance-set s (provenance-combine
                                                                   pv (syntax-provenance s))))
 
   (define (syntax-wrap s m*)
-    (if (syntax-wrapped? s)
-        (make-syntax (marks-append m* (syntax-mark* s))
-                     (syntax-peek s)
-                     (syntax-provenance s))
-        (make-syntax m* s #f)))
+    (if (marked-syntax? s)
+        (marked-syntax (marks-append m* (syntax-mark* s)) (marked-syntax-syntax s))
+        (marked-syntax m* s)))
 
   (define (syntax-unwrap s)
-    (if (syntax-wrapped? s)
+    (if (marked-syntax? s)
         (let ((d (syntax-peek s)) (m* (syntax-mark* s)))
-          (define (wrap x) (if (syntax-wrapped? x) (syntax-wrap x m*) (make-syntax m* x #f)))
+          (define (wrap x) (syntax-wrap x m*))
           (cond ((pair?   d) (cons (wrap (car d)) (wrap (cdr d))))
                 ((vector? d) (vector-map wrap d))
                 (else        d)))
-        s))
+        (maybe-annotated-syntax-form s)))
 
   (define (syntax-remove-mark? s m)
     (let ((m* (syntax-mark* s)))
       (and (pair? m*)
            (mark=? (car m*) m)
-           (make-syntax (cdr m*) (syntax-peek s) (syntax-provenance s))))))
+           (marked-syntax (cdr m*) (marked-syntax-syntax s))))))
 
 (define (identifier?  s) (symbol? (syntax-peek s)))
 (define (identifier?! s) (has-type?! identifier? 'identifier? s))

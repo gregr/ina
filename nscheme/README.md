@@ -186,11 +186,6 @@ TODO
 - Have quasiquote roll up quotes and preserve provenance when possible, rather than unrolling them
   into cons and vector construction expressions.
 
-- syntax should be factored into separate record types
-  - An annotated-syntax type only needs to store provenance and s-form
-    - An annotated-syntax should never directly wrap a marked-syntax or other annotated-syntax
-  - A marked-syntax type wraps any unmarked syntax with a list of marks
-
 - Fix environments to not be O(n^2)
   - But avoid depending on global/dynamic-parameter state
   - Represent marks and addresses as records with a semi-unique id for improved lookup performance
