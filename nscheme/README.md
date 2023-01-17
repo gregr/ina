@@ -1,7 +1,7 @@
 # nScheme
 
-This is a nonstandard Scheme for programming portable, performant, image-based
-systems that can run forever.
+This is a low-tech, nonstandard Scheme for programming portable, performant,
+image-based systems that can run forever.
 
 Compared with standard Scheme, the language semantics and data model have been
 simplified.  This simplification supports more aggressive compiler optimization
@@ -16,35 +16,75 @@ These primitives also provide reflection and introspection capabilities without
 interpretive overhead.  Unlike standard Scheme, nScheme does not prescribe any
 particular form of program organization or approach to metaprogramming.
 Transformations and features that would typically be built into a complex,
-ahead-of-time compilation model can instead be achieved at runtime in a
-straightforward way by manipulating programs and live processes as data.
+ahead-of-time compilation model can instead be achieved at runtime in a simpler
+way by manipulating programs and live processes as data.
 
 ## Deviations from Scheme
 
 - Some conventions from Racket are adopted:
   - Order of evaluation is left-to-right
     - e.g., in a procedure application, first the operator is evaluated, then
-      the operands are evaluated in the order they appear.
+      the operands are evaluated in the order they appear, from left to right.
   - Internal definitions may be interleaved with expressions
-  - `letrec` behaves like Scheme's `letrec*`
-- Expressions that would typically return `(void)` (like `set!`, non-matching
-  `cond` or `case`, etc.), instead return 0 values (i.e., `(values)`)
-- variables are immutable by default
-  - `set!` is only supported for variables introduced by special binders
-- All S-expression types are immutable
-  - This even includes pairs, strings, bytevectors, and vectors
-  - Mutable vectors and bytevectors (i.e., mvectors and mbytevectors) are a
-    distinct type of data
-  - Special vectors (i.e., svectors) are a distinct type of immutable vector.
-    These are used to represent immutable record types that are disjoint from
+- By default, all definition scopes behave the same way.  No distinct top-level is specified.
+  However, code-processing tools, such as REPLs, are free to choose alternative, ad-hoc behaviors
+  that better suit their purpose.  Anything is possible.
+- Definition scope construction is more specified than in Scheme: fewer programs are incorrect
+  - Definition scope is constructed iteratively with each definition operator being parsed according
+    to the identifiers known at the time, even if those identifiers are shadowed later in the same
+    definition scope.
+  - However, as in Scheme, an expression on the right-hand-side of a definition is not parsed until
+    the complete definition scope is available.
+  - Although not specified this way in Scheme, this behavior happens to be consistent with typical
+    Scheme implementations.
+    - Likely, this is because this behavior permits definition parsing that is efficient.  Detecting
+      violations of the Scheme standard on this issue would require multiple passes with complex
+      bookkeeping.
+  - This behavior also allows us to introduce a shadowing identifier that may build off of the
+    previous binding information of the same identifier.
+- `cond` and `case` will panic if no clause is chosen, rather than returning
+- Expressions that would typically return a single `(void)` value (like `set!`, `when`, etc.),
+  instead return 0 values (i.e., `(values)`).
+- Variables are immutable by default.
+  - `set!` is only supported for variables introduced by special binders.
+- All s-expression types are immutable.
+  - This even includes pairs, strings, bytevectors, and vectors.
+  - Mutable vectors and bytevectors (i.e., mvectors and mbytevectors) are a distinct type of data,
+    disjoint from the s-expression types.
+  - Records are distinct vector-like types which may or may not be mutable.  They are disjoint from
     the s-expression types.
-- Numbers, pairs, strings, bytevectors, and vectors don't have stable identities
-  - `eq?` on these types may not always return `#t` in cases where it is expected in Scheme
-  - the result of `eq?` on these types is still always `#f` for values that differ structurally
-  - `eqv?` will return `#t` for structurally identical numbers
-- Booleans, null, symbols, procedures, mbytevectors, and mvectors do have stable
-  identities
-  - i.e., the behavior of `eq?` is analogous to its behavior in R7RS Scheme
+- Equality and identity:
+  - Structurally equal `()`, `#t`, `#f`, symbols, and an unspecified range of small numbers, are
+    always `eq?`.  This is because they are considered unique objects that are either not allocated
+    at all, or are uniquely allocated.
+  - All other values are non-uniquely allocated objects.  They are only `eq?` if they were produced
+    by the same allocation.  For instance, each evaluation of `(vector)` produces a newly-allocated
+    empty vector.
+    - Perhaps surprisingly, this means that all values produced by evaluating a particular `quote`
+      expression are always `eq?`.  The reason why is that evaluating a `quote` expression always
+      produces the exact object that has been embedded in the `quote` expression structure itself.
+      Therefore, it must be the case that the same object, in the sense of `eq?`, is being returned
+      each time.
+      - Every `quote` expression is itself a value that must be allocated and constructed
+        programmatically, with some value embedded inside, before it is evaluated.  That embedded
+        value must also either be a non-allocated value, or is allocated, before the `quote`
+        expression is evaluated.  For instance, `read` will build such `quote` expressions,
+        performing any allocations necessary to do so.  And so the values returned by evaluating any
+        particular `quote` expression will always be the exact same object.
+      - So each evaluation of the same `(quote #())` expression returns the exact same empty vector
+        object.
+        - Different `(quote #())` expressions may return different empty vector objects.  It depends
+          on whether or not the embedded empty vector is the same allocated object.
+  - `eqv?` returns `#t` for structurally equal numbers, and in every case that `eq?` returns `#t`.
+    - `eqv?` returning `#f` implies that `eq?` returns `#f`, but not vice versa.
+  - `equal?` returns `#t` for all structurally equal values of all s-expression types.  That is,
+    structurally equal, immutable, non-procedure, non-record values.  For all procedures, records,
+    mbytevectors, and mvectors, even empty ones, `equal?` returns the same result as `eq?`.
+  - All independently-constructed, non-uniquely allocated objects, except for numbers, can be
+    reliably used as distinct identities according to `eq?`.
+    - e.g., every call to `cons` will return an object with a distinct identity.
+    - Even large numbers are not reliable for this because the implementation may commonalize them
+      more aggressively than other types, unpredictably sharing allocated objects.
 - No primitive character type: a string is indivisible until it is decoded as a bytevector
   - e.g., `string->utf8` and `utf8->string`
   - no `string-ref`, since basis of decomposition depends on context
@@ -75,7 +115,7 @@ straightforward way by manipulating programs and live processes as data.
   - Complex numbers are not built in.
 - First-class control operators produce continuations that are one-shot.
   - No primitive operators produce multi-shot, delimited continuations.
-  - These operators only produce virtual threads and same-thread escape continuations.
+  - These operators only produce virtual thread contexts and same-thread escape continuations.
 - There is no prescribed object-level error handling model.
   - You can define your own handling using escape continuations and dynamically-scoped parameters.
 
@@ -91,6 +131,308 @@ TODO
 
 ## TODO
 
+### bootstrap
+
+- Try to bootstrap without reflection first (eliminate all Racket value dependencies when bootstrap compiling)
+
+- Keep meta-evaluation syntax (like begin-meta and define-syntax) out of the initial environment
+  - May also want to simplify defstates
+
+- Split base library code by topic and level of privilege
+  - Particularly error construction and handling (error.scm ?)
+    - Privileges that may be needed: records, escape continuations, dynamic parameters
+    - Make sure to `panic` instead of `raise` when appropriate.
+    - To get started quickly, can initially define `raise` to simply `panic`.
+  - Split along two privilege levels only? privileged and unprivileged?
+    - privileged:
+      - dynamic-scope
+      - error
+      - thread
+      - syntax
+      - define-datatype
+    - unprivileged:
+      - env, parse
+      - number, list, vector, bytevector, string, hash, btree
+      - comparison-and-equality
+      - quasiquote, match
+      - read, write  ; document-based rather than just s-expression-based?
+
+- How do we organize the bootstrap and user libraries? env-building, parsing, etc.
+  - Don't worry about filesystem organization too much, worry about library/package definitions as
+    persisted data values
+  - Safe vs. unsafe ?  Varying degrees of safety?  Pure vs. impure?  IO?
+  - languages: boot (privileged) vs. base (user) vs. io (platform-specific)
+
+- Maybe simulate call-in-empty-context and call-with-escape-continuation in Racket
+  - Each empty context is a Racket thread
+    - The thread owns a channel on which it waits for requests to invoke one of its local escape
+      continuations
+    - When the thread is ready to yield, it blocks while receiving on the channel
+    - When the thread is resumed, it will do so by invoking an escape continuation
+
+- Revise bootstrap.rkt so we can use it for testing
+
+### Design improvements
+
+- Eliminate aliases
+
+- Eliminate qualified identifiers
+  - Replace with environment composition, like before
+
+- Define something like a `($provenance STX AST-VALUE)` helper
+
+- Include quasiquote, caseq, casev, (maybe even match, if records cooperate) in initial env
+
+- Have quasiquote roll up quotes and preserve provenance when possible, rather than unrolling them
+  into cons and vector construction expressions.
+
+- syntax should be factored into separate record types
+  - An annotated-syntax type only needs to store provenance and s-form
+    - An annotated-syntax should never directly wrap a marked-syntax or other annotated-syntax
+  - A marked-syntax type wraps any unmarked syntax with a list of marks
+
+- Fix environments to not be O(n^2)
+  - But avoid depending on global/dynamic-parameter state
+  - Represent marks and addresses as records with a semi-unique id for improved lookup performance
+    - Each record needs a distinct identity to maintain uniqueness
+    - But the id field doesn't need to be completely unique since it's just used to improve bucket
+      or comparison-based search
+    - id could be populated with either the initial allocated memory address, or the value of a
+      counter stored in an environment
+
+- Close/freeze environments ASAP to reduce side channels and mutation-based interference.
+  - Automatic push-based freezing: env-extend can register itself to be updated with a consolidation
+    once its constituents have frozen.
+  - Tree-shaped scope extensions can be frozen immediately.
+  - Definition contexts manipulate a mutable env.scope, and cannot be frozen until completion.
+    - Freezing can happen before processing definition RHSs.
+
+- Install a scope-local uid counter in the environment that is forked or threaded by extensions.
+  - With a distinct-identity record-based approach we don't need env-oriented ids to be perfectly
+    unique, though distinctness can improve lookup performance.
+  - Tree-shaped scope extensions (env-extend-scope) should fork the uid counter (effects are not
+    seen by parent or siblings).
+  - Flat definition context scope extensions (env-extend) should thread the uid counter into and out
+    of splicing sub-scopes (entire definition context sees all effects).
+  - Macro transcription should retrieve its mark uid from the user environment.
+
+### Records
+
+- Replace svectors with records
+  - Maybe bootstrap using `make-struct-type`: https://docs.racket-lang.org/reference/creatingmorestructs.html
+  - Records can be seen as fancy vectors where a type descriptor value replaces the length entry.
+  - System-defined representation protocol
+    - Representation follows from system-given interpretation of the descriptor value.
+    - At a minimum, a record type descriptor includes information about field counts, and how many
+      are unboxed (non-GC) word-sized bitvectors (unsigned integers).
+    - It also includes user-programmable metadata.  This could be used to list parent types if we
+      support single inheritance.
+  - User-defined inheritance protocol (if any)
+    - Inheritance follows from user-given definitions for construction and type-checking, and any
+      user-controlled metadata installed in the record type descriptor.
+  - Two types of field are supported:
+    - Unboxed, word-sized bitvectors
+    - Normal values
+  - Unlike Scheme, record type descriptors (RTDs) are normal vectors with the following layout:
+    - `(vector total-field-count unboxed-field-count optional-user-defined-metadata ...)`
+    - The field counts always come first so that the system (particularly the garbage collector) can
+      find them easily.
+  - Record instances are laid out with all unboxed fields coming before boxed fields.
+  - It is possible for single-inheritance to support adding more unboxed fields if field accessors
+    are defined to calculate their index dynamically from unboxed-field-count or total-field-count`.
+
+- Will unboxed bitvector fields really be useful at this level?
+  - bytevectors may be enough most of the time.
+  - For now, maybe only support these in arrays/structs defined in lower-level language.
+
+### Primitives
+
+- Allow primitives to be procedures containing arbitrary code
+  - Can still provide names for more reliable cross-referencing and optimization-rule association
+    - Can also provide portable low-level code when possible
+    - Maybe also original/optimized source for any high-low-level language that was used to define
+      the primitive
+  - Can add new primitives arbitrarily
+  - Can implicitly learn new primitives by importing snapshot fragments containing them
+    - Assuming the snapshot is compatible with our platform
+    - This requires trust that each primitive implementation is safe
+      - For this reason, primitives must be distinguished from user-defined procedures, so we know
+        when snapshots are dangerous to import
+      - User-defined procedures in snapshots also contain seemingly-arbitrary low-level code, but if
+        we are worried, we can recompile them from the higher-level code they also (should) come
+        with in their metadata
+  - Primitives will often have algebraic-rewrite optimization rules
+    - e.g., `(car (cons A B)) ==> (let ((x.0 A)) (begin B x.0))`
+    - multiple primitives often involved in the same rule
+    - Is there a good reason why we couldn't support these for non-primitives as well?
+      - e.g., user-defined types with algebraic rewrite rules
+        - dictionaries:
+          - (get (put d k v) k) == v
+          - (put (put d k v1) k v2) == (put d k v2)
+        - matrices: linear algebra identities
+        - symbolic reals: trig identities etc.
+        - should also be able to specify CFA lattices for these types and operations?
+          - or is each lattice derivable from the rewrite rules?
+      - Just need a reliable way for the compiler to associate procedures and related rules
+      - We could try to stratify inlining by rule domain
+        - start by not inlining anything with any rules, then inline procedures that only have
+          highest-level rules, then those that have only next-highest-level rules, and so on ...
+        - no guarantee that this process will be complete in terms of finding optimal rewrites
+      - Or try equality saturation
+      - Or heuristics based on procedure/application shape and potential for uncovering rewrites
+
+- eliminate space budget, only timer is well-behaved enough
+  - for real space budgeting, use stronger isolation
+
+- reduce eqv? into its component parts: eq?, rational=?, f32=?, f64=?
+  - on 64-bit systems, f32=? would typically be the same as eq?, but that's fine
+
+### Procedures and metadata
+
+- When a primitive procedure (according to metadata) ends up in the operator position of a call
+  `(ast:call PV (ast:quote _ PRIM) ARGS)` replace it with the corresponding `(ast:prim _ NAME)`
+
+- We would like to treat captured variables as opaque to support compiler optimization of their
+  representation. e.g., unboxing.  But if procedure-metadata exposes these, the representation
+  must be standard enough to allow code to interact with it.
+  - We don't have to return captured data verbatim.  We could have procedure-metadata perform
+    just-in-time transformations on optimized representations to convert them to general values.
+
+- No need for an IO capability to be a distinct class of procedure as long as we register its
+  ephemeral state in system-owned mutable state.
+  - e.g., to use a file descriptor, we retrieve it from a box and pass it to a primitive operator.
+  - This will prevent the compiler from being able to inline the ephemeral state value since the
+    system could change it at any time.
+  - NOTE: snapshotting normally should not follow pointers into system-owned data.
+
+- Primitive procedures normally cannot be given a portable AST: their definition depends on both
+  platform AND compiler.
+  - Each compiler has to supply its own definition (if supported) depending on the platform
+    - Primitive inlining can be supported within other primitives, but not between primitive and
+      portable procedures
+  - Since primitive procedure values are compiled via reflection, where procedure values are
+    embedded directly in ASTs, if we want to cross-compile, then we need to create stub
+    (error-reporting) implementations for the foreign platform's primitives
+    - i.e., `(error "unimplemented primitive" name.platform name.primitive)`
+  - They should typically be given unique names (which can be arbitrary values), possibly including
+    platform identifiers or other classification to disambiguate them.
+    - Can provide a multi-part name with library prefix for extra uniqueness, e.g., `(base . cons)`,
+      `(boot . procedure-metadata)`, etc.
+    - Snapshots may also want to group these by library to remain organized
+      - e.g.,:
+        ```
+        ((boot
+          (procedure-metadata . <_>)
+          (call-with-escape-continuation . <_>)
+          etc. ...)
+         (base
+          (cons . <_>)
+          (car . <_>)
+          etc. ...)
+         (www-js
+          (alert . <_>)
+          (console-log . <_>)
+          (document-create-element . <_>)
+          (add-event-listener . <_>)
+          etc. ...)
+         etc. ...)
+        ```
+
+- Procedure data and metadata:
+  - `primitive? => name or #f`
+    - If a procedure is marked as primitive, a compiler should be careful not to inline it into
+      portable code, such as optimized source
+      - NOTE: it is fine to inline it into other primitive/nonportable code
+  - source code provenance
+  - optimized source with type/flow analysis info
+    - the AST after source-to-source optimization, but no environment (a flat list of captured
+      variables is included in another part of the metadata)
+    - If the procedure is nonprimitive, its optimized source should be portable across platforms
+      - Primitive algebraic rules may have been used during source optimization, but primitives
+        have not been inlined/open-coded yet at this stage
+  - portable low-level code
+    - compared to source code, this should be faster to translate to the platform-specific
+      low-level code (for this and other platforms)
+      - if represented as bytecode, it should also not require a graph walk, unlike source ASTs
+    - still no primitives have been inlined
+  - platform-specific low-level code
+    - the x86-64/RISC-V/WASM/etc. corresponding to the platform (architecture+OS+ABI+runtime)
+      being used
+      - the platform is a tuple: a choice of
+        - architecture (one of x86, ARM, WASM, etc. ...)
+        - host OS (interface to devices and other resources)
+        - ABI (may be nonstandard)
+        - a runtime-library/kernel designed with the above choices in mind
+    - at this point, primitives are likely to have been inlined/open-coded
+
+;; TODO: fix these in nscheme.rkt
+```
+(define (procedure-primitive! p name)       (set-procedure-metadata! p (lambda () (vector 'primitive name))))
+(define (procedure-closure!   p code cvals) (set-procedure-metadata! p (lambda () (vector 'case-lambda
+                                                                                          (code-provenance code)
+                                                                                          (code-case-clauses code)
+                                                                                          (mvector->vector cvals)))))
+```
+
+### LLL
+
+- simple non-polymorphic type inference with representation subtyping
+  - typed lambda/let/letrec
+  - existentially quantified type variables that must end up ground after inference
+  - allow implicit subtyping coercion for structs, arrays, pointers
+  - do not automatically coerce numbers/bitvectors, signed or unsigned
+  - separate safe (subtyping) and unsafe (non-subtyping) casts
+  - inferred numeric literals
+    - how should quoting work?
+- low-level representation types
+  - (unsigned 16 value) or typedef-like shorthands such as (bytes 2 value) or (u16 value)
+- unboxed call-by-value: any boxing is explicit via addresses
+- explicit vectorized ops
+- real OS threads, if available
+- Any VM/runtime integration is explicit
+  - allow VM interrupts only at explicit safe points
+    - no virtual-thread preemption: only cooperative multitasking
+  - GC integration, support, and metadata must be specified explicitly, if any
+    - i.e., allocator and memory manager can be written in this language
+
+- Maybe later, we can try to support dependent types with simple computations
+  - #tuple(n:int #array(n X))
+  - #tuple(n:int #ptr-to-array(n X))
+  - #tuple(start:#ptr-to-array(n X) end:#ptr-to-array(0 X) where n:int = (ptr- end start))
+    - distinguish internal ptrs from main ptrs that should be directly scavenged by GC?
+  - dependent and polymorphic types are really functions from parameters to a concrete representation
+    - a type might be an "application" of such a function
+      - e.g., the array type is a function with two parameters: a length and an element type
+    - dependent computation dependency graph must be acylic, with everything reachable from the root location
+  - types may be mutually recursive
+    - which is fine if we think of all types as functions, possibly with zero parameters
+    - so a type is a function: parameters -> representation
+      - where atomic types take zero parameters
+      - array can be a builtin non-atomic type, but it could also be expressed as a sequence of nested, unboxed pair-products
+        - same story for tuple
+        - probably not great to reduce these types in this way, so provide array and tuple as primitive type constructors
+        - nullary tuple/array is the unit type
+      - similar story for n-ary sum type in terms of binary sums, but this is awkward
+        - nullary sum is the void type
+    - use either memoization or naming/folding to prevent infinite representation
+
+### cee-flat
+
+- for generating C code
+  - design something analogous for generating JS, WASM, x86-64, RISC-V, etc.
+- major (concise with sanity checking and inferred output) and minor (unambiguously tagged with verbatim output) modes
+- major mode does some sanity-checking inference, and lowers to minor mode
+  - minor mode is just a raw, tagged s-expression syntax for C, that does no analysis whatsoever
+  - can embed `(minor etc. ...)` subforms in major code
+- `introduce-type* introduce-struct* introduce-expression* introduce-function* introduce-macro*`
+  - no need to forward declare, but still must describe header-sourced identifiers somewhere
+  - we won't be defining any of our own macros, but we may need to invoke macros defined by included C headers
+- `ref deref dot (we can have dot automatically infer arrows!) index := cast`
+  - symbols as variables will parse to `vref` in cee-flat
+  - dots on pointers become arrows in cee-flat
+- start implementing a C-assisted runtime (which we'll eventually replace to eliminate dependence on C)
+
+### old
 
 - Examine these procedural macro test cases:
   - or (introducing temporary variables)
@@ -460,15 +802,14 @@ Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
 
 - Nestable pre-emptive and cooperative multitasking via virtual threads
   - `(make-virtual-thread thunk)` produces a controller procedure with this signature:
-    `(controller budget-ticks-or-#f budget-pages-or-#f)`
-    - returns `(values done? ticks-remaining pages-remaining)` with these possibilities:
-      | circumstance           | done?        | ticks-remaining | pages-remaining |
-      |------------------------|--------------|-----------------|-----------------|
-      | successful return      | #t           | non-0           | non-0           |
-      | cooperative yield      | #f           | non-0           | non-0           |
-      | exhausted time budget  | #f           | 0               | _               |
-      | exhausted space budget | #f           | _               | _               |  ; TODO: pages requested
-      | panic                  | <panic-val*> | _               | _               |
+    `(controller budget-ticks-or-#f)`
+    - returns `ticks-remaining` with these interpretations:
+      | circumstance          | ticks-remaining        |
+      |-----------------------|------------------------|
+      | successful return     | positive               |
+      | cooperative yield     | negative               |
+      | exhausted time budget | 0                      |
+      | panic                 | <list-of-panic-values> |
       - `<panic-val*>` is the list of arguments passed to `panic`
     - resuming after a successful return will panic
     - resuming normally after a panic is futile as it will panic again
@@ -478,11 +819,10 @@ Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
   - Can be used to express threads, generators, coroutines
   - Alternative implementation of this interface in terms of lower-level primitives
     - `(panic-handler) (set-panic-handler! proc)`
-    - `(time-exceeded-handler) (set-time-exceeded-interrupt-handler! thunk)`
-      - `(set-time-budget ticks) ==> previous-ticks`
-    - `(space-exceeded-handler) (set-space-exceeded-interrupt-handler! proc)`
-      - `proc : (pages-remaining pages-requested) => _`
-      - `(set-space-budget pages) ==> previous-pages`
+    - `(yield-handler) (set-yield-handler! proc)`
+      - called automatically when time budget is exceeded
+    - `(set-timer new-ticks) ==> previous-remaining-ticks`
+      - if `ticks` is zero, the corresponding budget is unbounded
     - `(enable-interrupts) ==> decremented-disable-count`
     - `(disable-interrupts) ==> incremented-disable-count`
     - `(call-with-escape-continuation proc) (call-in-empty-context thunk)`
