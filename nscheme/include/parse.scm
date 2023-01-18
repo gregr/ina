@@ -8,9 +8,97 @@
 (define vocab.expression-operator  'expression-operator)
 (define vocab.expression-auxiliary 'expression-auxiliary)
 
+(define vocab-dict.empty '())
+(define (vocab-dict-ref    vocab=>x vocab)    (let ((vx (assq vocab vocab=>x))) (and vx (cdr vx))))
+(define (vocab-dict-remove vocab=>x . vocab*) (vocab-dict-remove* vocab=>x vocab*))
+
+(define (vocab-dict-remove* vocab=>x vocab*)
+  (filter-not (lambda (vx) (memq (car vx) vocab*)) vocab=>x))
+
+(define (vocab-dict-set vocab=>x . vx*)
+  (let loop ((vx* vx*) (vocab* '()) (x* '()))
+    (cond ((null? vx*) (vocab-dict-set* vocab=>x vocab* x*))
+          (else        (loop (cddr vx*) (cons (car vx*) vocab*) (cons (cadr vx*) x*))))))
+
+(define (vocab-dict-set* vocab=>x vocab* x*)
+  (foldl (lambda (vocab x vocab=>x) (if x (cons (cons vocab x) vocab=>x) vocab=>x))
+         (vocab-dict-remove* vocab=>x vocab*) vocab* x*))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Environment helpers ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (env-bind! env id . vx*) (env-set! env id (apply vocab-dict-set vocab-dict.empty vx*)))
+(define (env-set^! env id . vx*) (let ((vocab=>v (env-ref env id)))
+                                   (unless vocab=>v (error "unbound identifier" id))
+                                   (env-set! env id (apply vocab-dict-set vocab=>v vx*))))
+(define (env-ref^  env id vocab) (let ((vocab=>v (env-ref env id)))
+                                   (and vocab=>v (vocab-dict-ref vocab=>v vocab))))
+
+(define (env:scope param* addr*)
+  (let ((env.scope (make-env)))
+    (parse-param* param*)
+    (for-each (lambda (id a) (env-bind! env.scope id vocab.expression
+                                        (parse-variable-ref/address a)))
+              param* addr*)
+    env.scope))
+
+(define (env-extend-scope env param* addr*) (env-extend env (env:scope param* addr*)))
+
+(define (env-introduce! env.scope stx.id) (env-introduce*! env.scope (list stx.id)))
+
+(define (env-introduce*! env.scope stx*.id)
+  (for-each (lambda (stx.id)
+              (parse-undefined-identifier env.scope stx.id)
+              (env-bind! env.scope stx.id))
+            stx*.id))
+
+;;;;;;;;;;;;;;;;;;;;;;;
+;;; Parsing helpers ;;;
+;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (parse-identifier id) (unless (identifier? id) (raise-syntax-error "not an identifier" id)))
+
+(define (parse-undefined-identifier env id)
+  (parse-identifier id)
+  (when (env-ref env id) (raise-syntax-error "name defined multiple times" id)))
+
+(define (parse-param* param*)
+  (for-each parse-identifier param*)
+  (let loop ((id* param*))
+    (unless (null? id*)
+      (let ((id.0 (car id*)))
+        (when (memp (lambda (id) (bound-identifier=? id id.0)) (cdr id*))
+          (raise-syntax-error "duplicate parameter name" id.0 param*))
+        (loop (cdr id*))))))
+
+(define (parse-binding-pairs e.bpairs)
+  (define (parse-binding-pair e.bpair)
+    (let ((e* (syntax->list e.bpair)))
+      (unless (= (length e*) 2) (raise-syntax-error "binding pair without 2 elements" e.bpair))
+      (parse-identifier (car e*))
+      (cons (car e*) (cadr e*))))
+  (map parse-binding-pair (syntax->list e.bpairs)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Program construction ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (transcribe env.op op env.use stx)
+  (let* ((result (op (syntax-add-mark stx antimark)))
+         (m      (fresh-mark))
+         (env    (env-extend (env-add-mark env.op m) env.use))
+         (stx    (syntax-provenance-add
+                   (if (procedure? result)
+                       (let* ((lookup    (lambda (vocab id)
+                                           (env-ref^ env (syntax-add-mark id m) vocab)))
+                              (free-id=? (lambda (a b)
+                                           (free-identifier=?/env
+                                             env (syntax-add-mark a m) (syntax-add-mark b m)))))
+                         (result lookup free-id=?))
+                       result)
+                   stx)))
+    (values env (syntax-add-mark stx m))))
 
 (define (identifier->fresh-address p) (fresh-address p))
 
@@ -108,10 +196,11 @@
 (define (definitions->assigners def*) (map defstate-entry-assigner def*))
 
 (define ($define dst env.scope lhs ^rhs)
-  (let* ((addr    (env-introduce env.scope lhs))
+  (env-introduce! env.scope lhs)
+  (let* ((addr    (identifier->fresh-address lhs))
          (parser  (mvector (parse-variable-ref/address addr)))
          (assign! (lambda (value) (mvector-set! parser 0 (parse-variable-quote/value value)))))
-    (env-set! env.scope vocab.expression addr (lambda arg* (apply (mvector-ref parser 0) arg*)))
+    (env-set^! env.scope lhs vocab.expression (lambda arg* (apply (mvector-ref parser 0) arg*)))
     (defstate-define/assign! dst addr ^rhs assign!)))
 
 (define ($body env ^def)
@@ -125,25 +214,13 @@
 ;;; Parsing expressions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (env:scope param* addr*)
-  (let ((env.scope (make-env)))
-    (unless (andmap identifier? param*)
-      (raise-syntax-error "parameter names must be identifiers" param*))
-    (unless (bound-identifiers-unique? param*)
-      (raise-syntax-error "duplicate parameter names" param*))
-    (for-each (lambda (p a)
-                (env-bind! env.scope p a)
-                (env-set!  env.scope vocab.expression a (parse-variable-ref/address a)))
-              param* addr*)
-    env.scope))
-
-(define (env-extend-scope env param* addr*) (env-extend env (env:scope param* addr*)))
-
 (define (transcribe-and-parse-expression env.use env.op op stx)
   (let-values (((env.use stx) (transcribe env.op op env.use stx)))
     (parse-expression env.use stx)))
 
-(define (expression-auxiliary? a env stx) (equal? (env-ref^ env vocab.expression-auxiliary stx) a))
+(define (expression-auxiliary? a env stx.id)
+  (parse-identifier stx.id)
+  (equal? (env-ref^ env stx.id vocab.expression-auxiliary) a))
 
 (define (parse-expression* env e*) (map (lambda (e) (parse-expression env e)) e*))
 
@@ -153,16 +230,17 @@
     (ast-provenance-add
       (cond
         ((identifier? expr)
-         (let ((op (env-ref^ env vocab.expression expr)))
-           (cond ((procedure? op)        (op env expr))
-                 ((env-address env expr) (raise-syntax-error "invalid context for identifier" expr))
-                 (else                   (raise-syntax-error "unbound identifier" expr)))))
+         (let ((op (env-ref^ env expr vocab.expression)))
+           (cond ((procedure? op)    (op env expr))
+                 ((env-ref env expr) (raise-syntax-error "invalid context for identifier" expr))
+                 (else               (raise-syntax-error "unbound identifier" expr)))))
         ((pair?    x) (let* ((e.op (car x))
                              (op   (and (identifier? e.op)
-                                        (env-ref^ env vocab.expression-operator e.op))))
+                                        (env-ref^ env e.op vocab.expression-operator))))
                         (if (procedure? op)
                             (op env expr)
-                            (ast:call #f (parse-expression* env (syntax->list expr))))))
+                            (apply $call (parse-expression env e.op)
+                                   (parse-expression* env (syntax->list (cdr x)))))))
         ((literal? x) (ast:quote #f x))
         (else         (raise-syntax-error "not an expression" expr)))
       pv)))
@@ -176,25 +254,9 @@
 (define ((parse-variable-ref/address addr)  env e) (ast:ref   (syntax-provenance e) addr))
 (define ((parse-variable-quote/value value) env e) (ast:quote (syntax-provenance e) value))
 
-(define (parse-invalid-expression env e)
-  (raise-syntax-error "cannot be used in an expression context" e))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (env-introduce  env.scope stx.id) (car (env-introduce* env.scope (list stx.id))))
-(define (env-introduce* env.scope stx*.id)
-  (for-each (lambda (stx.id) (unless (identifier? stx.id)
-                               (raise-syntax-error "not an identifier" stx.id)))
-            stx*.id)
-  (map (lambda (stx.id)
-         (when (env-address env.scope stx.id)
-           (raise-syntax-error "name defined multiple times" stx.id))
-         (let ((addr (identifier->fresh-address stx.id)))
-           (env-bind! env.scope stx.id addr)
-           addr))
-       stx*.id))
 
 (define (transcribe-and-parse-definition dst env.scope env.use env.op op stx)
   (let-values (((env.use stx) (transcribe env.op op env.use stx)))
@@ -203,13 +265,13 @@
 (define (parse-definition dst env.scope env stx)
   (define (default) (defstate-add-expression dst (lambda () (parse-expression env stx))))
   (let ((x (syntax-unwrap stx)))
-    (cond ((identifier? stx) (let ((op (env-ref^ env vocab.definition stx)))
+    (cond ((identifier? stx) (let ((op (env-ref^ env stx vocab.definition)))
                                (if (procedure? op)
                                    (op dst env.scope env stx)
                                    (default))))
           ((pair? x)         (let* ((stx.op (car x))
                                     (op     (and (identifier? stx.op)
-                                                 (env-ref^ env vocab.definition-operator stx.op))))
+                                                 (env-ref^ env stx.op vocab.definition-operator))))
                                (if (procedure? op)
                                    (op dst env.scope env stx)
                                    (default))))

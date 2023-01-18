@@ -19,10 +19,8 @@
         (b*.def-and-expr
           (list
             (list 'begin-meta parse-begin-meta-definition parse-begin-meta-expression))))
-    (for-each (lambda (id op.def op.expr)
-                (let ((addr (identifier->fresh-address id)))
-                  (env-bind! env.scope id addr)
-                  (env-set!  env.scope vocab.definition-operator addr op.def)
-                  (env-set!  env.scope vocab.expression-operator addr op.expr)))
+    (for-each (lambda (id op.def op.expr) (env-bind! env.scope id
+                                                     vocab.definition-operator op.def
+                                                     vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
     (env-extend env.base-0 env.scope)))

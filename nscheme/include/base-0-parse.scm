@@ -1,13 +1,3 @@
-(define (parse-identifier id) (unless (identifier? id) (raise-syntax-error "not an identifier" id)))
-
-(define (parse-binding-pairs e.bpairs)
-  (define (parse-binding-pair e.bpair)
-    (let ((e* (syntax->list e.bpair)))
-      (unless (= (length e*) 2) (raise-syntax-error "binding pair without 2 elements" e.bpair))
-      (parse-identifier (car e*))
-      (cons (car e*) (cadr e*))))
-  (map parse-binding-pair (syntax->list e.bpairs)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -109,14 +99,15 @@
 (define (parse-begin-definition dst env.scope env . stx*)
   (foldl (lambda (stx dst) (parse-definition dst env.scope env stx)) dst stx*))
 
-(define (parse-introduce dst env.scope env . stx*) (env-introduce* env.scope stx*) dst)
+(define (parse-introduce dst env.scope env . stx*) (env-introduce*! env.scope stx*) dst)
 
 (define (parse-introduce-alias dst env.scope env id.lhs id.rhs)
-  (parse-identifier id.lhs)
+  (parse-undefined-identifier env.scope id.lhs)
   (parse-identifier id.rhs)
-  (let ((addr (env-address env id.rhs)))
-    (unless addr (raise-syntax-error "unbound identifier" id.rhs))
-    (env-bind! env.scope id.lhs addr)))
+  (let ((v=>v (env-ref env id.rhs)))
+    (unless v=>v (raise-syntax-error "unbound identifier" id.rhs))
+    (env-set! env.scope id.lhs v=>v))
+  dst)
 
 (define (parse-define dst env.scope env lhs . stx*.rhs)
   (cond
@@ -254,25 +245,14 @@
             (list 'splicing-letrec*-values
                   (definition-operator-parser parse-splicing-letrec*-values 2 #f)
                   (splicing-expression-operator-parser $splicing-letrec*-values)))))
-    (for-each (lambda (id)
-                (let ((addr (identifier->fresh-address id)))
-                  (env-bind! env.scope id addr)
-                  (env-set!  env.scope vocab.expression-auxiliary addr (syntax-peek id))))
+    (for-each (lambda (id) (env-bind! env.scope id vocab.expression-auxiliary (syntax-peek id)))
               b*.expr-aux)
-    (for-each (lambda (id op)
-                (let ((addr (identifier->fresh-address id)))
-                  (env-bind! env.scope id addr)
-                  (env-set!  env.scope vocab.definition-operator addr op)))
+    (for-each (lambda (id op) (env-bind! env.scope id vocab.definition-operator op))
               (map car b*.def) (map cdr b*.def))
-    (for-each (lambda (id op.def op.expr)
-                (let ((addr (identifier->fresh-address id)))
-                  (env-bind! env.scope id addr)
-                  (env-set!  env.scope vocab.definition-operator addr op.def)
-                  (env-set!  env.scope vocab.expression-operator addr op.expr)))
+    (for-each (lambda (id op.def op.expr) (env-bind! env.scope id
+                                                     vocab.definition-operator op.def
+                                                     vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
-    (for-each (lambda (id op)
-                (let ((addr (identifier->fresh-address id)))
-                  (env-bind! env.scope id addr)
-                  (env-set!  env.scope vocab.expression-operator addr op)))
+    (for-each (lambda (id op) (env-bind! env.scope id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
     (env-extend env.empty env.scope)))

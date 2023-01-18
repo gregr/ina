@@ -8,8 +8,7 @@
                                               (vector-ref pm 1)
                                               (error "not a primitive" p)))
                                     (addr (identifier->fresh-address id)))
-                               (env-bind! env.scope id addr)
-                               (env-set!  env.scope vocab.expression addr
+                               (env-bind! env.scope id vocab.expression
                                           (parse-variable-ref/address addr))))
                  primitive*)
        (env-extend env.empty env.scope))))

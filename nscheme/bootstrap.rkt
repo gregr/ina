@@ -72,7 +72,7 @@
 (include "include/ast-eval.scm")
 ;; TODO: read, parse, and ast-eval "include/base-1-source.scm"
 ;; TODO: pass ast.base-1 into:
-;(include "include/base-2-parse.scm")
+(include "include/base-2-parse.scm")
 ;; TODO: read, parse, and ast-eval "include/syntax.scm"
 ;; TODO: pass ast.syntax into:
 ;(include "include/base-3-parse.scm")

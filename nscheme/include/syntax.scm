@@ -2,6 +2,9 @@
 ;;; Syntax with lazy mark propagation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; TODO: eliminate description, which we shouldn't need thanks to AST provenance.
+(define (fresh-address description) (mvector description))
+
 (define (fresh-mark) (mvector))
 (define mark=?       equal?)
 (define mark*=?      equal?)
@@ -78,21 +81,15 @@
 
 (define (free-identifier=?/env env a b)
   (identifier?! a) (identifier?! b)
-  (let ((addr.a (env-address env a)) (addr.b (env-address env b)))
-    (if (or addr.a addr.b)
-        (addr=? addr.a addr.b)
+  (let ((v=>v.a (env-ref env a)) (v=>v.b (env-ref env b)))
+    (if (or v=>v.a v=>v.b)
+        (eq? v=>v.a v=>v.b)
         (eq? (syntax-peek a) (syntax-peek b)))))
 
 (define (bound-identifier=? a b)
   (identifier?! a) (identifier?! b)
   (and (eq? (syntax-peek a) (syntax-peek b))
        (mark*=? (syntax-mark* a) (syntax-mark* b))))
-
-(define (bound-identifiers-unique? ids)
-  (or (null? ids)
-      (and (bound-identifiers-unique? (cdr ids))
-           (let ((id.0 (car ids)))
-             (not (memp (lambda (id) (bound-identifier=? id id.0)) (cdr ids)))))))
 
 (define (datum->syntax context datum)
   (identifier?! context)
@@ -121,94 +118,52 @@
 
 (define (syntax->list s) (or (syntax->list? s) (raise-syntax-error "not a list" s)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Environments with vocabularies ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;
+;;; Environments ;;;
+;;;;;;;;;;;;;;;;;;;;
 
-(define (fresh-address description) (mvector description))
-(define addr=? equal?)
-
-(define (env-extend env env.first)
-  (lambda (method)
-    (case method
-      ((address)    (lambda (k id)         ((env.first 'address)
-                                            (lambda (id) ((env 'address) k id))
-                                            id)))
-      ((ref)        (lambda (k vocab addr) ((env.first 'ref)
-                                            (lambda (vocab addr) ((env 'ref) k vocab addr))
-                                            vocab addr)))
-      ((bind! set!) (error "invalid immutable environment operation" method))
-      (else         (error "invalid environment operation"           method)))))
-
-(define (env-add-mark env m)
-  (lambda (method)
-    (case method
-      ((address)    (lambda (k id) (let ((i (and (identifier? id) (syntax-remove-mark? id m))))
-                                     (if i ((env 'address) k i) (k id)))))
-      ((ref)        (env 'ref))
-      ((bind! set!) (error "invalid immutable environment operation" method))
-      (else         (error "invalid environment operation"           method)))))
-
-(define (make-env)
-  (let ((id=>addr '()) (addr=>vocab=>value '()))
-    (lambda (method)
-      (case method
-        ((address) (lambda (k id)
-                     (let ((entry (assp (lambda (id.key) (bound-identifier=? id.key id)) id=>addr)))
-                       (if entry (cdr entry) (k id)))))
-        ((ref)     (lambda (k vocab addr)
-                     (let ((entry (assoc addr addr=>vocab=>value)))
-                       (if entry
-                           (let ((entry (assoc vocab (cdr entry))))
-                             (if entry (cdr entry) (k vocab addr)))
-                           (k vocab addr)))))
-        ((bind!)   (lambda (id addr) (set! id=>addr (cons (cons id addr) id=>addr))))
-        ((set!)    (lambda (vocab addr value)
-                     (unless addr (error "invalid environment address" vocab value))
-                     (set! addr=>vocab=>value
-                       (let ((entry.addr (assoc addr addr=>vocab=>value)))
-                         (if entry.addr
-                             (let* ((entry.vocab  (assoc vocab (cdr entry.addr)))
-                                    (vocab=>value (cons (cons vocab value)
-                                                        (if entry.vocab
-                                                            (rem1p (lambda (entry)
-                                                                     (equal? vocab (car entry)))
-                                                                   (cdr entry.addr))
-                                                            (cdr entry.addr)))))
-                               (cons (cons addr vocab=>value)
-                                     (rem1p (lambda (entry) (addr=? addr (car entry)))
-                                            addr=>vocab=>value)))
-                             (cons (cons addr (list (cons vocab value)))
-                                   addr=>vocab=>value))))))
-        (else      (error "invalid environment operation" method))))))
 
 (define env.empty
   (lambda (method)
     (case method
-      ((address)    (lambda (k id)         (k id)))
-      ((ref)        (lambda (k vocab addr) (k vocab addr)))
-      ((bind! set!) (error "invalid immutable environment operation" method))
-      (else         (error "invalid environment operation"           method)))))
+      ((ref)  (lambda (fail id) (fail)))
+      ((set!) (error "invalid immutable environment operation" method))
+      (else   (error "invalid environment operation"           method)))))
 
-(define (env-address env id)           ((env 'address) (lambda (id) #f) id))
-(define (env-ref     env vocab addr)   ((env 'ref)     (lambda (vocab addr) #f) vocab addr))
-(define (env-ref^    env vocab id)     (let ((addr (env-address env id)))
-                                         (and addr (env-ref env vocab addr))))
-(define (env-bind!   env id addr)      ((env 'bind!)   id addr))
-(define (env-set!    env vocab addr v) ((env 'set!)    vocab addr v))
+(define (env-extend env env.first)
+  (lambda (method)
+    (case method
+      ((ref)  (lambda (fail id) ((env.first 'ref) (lambda () ((env 'ref) fail id)) id)))
+      ((set!) (error "invalid immutable environment operation" method))
+      (else   (error "invalid environment operation"           method)))))
 
-(define (transcribe env.op op env.use stx)
-  (let* ((result (op (syntax-add-mark stx antimark)))
-         (m      (fresh-mark))
-         (env    (env-extend (env-add-mark env.op m) env.use))
-         (stx    (syntax-provenance-add
-                   (if (procedure? result)
-                       (let* ((lookup    (lambda (vocab id)
-                                           (env-ref^ env vocab (syntax-add-mark id m))))
-                              (free-id=? (lambda (a b)
-                                           (free-identifier=?/env
-                                             env (syntax-add-mark a m) (syntax-add-mark b m)))))
-                         (result lookup free-id=?))
-                       result)
-                   stx)))
-    (values env (syntax-add-mark stx m))))
+(define (env-add-mark env m)
+  (lambda (method)
+    (case method
+      ((ref)  (lambda (fail id) (let ((i (and (identifier? id) (syntax-remove-mark? id m))))
+                                  (if i ((env 'ref) fail i) (fail id)))))
+      ((set!) (error "invalid immutable environment operation" method))
+      (else   (error "invalid environment operation"           method)))))
+
+(splicing-local
+  ((define id=? bound-identifier=?)
+   (define id-dict.empty '())
+   (define (id-dict-ref id=>x id)
+     (let ((kv (assp (lambda (id.key) (id=? id.key id)) id=>x)))
+       (and kv (cdr kv))))
+   (define (id-dict-set id=>x id x)
+     (let ((id=>x (let loop ((ix* id=>x) (skipped '()))
+                    (cond ((null? ix*)          id=>x)
+                          ((id=? (caar ix*) id) (foldl cons (cdr ix*) skipped))
+                          (else                 (loop (cdr ix*) (cons (car ix*) skipped)))))))
+       (cons (cons id x) id=>x))))
+  (define (make-env)
+    (let ((id=>x id-dict.empty))
+      (lambda (method)
+        (case method
+          ((ref)  (lambda (fail id) (or (id-dict-ref id=>x id) (fail))))
+          ((set!) (lambda (id x)    (set! id=>x (id-dict-set id=>x id x))))
+          (else   (error "invalid environment operation" method)))))))
+
+(define (env-set! env id x) ((env 'set!) id x))
+(define (env-ref  env id)   ((env 'ref) (lambda () #f) id))

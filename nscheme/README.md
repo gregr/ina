@@ -127,7 +127,9 @@ way by manipulating programs and live processes as data.
 
 ## Bootstrap
 
-TODO
+Eventually:
+
+`time racket bootstrap.rkt`
 
 ## TODO
 
@@ -173,11 +175,6 @@ TODO
 - Revise bootstrap.rkt so we can use it for testing
 
 ### Design improvements
-
-- Eliminate aliases
-  - Replace with "bindings", which are vocab dicts
-    - vocab dict can include a vocab for comparing identifiers, which contains a "free-identity" key
-  - environment maps identifier directly to binding
 
 - Define something like a `($provenance STX AST-VALUE)` helper
 
