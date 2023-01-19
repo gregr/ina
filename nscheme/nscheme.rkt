@@ -1,5 +1,6 @@
 #lang racket/base
 (provide
+  caseq casev
   ;; privileged primitives
   ;call-with-escape-continuation call-in-empty-context
   ;thread-register set-thread-register!
@@ -350,6 +351,22 @@
   f32->b32 b32->f32 f64->b64 b64->f64
   f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
   f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Syntax extensions ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-syntax case-etc
+  (syntax-rules (else =>)
+    ((_ mem x)                              (error "no matching clause" x))
+    ((_ mem x (else rhs ...))               (let () rhs ...))
+    ((_ mem x (=> proc))                    (proc x))
+    ((_ mem x ((d ...) rhs ...) clause ...) (if (mem x '(d ...))
+                                                (let () rhs ...)
+                                                (case-etc mem x clause ...)))))
+
+(define-syntax-rule (caseq e clause ...) (let ((x e)) (case-etc memq x clause ...)))
+(define-syntax-rule (casev e clause ...) (let ((x e)) (case-etc memv x clause ...)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Snapshot saving and loading ;;;
