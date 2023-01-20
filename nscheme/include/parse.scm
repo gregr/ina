@@ -105,7 +105,7 @@
 (define ($quote value)       (ast:quote #f value))
 (define ($ref   addr)        (ast:ref   #f addr))
 (define ($call  proc . args) (ast:call  #f proc args))
-(define ($if    c t f)       (ast:if #f c t f))
+(define ($if    c t f)       (ast:if    #f c t f))
 
 (define (ast:lambda pv param   body) (ast:case-lambda pv (list (case-lambda-clause param body))))
 (define (ast:let    pv p* rhs* body) (ast:call        pv (ast:lambda #f p* body) rhs*))
@@ -146,26 +146,30 @@
 
 (define ($not  x) ($if x ($quote #f) ($quote #t)))
 
-(define ($when   c body . body*) ($if c (apply $begin body body*) ($call ($quote values))))
+(define ($when   c body . body*) ($if c (apply $begin body body*) ($values)))
 (define ($unless c body . body*) (apply $when ($not c) body body*))
 
-(define ($pcall prim . args) (apply $call ($quote prim) args))
+(define ($prim  name)        (ast:prim #f name))
+(define ($pcall name . args) (apply $call ($prim name) args))
 
 (define ($begin  a . a*)
-  (foldr (lambda (a1 a0) ($pcall call-with-values (ast:lambda #f '() a0) (ast:lambda #f #f  a1)))
-         a a*))
+  (foldr (lambda (a1 a0) ($call-with-values (ast:lambda #f '() a0) (ast:lambda #f #f a1))) a a*))
 
-(define $void         ($pcall values))
-(define ($eq?   a b)  ($pcall eq?   a b))
-(define ($eqv?  a b)  ($pcall eqv?  a b))
-(define ($null? x)    ($pcall null? x))
-(define ($pair? x)    ($pcall pair? x))
-(define ($cons  a b)  ($pcall cons  a b))
-(define ($car   x)    ($pcall car   x))
-(define ($cdr   x)    ($pcall cdr   x))
-(define ($list  . x*) (let loop ((x* x*))
-                        (cond ((null? x*) ($quote '()))
-                              (else       ($cons (car x*) (loop (cdr x*)))))))
+(define $void                    ($pcall 'values))
+(define ($eq?               a b) ($pcall 'eq?   a b))
+(define ($eqv?              a b) ($pcall 'eqv?  a b))
+(define ($null?             x)   ($pcall 'null? x))
+(define ($pair?             x)   ($pcall 'pair? x))
+(define ($cons              a b) ($pcall 'cons  a b))
+(define ($car               x)   ($pcall 'car   x))
+(define ($cdr               x)   ($pcall 'cdr   x))
+(define ($vector-ref        v i) ($pcall 'vector-ref v i))
+(define ($vector           . x*) (apply $pcall 'vector x*))
+(define ($values           . x*) (apply $pcall 'values x*))
+(define ($call-with-values . x*) (apply $pcall 'call-with-values x*))
+(define ($list             . x*) (let loop ((x* x*))
+                                   (cond ((null? x*) ($quote '()))
+                                         (else       ($cons (car x*) (loop (cdr x*)))))))
 
 (define defstate.empty '())
 
@@ -243,7 +247,7 @@
                             (op env expr)
                             (apply $call (parse-expression env e.op)
                                    (parse-expression* env (syntax->list (cdr x)))))))
-        ((literal? x) (ast:quote #f x))
+        ((literal? x) ($quote x))
         (else         (raise-syntax-error "not an expression" expr)))
       pv)))
 

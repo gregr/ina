@@ -18,6 +18,7 @@
 (define (ast-provenance-add ast pv) (ast-provenance-set
                                       ast (provenance-combine pv (ast-provenance ast))))
 
+(define (ast:prim        pv name)              `#(prim        ,pv ,name))
 (define (ast:quote       pv v)                 `#(quote       ,pv ,v))
 (define (ast:ref         pv address)           `#(ref         ,pv ,address))
 (define (ast:if          pv ast.c ast.t ast.f) `#(if          ,pv ,ast.c ,ast.t ,ast.f))
