@@ -122,24 +122,23 @@
 ;;; Environments ;;;
 ;;;;;;;;;;;;;;;;;;;;
 
-
 (define env.empty
   (lambda (method)
-    (case method
+    (caseq method
       ((ref)  (lambda (fail id) (fail)))
       ((set!) (error "invalid immutable environment operation" method))
       (else   (error "invalid environment operation"           method)))))
 
 (define (env-extend env env.first)
   (lambda (method)
-    (case method
+    (caseq method
       ((ref)  (lambda (fail id) ((env.first 'ref) (lambda () ((env 'ref) fail id)) id)))
       ((set!) (error "invalid immutable environment operation" method))
       (else   (error "invalid environment operation"           method)))))
 
 (define (env-add-mark env m)
   (lambda (method)
-    (case method
+    (caseq method
       ((ref)  (lambda (fail id) (let ((i (and (identifier? id) (syntax-remove-mark? id m))))
                                   (if i ((env 'ref) fail i) (fail id)))))
       ((set!) (error "invalid immutable environment operation" method))
@@ -160,7 +159,7 @@
   (define (make-env)
     (let ((id=>x id-dict.empty))
       (lambda (method)
-        (case method
+        (caseq method
           ((ref)  (lambda (fail id) (or (id-dict-ref id=>x id) (fail))))
           ((set!) (lambda (id x)    (set! id=>x (id-dict-set id=>x id x))))
           (else   (error "invalid environment operation" method)))))))

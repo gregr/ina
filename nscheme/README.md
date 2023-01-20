@@ -42,7 +42,6 @@ way by manipulating programs and live processes as data.
       bookkeeping.
   - This behavior also allows us to introduce a shadowing identifier that may build off of the
     previous binding information of the same identifier.
-- `cond` and `case` will panic if no clause is chosen, rather than returning
 - Expressions that would typically return a single `(void)` value (like `set!`, `when`, etc.),
   instead return 0 values (i.e., `(values)`).
 - Variables are immutable by default.
@@ -178,7 +177,7 @@ Eventually:
 
 - Define something like a `($provenance STX AST-VALUE)` helper
 
-- Include quasiquote, caseq, casev, (maybe even match, if records cooperate) in initial env
+- Include quasiquote, (maybe even match, if records cooperate) in initial env
 
 - Have quasiquote roll up quotes and preserve provenance when possible, rather than unrolling them
   into cons and vector construction expressions.

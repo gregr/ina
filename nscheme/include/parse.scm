@@ -156,6 +156,8 @@
          a a*))
 
 (define $void         ($pcall values))
+(define ($eq?   a b)  ($pcall eq?   a b))
+(define ($eqv?  a b)  ($pcall eqv?  a b))
 (define ($null? x)    ($pcall null? x))
 (define ($pair? x)    ($pcall pair? x))
 (define ($cons  a b)  ($pcall cons  a b))
