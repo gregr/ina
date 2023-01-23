@@ -272,12 +272,6 @@ Eventually:
       - Or try equality saturation
       - Or heuristics based on procedure/application shape and potential for uncovering rewrites
 
-- eliminate space budget, only timer is well-behaved enough
-  - for real space budgeting, use stronger isolation
-
-- reduce eqv? into its component parts: eq?, rational=?, f32=?, f64=?
-  - on 64-bit systems, f32=? would typically be the same as eq?, but that's fine
-
 ### Procedures and metadata
 
 - When a primitive procedure (according to metadata) ends up in the operator position of a call
@@ -355,15 +349,6 @@ Eventually:
         - ABI (may be nonstandard)
         - a runtime-library/kernel designed with the above choices in mind
     - at this point, primitives are likely to have been inlined/open-coded
-
-;; TODO: fix these in nscheme.rkt
-```
-(define (procedure-primitive! p name)       (set-procedure-metadata! p (lambda () (vector 'primitive name))))
-(define (procedure-closure!   p code cvals) (set-procedure-metadata! p (lambda () (vector 'case-lambda
-                                                                                          (code-provenance code)
-                                                                                          (code-case-clauses code)
-                                                                                          (mvector->vector cvals)))))
-```
 
 ### LLL
 

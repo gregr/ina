@@ -11,7 +11,7 @@
        (let ((end (bytevector-length a)))
          (let loop ((i 0))
            (or (= i end)
-               (and (= (bytevector-b8-ref a i) (bytevector-b8-ref b i))
+               (and (= (bytevector-u8-ref a i) (bytevector-u8-ref b i))
                     (loop (+ i 1))))))))
 
 ;; TODO: variadic?

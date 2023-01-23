@@ -2,39 +2,39 @@
 (provide
   caseq casev
   ;; privileged primitives
-  ;call-with-escape-continuation call-in-empty-context
-  ;thread-register set-thread-register!
-  ;panic-handler set-panic-handler!
-  ;set-time-budget time-exceeded-handler set-time-exceeded-handler!
-  ;set-space-budget space-exceeded-handler set-space-exceeded-handler!
-  ;; procedure-metadata should return a vector with one of these shapes:
-  ;;   #(case-lambda ,stx ,vector-of-case-clauses ,vector-of-captured-values)
-  ;;   #(io          ,name ,descriptor)
-  ;;   #(primitive   ,name)
-  ;; This operator can implicitly allocate the vector (which will hopefully be unboxed during
-  ;; optimization), populating it based on a low-level code/closure representation.
+  call-with-escape-continuation call-in-empty-context
+  thread-register set-thread-register!
+  panic set-panic-handler!
+  yield set-yield-handler! set-timer enable-interrupts disable-interrupts
+  ;; procedure-metadata returns a vector with this shape:
+  ;;   #(,primitive ,captured ,code*)
+  ;; where:
+  ;;   - primitive is either #f or a name
+  ;;   - captured is either #f or a vector of captured values
+  ;;   - code* is a possibly-empty list of code descriptions
+  ;; This operator can allocate the vector on demand (which will hopefully be unboxed during
+  ;; optimization), populating it based on a lower-level code/closure representation.
   procedure-metadata
   svector? svector->vector vector->svector
   string->bytevector bytevector->string
 
-  panic apply call-with-values values
-  eq? eqv? null? procedure? symbol? string? rational? integer? f32? f64?
+  apply call-with-values values
+  eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
   pair? vector? mvector? bytevector? mbytevector?
   string->symbol symbol->string
   cons car cdr
   vector-length vector-ref
   make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-  bytevector-length bytevector-b8-ref bytevector-b16-native-ref bytevector-b32-native-ref bytevector-b64-native-ref
+
+  bytevector-length bytevector-u8-ref bytevector-u16-ref bytevector-u32-ref bytevector-u64-ref
   make-mbytevector mbytevector->bytevector mbytevector-length
-  mbytevector-b8-ref mbytevector-b16-native-ref mbytevector-b32-native-ref mbytevector-b64-native-ref
-  mbytevector-b8-set! mbytevector-b16-native-set! mbytevector-b32-native-set! mbytevector-b64-native-set!
-  native-big-endian?
+  mbytevector-u8-ref mbytevector-u16-ref mbytevector-u32-ref mbytevector-u64-ref
+  mbytevector-u8-set! mbytevector-u16-set! mbytevector-u32-set! mbytevector-u64-set!
   bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
-  bitwise-not bitwise-and bitwise-ior bitwise-xor integer-floor-divmod
+  bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
   numerator denominator cmp + - * /
-  f32->f64 f64->f32
-  f32->rational rational->f32 f64->rational rational->f64
-  f32->b32 b32->f32 f64->b64 b64->f64
+  f32->u32 u32->f32 f64->u64 u64->f64
+  f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
   f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
   f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/
 
@@ -50,8 +50,15 @@
 (require racket/control racket/file racket/flonum racket/list racket/match racket/port racket/string
          racket/struct racket/system racket/tcp racket/udp racket/vector (prefix-in rkt: racket/base))
 
-;; TODO: redefine to use panic-handler
 (define (panic . args) (raise (vector 'panic args)))
+(define (thread-register)           (error "TODO: not implemented"))
+(define (set-thread-register! x)    (error "TODO: not implemented"))
+(define (yield              . args) (error "TODO: not implemented"))
+(define (set-panic-handler! . args) (error "TODO: not implemented"))
+(define (set-yield-handler! . args) (error "TODO: not implemented"))
+(define (set-timer          . args) (error "TODO: not implemented"))
+(define (enable-interrupts  . args) (error "TODO: not implemented"))
+(define (disable-interrupts . args) (error "TODO: not implemented"))
 
 (define-syntax-rule (assert test ...) (begin (unless test (panic 'assertion-violation 'test)) ...))
 
@@ -77,8 +84,6 @@
 ;;   - io controller
 ;;   - closure
 
-(define (native-big-endian?) (system-big-endian?))
-
 (define (rational? x) (and (rkt:rational? x) (exact? x)))
 (define (integer?  x) (rkt:exact-integer? x))
 (define (f32?      x) (single-flonum? x))
@@ -94,11 +99,11 @@
 (define (rational->f32 n) (assert (rational? n)) (real->single-flonum n))
 (define (rational->f64 n) (assert (rational? n)) (real->double-flonum n))
 
-(define (f32->b32 n) (assert (f32? n)) (integer-bytes->integer (real->floating-point-bytes n 4) #f))
-(define (f64->b64 n) (assert (f64? n)) (integer-bytes->integer (real->floating-point-bytes n 8) #f))
+(define (f32->u32 n) (assert (f32? n)) (integer-bytes->integer (real->floating-point-bytes n 4) #f))
+(define (f64->u64 n) (assert (f64? n)) (integer-bytes->integer (real->floating-point-bytes n 8) #f))
 ;;; NOTE: Any NaNs produced have already been automatically quieted by these operations.
-(define (b32->f32 n) (assert (b32? n)) (floating-point-bytes->real (integer->integer-bytes n 4 #f)))
-(define (b64->f64 n) (assert (b64? n)) (floating-point-bytes->real (integer->integer-bytes n 8 #f)))
+(define (u32->f32 n) (assert (b32? n)) (floating-point-bytes->real (integer->integer-bytes n 4 #f)))
+(define (u64->f64 n) (assert (b64? n)) (floating-point-bytes->real (integer->integer-bytes n 8 #f)))
 
 (define (cmp a b)
   (assert (rational? a) (rational? b))
@@ -136,6 +141,7 @@
 
 (define (bitwise-arithmetic-shift-left  n k) (rkt:arithmetic-shift n    k))
 (define (bitwise-arithmetic-shift-right n k) (rkt:arithmetic-shift n (- k)))
+(define (bitwise-length                 n)   (integer-length n))
 
 (define (integer-floor-divmod dividend divisor)
   (assert (integer? dividend) (integer? divisor))
@@ -162,22 +168,22 @@
 (define (bytevector?       x)    (bytes?       x))
 (define (bytevector-length bv)   (bytes-length bv))
 
-(define (bytevector-b8-ref         bv i) (bytes-ref              bv                         i))
-(define (bytevector-b16-native-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 2)))
-(define (bytevector-b32-native-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 4)))
-(define (bytevector-b64-native-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 8)))
+(define (bytevector-u8-ref  bv i) (bytes-ref              bv                         i))
+(define (bytevector-u16-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 2)))
+(define (bytevector-u32-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 4)))
+(define (bytevector-u64-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 8)))
 
-(define (make-mbytevector            len n)   (mbytevector:new (make-bytes len n)))
-(define (mbytevector->bytevector     mbv)     (bytes-copy                (mbytevector-bv mbv)))
-(define (mbytevector-length          mbv i)   (bytevector-length         (mbytevector-bv mbv)))
-(define (mbytevector-b8-ref          mbv i)   (bytevector-b8-ref         (mbytevector-bv mbv) i))
-(define (mbytevector-b16-native-ref  mbv i)   (bytevector-b16-native-ref (mbytevector-bv mbv) i))
-(define (mbytevector-b32-native-ref  mbv i)   (bytevector-b32-native-ref (mbytevector-bv mbv) i))
-(define (mbytevector-b64-native-ref  mbv i)   (bytevector-b64-native-ref (mbytevector-bv mbv) i))
-(define (mbytevector-b8-set!         mbv i n) (bytes-set!                (mbytevector-bv mbv) i n))
-(define (mbytevector-b16-native-set! mbv i n) (integer->integer-bytes n 2 #f (system-big-endian?) (mbytevector-bv mbv) i))
-(define (mbytevector-b32-native-set! mbv i n) (integer->integer-bytes n 4 #f (system-big-endian?) (mbytevector-bv mbv) i))
-(define (mbytevector-b64-native-set! mbv i n) (integer->integer-bytes n 8 #f (system-big-endian?) (mbytevector-bv mbv) i))
+(define (make-mbytevector        len n)   (mbytevector:new (make-bytes len n)))
+(define (mbytevector->bytevector mbv)     (bytes-copy         (mbytevector-bv mbv)))
+(define (mbytevector-length      mbv i)   (bytevector-length  (mbytevector-bv mbv)))
+(define (mbytevector-u8-ref      mbv i)   (bytevector-u8-ref  (mbytevector-bv mbv) i))
+(define (mbytevector-u16-ref     mbv i)   (bytevector-u16-ref (mbytevector-bv mbv) i))
+(define (mbytevector-u32-ref     mbv i)   (bytevector-u32-ref (mbytevector-bv mbv) i))
+(define (mbytevector-u64-ref     mbv i)   (bytevector-u64-ref (mbytevector-bv mbv) i))
+(define (mbytevector-u8-set!     mbv i n) (bytes-set!         (mbytevector-bv mbv) i n))
+(define (mbytevector-u16-set!    mbv i n) (integer->integer-bytes n 2 #f (system-big-endian?) (mbytevector-bv mbv) i))
+(define (mbytevector-u32-set!    mbv i n) (integer->integer-bytes n 4 #f (system-big-endian?) (mbytevector-bv mbv) i))
+(define (mbytevector-u64-set!    mbv i n) (integer->integer-bytes n 8 #f (system-big-endian?) (mbytevector-bv mbv) i))
 
 (define (make-case-clause param body) (vector param body))
 (define (case-clause-param cc)        (vector-ref cc 0))
@@ -188,20 +194,30 @@
 (define (code-case-clauses            c)         (vector-ref c 1))
 (define (code-captured-variable-count c)         (vector-ref c 2))
 
-;; Procedure metadata is stored as a thunk.  This laziness simplifies the
-;; generated Racket code for attaching metadata to a procedure, allowing the
-;; attachment to occur immediately after construction of the procedure itself.
-;; This immediate attachment would not always be possible without the laziness,
-;; particularly when a procedure is bound in a recursive context, such as a
-;; letrec, while capturing other values bound in the same letrec.  The problem
-;; is these captured values are a component of the metadata, and may not have
-;; been initialized by the time the procedure is constructed.  By wrapping the
-;; metadata in a thunk, we no longer need to worry about initialization order.
-(define procedure=>metadata (make-weak-hash))
-(define (procedure-metadata p) ((hash-ref procedure=>metadata p (lambda () (error "procedure has no metadata" p)))))
+(define (procedure-metadata p)
+  (let ((pmd (hash-ref procedure=>metadata p (lambda () (error "procedure has no metadata" p)))))
+    (match-define (proc-metadata primitive captured code*) pmd)
+    ;; When a procedure is constructed in a letrec alongside captured values, those values may not
+    ;; have been initialized by the time the procedure is constructed.  By lazily placing captured
+    ;; values in a mvector, we can attach metadata to the procedure immediately after constructing
+    ;; it without having to worry about evaluation order.  We convert the mvector to a vector on
+    ;; demand.  (We assume metadata is requested only after captured values are initialized).
+    (vector primitive (and captured (mvector->vector captured)) code*)))
 
-;; These operations are Racket-specific.
-(define (set-procedure-metadata! p pmeta)      (hash-set! procedure=>metadata p pmeta))
+(define procedure=>metadata (make-weak-hash))
+(struct proc-metadata (primitive captured code*) #:prefab)
+(define proc-metadata.empty (proc-metadata #f #f '()))
+(define (proc-metadata-primitive-set pmd primitive)
+  (match-define (proc-metadata _ captured code*) pmd)
+  (proc-metadata primitive captured code*))
+(define (proc-metadata-captured-set pmd captured)
+  (match-define (proc-metadata primitive _ code*) pmd)
+  (proc-metadata primitive captured code*))
+(define (proc-metadata-code-add pmd code)
+  (match-define (proc-metadata primitive captured code*) pmd)
+  (proc-metadata primitive captured (cons code code*)))
+(define (update-procedure-metadata! p update)
+  (hash-update! procedure=>metadata p update proc-metadata.empty))
 ;; A primitive is an operation that is implemented directly in the platform
 ;; layer.  These operations will typically be portable, but it is possible to
 ;; define platform-specific operations.  To remain portable when snapshotting
@@ -213,17 +229,14 @@
 ;; shared library in mainstream operating systems.  A substitute would be
 ;; implemented in a way that is both consistent with the original, and
 ;; compatible with the new host, solving the portability issue.
-(define (procedure-primitive!    p name)       (set-procedure-metadata! p (lambda () (vector 'primitive name))))
-;; An io controller is a transient, host-specific input/output capability.  In
-;; some cases, particularly when the capability maps to a virtual io device, a
-;; system can optionally persist the corresponding device state and package it
-;; with a program snapshot.  But more often, when a host loads the snapshot,
-;; this capability will be attached to a new io device of the host's choosing.
-(define (procedure-io!           p name desc)  (set-procedure-metadata! p (lambda () (vector 'io        name desc))))
-(define (procedure-closure!      p code cvals) (set-procedure-metadata! p (lambda () (vector 'case-lambda
-                                                                                             (code-provenance code)
-                                                                                             (code-case-clauses code)
-                                                                                             (mvector->vector cvals)))))
+(define (procedure-primitive! p name)
+  (update-procedure-metadata! p (lambda (pmd) (proc-metadata-primitive-set pmd name))))
+(define (procedure-closure! p code cvals)
+  (update-procedure-metadata!
+    p (lambda (pmd) (proc-metadata-code-add (proc-metadata-captured-set pmd cvals)
+                                            (vector 'case-lambda
+                                                    (code-provenance code)
+                                                    (code-case-clauses code))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Resource budget interrupts, thread register, continuations ;;;
@@ -322,33 +335,30 @@
 
 (declare-primitives!
   ;; privileged primitives
-  ;call-with-escape-continuation call-in-empty-context
-  ;thread-register set-thread-register!
-  ;panic-handler set-panic-handler!
-  ;set-time-budget time-exceeded-handler set-time-exceeded-handler!
-  ;set-space-budget space-exceeded-handler set-space-exceeded-handler!
+  call-with-escape-continuation call-in-empty-context
+  thread-register set-thread-register!
+  panic set-panic-handler!
+  yield set-yield-handler! set-timer enable-interrupts disable-interrupts
   procedure-metadata
   svector? svector->vector vector->svector
   string->bytevector bytevector->string
 
-  panic apply call-with-values values
-  eq? eqv? null? procedure? symbol? string? rational? integer? f32? f64?
+  apply call-with-values values
+  eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
   pair? vector? mvector? bytevector? mbytevector?
   string->symbol symbol->string
   cons car cdr
   vector-length vector-ref
   make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-  bytevector-length bytevector-b8-ref bytevector-b16-native-ref bytevector-b32-native-ref bytevector-b64-native-ref
+  bytevector-length bytevector-u8-ref bytevector-u16-ref bytevector-u32-ref bytevector-u64-ref
   make-mbytevector mbytevector->bytevector mbytevector-length
-  mbytevector-b8-ref mbytevector-b16-native-ref mbytevector-b32-native-ref mbytevector-b64-native-ref
-  mbytevector-b8-set! mbytevector-b16-native-set! mbytevector-b32-native-set! mbytevector-b64-native-set!
-  native-big-endian?
+  mbytevector-u8-ref mbytevector-u16-ref mbytevector-u32-ref mbytevector-u64-ref
+  mbytevector-u8-set! mbytevector-u16-set! mbytevector-u32-set! mbytevector-u64-set!
   bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
-  bitwise-not bitwise-and bitwise-ior bitwise-xor integer-floor-divmod
+  bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
   numerator denominator cmp + - * /
-  f32->f64 f64->f32
-  f32->rational rational->f32 f64->rational rational->f64
-  f32->b32 b32->f32 f64->b64 b64->f64
+  f32->u32 u32->f32 f64->u64 u64->f64
+  f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
   f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
   f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/)
 
@@ -502,9 +512,9 @@
                     (push! other* name (ast:call (loop make-mvector) (loop (mvector-length value)) (loop 0)))
                     (set! initialization**
                       (cons (map (lambda (i)
-                                   (ast:call (loop mbytevector-b8-set!)
+                                   (ast:call (loop mbytevector-u8-set!)
                                              (ast:ref name) (loop i)
-                                             (loop (mbytevector-b8-ref value i))))
+                                             (loop (mbytevector-u8-ref value i))))
                                  (range (mbytevector-length value)))
                             initialization**)))
                    (_ (let ((ast (match value
@@ -515,9 +525,9 @@
                                                              (loop (svector->vector value))))
                                    ((? mbytevector?)
                                     (set! initialization**
-                                      (cons (map (lambda (i) (ast:call (loop mbytevector-b8-set!)
+                                      (cons (map (lambda (i) (ast:call (loop mbytevector-u8-set!)
                                                                        (ast:ref name) (loop i)
-                                                                       (loop (mbytevector-b8-ref value i))))
+                                                                       (loop (mbytevector-u8-ref value i))))
                                                  (range (mbytevector-length value)))
                                             initialization**))
                                     (ast:call (loop make-mbytevector)
