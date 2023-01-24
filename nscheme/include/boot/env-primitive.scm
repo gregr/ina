@@ -58,9 +58,10 @@
         pair? vector? mvector? bytevector? mbytevector?
         string->symbol symbol->string
         cons car cdr
-        vector-length vector-ref
+        vector vector-length vector-ref
         make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-        bytevector-length bytevector-u8-ref bytevector-u16-ref bytevector-u32-ref bytevector-u64-ref
+        bytevector bytevector-length
+        bytevector-u8-ref bytevector-u16-ref bytevector-u32-ref bytevector-u64-ref
         make-mbytevector mbytevector->bytevector mbytevector-length
         mbytevector-u8-ref mbytevector-u16-ref mbytevector-u32-ref mbytevector-u64-ref
         mbytevector-u8-set! mbytevector-u16-set! mbytevector-u32-set! mbytevector-u64-set!

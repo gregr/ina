@@ -1,5 +1,3 @@
-(define (vector . args) (mvector->vector (apply mvector args)))
-
 (define (list->vector x*) (apply vector x*))
 
 (define (vector->list x)

@@ -1,5 +1,3 @@
-(define (bytevector . bs) (mbytevector->bytevector (apply mbytevector bs)))
-
 (define (u8*->bytevector x*) (apply bytevector x*))
 
 (define (bytevector->u8* x)
