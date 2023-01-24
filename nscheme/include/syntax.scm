@@ -20,27 +20,34 @@
                    (cond ((null? m*) (cdr m*.inner))
                          (else       (cons m (loop (car m*) (cdr m*)))))))))
 
+   (define rtd.annotated-syntax (vector 2))
+   (define rtd.marked-syntax    (vector 2))
+
    (define (annotated-syntax form provenance)
      (if (not provenance)
          form
-         (svector 'annotated-syntax form provenance)))
+         (let ((r (make-record rtd.annotated-syntax 0)))
+           (record-set! r 0 form)
+           (record-set! r 1 provenance)
+           r)))
 
    (define (marked-syntax mark* stx)
      (if (null? mark*)
          stx
-         (svector 'marked-syntax mark* stx)))
+         (let ((r (make-record rtd.marked-syntax 0)))
+           (record-set! r 0 mark*)
+           (record-set! r 1 stx)
+           r)))
 
-   (define (annotated-syntax? x) (and (svector? x)
-                                      (= (svector-length x) 3)
-                                      (eq? (svector-ref x 0) 'annotated-syntax)))
-   (define (marked-syntax?    x) (and (svector? x)
-                                      (= (svector-length x) 3)
-                                      (eq? (svector-ref x 0) 'marked-syntax)))
+   (define (annotated-syntax? x) (and (record? x) (eq? (record-type-descriptor x)
+                                                       rtd.annotated-syntax)))
+   (define (marked-syntax?    x) (and (record? x) (eq? (record-type-descriptor x)
+                                                       rtd.marked-syntax)))
 
-   (define (marked-syntax-mark*               s) (svector-ref s 1))
-   (define (marked-syntax-syntax              s) (svector-ref s 2))
-   (define (maybe-annotated-syntax-form       s) (if (annotated-syntax? s) (svector-ref s 1) s))
-   (define (maybe-annotated-syntax-provenance s) (if (annotated-syntax? s) (svector-ref s 2) s)))
+   (define (marked-syntax-mark*               s) (record-ref s 0))
+   (define (marked-syntax-syntax              s) (record-ref s 1))
+   (define (maybe-annotated-syntax-form       s) (if (annotated-syntax? s) (record-ref s 0) s))
+   (define (maybe-annotated-syntax-provenance s) (if (annotated-syntax? s) (record-ref s 1) s)))
 
   (define (syntax-mark*          s)    (if (marked-syntax? s) (marked-syntax-mark* s) '()))
   (define (syntax-peek           s)    (maybe-annotated-syntax-form

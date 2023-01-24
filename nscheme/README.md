@@ -52,6 +52,13 @@ way by manipulating programs and live processes as data.
     disjoint from the s-expression types.
   - Records are distinct vector-like types which may or may not be mutable.  They are disjoint from
     the s-expression types.
+- Unlike Scheme, record type descriptors (RTDs) are normal vectors with the following layout:
+  - `(vector field-count optional-user-defined-metadata ...)`
+  - The field count always comes first so that the system (particularly the garbage collector) can
+    find it easily.
+  - It can also include user-specified metadata.  For instance, this could be used to list parent
+    types for implementing some variant of inheritance.  It could also be used to list field names
+    for dynamic field lookup.
 - Equality and identity:
   - Structurally equal `()`, `#t`, `#f`, symbols, and an unspecified range of small numbers, are
     always `eq?`.  This is because they are considered unique objects that are either not allocated
@@ -206,35 +213,6 @@ Eventually:
   - Flat definition context scope extensions (env-extend) should thread the uid counter into and out
     of splicing sub-scopes (entire definition context sees all effects).
   - Macro transcription should retrieve its mark uid from the user environment.
-
-### Records
-
-- Replace svectors with records
-  - Maybe bootstrap using `make-struct-type`: https://docs.racket-lang.org/reference/creatingmorestructs.html
-  - Records can be seen as fancy vectors where a type descriptor value replaces the length entry.
-  - System-defined representation protocol
-    - Representation follows from system-given interpretation of the descriptor value.
-    - At a minimum, a record type descriptor includes information about field counts, and how many
-      are unboxed (non-GC) word-sized bitvectors (unsigned integers).
-    - It also includes user-programmable metadata.  This could be used to list parent types if we
-      support single inheritance.
-  - User-defined inheritance protocol (if any)
-    - Inheritance follows from user-given definitions for construction and type-checking, and any
-      user-controlled metadata installed in the record type descriptor.
-  - Two types of field are supported:
-    - Unboxed, word-sized bitvectors
-    - Normal values
-  - Unlike Scheme, record type descriptors (RTDs) are normal vectors with the following layout:
-    - `(vector total-field-count unboxed-field-count optional-user-defined-metadata ...)`
-    - The field counts always come first so that the system (particularly the garbage collector) can
-      find them easily.
-  - Record instances are laid out with all unboxed fields coming before boxed fields.
-  - It is possible for single-inheritance to support adding more unboxed fields if field accessors
-    are defined to calculate their index dynamically from unboxed-field-count or total-field-count`.
-
-- Will unboxed bitvector fields really be useful at this level?
-  - bytevectors may be enough most of the time.
-  - For now, maybe only support these in arrays/structs defined in lower-level language.
 
 ### Primitives
 

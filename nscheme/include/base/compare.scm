@@ -27,6 +27,4 @@
             ((vector?     a) (and (vector?     b) (vector=?     a b)))
             ((bytevector? a) (and (bytevector? b) (bytevector=? a b)))
             ((string?     a) (and (string?     b) (string=? a b)))
-            ((svector?    a) (and (svector?    b) (vector=? (svector->vector a)
-                                                            (svector->vector b))))
             (else            #f))))

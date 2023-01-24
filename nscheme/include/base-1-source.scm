@@ -1,5 +1,4 @@
 (include "base/misc.scm")
-(include "boot/svector.scm")
 (include "boot/error.scm")
 (include "base/compare.scm")
 (include "base/list.scm")

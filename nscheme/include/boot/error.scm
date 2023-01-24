@@ -1,13 +1,16 @@
-(define (error? x) (and (svector? x)
-                        (= (svector-length x) 3)
-                        (eq? (svector-ref x 0) 'error)))
+(splicing-local
+  ((define rtd.error (vector 2)))
+  (define (make-error kind details)
+    (let ((e (make-record rtd.error 0)))
+      (record-set! e 0 kind)
+      (record-set! e 1 details)
+      e))
+  (define (error? x) (and (record? x) (eq? (record-type-descriptor x) rtd.error))))
 
-(define (error?! x) (has-type?! error? 'error x))
+(define (error?!       x) (has-type?! error? 'error x))
+(define (error-kind    e) (error?! e) (record-ref e 0))
+(define (error-details e) (error?! e) (record-ref e 1))
 
-(define (error-kind    err) (error?! err) (svector-ref err 1))
-(define (error-details err) (error?! err) (svector-ref err 2))
-
-(define (make-error kind details) (svector 'error kind details))
 
 (define (make-error:syntax description . stx*)
   (make-error 'syntax (list (cons 'description description)
