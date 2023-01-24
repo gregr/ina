@@ -97,10 +97,12 @@
                                              env (syntax-add-mark a m) (syntax-add-mark b m)))))
                          (result lookup free-id=?))
                        result)
-                   stx)))
+                   (syntax-provenance stx))))
     (values env (syntax-add-mark stx m))))
 
 (define (identifier->fresh-address p) (fresh-address p))
+
+(define ($provenance ast stx) (ast-provenance-add ast (syntax-provenance stx)))
 
 (define ($quote value)       (ast:quote #f value))
 (define ($ref   addr)        (ast:ref   #f addr))
@@ -232,8 +234,8 @@
 
 (define (parse-expression env expr)
   (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
-  (let ((pv (syntax-provenance expr)) (x (syntax-unwrap expr)))
-    (ast-provenance-add
+  (let ((x (syntax-unwrap expr)))
+    ($provenance
       (cond
         ((identifier? expr)
          (let ((op (env-ref^ env expr vocab.expression)))
@@ -249,7 +251,7 @@
                                    (parse-expression* env (syntax->list (cdr x)))))))
         ((literal? x) ($quote x))
         (else         (raise-syntax-error "not an expression" expr)))
-      pv)))
+      expr)))
 
 (define ((expression-operator-parser parser argc.min argc.max) env expr)
   (let* ((e* (syntax->list expr)) (argc (- (length e*) 1)))

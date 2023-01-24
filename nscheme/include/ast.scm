@@ -7,10 +7,10 @@
 (define (binding-pair-rhs bpair) (cdr bpair))
 
 (define (provenance-combine pv1 pv2)
-  (cond ((not pv1)        pv2)
-        ((not pv2)        pv1)
-        ((equal? pv1 pv2) pv1)
-        (else             (cons pv1 pv2))))
+  (cond ((not pv1)     pv2)
+        ((not pv2)     pv1)
+        ((eq? pv1 pv2) pv1)
+        (else          (cons pv1 pv2))))
 
 (define (ast-provenance     ast)    (vector-ref ast 1))
 (define (ast-provenance-set ast pv) (let ((parts (vector->list ast)))

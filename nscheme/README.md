@@ -182,8 +182,6 @@ Eventually:
 
 ### Design improvements
 
-- Define something like a `($provenance STX AST-VALUE)` helper
-
 - Include quasiquote, (maybe even match, if records cooperate) in initial env
 
 - Have quasiquote roll up quotes and preserve provenance when possible, rather than unrolling them

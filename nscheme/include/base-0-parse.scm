@@ -124,7 +124,7 @@
                     (unless (defstate-expression dst)
                       (raise-syntax-error "no expression after definitions" stx.body))
                     dst))
-                (ast-provenance-add ($body env ^def) (syntax-provenance stx.body))))))
+                ($provenance ($body env ^def) stx.body)))))
 
 (define (parse-begin-definition dst env.scope env . stx*)
   (foldl (lambda (stx dst) (parse-definition dst env.scope env stx)) dst stx*))
