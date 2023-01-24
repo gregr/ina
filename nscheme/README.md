@@ -182,11 +182,6 @@ Eventually:
 
 ### Design improvements
 
-- Include quasiquote, (maybe even match, if records cooperate) in initial env
-
-- Have quasiquote roll up quotes and preserve provenance when possible, rather than unrolling them
-  into cons and vector construction expressions.
-
 - Fix environments to not be O(n^2)
   - But avoid depending on global/dynamic-parameter state
   - Represent marks and addresses as records with a semi-unique id for improved lookup performance
@@ -211,6 +206,8 @@ Eventually:
   - Flat definition context scope extensions (env-extend) should thread the uid counter into and out
     of splicing sub-scopes (entire definition context sees all effects).
   - Macro transcription should retrieve its mark uid from the user environment.
+
+- Include match in initial env?
 
 ### Primitives
 

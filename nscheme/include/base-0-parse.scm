@@ -111,6 +111,64 @@
       $splicing (lambda (stx*) (lambda (dst scope env)
                                  (apply parse-begin-definition dst scope env stx*))))))
 
+(define (parse-quasiquote env stx.qq)
+  (define (finish quote? x) (if quote? (parse-quote env x) x))
+  (define (operand qq) (car (syntax-unwrap (cdr qq))))
+  (define (operation? qq tag)
+    (and (pair? qq)
+         (let ((qq.d (syntax-unwrap (cdr qq))))
+           (and (pair? qq.d)
+                (let ((qq.dd (syntax-unwrap (cdr qq.d))))
+                  (and (null? qq.dd)
+                       (identifier? (car qq))
+                       (eq? (env-ref^ env (car qq) vocab.quasiquote) tag)))))))
+  (let-values
+    (((quote? e)
+      (let loop ((stx.qq stx.qq) (level 0))
+        (when (and (identifier? stx.qq) (env-ref^ env stx.qq vocab.quasiquote))
+          (raise-syntax-error "misplaced quasiquote operator" stx.qq))
+        (let ((qq (syntax-unwrap stx.qq)))
+          (cond ((and (= level 0) (pair? qq)
+                      (let ((qq.a (syntax-unwrap (car qq))))
+                        (operation? qq.a 'unquote-splicing)))
+                 (let ((rand (operand (syntax-unwrap (car qq)))))
+                   (let-values (((quote? rest) (loop (cdr qq) level)))
+                     (let ((rest (finish quote? rest)))
+                       (values #f ($call $append (parse-expression env rand) rest))))))
+                ((and (< 0 level) (operation? qq 'unquote-splicing))
+                 (let ((rand (operand qq)))
+                   (let-values (((quote? e) (loop rand (- level 1))))
+                     (if quote?
+                         (values #t stx.qq)
+                         (values #f ($list ($quote 'unquote-splicing) e))))))
+                ((operation? qq 'unquote)
+                 (let ((rand (operand qq)))
+                   (if (= level 0)
+                       (values #f (parse-expression env rand))
+                       (let-values (((quote? e) (loop rand (- level 1))))
+                         (if quote?
+                             (values #t stx.qq)
+                             (values #f ($list ($quote 'unquote) e)))))))
+                ((operation? qq 'quasiquote)
+                 (let ((rand (operand qq)))
+                   (let-values (((quote? e) (loop rand (+ level 1))))
+                     (if quote?
+                         (values #t stx.qq)
+                         (values #f ($list ($quote 'quasiquote) e))))))
+                ((pair? qq)
+                 (let-values (((quote.a? a) (loop (car qq) level))
+                              ((quote.b? b) (loop (cdr qq) level)))
+                   (if (and quote.a? quote.b?)
+                       (values #t stx.qq)
+                       (values #f ($cons (finish quote.a? a) (finish quote.b? b))))))
+                ((vector? qq)
+                 (let-values (((quote? e) (loop (vector->list qq) level)))
+                   (if quote?
+                       (values #t stx.qq)
+                       (values #f ($pcall 'apply ($prim 'vector) e)))))
+                (else (values #t stx.qq)))))))
+    (finish quote? e)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -251,6 +309,8 @@
             (cons 'let*-values    (nonsplicing-expression-operator-parser $splicing-let*-values))
             (cons 'letrec*-values (nonsplicing-expression-operator-parser $splicing-letrec*-values))
             (cons 'let            (expression-operator-parser parse-let          2 #f))))
+        (b*.qq '(unquote unquote-splicing))
+        (b*.qq-and-expr (list (cons 'quasiquote (expression-operator-parser parse-quasiquote 1 1))))
         (b*.def-and-expr
           (list
             (list 'begin
@@ -285,6 +345,12 @@
                                                      vocab.definition-operator op.def
                                                      vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
+    (for-each (lambda (id) (env-bind! env.scope id vocab.quasiquote (syntax-peek id)))
+              b*.qq)
+    (for-each (lambda (id op) (env-bind! env.scope id
+                                         vocab.expression-operator op
+                                         vocab.quasiquote          (syntax-peek id)))
+              (map car b*.qq-and-expr) (map cdr b*.qq-and-expr))
     (for-each (lambda (id op) (env-bind! env.scope id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
     (env-extend env.empty env.scope)))
