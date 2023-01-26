@@ -42,6 +42,7 @@
     (for-each (lambda (id a) (env-bind! env.scope id vocab.expression
                                         (parse-variable-ref/address a)))
               param* addr*)
+    (env-freeze! env.scope)
     env.scope))
 
 (define (env-extend-scope env param* addr*) (env-extend env (env:scope param* addr*)))
@@ -101,7 +102,7 @@
                    (syntax-provenance stx))))
     (values env (syntax-add-mark stx m))))
 
-(define (identifier->fresh-address p) (fresh-address p))
+(define (identifier->fresh-address p) (fresh-address (syntax-peek p)))
 
 (define ($provenance ast stx) (ast-provenance-add ast (syntax-provenance stx)))
 
@@ -125,11 +126,10 @@
 (define ($lambda env param*~     ^body) ($case-lambda env (cons param*~ ^body)))
 (define ($let    env param* rhs* ^body) (apply $call ($lambda env param* ^body) rhs*))
 
-(define ($letrec env param* env&addr*->rhs*&body)
-  (let* ((addr*     (map identifier->fresh-address param*))
-         (env       (env-extend-scope env param* addr*)))
-    (let-values ((($rhs* $body) (apply env&addr*->rhs*&body env addr*)))
-      (ast:letrec #f (map binding-pair addr* $rhs*) $body))))
+(define ($letrec env param* ^rhs* ^body)
+  (let* ((addr* (map identifier->fresh-address param*))
+         (env   (env-extend-scope env param* addr*)))
+    (ast:letrec #f (map binding-pair addr* (apply ^rhs* env addr*)) (apply ^body env addr*))))
 
 (define $and
   (case-lambda
@@ -225,6 +225,7 @@
   (let* ((env.scope (make-env))
          (env       (env-extend env env.scope))
          (dst       (^def defstate.empty env.scope env)))
+    (env-freeze! env.scope)
     (ast:letrec #f (definitions->binding-pairs (defstate-definitions dst))
                 ((defstate-expression dst)))))
 

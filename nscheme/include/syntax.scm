@@ -2,13 +2,16 @@
 ;;; Syntax with lazy mark propagation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; TODO: eliminate description, which we shouldn't need thanks to AST provenance.
-(define (fresh-address description) (mvector description))
-
-(define (fresh-mark) (mvector))
-(define mark=?       equal?)
-(define mark*=?      equal?)
-(define antimark     #f)
+(define (fresh-mark) (vector #t))
+(define antimark #f)
+(define mark=?   eq?)
+(define (mark*=? a* b*)
+  (let loop ((a* a*) (b* b*))
+    (if (pair? a*)
+        (and (pair? b*)
+             (mark=? (car a*) (car b*))
+             (loop (cdr a*) (cdr b*)))
+        (null? b*))))
 
 (splicing-local
   ((define antimark? not)
@@ -129,27 +132,41 @@
 ;;; Environments ;;;
 ;;;;;;;;;;;;;;;;;;;;
 
+;; NOTE: lookup is currently O(n^2), but may not be a problem in practice.  Consider more efficient
+;; dictionary data structures If we need to harden this.
+;;
+;; In order for a better dictionary structure to help, env-extend would have to combine
+;; sub-dictionaries.  But this is only possible if the sub-dictionaries are immutable, which is not
+;; the case for definition-style environments until they are frozen.
+;;
+;; We could have env-extend listen for freeze! events coming from its children.  Once both children
+;; are frozen, we would combine their dictionaries, then propagate our own freeze! event to any
+;; further registered extensions.
+
 (define env.empty
   (lambda (method)
     (caseq method
-      ((ref)  (lambda (fail id) (fail)))
-      ((set!) (error "invalid immutable environment operation" method))
-      (else   (error "invalid environment operation"           method)))))
+      ((ref)     (lambda (fail id) (fail)))
+      ((freeze!) (lambda () (values)))
+      ((set!)    (error "invalid immutable environment operation" method))
+      (else      (error "invalid environment operation"           method)))))
 
 (define (env-extend env env.first)
   (lambda (method)
     (caseq method
-      ((ref)  (lambda (fail id) ((env.first 'ref) (lambda () ((env 'ref) fail id)) id)))
-      ((set!) (error "invalid immutable environment operation" method))
-      (else   (error "invalid environment operation"           method)))))
+      ((ref)     (lambda (fail id) ((env.first 'ref) (lambda () ((env 'ref) fail id)) id)))
+      ((freeze!) (lambda () (values)))
+      ((set!)    (error "invalid immutable environment operation" method))
+      (else      (error "invalid environment operation"           method)))))
 
 (define (env-add-mark env m)
   (lambda (method)
     (caseq method
-      ((ref)  (lambda (fail id) (let ((i (and (identifier? id) (syntax-remove-mark? id m))))
-                                  (if i ((env 'ref) fail i) (fail id)))))
-      ((set!) (error "invalid immutable environment operation" method))
-      (else   (error "invalid environment operation"           method)))))
+      ((ref)     (lambda (fail id) (let ((i (and (identifier? id) (syntax-remove-mark? id m))))
+                                     (if i ((env 'ref) fail i) (fail id)))))
+      ((freeze!) (lambda () (values)))
+      ((set!)    (error "invalid immutable environment operation" method))
+      (else      (error "invalid environment operation"           method)))))
 
 (splicing-local
   ((define id=? bound-identifier=?)
@@ -157,19 +174,19 @@
    (define (id-dict-ref id=>x id)
      (let ((kv (assp (lambda (id.key) (id=? id.key id)) id=>x)))
        (and kv (cdr kv))))
-   (define (id-dict-set id=>x id x)
-     (let ((id=>x (let loop ((ix* id=>x) (skipped '()))
-                    (cond ((null? ix*)          id=>x)
-                          ((id=? (caar ix*) id) (foldl cons (cdr ix*) skipped))
-                          (else                 (loop (cdr ix*) (cons (car ix*) skipped)))))))
-       (cons (cons id x) id=>x))))
+   (define (id-dict-set id=>x id x) (cons (cons id x) id=>x)))
   (define (make-env)
-    (let ((id=>x id-dict.empty))
+    (let ((id=>x (mvector id-dict.empty)) (frozen? (mvector #f)))
       (lambda (method)
         (caseq method
-          ((ref)  (lambda (fail id) (or (id-dict-ref id=>x id) (fail))))
-          ((set!) (lambda (id x)    (set! id=>x (id-dict-set id=>x id x))))
-          (else   (error "invalid environment operation" method)))))))
+          ((ref)     (lambda (fail id) (or (id-dict-ref (mvector-ref id=>x 0) id) (fail))))
+          ((freeze!) (lambda () (mvector-set! frozen? 0 #t)))
+          ((set!)    (lambda (id x)
+                       (when (mvector-ref frozen? 0)
+                         (error "invalid immutable environment operation" method))
+                       (mvector-set! id=>x 0 (id-dict-set (mvector-ref id=>x 0) id x))))
+          (else      (error "invalid environment operation" method)))))))
 
-(define (env-set! env id x) ((env 'set!) id x))
-(define (env-ref  env id)   ((env 'ref) (lambda () #f) id))
+(define (env-freeze! env)      ((env 'freeze!)))
+(define (env-set!    env id x) ((env 'set!) id x))
+(define (env-ref     env id)   ((env 'ref) (lambda () #f) id))

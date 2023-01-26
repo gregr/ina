@@ -182,31 +182,6 @@ Eventually:
 
 ### Design improvements
 
-- Fix environments to not be O(n^2)
-  - But avoid depending on global/dynamic-parameter state
-  - Represent marks and addresses as records with a semi-unique id for improved lookup performance
-    - Each record needs a distinct identity to maintain uniqueness
-    - But the id field doesn't need to be completely unique since it's just used to improve bucket
-      or comparison-based search
-    - id could be populated with either the initial allocated memory address, or the value of a
-      counter stored in an environment
-
-- Close/freeze environments ASAP to reduce side channels and mutation-based interference.
-  - Automatic push-based freezing: env-extend can register itself to be updated with a consolidation
-    once its constituents have frozen.
-  - Tree-shaped scope extensions can be frozen immediately.
-  - Definition contexts manipulate a mutable env.scope, and cannot be frozen until completion.
-    - Freezing can happen before processing definition RHSs.
-
-- Install a scope-local uid counter in the environment that is forked or threaded by extensions.
-  - With a distinct-identity record-based approach we don't need env-oriented ids to be perfectly
-    unique, though distinctness can improve lookup performance.
-  - Tree-shaped scope extensions (env-extend-scope) should fork the uid counter (effects are not
-    seen by parent or siblings).
-  - Flat definition context scope extensions (env-extend) should thread the uid counter into and out
-    of splicing sub-scopes (entire definition context sees all effects).
-  - Macro transcription should retrieve its mark uid from the user environment.
-
 - Include match in initial env?
 
 ### Primitives

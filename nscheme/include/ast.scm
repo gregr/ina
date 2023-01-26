@@ -18,6 +18,8 @@
 (define (ast-provenance-add ast pv) (ast-provenance-set
                                       ast (provenance-combine pv (ast-provenance ast))))
 
+(define (fresh-address name) (vector name))
+
 (define (ast:prim        pv name)              `#(prim        ,pv ,name))
 (define (ast:quote       pv v)                 `#(quote       ,pv ,v))
 (define (ast:ref         pv address)           `#(ref         ,pv ,address))
