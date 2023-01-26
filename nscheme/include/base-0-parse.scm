@@ -125,8 +125,6 @@
   (let-values
     (((quote? e)
       (let loop ((stx.qq stx.qq) (level 0))
-        (when (and (identifier? stx.qq) (env-ref^ env stx.qq vocab.quasiquote))
-          (raise-syntax-error "misplaced quasiquote operator" stx.qq))
         (let ((qq (syntax-unwrap stx.qq)))
           (cond ((and (= level 0) (pair? qq)
                       (let ((qq.a (syntax-unwrap (car qq))))
@@ -166,7 +164,9 @@
                    (if quote?
                        (values #t stx.qq)
                        (values #f ($pcall 'apply ($prim 'vector) e)))))
-                (else (values #t stx.qq)))))))
+                (else (when (and (identifier? stx.qq) (env-ref^ env stx.qq vocab.quasiquote))
+                        (raise-syntax-error "misplaced quasiquote operator" stx.qq))
+                      (values #t stx.qq)))))))
     (finish quote? e)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;

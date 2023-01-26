@@ -1,20 +1,24 @@
 #lang racket/base
-(require "nscheme.rkt"
+(require "nscheme.rkt" (for-syntax "nscheme.rkt")
          profile racket/function racket/include racket/list racket/match
          racket/pretty racket/string
-         (for-syntax (except-in racket/base append string-ref string-length
-                                string->list list->string))
+         (for-syntax (except-in racket/base integer? rational? append string-ref string-length
+                                string-append string->list list->string
+                                call-with-escape-continuation)
+                     racket/list)
          (rename-in racket/port
                     (call-with-input-string  racket:call-with-input-string)
                     (call-with-output-string racket:call-with-output-string))
-         (rename-in (except-in racket/base append string-ref string-length
-                               string->list list->string)
+         (rename-in (except-in racket/base integer? rational? append string-ref string-length
+                               string-append string->list list->string
+                               call-with-escape-continuation)
                     (eof-object? racket:eof-object?)
                     (read racket:read) (write racket:write)))
 (module nscm:base racket
   (provide (all-defined-out))
   (require "nscheme.rkt" (for-syntax racket/list))
-  (include "base.scm"))
+  (include "include/base/bytevector.scm")
+  (include "include/base/string.scm"))
 (require 'nscm:base (for-syntax 'nscm:base))
 (include "unicode.scm")
 (include "grammar.scm")
@@ -227,7 +231,7 @@
             |a b|
             |p q|\ r\|s|tu|
             ,(string-append "1 2\t3\n4"
-                            (list->string (append '(5) (unicode->utf8 150))))
+                            (utf8->string (u8*->bytevector (append '(5) (unicode->utf8 150)))))
             0
             0.0
             -0.0

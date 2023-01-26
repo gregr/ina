@@ -49,7 +49,7 @@
           ((vector?    v) (cond ((eqv? (vector-length  v) 0) (pr "#()"))
                                 (else (bracket "#(" ")"  (vector->list  v)))))
           ((mvector?   v) (cond ((eqv? (mvector-length v) 0) (pr "#m()"))
-                                (else (bracket "#m(" ")" (mvector->list v)))))
+                                (else (bracket "#m(" ")" (vector->list (mvector->vector v))))))
           ((eq? #t     v) "#t")
           ((eq? #f     v) "#f")
           ((null?      v) "()")
@@ -91,7 +91,7 @@
             ("\r" "\\r") ("\t" "\\t") ("\v" "\\v")
             (else (if (or (unicode-control? c) (unicode-vspace? c))
                     (string-append "\\u" (number->string c) ";")
-                    (list->string (list c)))))))
+                    (utf8->string (bytevector c)))))))
     (string->unicodes v))
   (pr "\""))
 
@@ -111,7 +111,7 @@
                       (cond ((eqv? c (char "|")) (when bad? (pr "|"))
                                                  (pr "\\|")
                                                  (when bad? (pr "|")))
-                            (else (pr (list->string (unicode->utf8 c))))))
+                            (else (pr (utf8->string (u8*->bytevector (unicode->utf8 c)))))))
                     cs)
                   (when bad? (pr "|")))))))
 

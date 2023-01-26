@@ -1,6 +1,52 @@
+(define cons* list*)
+(define (mvector-fill! mv v)
+  (let loop ((i (- (mvector-length mv) 1)))
+    (when (<= 0 i) (mvector-set! mv i v) (loop (- i 1)))))
+(define (mvector-copy!/ref mv start src src-start src-end ref)
+  (let loop ((i src-start))
+    (cond ((<= src-end i) (- i src-start))
+          (else (mvector-set! mv (+ start (- i src-start)) (ref src i))
+                (loop (+ i 1))))))
+(define (mvector-copy! mv start src src-start src-end)
+  (mvector-copy!/ref mv start src src-start src-end mvector-ref))
+;(define (mvector-copy!/string mv start src src-start src-end)
+  ;(mvector-copy!/ref mv start src src-start src-end string-ref))
+(define (mvector-copy!/list mv start xs)
+  (let loop ((i start) (xs xs)) (cond ((null? xs) (- i start))
+                                      (else       (mvector-set! mv i (car xs))
+                                                  (loop (+ i 1) (cdr xs))))))
+
+(define-syntax (define-variant stx)
+  (syntax-case stx ()
+    ((_ (tag field ...))
+     (andmap identifier? (syntax->list #'(tag field ...)))
+     (let ((tag-string (symbol->string (syntax->datum #'tag)))
+           (len        (length (syntax->list #'(tag field ...)))))
+       (with-syntax
+         ((dlen     (datum->syntax #'_ len))
+          (d?       (datum->syntax
+                      #'tag (string->symbol (string-append tag-string "?"))))
+          ((df ...) (datum->syntax
+                      #'_ (map (lambda (f)
+                                 (datum->syntax
+                                   f (string->symbol
+                                       (string-append
+                                         tag-string "-"
+                                         (symbol->string (syntax->datum f))))))
+                               (syntax->list #'(field ...)))))
+          ((di ...) (datum->syntax #'_ (range 1 len))))
+         #'(begin (define (tag field ...) (vector 'tag field ...))
+                  (define (d? d) (and (vector? d) (= dlen (vector-length d))
+                                      (eq? 'tag (vector-ref d 0))))
+                  (define (df d) (vector-ref d di)) ...))))))
+(define-syntax-rule (define-variant* vd vds ...)
+  (begin (define-variant vd) (define-variant vds) ...))
+
 (define-syntax (cset/x stx)
   (define (cunit cstx)
     (define c (syntax->datum cstx))
+    (define (string-length s) (bytevector-length (string->utf8 s)))
+    (define (string-ref s i) (bytevector-u8-ref (string->utf8 s) i))
     (cond ((byte? c)                                 c)
           ;; TODO: do not use string-length or string-ref
           ((and (string? c) (= (string-length c) 1)) (string-ref c 0))
@@ -15,7 +61,7 @@
     ((_ x cstx) (let ((c (syntax->datum #'cstx)))
                   (cond ((byte? c)   #'(eq? x c))
                         ((string? c) #`(or #,@(map (lambda (b) #`(eq? x #,b))
-                                                   (string->list c))))
+                                                   (bytevector->u8* (string->utf8 c)))))
                         (else        (error "invalid cset:" #'cstx)))))))
 
 (define-syntax-rule (cset c) (lambda (x) (cset/x x c)))
@@ -294,7 +340,7 @@
 
 (define (g:lift x)
   (cond ((grammar? x) x)
-        ((string?  x) (g:app list->string (g:lift (string->list x))))
+        ((string?  x) (g:app list->string (g:lift (bytevector->u8* (string->utf8 x)))))
         ((list?    x) (foldr (lambda (d g) (g:seq (one d) g)) (return '()) x))
         (else         (one x))))
 (define (seq* xs)
@@ -302,11 +348,12 @@
         ((vector? xs) (g:app list->vector (g:lift (vector->list xs))))
         (else         (error "invalid seq* source" xs))))
 (define (alt* xs)
-  (cond ((string? xs) (alt* (string->vector xs)))
-        ((vector? xs) (alt* (vector->list   xs)))
-        ((list?   xs) (foldr (lambda (x alts) (g:alt (one x) alts))
-                             (g:fail '()) xs))
-        (else         (error "invalid alt* source" xs))))
+  (cond ((string?     xs) (alt* (string->utf8    xs)))
+        ((bytevector? xs) (alt* (bytevector->u8* xs)))
+        ((vector?     xs) (alt* (vector->list    xs)))
+        ((list?       xs) (foldr (lambda (x alts) (g:alt (one x) alts))
+                                 (g:fail '()) xs))
+        (else             (error "invalid alt* source" xs))))
 
 (define (gfoldl proc g gs)
   (if (null? gs) (g:lift g)

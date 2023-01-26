@@ -2,8 +2,7 @@
 (require "nscheme.rkt" racket/include racket/list racket/pretty racket/string)
 (module nscm:base racket
   (provide (all-defined-out))
-  (require "nscheme.rkt" (for-syntax racket/list))
-  (include "base.scm"))
+  (require "nscheme.rkt" (for-syntax racket/list)))
 (require 'nscm:base (for-syntax 'nscm:base))
 (include "tty.scm")
 (print-as-expression #f)

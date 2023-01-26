@@ -1,3 +1,9 @@
+(define << bitwise-arithmetic-shift-left)
+(define >> bitwise-arithmetic-shift-right)
+(define \| bitwise-ior)
+(define &  bitwise-and)
+(define ^  bitwise-xor)
+
 ;; TODO: rename unicode to codepoint in many places
 (define unicode-min 0)
 (define unicode-max #x7FFFFFFF)
@@ -53,7 +59,7 @@
     (foldl (lambda (b acc) (let ((rps (car acc)) (next ((cdr acc) b)))
                              (if (procedure? next) (cons rps next)
                                (cons (cons next rps) utf8->unicode))))
-           (cons '() utf8->unicode) (string->list s)))
+           (cons '() utf8->unicode) (bytevector->u8* (string->utf8 s))))
   (reverse (append (if (eq? (cdr result) utf8->unicode) '() '(#f))
                    (car result))))
 
@@ -120,7 +126,10 @@
 (define-syntax (char stx)
   (syntax-case stx ()
     ((_ ss) (let ((s (syntax->datum #'ss)))
-            ;; TODO: do not use string-length
+              (define (string-length s) (bytevector-length (string->utf8 s)))
+              ;; TODO: do not use string-length
               (and (string? s) (= (string-length s) 1)))
-            ;; TODO: do not use string-ref
-            (datum->syntax #'_ (string-ref (syntax->datum #'ss) 0)))))
+            (let ()
+              (define (string-ref s i) (bytevector-u8-ref (string->utf8 s) i))
+              ;; TODO: do not use string-ref
+              (datum->syntax #'_ (string-ref (syntax->datum #'ss) 0))))))

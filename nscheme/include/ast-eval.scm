@@ -1,3 +1,6 @@
+;; TODO: this code is only intended for testing, and should be moved to a Racket file.
+;; The bootstrapping process should not depend on ast-eval to succeed.
+
 (define cenv.empty '())
 (define renv.empty '())
 
@@ -60,8 +63,8 @@
                             (lambda (renv count args)
                               (let ((renv-extend (make-renv-extend rparam count)))
                                 (if renv-extend
-                                  (s.body (renv-extend renv args))
-                                  (k renv count args))))))
+                                    (s.body (renv-extend renv args))
+                                    (k renv count args))))))
                         (lambda (renv count args)
                           (error "arity mismatch"
                                  'given count 'expected (map case-lambda-clause-param cc*)))
@@ -82,99 +85,29 @@
               (for-each (lambda (loc s) (set-box! loc (s renv))) loc*.arg s*.arg)
               (s.body (renv-extend renv rparam (map unbox loc*.arg)))))))
       (`#(prim ,_ ,name)
-        (let ((prim (case name
-                      ((apply) apply)
-                      ((call-with-values) call-with-values)
-                      ((values) values)
-                      ((eq?) eq?)
-                      ((eqv?) eqv?)
-                      ((null?) null?)
-                      ((boolean?) boolean?)
-                      ((procedure?) procedure?)
-                      ((symbol?) symbol?)
-                      ((string?) string?)
-                      ((rational?) rational?)
-                      ((integer?) integer?)
-                      ((f32?) f32?)
-                      ((f64?) f64?)
-                      ((pair?) pair?)
-                      ((vector?) vector?)
-                      ((mvector?) mvector?)
-                      ((bytevector?) bytevector?)
-                      ((mbytevector?) mbytevector?)
-                      ((string->symbol) string->symbol)
-                      ((symbol->string) symbol->string)
-                      ((cons) cons)
-                      ((car) car)
-                      ((cdr) cdr)
-                      ((vector) vector)
-                      ((vector-length) vector-length)
-                      ((vector-ref) vector-ref)
-                      ((make-mvector) make-mvector)
-                      ((mvector->vector) mvector->vector)
-                      ((mvector-length) mvector-length)
-                      ((mvector-ref) mvector-ref)
-                      ((mvector-set!) mvector-set!)
-                      ((bytevector) bytevector)
-                      ((bytevector-length) bytevector-length)
-                      ((bytevector-u8-ref) bytevector-u8-ref)
-                      ((bytevector-u16-ref) bytevector-u16-ref)
-                      ((bytevector-u32-ref) bytevector-u32-ref)
-                      ((bytevector-u64-ref) bytevector-u64-ref)
-                      ((make-mbytevector) make-mbytevector)
-                      ((mbytevector->bytevector) mbytevector->bytevector)
-                      ((mbytevector-length) mbytevector-length)
-                      ((mbytevector-u8-ref) mbytevector-u8-ref)
-                      ((mbytevector-u16-ref) mbytevector-u16-ref)
-                      ((mbytevector-u32-ref) mbytevector-u32-ref)
-                      ((mbytevector-u64-ref) mbytevector-u64-ref)
-                      ((mbytevector-u8-set!) mbytevector-u8-set!)
-                      ((mbytevector-u16-set!) mbytevector-u16-set!)
-                      ((mbytevector-u32-set!) mbytevector-u32-set!)
-                      ((mbytevector-u64-set!) mbytevector-u64-set!)
-                      ((bitwise-arithmetic-shift-left) bitwise-arithmetic-shift-left)
-                      ((bitwise-arithmetic-shift-right) bitwise-arithmetic-shift-right)
-                      ((bitwise-not) bitwise-not)
-                      ((bitwise-and) bitwise-and)
-                      ((bitwise-ior) bitwise-ior)
-                      ((bitwise-xor) bitwise-xor)
-                      ((bitwise-length) bitwise-length)
-                      ((integer-floor-divmod) integer-floor-divmod)
-                      ((numerator) numerator)
-                      ((denominator) denominator)
-                      ((cmp) cmp)
-                      ((+) +)
-                      ((-) -)
-                      ((*) *)
-                      ((/) /)
-                      ((f32->u32) f32->u32)
-                      ((u32->f32) u32->f32)
-                      ((f64->u64) f64->u64)
-                      ((u64->f64) u64->f64)
-                      ((f32->f64) f32->f64)
-                      ((f64->f32) f64->f32)
-                      ((f32->rational) f32->rational)
-                      ((rational->f32) rational->f32)
-                      ((f64->rational) f64->rational)
-                      ((rational->f64) rational->f64)
-                      ((f32-cmp) f32-cmp)
-                      ((f32-floor) f32-floor)
-                      ((f32-ceiling) f32-ceiling)
-                      ((f32-truncate) f32-truncate)
-                      ((f32-round) f32-round)
-                      ((f32+) f32+)
-                      ((f32-) f32-)
-                      ((f32*) f32*)
-                      ((f32/) f32/)
-                      ((f64-cmp) f64-cmp)
-                      ((f64-floor) f64-floor)
-                      ((f64-ceiling) f64-ceiling)
-                      ((f64-truncate) f64-truncate)
-                      ((f64-round) f64-round)
-                      ((f64+) f64+)
-                      ((f64-) f64-)
-                      ((f64*) f64*)
-                      ((f64/) f64/))))
+        (define-syntax-rule (case-symbol->var x sym ...) (case x ((sym) sym) ...))
+        (let ((prim
+                (case-symbol->var
+                  name
+                  apply call-with-values values
+                  eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
+                  pair? vector? mvector? bytevector? mbytevector?
+                  string->symbol symbol->string
+                  cons car cdr
+                  vector vector-length vector-ref
+                  make-mvector mvector->vector mvector-length mvector-ref mvector-set!
+                  bytevector bytevector-length
+                  bytevector-u8-ref bytevector-u16-ref bytevector-u32-ref bytevector-u64-ref
+                  make-mbytevector mbytevector->bytevector mbytevector-length
+                  mbytevector-u8-ref mbytevector-u16-ref mbytevector-u32-ref mbytevector-u64-ref
+                  mbytevector-u8-set! mbytevector-u16-set! mbytevector-u32-set! mbytevector-u64-set!
+                  bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
+                  bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
+                  numerator denominator cmp + - * /
+                  f32->u32 u32->f32 f64->u64 u64->f64
+                  f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
+                  f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
+                  f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/)))
           (lambda (renv) prim))))))
 
 (define (ast-eval ast) ((ast-stage ast cenv.empty) renv.empty))
