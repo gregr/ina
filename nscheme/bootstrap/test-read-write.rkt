@@ -1,5 +1,5 @@
 #lang racket/base
-(require "nscheme.rkt" (for-syntax "nscheme.rkt")
+(require "../platform/racket/nscheme.rkt" (for-syntax "../platform/racket/nscheme.rkt")
          profile racket/function racket/include racket/list racket/match
          racket/pretty racket/string
          (for-syntax (except-in racket/base integer? rational? append string-ref string-length
@@ -16,14 +16,14 @@
                     (read racket:read) (write racket:write)))
 (module nscm:base racket
   (provide (all-defined-out))
-  (require "nscheme.rkt" (for-syntax racket/list))
-  (include "include/base/bytevector.scm")
-  (include "include/base/string.scm"))
+  (require "../platform/racket/nscheme.rkt" (for-syntax racket/list))
+  (include "../include/base/bytevector.scm")
+  (include "../include/base/string.scm"))
 (require 'nscm:base (for-syntax 'nscm:base))
-(include "unicode.scm")
-(include "grammar.scm")
-(include "read.scm")
-(include "write.scm")
+(include "../include/unicode.scm")
+(include "../include/grammar.scm")
+(include "../include/read.scm")
+(include "../include/write.scm")
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 
@@ -127,7 +127,11 @@
           categorized-data.normal
           categorized-data.annotated)
 
-(define fsys (filesystem '(".")))
+(require racket/runtime-path)
+(define-runtime-path here ".")
+(define path.include (path->string (build-path here "../include/")))
+
+(define fsys (filesystem (list path.include)))
 
 ;; TODO: read* via grammar is significantly slower at the moment:
 ;;   read*:              cpu time:   54 real time:   57 gc time:   3
@@ -137,7 +141,7 @@
          (d (time (read* in))))
     (in 'close)
     d))
-(define data.racket (time (call-with-input-file "read.scm" racket:read*)))
+(define data.racket (time (call-with-input-file (build-path path.include "read.scm") racket:read*)))
 
 (test 'read.read.scm.length
   (length data)

@@ -1,26 +1,25 @@
 #lang racket/base
-(require "nscheme.rkt" racket/include racket/match racket/splicing racket/vector
-         (for-syntax racket/base))
+(require "../platform/racket/nscheme.rkt" racket/include racket/splicing (for-syntax racket/base))
 
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an
 ;;; interactive system and its dependencies, targeting each platform.
 
-(include "include/base-1-source.scm")
-(include "include/syntax.scm")
-(include "include/ast.scm")
-(include "include/parse.scm")
+(include "../include/base-1-source.scm")
+(include "../include/syntax.scm")
+(include "../include/ast.scm")
+(include "../include/parse.scm")
 
 ;; TODO: replace this with environments populated using ast:prim instead.
-(include "include/boot/env-primitive.scm")
+(include "../include/boot/env-primitive.scm")
 
-(include "include/base-0-parse.scm")
+(include "../include/base-0-parse.scm")
 
-;; TODO: all remaining compiler definitions should be included here, replacing ast-eval.scm:
-(include "include/ast-eval.scm")
+;; TODO: all remaining compiler definitions should be included here, replacing ast-eval.rkt:
+(require "ast-eval.rkt")
 
 ;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
 ;; depend on the compiler instead of ast-eval:
-(include "include/base-2-parse.scm")
+(include "../include/base-2-parse.scm")
 
 ;; TODO: compile interact.scm and all of its dependencies (almost everything listed above).
 ;; - Other dependencies: read.scm write.scm tty.scm and/or other UI definitions, etc.

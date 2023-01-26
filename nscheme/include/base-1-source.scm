@@ -3,6 +3,7 @@
 (include "base/compare.scm")
 (include "base/list.scm")
 (include "base/mvector.scm")
+(include "base/vector.scm")
 (include "base/mbytevector.scm")
 (include "base/bytevector.scm")
 (include "base/string.scm")

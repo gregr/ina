@@ -1,5 +1,10 @@
-;; TODO: this code is only intended for testing, and should be moved to a Racket file.
-;; The bootstrapping process should not depend on ast-eval to succeed.
+#lang racket/base
+(provide ast-eval)
+(require "../platform/racket/nscheme.rkt" racket/include racket/match)
+(include "../include/ast.scm")
+
+;;; NOTE: this code is only intended for testing until the compiler is finished.  The bootstrapping
+;;; process should not depend on ast-eval.
 
 (define cenv.empty '())
 (define renv.empty '())

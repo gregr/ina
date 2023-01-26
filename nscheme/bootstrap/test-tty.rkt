@@ -1,10 +1,10 @@
 #lang racket/base
-(require "nscheme.rkt" racket/include racket/list racket/pretty racket/string)
+(require "../platform/racket/nscheme.rkt" racket/include racket/list racket/pretty racket/string)
 (module nscm:base racket
   (provide (all-defined-out))
-  (require "nscheme.rkt" (for-syntax racket/list)))
+  (require "../platform/racket/nscheme.rkt" (for-syntax racket/list)))
 (require 'nscm:base (for-syntax 'nscm:base))
-(include "tty.scm")
+(include "../include/tty.scm")
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 

@@ -125,17 +125,13 @@ way by manipulating programs and live processes as data.
 - There is no prescribed object-level error handling model.
   - You can define your own handling using escape continuations and dynamically-scoped parameters.
 
-## Run tests
-
-~~`raco test *.rkt`~~
-
-`time racket test.rkt`
-
-## Bootstrap
+## Run tests and bootstrap
 
 Eventually:
 
-`time racket bootstrap.rkt`
+`time racket bootstrap/test.rkt`
+
+`time racket bootstrap/bootstrap.rkt`
 
 ## TODO
 
@@ -177,8 +173,6 @@ Eventually:
       continuations
     - When the thread is ready to yield, it blocks while receiving on the channel
     - When the thread is resumed, it will do so by invoking an escape continuation
-
-- Revise bootstrap.rkt so we can use it for testing
 
 ### Design improvements
 
