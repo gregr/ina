@@ -5,6 +5,48 @@
 (include "include/ast.scm")
 (include "include/syntax.scm")
 
+;; Some idea sketches:
+;;
+;; Examples of possible io procedure operation names:
+;; - 'block-read 'block-write 'stream-read 'stream-write 'socket-read 'socket-write
+;; - What about handles to virtual filesystems and networks?  These aren't blocks or streams.
+;;   - Ultimately, we can't predetermine all primitive families, and platforms will differ in the
+;;     set of primitives they support.
+;;     - e.g., a gui-enabled platform vs. a text-only platform
+;; - IO descriptors could just be integer ids, or we could tag them with a type, e.g.:
+;;   - `(file ,uid)
+;;   - `(console ,uid)
+;;   - `(process ,uid)
+;;   - `(keyboard ,uid)
+;;   - `(mouse ,uid)
+;;   - `(canvas ,uid)
+;;   - `(audio ,uid)
+;;   - `(filesystem ,uid)
+;;   - `(network ,uid)
+;; - The host system would map each descriptor to a device, which has its own state and controller.
+;;   - When taking a full-system snapshot, we may want to package up the state of some devices.
+;;   - file/canvas/console/etc.
+;;
+;; We will need to deal with dynamic linking, and conflicting layouts of shared libraries.  We also
+;; may not be restarting a system.  We may just be recovering persisted data and using it from an
+;; existing system.  We also may be restarting a system while embedding it in another system.
+;; - Components of an independent executable:
+;;   - bootstrapping process
+;;   - shared libraries
+;;   - program entry point
+;;   - optional io device state
+;; - These components can take different forms even on the same platform:
+;;   - bootstrapping process
+;;     - wrapper for standalone executable file format
+;;     - virtual machine executable taking libraries and program as input
+;;     - loading additional libraries into an already-running program
+;;   - shared libraries, program, io device state
+;;     - raw memory dump (a heap image)
+;;     - generated code
+;;       - platform-specific (e.g., Racket, Chez, JS, Python, C, WASM, x86 ...), compiled code
+;;       - portable, compiled code
+;;       - portable, not-yet-compiled nScheme code
+
 (define-syntax (quote-syntax stx)
   (syntax-case stx ()
     ((_ stx)
@@ -65,6 +107,14 @@
                                                                 (vector->list (syntax-e qq))))
                                                '#,(stx->pv qq))
                                            #`(quote-syntax #,qq))))))))
+
+(require racket/pretty)
+;(pretty-write (quote-syntax (foo . bar)))
+;(pretty-write (quasiquote-syntax (a b c)))
+;(pretty-write (quasiquote-syntax (a #,'b c)))
+;(pretty-write (quasiquote-syntax (a #,'(1 2 3) c)))
+;(pretty-write (quasiquote-syntax (a #,@(quote-syntax (1 2 3)) c)))
+;(pretty-write (quasiquote-syntax (a (quasiquote-syntax (1 #,2 3)) c)))
 
 (include "include/parse.scm")
 (include "include/boot/env-primitive.scm")

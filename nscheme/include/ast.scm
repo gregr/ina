@@ -24,6 +24,8 @@
 (define (ast:quote       pv v)                 `#(quote       ,pv ,v))
 (define (ast:ref         pv address)           `#(ref         ,pv ,address))
 (define (ast:if          pv ast.c ast.t ast.f) `#(if          ,pv ,ast.c ,ast.t ,ast.f))
+;; TODO: ASTs for lower-level language integration:
+;; - ast:unchecked-call, ast:let with type info, ast:case-lambda with type info, etc.
 (define (ast:call        pv ast.proc ast.args) `#(call        ,pv ,ast.proc ,ast.args))
 (define (ast:case-lambda pv clause*)           `#(case-lambda ,pv ,clause*))
 (define (ast:letrec      pv bpair* body)       `#(letrec      ,pv ,bpair* ,body))

@@ -51,6 +51,23 @@
 (require racket/control racket/file racket/flonum racket/list racket/match racket/port racket/string
          racket/struct racket/system racket/tcp racket/udp racket/vector (prefix-in rkt: racket/base))
 
+;; TODO: implement timer interrupts by manually ticking in generated code.  Do not get fancy with
+;; Racket's alarm events or breaks.
+
+;; TODO: we can use threads, call-with-escape-continuation, and current-thread to simulate
+;;       independent stacks and virtual escape continuations.
+;; - Actually, wrap a channel where the thread will expect escape continuation requests to appear.
+;;   - We can keep each thread's channel in a dynamic parameter.
+;; - To figure out which other virtual escape continuations are invalidated by calling one, look at
+;;   the current-thread.
+;; - To invoke a virutal escape continuation, first switch to its thread.
+;;   - When a thread suspends, it should block on a channel where it will receive any "escape
+;;     continuation requests".
+;;   - An escape continuation request will be a combination of arguments, a Racket-level escape
+;;     continuation that should be local to the thread, and a box/link for invalidating any escape
+;;     continuations that have been skipped.
+;;   - The thread then carries out the request.
+
 (define (panic . args) (raise (vector 'panic args)))
 (define (thread-register)           (error "TODO: not implemented"))
 (define (set-thread-register! x)    (error "TODO: not implemented"))
