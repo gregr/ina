@@ -81,10 +81,10 @@
 (define (parse-let env e0 e1 . e*)
   (if (identifier? e0)
       (let* ((bpair* (parse-binding-pairs e1)) (param* (map car bpair*)))
-        ($call ($letrec env (list e0)
-                        (lambda (env _)  (list ($lambda env param* (lambda (env . _)
-                                                                     (parse-body env e*)))))
-                        (lambda (_ addr) ($ref addr)))
+        (apply $call ($letrec env (list e0)
+                              (lambda (env _)  (list ($lambda env param* (lambda (env . _)
+                                                                           (parse-body env e*)))))
+                              (lambda (_ addr) ($ref addr)))
                (parse-expression* env (map cdr bpair*))))
       (let* ((bpair* (parse-binding-pairs e0)) (param* (map car bpair*)))
         ($let env param* (parse-expression* env (map cdr bpair*))
@@ -103,13 +103,15 @@
        2 #f)))
 
   (define (nonsplicing-expression-operator-parser $splicing)
-    (etc-splicing-expression-operator-parser $splicing (lambda (stx*) (lambda (_ __ env)
-                                                                        (parse-body env stx*)))))
+    (etc-splicing-expression-operator-parser
+      $splicing (lambda (stx*) (lambda (dst scope env)
+                                 (defstate-add-expression dst (lambda () (parse-body env stx*)))))))
 
   (define (splicing-expression-operator-parser $splicing)
     (etc-splicing-expression-operator-parser
       $splicing (lambda (stx*) (lambda (dst scope env)
-                                 (apply parse-begin-definition dst scope env stx*))))))
+                                 (defstate-add-expression
+                                   dst (lambda () (parse-begin-expression env stx*))))))))
 
 (define (parse-quasiquote env stx.qq)
   (define (finish quote? x) (if quote? (parse-quote env x) x))
@@ -248,7 +250,7 @@
        ($splicing-etc dst env.scope env
                       (lambda (dst scope env)
                         (foldl (lambda (lhs rhs dst) (parse-def dst scope env lhs rhs))
-                               dst (map car bpair*) (map cdr bpair*)))
+                               dst (map binding-pair-lhs bpair*) (map binding-pair-rhs bpair*)))
                       ^body))))
   (define ($splicing-let            . a*) (apply $splicing $splicing-nonrec parse-define        a*))
   (define ($splicing-let-values     . a*) (apply $splicing $splicing-nonrec parse-define-values a*))
@@ -257,10 +259,14 @@
 
 (splicing-local
   ((define ($splicing $splicing-etc dst env.scope env stx.bpair* ^body)
-     (let loop ((bpair* (parse-binding-pairs stx.bpair*)) (dst dst) (scope env.scope) (env env))
-       (cond ((null? bpair*) (^body dst scope env))
-             (else ($splicing-etc dst scope env (list (car bpair*))
-                                  (lambda (dst scope env) (loop (cdr bpair*) dst scope env))))))))
+     (let loop ((stx*.bpair* (syntax->list stx.bpair*))
+                (dst         dst)
+                (scope       env.scope)
+                (env         env))
+       (cond ((null? stx*.bpair*) (^body dst scope env))
+             (else ($splicing-etc dst scope env (list (car stx*.bpair*))
+                                  (lambda (dst scope env)
+                                    (loop (cdr stx*.bpair*) dst scope env))))))))
   (define ($splicing-let*        . a*) (apply $splicing $splicing-let        a*))
   (define ($splicing-let*-values . a*) (apply $splicing $splicing-let-values a*)))
 

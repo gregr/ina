@@ -238,8 +238,8 @@
     (parse-expression env.use stx)))
 
 (define (expression-auxiliary? a env stx.id)
-  (parse-identifier stx.id)
-  (equal? (env-ref^ env stx.id vocab.expression-auxiliary) a))
+  (and (identifier? stx.id)
+       (equal? (env-ref^ env stx.id vocab.expression-auxiliary) a)))
 
 (define (parse-expression* env e*) (map (lambda (e) (parse-expression env e)) e*))
 

@@ -50,7 +50,7 @@
    (define (marked-syntax-mark*               s) (record-ref s 0))
    (define (marked-syntax-syntax              s) (record-ref s 1))
    (define (maybe-annotated-syntax-form       s) (if (annotated-syntax? s) (record-ref s 0) s))
-   (define (maybe-annotated-syntax-provenance s) (if (annotated-syntax? s) (record-ref s 1) s)))
+   (define (maybe-annotated-syntax-provenance s) (if (annotated-syntax? s) (record-ref s 1) #f)))
 
   (define (syntax-mark*          s)    (if (marked-syntax? s) (marked-syntax-mark* s) '()))
   (define (syntax-peek           s)    (maybe-annotated-syntax-form

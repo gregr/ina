@@ -71,6 +71,10 @@
 (define (error message . irritants)
   (raise (make-error #f (cons message irritants))))
 
+(define (raise c)
+  (if (error? c)
+      (apply panic 'error (error-kind c) (error-details c))
+      (panic 'unknown-condition c)))
 
 ;;; TODO: clean up these older notes:
 

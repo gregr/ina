@@ -1,5 +1,5 @@
 #lang racket/base
-(require "../platform/racket/nscheme.rkt" racket/include racket/splicing (for-syntax racket/base))
+(require "../platform/racket/nscheme.rkt" racket/include racket/splicing)
 
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an
 ;;; interactive system and its dependencies, targeting each platform.
@@ -137,4 +137,3 @@
 ;(pretty-write (quasiquote-syntax (a #,'(1 2 3) c)))
 ;(pretty-write (quasiquote-syntax (a #,@(quote-syntax (1 2 3)) c)))
 ;(pretty-write (quasiquote-syntax (a (quasiquote-syntax (1 #,2 3)) c)))
-
