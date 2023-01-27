@@ -1,0 +1,400 @@
+#lang racket/base
+(require "../platform/racket/nscheme.rkt" racket/include racket/match racket/pretty racket/splicing)
+(print-as-expression #f)
+(pretty-print-abbreviate-read-macros #f)
+
+(include "../include/base-1-source.scm")
+(include "../include/syntax.scm")
+(include "../include/ast.scm")
+(include "../include/parse.scm")
+
+;; TODO: replace this with environments populated using ast:prim instead.
+(include "../include/boot/env-primitive.scm")
+
+(include "../include/base-0-parse.scm")
+
+;; TODO: all remaining compiler definitions should be included here, replacing ast-eval.rkt:
+(require "ast-eval.rkt")
+
+;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
+;; depend on the compiler instead of ast-eval:
+(include "../include/base-2-parse.scm")
+
+(define env.test (env-extend env.primitive env.base-0))
+
+(struct error:parse (c) #:prefab)
+(struct error:eval  (c) #:prefab)
+
+(define (test-eval stx)
+  (displayln "EXPRESSION:")
+  (pretty-write stx)
+  (with-handlers ((vector? (lambda (c)
+                             (displayln "PARSE ERROR:")
+                             (pretty-write c)
+                             (error:parse c))))
+    (let ((ast (parse-expression env.test stx)))
+      (displayln "AST:")
+      (pretty-write ast)
+      (displayln "PRETTY AST:")
+      (pretty-write (ast-pretty ast))
+      (with-handlers ((vector? (lambda (c)
+                                 (displayln "EVALUATION ERROR:")
+                                 (pretty-write c)
+                                 (error:eval c))))
+        (let ((result (ast-eval ast)))
+          (displayln "VALUE:")
+          (pretty-write result)
+          result)))))
+
+(define (display-border)
+  (displayln "================================================================================"))
+
+(define-syntax run-evaluation-tests-etc
+  (syntax-rules (! ==>)
+    ((_ (test-successes test-failures))
+     (let* ((tests-succeeded (length test-successes))
+            (tests-failed    (length test-failures))
+            (tests-total     (+ tests-succeeded tests-failed))
+            (tests-passed    (- tests-total tests-failed)))
+       (newline)
+       (unless (= tests-passed tests-total)
+         (display-border)
+         (printf "Tests failed: ~a out of ~a\n" tests-failed tests-total)
+         (display-border)
+         (for-each (lambda (failure)
+                     (match-define `(,actual ,expr ,type ,expected) failure)
+                     (newline)
+                     (pretty-write `(Expected: ,expr ,type ,expected))
+                     (pretty-write `(Actual: ,actual)))
+                   test-failures)
+         (newline))
+       (display-border)
+       (printf "Tests passed: ~a out of ~a\n" tests-passed tests-total)
+       (display-border)))
+    ((_ (test-successes test-failures) ! info tests ...)
+     (begin (newline)
+            (display-border)
+            (pretty-write 'info)
+            (display-border)
+            (run-evaluation-tests-etc (test-successes test-failures) tests ...)))
+    ((_ (test-successes test-failures) e.expr ==> e.expected tests ...)
+     (begin
+       (let ((expr 'e.expr) (expected 'e.expected))
+         (newline)
+         (printf "~s ==> ~s\n" expr expected)
+         (let ((actual (test-eval expr)))
+           (cond ((or (and (eq? expected 'error:parse) (error:parse? actual))
+                      (and (eq? expected 'error:eval)  (error:eval?  actual))
+                      (equal? expected actual))
+                  (set! test-successes (cons `(,expr ==> ,actual) test-successes)))
+                 (else (set! test-failures (cons `(,actual ,expr ==> ,expected) test-failures))
+                       (displayln "FAILED:")
+                       (displayln "EXPECTED:")
+                       (pretty-write expected)
+                       (displayln "ACTUAL:")
+                       (pretty-write actual)))))
+       (run-evaluation-tests-etc (test-successes test-failures) tests ...)))))
+
+(define-syntax-rule (run-evaluation-tests tests ...)
+  (let ((test-successes '()) (test-failures '()))
+    (run-evaluation-tests-etc (test-successes test-failures) tests ...)))
+
+(run-evaluation-tests
+  ! constants
+  5         ==> 5
+  '5        ==> 5
+  'foo      ==> foo
+  #t        ==> #t
+  '()       ==> ()
+  '#()      ==> #()
+  '#(1 2 3) ==> #(1 2 3)
+  '(1 2 3)  ==> (1 2 3)
+
+  ! unbound-variable
+  xyz            ==> error:parse
+  (lambda (x) y) ==> error:parse
+
+  ! primitives
+  (cons 1 2)                    ==> (1 . 2)
+  (car (cons 1 2))              ==> 1
+  (cdr (cons 1 2))              ==> 2
+  (pair? '(x x))                ==> #t
+  (pair? #t)                    ==> #f
+  (pair? (lambda x x))          ==> #f
+  (procedure? '(x x))           ==> #f
+  (procedure? '#t)              ==> #f
+  (procedure? (lambda x x))     ==> #t
+  (vector)                      ==> #()
+  (vector 3 1)                  ==> #(3 1)
+  (vector-length (vector))      ==> 0
+  (vector-length (vector 3 1))  ==> 2
+  (vector-ref (vector 5) 0)     ==> 5
+  (vector-ref (vector 3 1 2) 0) ==> 3
+  (vector-ref (vector 3 1 2) 1) ==> 1
+  (vector-ref (vector 3 1 2) 2) ==> 2
+  (pair? (vector 3 1 2))        ==> #f
+  (procedure? (vector 3 1 2))   ==> #f
+  (vector? (vector))            ==> #t
+  (vector? (vector 3 1))        ==> #t
+  (vector? '(x x))              ==> #f
+  (vector? (lambda x x))        ==> #f
+  (vector-ref '#(1 2 3) 0)      ==> 1
+  (vector-ref '#(4 5 6) 2)      ==> 6
+  (vector-ref '#(7 8 9) 1)      ==> 8
+  (vector-ref
+    (car (cdr (cons 6 (cons (vector 7 (cons 8 9) 0)
+                            (cons 1 '())))))
+    1)
+  ==> (8 . 9)
+  (vector-ref
+    (car (cdr (cons 6 (cons (vector 7 (cons 8 9) 0 (car '(5 . #f)))
+                            (cons 1 '())))))
+    3)
+  ==> 5
+
+  ! if
+  (if #t 'yes 'no)               ==> yes
+  (if #f 'yes 'no)               ==> no
+  (if 0 'yes 'no)                ==> yes
+  (if (car '(#t . #f)) 'yes 'no) ==> yes
+  (if (cdr '(#t . #f)) 'yes 'no) ==> no
+
+  ! and
+  (and)        ==> #t
+  (and 1)      ==> 1
+  (and #f 2)   ==> #f
+  (and 2 3)    ==> 3
+  (and 2 3 4)  ==> 4
+  (and 2 #f 4) ==> #f
+
+  ! or
+  (or)         ==> #f
+  (or 1)       ==> 1
+  (or #f 2)    ==> 2
+  (or 2 3)     ==> 2
+  (or #f #f 4) ==> 4
+  (or 2 #f 4)  ==> 2
+
+  ! when
+  (when 1 2)                         ==> 2
+  (let-values ((v* (when #f 3))) v*) ==> ()
+
+  ! unless
+  (let-values ((v* (unless 1 2))) v*) ==> ()
+  (unless #f 3)                       ==> 3
+
+  ! cond
+  (cond (1 2))        ==> 2
+  (cond (#f 3) (4 5)) ==> 5
+
+  ! lambda
+  ((lambda (x y) x) 5 6)                             ==> 5
+  ((lambda (x y) y) 5 6)                             ==> 6
+  ((lambda (x y) (cons y x)) 5 6)                    ==> (6 . 5)
+  ((lambda (a b c) (cons b c)) '() 1 '(2))           ==> (1 2)
+  ((lambda (a b . c) (cons b c)) '() 1 2 3)          ==> (1 2 3)
+  ((lambda x x) 4 5 6)                               ==> (4 5 6)
+  ((lambda (x) (cons (cdr x) (car x))) (cons #t #f)) ==> (#f . #t)
+  ((lambda (w _ x __ y . z)
+     (if (x y z '(a ... z))
+         'true
+         'false))
+   1 2 (lambda x x) 4 5 6 7)
+  ==> true
+  ((lambda (w _ x __ y . z)
+     (if (x y z '(a ... z))
+         'true
+         'false))
+   1 2 (lambda x #f) 4 5 6 7)
+  ==> false
+  ((lambda (w _ x __ y . z)
+     (if 'true
+         (x y z '(a ... z))
+         'false))
+   1 2 (lambda x x) 4 5 6 7)
+  ==> (5 (6 7) (a ... z))
+
+  ! shadowing
+  ((lambda lambda lambda) 'ok) ==> (ok)
+
+  ! let
+  (let ((x 8)) x)                             ==> 8
+  (let ((x 9)) (let ((x 20)) x))              ==> 20
+  (let ((x 9)) (let ((y 20)) x))              ==> 9
+  (let ((x 10) (z 4)) (let ((x 11) (y x)) z)) ==> 4
+  (let ((x 10) (y 4)) (let ((x 11) (y x)) y)) ==> 10
+  (let ((p (cons 1 2)))
+    (cons (cdr p) (cons (car p) '())))
+  ==> (2 1)
+  (let ((p (cons 1 2)))
+    ((lambda x x) (cdr p) (car p)))
+  ==> (2 1)
+  (let ((op    (lambda (x) (car x)))
+        (datum '(#t . #f))
+        (ta    'yes)
+        (fa    'no))
+    (if (op datum) ta fa))
+  ==> yes
+  (let ((op    (lambda (x) (cdr x)))
+        (datum '(#t . #f))
+        (ta    'yes)
+        (fa    'no))
+    (if (op datum) ta fa))
+  ==> no
+  (let loop ((xs '(a b c)) (acc '()))
+    (if (null? xs)
+        acc
+        (loop (cdr xs) (cons (car xs) acc))))
+  ==> (c b a)
+
+  (let ((list (lambda x x)))
+    (list
+      (list)
+      (list 6 7)
+      (pair? (list))
+      (pair? (list 6 7))
+      (pair? '(6 . 7))))
+  ==> (() (6 7) #f #t #t)
+
+  ! let*
+  (let* ((a 1) (b (cons 2 a))) b) ==> (2 . 1)
+  (let* ((a 1) (a (cons 2 a))) a) ==> (2 . 1)
+
+  ! internal-define
+  ((lambda (a b c)
+     (define x (lambda () (+ (+ c y) z)))
+     (define y b)
+     (define z a)
+     (x))
+   1 2 3)
+  ==> 6
+  ((lambda (a b c)
+     (begin (define x (lambda () (+ (+ c y) z)))
+            (define y b))
+     (define z a)
+     (x))
+   1 2 3)
+  ==> 6
+  ((lambda (a b c)
+     (define list (lambda x x))
+     (define ((f w) x y) (list w x y))
+     ((f a) b c))
+   1 2 3)
+  ==> (1 2 3)
+  (let ((list (lambda x x)))
+    ((lambda (a b c)
+       (define ((f w) x y) (list w x y))
+       ((f a) b c))
+     1 2 3))
+  ==> (1 2 3)
+  (let ((x 1) (y 7) (z 33))
+    (define u 88)
+    (define z y)
+    6
+    (begin (define a 5) (define w 4))
+    z)
+  ==> 7
+  (let ((x 1) (y 7) (z 33))
+    (define y 88)
+    (define z y)
+    6
+    (begin (define a 5) (define w 4))
+    z)
+  ==> 88
+  (let ((x 1) (y 7) (z 33))
+    (define y 88)
+    (define z y)
+    6
+    (begin (define a 5) (define w 4))
+    a)
+  ==> 5
+  (let ((x 1) (y 7) (z 33))
+    (define y 88)
+    (define z (lambda (x) x))
+    6
+    (begin (define a 5) (define w (z y)))
+    w)
+  ==> 88
+
+  ! letrec*
+  (letrec* ((w (lambda () (y)))
+            (x 32)
+            (y (lambda () x)))
+    (w))
+  ==> 32
+  (letrec* ((w (lambda () y))
+            (x 33)
+            (y x))
+    (w))
+  ==> 33
+
+  ! begin
+  (begin 1)   ==> 1
+  (begin 1 2) ==> 2
+  (let ((x 1))
+    (let ((y (begin x x)))
+      y))
+  ==> 1
+
+  ! fixed-points
+  (let ((list (lambda xs xs))
+        (fix (lambda (f)
+               ((lambda (d) (d d))
+                (lambda (x) (f (lambda (a b) ((x x) a b))))))))
+    (let ((append
+            (fix (lambda (append)
+                   (lambda (xs ys)
+                     (if (null? xs)
+                         ys
+                         (cons (car xs) (append (cdr xs) ys))))))))
+      (list (append '() '())
+            (append '(foo) '(bar))
+            (append '(1 2) '(3 4)))))
+  ==> (() (foo bar) (1 2 3 4))
+  (let ((list (lambda xs xs))
+        (fix (lambda (f)
+               ((lambda (d) (d d))
+                (lambda (x) (f (lambda a (apply (x x) a))))))))
+    (let ((append
+            (fix (lambda (append)
+                   (lambda (xs ys)
+                     (if (null? xs)
+                         ys
+                         (cons (car xs) (append (cdr xs) ys))))))))
+      (list (append '() '())
+            (append '(foo) '(bar))
+            (append '(1 2) '(3 4)))))
+  ==> (() (foo bar) (1 2 3 4))
+  (let ((list (lambda xs xs))
+        (fix (lambda (f)
+               ((lambda (d) (d d))
+                (lambda (x) (f (lambda a (apply (x x) a))))))))
+    (let ((map (fix (lambda (map)
+                      (lambda (f xs)
+                        (if (null? xs)
+                            '()
+                            (cons (f (car xs)) (map f (cdr xs)))))))))
+      (let ((fix*
+              (fix (lambda (fix*)
+                     (lambda fs
+                       (map (lambda (fi)
+                              (lambda a
+                                (apply (apply fi (apply fix* fs)) a)))
+                            fs))))))
+        (let ((even&odd
+                (fix* (lambda (even? odd?)
+                        (lambda (n) (if (null? n)
+                                        #t
+                                        (odd? (cdr n)))))
+                      (lambda (even? odd?)
+                        (lambda (n)
+                          (if (null? n)
+                              #f
+                              (even? (cdr n))))))))
+          (let ((even? (car even&odd)) (odd? (car (cdr even&odd))))
+            (list (even? '())    (odd? '())
+                  (even? '(s))   (odd? '(s))
+                  (even? '(s s)) (odd? '(s s))))))))
+  ==> (#t #f #f #t #t #f)
+
+  )
