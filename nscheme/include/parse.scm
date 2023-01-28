@@ -8,6 +8,9 @@
 (define vocab.expression-operator  'expression-operator)
 (define vocab.expression-auxiliary 'expression-auxiliary)
 (define vocab.quasiquote           'quasiquote)
+(define vocab.pattern              'pattern)
+(define vocab.pattern-operator     'pattern-operator)
+(define vocab.pattern-auxiliary    'pattern-auxiliary)
 
 (define vocab-dict.empty '())
 (define (vocab-dict-ref    vocab=>x vocab)    (let ((vx (assq vocab vocab=>x))) (and vx (cdr vx))))
@@ -173,7 +176,7 @@
 (define ($list             . x*) (let loop ((x* x*))
                                    (cond ((null? x*) ($quote '()))
                                          (else       ($cons (car x*) (loop (cdr x*)))))))
-(define $append
+(define $append.value
   (let (($append ($ref 'append)) ($x* ($ref 'x*)) ($y ($ref 'y)))
     (ast:letrec #f (list (binding-pair
                            'append (ast:lambda #f '(x* y)
@@ -182,6 +185,8 @@
                                                     ($cons ($car $x*)
                                                            ($call $append ($cdr $x*) $y))))))
                 $append)))
+(define ($append x* y) ($call $append.value x* y))
+;; TODO: $vector->list.value and $vector->list
 
 (define defstate.empty '())
 

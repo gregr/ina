@@ -134,7 +134,7 @@
                  (let ((rand (operand (syntax-unwrap (car qq)))))
                    (let-values (((quote? rest) (loop (cdr qq) level)))
                      (let ((rest (finish quote? rest)))
-                       (values #f ($call $append (parse-expression env rand) rest))))))
+                       (values #f ($append (parse-expression env rand) rest))))))
                 ((and (< 0 level) (operation? qq 'unquote-splicing))
                  (let ((rand (operand qq)))
                    (let-values (((quote? e) (loop rand (- level 1))))
@@ -170,6 +170,91 @@
                         (raise-syntax-error "misplaced quasiquote operator" stx.qq))
                       (values #t stx.qq)))))))
     (finish quote? e)))
+
+;; TODO: replace all of this with patterns as data structures
+(define ($pattern-succeed succeed $fail $x env) (succeed env))
+(define (($pattern-quote value) succeed $fail $x env)
+  ($if ($eqv? $x ($quote value))
+       (succeed env)
+       $fail))
+(define (($pattern-cons ^car ^cdr) succeed $fail $x env)
+  ($if ($pair? $x)
+       (^car (lambda (env) (^cdr succeed $fail ($cdr $x) env))
+             $fail ($car $x) env)
+       $fail))
+
+(define (parse-pattern-any _ __) $pattern-succeed)
+(define ((parse-pattern-var _ stx.id) succeed $fail $x env)
+  (parse-undefined-identifier env stx.id)
+  ($let env (list stx.id) (list $x) (lambda (env $x) (succeed env))))
+(define (parse-pattern-quote env stx.value)
+  (let loop ((q (syntax->datum stx.value)))
+    (cond ((pair?   q) ($pattern-cons (loop (car q)) (loop (cdr q))))
+          ;((vector? q) ($pattern-vector (map loop (vector->list q))))
+          ((vector? q) (raise-syntax-error "TODO: vector patterns" q))
+          (else        ($pattern-quote q)))))
+
+(define (parse-pattern-cons env stx.car stx.cdr)
+  ($pattern-cons (parse-pattern env stx.car) (parse-pattern env stx.cdr)))
+
+(define (parse-pattern env stx)
+  (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
+  (let ((x (syntax-unwrap stx)))
+    (cond
+      ((identifier? stx) (let ((op (env-ref^ env stx vocab.pattern)))
+                           (if (procedure? op)
+                               (op env stx)
+                               (parse-pattern-var env stx))))
+      ((pair?    x)      (let* ((e.op (car x))
+                                (op   (and (identifier? e.op)
+                                           (env-ref^ env e.op vocab.pattern-operator))))
+                           (if (procedure? op)
+                               (op env stx)
+                               (raise-syntax-error "not a match pattern" stx))))
+      ((literal? x)      ($pattern-quote x))
+      (else              (raise-syntax-error "not a pattern" stx)))))
+
+(define ((match-pattern-operator-parser parser argc.min argc.max) env stx)
+  (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
+    (unless (<= argc.min argc)           (raise-syntax-error "too few operator arguments"  stx))
+    (unless (<= argc (or argc.max argc)) (raise-syntax-error "too many operator arguments" stx))
+    (apply parser env (cdr stx*))))
+
+(define (parse-match env stx.e . stx*.clause*)
+  (let (($x    ($ref 'x))
+        ($fail ($call ($ref 'fail))))
+    (ast:let
+      #f '(x) (list (parse-expression env stx.e))
+      (ast:let
+        #f '(fail) (list (ast:lambda #f '() ($pcall 'panic ($quote "no matching clause") $x)))
+        (let loop ((stx*.clause* stx*.clause*))
+          (cond
+            ((null? stx*.clause*) $fail)
+            (else
+              (let ((clause (syntax-unwrap (car stx*.clause*))))
+                (unless (pair? clause) (raise-syntax-error "not a match clause" (car stx*.clause*)))
+                (let ((stx.body (cdr clause))
+                      (^pattern (parse-pattern env (car clause))))
+                  (ast:let
+                    #f '(fail) (list (ast:lambda #f '() (loop (cdr stx*.clause*))))
+                    ($provenance
+                      (^pattern
+                        (lambda (env.pattern)
+                          (let* ((env    (env-extend env env.pattern))
+                                 (body   (syntax-unwrap stx.body))
+                                 (fender (and (pair? body)
+                                              (let ((fender (syntax-unwrap (car body))))
+                                                (and (pair? fender) fender)))))
+                            (if (expression-auxiliary? 'guard env (car fender))
+                                (let ((fender* (syntax->list (cdr fender))))
+                                  (unless (and (pair? fender*) (null? (cdr fender*)))
+                                    (raise-syntax-error "not a guard" (car body)))
+                                  ($if (parse-expression env (car fender*))
+                                       (parse-body env (cdr body))
+                                       $fail))
+                                (parse-body env stx.body))))
+                        $fail $x env.empty)
+                      (car stx*.clause*))))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;
@@ -288,7 +373,7 @@
 
 (define env.base-0
   (let ((env.scope (make-env))
-        (b*.expr-aux '(=> else))
+        (b*.expr-aux '(=> else guard))
         (b*.def
           (list (cons 'define          (definition-operator-parser parse-define          2 #f))
                 (cons 'define-values   (definition-operator-parser parse-define-values   2 #f))
@@ -306,6 +391,7 @@
             (cons 'cond           (expression-operator-parser parse-cond         1 #f))
             (cons 'caseq          (expression-operator-parser parse-caseq        2 #f))
             (cons 'casev          (expression-operator-parser parse-casev        2 #f))
+            (cons 'match          (expression-operator-parser parse-match        1 #f))
             (cons 'case-lambda    (expression-operator-parser parse-case-lambda  0 #f))
             (cons 'lambda         (expression-operator-parser parse-lambda       2 #f))
             (cons 'local          (nonsplicing-expression-operator-parser $splicing-local))
@@ -342,7 +428,14 @@
                   (splicing-expression-operator-parser $splicing-let*-values))
             (list 'splicing-letrec*-values
                   (definition-operator-parser parse-splicing-letrec*-values 2 #f)
-                  (splicing-expression-operator-parser $splicing-letrec*-values)))))
+                  (splicing-expression-operator-parser $splicing-letrec*-values))))
+        (b*.match-pattern
+          (list (cons '_ parse-pattern-any)))
+        (b*.match-pattern-operator
+          (list (cons 'quote (match-pattern-operator-parser parse-pattern-quote 1 1))
+                ;; TODO: we want to use cons, not pcons, but we need access to env.primitive first.
+                (cons 'pcons (match-pattern-operator-parser parse-pattern-cons  2 2))
+                )))
     (for-each (lambda (id) (env-bind! env.scope id vocab.expression-auxiliary (syntax-peek id)))
               b*.expr-aux)
     (for-each (lambda (id op) (env-bind! env.scope id vocab.definition-operator op))
@@ -359,4 +452,13 @@
               (map car b*.qq-and-expr) (map cdr b*.qq-and-expr))
     (for-each (lambda (id op) (env-bind! env.scope id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
+    (for-each (lambda (id op) (env-bind! env.scope id vocab.pattern op))
+              (map car b*.match-pattern) (map cdr b*.match-pattern))
+    (for-each (lambda (id op)
+                (if (env-ref env.scope id)
+                    (env-set^! env.scope id vocab.pattern-operator op)
+                    ;; TODO: we just want to overload, so get rid of this case
+                    (env-bind! env.scope id vocab.pattern-operator op)
+                    ))
+              (map car b*.match-pattern-operator) (map cdr b*.match-pattern-operator))
     (env-extend env.empty env.scope)))

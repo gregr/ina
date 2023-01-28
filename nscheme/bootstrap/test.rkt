@@ -421,4 +421,46 @@
   ``(7 ,@',(cons 8 (cons 9 '())) 10)  ==> `(7 ,@'(8 9) 10)
   ``#(7 ,@(cons 8 (cons 9 '())) 10)   ==> `#(7 ,@(cons 8 (cons 9 '())) 10)
   ``#(7 ,@',(cons 8 (cons 9 '())) 10) ==> `#(7 ,@'(8 9) 10)
+
+  ! match
+  (match 5
+    (6 'six)
+    (5 'five)
+    (x (cons 'x: (cons x '())))
+    (_ 'something-else))
+  ==> five
+  (match 7
+    (6 'six)
+    (5 'five)
+    (x (cons 'x: (cons x '())))
+    (_ 'something-else))
+  ==> (x: 7)
+  (match 7
+    (6 'six)
+    (5 'five)
+    (_ 'something-else))
+  ==> something-else
+  (match '(1 2 3)
+    (6        'six)
+    (5        'five)
+    ('(1 2 3) 'one-two-three)
+    (x        (cons 'x: (cons x '())))
+    (_        'something-else))
+  ==> one-two-three
+  (match '(1 2 3)
+    (6               'six)
+    (5               'five)
+    ((pcons x '(2 3)) (cons 'first: (cons x '())))
+    ('(1 2 3)        'one-two-three)
+    (x               (cons 'x: (cons x '())))
+    (_               'something-else))
+  ==> (first: 1)
+  (match '(1 2 3)
+    (6               'six)
+    (5               'five)
+    ((pcons 1 (pcons x '(3))) (cons 'second: (cons x '())))
+    ('(1 2 3)        'one-two-three)
+    (x               (cons 'x: (cons x '())))
+    (_               'something-else))
+  ==> (second: 2)
   )
