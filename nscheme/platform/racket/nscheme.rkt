@@ -68,6 +68,12 @@
 ;;     continuations that have been skipped.
 ;;   - The thread then carries out the request.
 
+(define (eqv? a b)
+  (or (rkt:eqv? a b)
+      (if (string? a)
+          (and (string? b) (string=? a b))
+          (and (bytevector? a) (bytevector? b) (bytes=? a b)))))
+
 (define (panic . args) (raise (vector 'panic args)))
 (define (thread-register)           (error "TODO: not implemented"))
 (define (set-thread-register! x)    (error "TODO: not implemented"))

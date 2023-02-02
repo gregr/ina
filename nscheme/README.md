@@ -81,15 +81,16 @@ way by manipulating programs and live processes as data.
         object.
         - Different `(quote #())` expressions may return different empty vector objects.  It depends
           on whether or not the embedded empty vector is the same allocated object.
-  - `eqv?` returns `#t` for structurally equal numbers, and in every case that `eq?` returns `#t`.
+  - `eqv?` returns `#t` for structurally equal numbers, strings, and bytevectors, and in every case
+    that `eq?` returns `#t`.
     - `eqv?` returning `#f` implies that `eq?` returns `#f`, but not vice versa.
   - `equal?` returns `#t` for all structurally equal values of all s-expression types.  That is,
     structurally equal, immutable, non-procedure, non-record values.  For all procedures, records,
     mbytevectors, and mvectors, even empty ones, `equal?` returns the same result as `eq?`.
-  - All independently-constructed, non-uniquely allocated objects, except for numbers, can be
-    reliably used as distinct identities according to `eq?`.
+  - All independently-constructed, non-uniquely allocated objects, except for numbers, strings,
+    bytevectors, and empty vectors, can be reliably used as distinct identities according to `eq?`.
     - e.g., every call to `cons` will return an object with a distinct identity.
-    - Even large numbers are not reliable for this because the implementation may commonalize them
+    - The implementation may commonalize large numbers, strings, bytevectors, and empty vectors
       more aggressively than other types, unpredictably sharing allocated objects.
 - No primitive character type: a string is indivisible until it is decoded as a bytevector
   - e.g., `string->utf8` and `utf8->string`
