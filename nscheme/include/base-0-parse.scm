@@ -529,13 +529,12 @@
                 (cons 'and        (match-pattern-operator-parser parse-pattern-and        0 #f))
                 (cons 'or         (match-pattern-operator-parser parse-pattern-or         0 #f))
                 (cons 'not        (match-pattern-operator-parser parse-pattern-not        1 1))
-                ;; TODO: we want to use the actual primitive names, not pcons etc., but we need
-                ;; access to env.primitive first.
-                (cons 'pcons      (match-pattern-operator-parser parse-pattern-cons       2 2))
-                (cons 'pcons*     (match-pattern-operator-parser parse-pattern-cons*      1 #f))
-                (cons 'plist      (match-pattern-operator-parser parse-pattern-list       0 #f))
-                (cons 'pvector    (match-pattern-operator-parser parse-pattern-vector     0 #f))
-                )))
+                ;; TODO: avoid shadowing these when defining same-named library procedures
+                (cons 'cons*      (match-pattern-operator-parser parse-pattern-cons*      1 #f))
+                (cons 'list       (match-pattern-operator-parser parse-pattern-list       0 #f))))
+        (b*.match-pattern-operator-primitive
+          (list (cons 'cons      (match-pattern-operator-parser parse-pattern-cons       2 2))
+                (cons 'vector    (match-pattern-operator-parser parse-pattern-vector     0 #f)))))
     (for-each (lambda (id) (env-bind! env.scope id vocab.expression-auxiliary (syntax-peek id)))
               b*.expr-aux)
     (for-each (lambda (id op) (env-bind! env.scope id vocab.definition-operator op))
@@ -558,4 +557,11 @@
                                   (env-set^! env.scope id vocab.pattern-operator op)
                                   (env-bind! env.scope id vocab.pattern-operator op)))
               (map car b*.match-pattern-operator) (map cdr b*.match-pattern-operator))
-    (env-extend env.empty env.scope)))
+    (for-each (lambda (id op)
+                (let ((v=>v (env-ref env.primitive id)))
+                  (unless v=>v (raise-syntax-error "unbound primitive identifier" id))
+                  (env-set! env.scope id v=>v))
+                (env-set^! env.scope id vocab.pattern-operator op))
+              (map car b*.match-pattern-operator-primitive)
+              (map cdr b*.match-pattern-operator-primitive))
+    (env-extend env.primitive env.scope)))
