@@ -276,8 +276,9 @@
     (unless (<= argc (or argc.max argc)) (raise-syntax-error "too many operator arguments" expr))
     (apply parser env (cdr e*))))
 
-(define ((parse-variable-ref/address addr)  env e) (ast:ref   (syntax-provenance e) addr))
-(define ((parse-variable-quote/value value) env e) (ast:quote (syntax-provenance e) value))
+(define ((parse-variable-ref/address    addr)  env e) (ast:ref   (syntax-provenance e) addr))
+(define ((parse-variable-quote/value    value) env e) (ast:quote (syntax-provenance e) value))
+(define ((parse-variable-primitive/name name)  env e) (ast:prim  (syntax-provenance e) name))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;

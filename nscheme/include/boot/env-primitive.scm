@@ -1,14 +1,8 @@
-;; TODO: define alternative environments that bind parsers producing ast:prim instead of ast:quote.
 (splicing-local
   ((define (primitive*->env primitive*)
      (let ((env.scope (make-env)))
-       (for-each (lambda (p) (let* ((pm (procedure-metadata p))
-                                    (id (or (and (vector? pm)
-                                                 (= (vector-length pm) 3)
-                                                 (vector-ref pm 0))
-                                            (error "not a primitive" p))))
-                               (env-bind! env.scope id vocab.expression
-                                          (parse-variable-quote/value p))))
+       (for-each (lambda (id) (env-bind! env.scope id vocab.expression
+                                         (parse-variable-primitive/name id)))
                  primitive*)
        (env-extend env.empty env.scope))))
   ;; TODO: provide low-level, possibly platform-dependent, privileged primitives
@@ -41,7 +35,7 @@
   ;  )
   (define env.primitive.privileged
     (primitive*->env
-      (list
+      '(
         call-with-escape-continuation call-in-empty-context
         thread-register set-thread-register!
         panic set-panic-handler!
@@ -52,7 +46,7 @@
         string->bytevector bytevector->string)))
   (define env.primitive
     (primitive*->env
-      (list
+      '(
         apply call-with-values values
         eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
         pair? vector? mvector? bytevector? mbytevector?
