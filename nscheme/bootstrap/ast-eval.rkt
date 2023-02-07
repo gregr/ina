@@ -90,10 +90,18 @@
                 (for-each (lambda (loc s) (set-box! loc (s renv))) loc*.arg s*.arg))
               (s.body (renv-extend renv (map unbox loc*.arg)))))))
       (`#(prim ,_ ,name)
-        (define-syntax-rule (case-symbol->var x sym ...) (case x ((sym) sym) ...))
+        (define-syntax-rule (case-symbol->var x sym ...)
+          (case x ((sym) sym) ... (else (error "unknown primitive" x))))
         (let ((prim
                 (case-symbol->var
                   name
+                  call-with-escape-continuation call-in-empty-context
+                  thread-register set-thread-register!
+                  panic set-panic-handler!
+                  yield set-yield-handler! set-timer enable-interrupts disable-interrupts
+                  procedure-metadata
+                  record? make-record record-type-descriptor record-ref record-set!
+                  string->bytevector bytevector->string
                   apply call-with-values values
                   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
                   pair? vector? mvector? bytevector? mbytevector?
