@@ -238,6 +238,8 @@
 ;;; Parsing expressions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
+
 (define (transcribe-and-parse-expression env.use env.op op stx)
   (let-values (((env.use stx) (transcribe env.op op env.use stx)))
     (parse-expression env.use stx)))
@@ -249,7 +251,6 @@
 (define (parse-expression* env e*) (map (lambda (e) (parse-expression env e)) e*))
 
 (define (parse-expression env expr)
-  (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
   (let ((x (syntax-unwrap expr)))
     ($provenance
       (cond

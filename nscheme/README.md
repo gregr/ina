@@ -175,10 +175,6 @@ Eventually:
     - When the thread is ready to yield, it blocks while receiving on the channel
     - When the thread is resumed, it will do so by invoking an escape continuation
 
-### Design improvements
-
-- Include match in initial env?
-
 ### Primitives
 
 - Allow primitives to be procedures containing arbitrary code
