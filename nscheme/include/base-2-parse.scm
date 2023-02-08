@@ -133,4 +133,5 @@
                                                      vocab.definition-operator op.def
                                                      vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
+    (env-freeze! env.scope)
     (env-extend env.base-0 env.scope)))
