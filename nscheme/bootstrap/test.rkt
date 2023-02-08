@@ -566,6 +566,42 @@
     (``#(1 ,,x 3) (cons 'vector-second: (cons x '())))
     (_            'something-else))
   ==> (vector-second: 2)
+  (match '(1 1 1)
+    ((list x 1 y) (guard (eqv? x y)) 'equal)
+    (_            'something-else))
+  ==> equal
+  (match '(1 1 1)
+    ((list x 1 y) (guard (eqv? x y) (integer? x)) 'equal-int)
+    (_            'something-else))
+  ==> equal-int
+  (match '(x 1 x)
+    ((list x 1 y) (guard (eqv? x y)) 'equal)
+    (_            'something-else))
+  ==> equal
+  (match '(x 1 x)
+    ((list x 1 y) (guard (eqv? x y) (integer? x)) 'equal-int)
+    (_            'something-else))
+  ==> something-else
+  (match '(1 1 1)
+    ((list x 1 (not (? symbol?))) 'not-symbol)
+    (_                            'something-else))
+  ==> not-symbol
+  (match '(1 1 q)
+    ((list x 1 (not (? symbol?))) 'not-symbol)
+    (_                            'something-else))
+  ==> something-else
+  (match '(1 1 q)
+    ((list x 1 (or (? symbol?) (? boolean?))) 'symbol-or-boolean)
+    (_                                        'something-else))
+  ==> symbol-or-boolean
+  (match '(1 1 #f)
+    ((list x 1 (or (? symbol?) (? boolean?))) 'symbol-or-boolean)
+    (_                                        'something-else))
+  ==> symbol-or-boolean
+  (match '(1 1 1)
+    ((list x 1 (or (? symbol?) (? boolean?))) 'symbol-or-boolean)
+    (_                                        'something-else))
+  ==> something-else
 
   ! qmatch
   (qmatch 5
