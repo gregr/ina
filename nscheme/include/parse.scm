@@ -244,9 +244,10 @@
   (let-values (((env.use stx) (transcribe env.op op env.use stx)))
     (parse-expression env.use stx)))
 
-(define (expression-auxiliary? a env stx.id)
-  (and (identifier? stx.id)
-       (equal? (env-ref^ env stx.id vocab.expression-auxiliary) a)))
+(define ((auxiliary?/vocab vocab) a env stx.id)
+  (and (identifier? stx.id) (equal? (env-ref^ env stx.id vocab) a)))
+(define expression-auxiliary? (auxiliary?/vocab vocab.expression-auxiliary))
+(define pattern-auxiliary?    (auxiliary?/vocab vocab.pattern-auxiliary))
 
 (define (parse-expression* env e*) (map (lambda (e) (parse-expression env e)) e*))
 
