@@ -199,7 +199,6 @@
 (define ($p:ellipsis P)       (pattern:ellipsis #f P))
 (define ($p:list     . P*)    (foldr $p:cons ($p:quote '()) P*))
 
-;; TODO: handle ellipsis
 (define (pattern-compile-linear P)
   (define ($$p:quote value) ($p:? (ast:lambda #f '(x) ($eqv? ($ref 'x) ($quote value)))))
   (define ($$p:cons  a b)   ($p:and ($p:? ($prim 'pair?)) ($p:and ($p:app ($prim 'car) a)
@@ -215,8 +214,17 @@
                         ($p:and current ($p:app (ast:lambda
                                                   #f '(x) ($pcall 'vector-ref ($ref 'x) ($quote i)))
                                                 (car p*))))))))
+  (define ($p:rlist/ellipsis P.tail rP*.suffix P.ellipsis)
+    `#(rlist/ellipsis ,P.tail ,rP*.suffix ,P.ellipsis))
+  (define ($p:vector/ellipsis P*.prefix P.ellipsis P*.suffix)
+    `#(vector/ellipsis ,P*.prefix ,P.ellipsis ,P*.suffix))
+  (define ((tagged?/P P) tag) (eq? (vector-ref P 0) tag))
+  (define (p:ellipsis? P) ((tagged?/P P) 'ellipsis))
+  (define (p:cons?     P) ((tagged?/P P) 'cons))
+  (define (p:car       P) (vector-ref P 2))
+  (define (p:cdr       P) (vector-ref P 3))
   (define (simplify P)
-    (define (tagged? tag) (eq? (vector-ref P 0) tag))
+    (define tagged? (tagged?/P P))
     (ast-provenance-add
       (cond
         ((or (tagged? 'any) (tagged? 'none) (tagged? 'var) (tagged? '?)) P)
@@ -227,8 +235,27 @@
                                        ((vector? q) ($$p:vector (map loop (vector->list q))))
                                        (else        ($$p:quote q)))
                                  stx.value))))
-        ((tagged? 'cons)   ($$p:cons (simplify (vector-ref P 2)) (simplify (vector-ref P 3))))
-        ((tagged? 'vector) ($$p:vector (map simplify (vector-ref P 2))))
+        ((tagged? 'cons)   (let ((P.a (p:car P)) (P.d (p:cdr P)))
+                             (if (p:ellipsis? P.a)
+                                 (let loop ((P P.d) (rP* '()))
+                                   (cond ((p:cons? P)
+                                          (let ((P.next (p:car P)))
+                                            (when (p:ellipsis? P.next)
+                                              (raise-syntax-error "too many ellipses" P.next))
+                                            (loop (p:cdr P) (cons P.next rP*))))
+                                         (else ($p:rlist/ellipsis P rP* (vector-ref P.a 2)))))
+                                 ($$p:cons (simplify P.a) (simplify P.d)))))
+        ((tagged? 'vector) (let* ((P*  (vector-ref P 2))
+                                  (Pe* (filter p:ellipsis? P*)))
+                             (cond ((pair? Pe*)
+                                    (when (pair? (cdr Pe*))
+                                      (raise-syntax-error "too many ellipses" P))
+                                    (let loop ((P (car P*)) (P* (cdr P*)) (prefix* '()))
+                                      (cond ((p:ellipsis? P)
+                                             ($p:vector/ellipsis
+                                               (reverse prefix*) (vector-ref P 2) P*))
+                                            (else (loop (car P*) (cdr P*) (cons P prefix*))))))
+                                   (else ($$p:vector (map simplify P*))))))
         ((tagged? 'app)    ($p:app (vector-ref P 2) (simplify (vector-ref P 3))))
         ((tagged? 'and)    ($p:and (simplify (vector-ref P 2)) (simplify (vector-ref P 3))))
         ((tagged? 'or)     ($p:or  (simplify (vector-ref P 2)) (simplify (vector-ref P 3))))
@@ -248,7 +275,7 @@
   (define scope (make-env))
   (define (loop-true allow-variables? P)
     (define (loop P) (loop-true allow-variables? P))
-    (define (tagged? tag) (eq? (vector-ref P 0) tag))
+    (define tagged? (tagged?/P P))
     (wrap
       (vector-ref P 1)
       (cond
@@ -267,9 +294,19 @@
         ((tagged? 'and)  ($$and (loop (vector-ref P 2)) (loop (vector-ref P 3))))
         ((tagged? 'or)   ($$or (loop-true #f (vector-ref P 2)) (loop-true #f (vector-ref P 3))))
         ((tagged? 'not)  (loop-false (vector-ref P 2)))
+        ;((tagged? 'rlist/ellipsis)
+        ; ;; TODO: improper-reverse $x, match P.tail, then rP*.suffix,
+        ; ;; then match the rest against P.ellipsis to build up a list of results.
+        ; )
+        ;((tagged? 'vector/ellipsis)
+        ; ;; TODO: vector-length must be at least (+ (length P*.prefix) (length P*.suffix))
+        ; ;; and (vector-ref v (- len i)) for each i in (length P*.suffix)
+        ; ;; then match (length P*.prefix) through (- len (length P*.suffix)) against
+        ; ;; P.ellipsis to build up a list of results.
+        ; )
         (else            (raise-syntax-error "unsupported pattern" P)))))
   (define (loop-false P)
-    (define (tagged? tag) (eq? (vector-ref P 0) tag))
+    (define tagged? (tagged?/P P))
     (wrap
       (vector-ref P 1)
       (cond
@@ -281,6 +318,11 @@
         ((tagged? 'and)  ($$or  (loop-false (vector-ref P 2)) (loop-false (vector-ref P 3))))
         ((tagged? 'or)   ($$and (loop-false (vector-ref P 2)) (loop-false (vector-ref P 3))))
         ((tagged? 'not)  (loop-true #f (vector-ref P 2)))
+        ;; TODO:
+        ;((tagged? 'rlist/ellipsis)
+        ; )
+        ;((tagged? 'vector/ellipsis)
+        ; )
         (else            (raise-syntax-error "unsupported pattern" P)))))
   (loop-true #t (simplify P)))
 
