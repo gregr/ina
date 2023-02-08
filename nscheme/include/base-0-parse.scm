@@ -263,18 +263,20 @@
         (else              (raise-syntax-error "unsupported pattern" P)))
       (vector-ref P 1)))
   (define ((wrap pv ^ast) . args) (ast-provenance-add (apply ^ast args) pv))
-  (define (($$?   $?)       succeed fail $x env) ($if ($call $? $x) (succeed env) (fail env)))
-  (define (($$and ^a ^b)    succeed fail $x env) (^a (lambda (env) (^b succeed fail $x env))
-                                                     fail $x env))
-  (define (($$or  ^a ^b)    succeed fail $x env) (^a succeed
-                                                     (lambda (env) (^b succeed fail $x env))
-                                                     $x env))
+  (define (($$?   $?)    succeed fail $x env) ($if ($call $? $x) (succeed env) (fail env)))
+  ;; TODO: if we let-bind ^b as a lambda, it becomes safe for $$app to always use the same variable
+  ;; address.  We would have to coordinate the name of that address with parse-match.
+  (define (($$and ^a ^b) succeed fail $x env) (^a (lambda (env) (^b succeed fail $x env))
+                                                  fail $x env))
+  ;; TODO: define a join point to avoid duplicating code with succeed.  Requires early communication
+  ;; of pattern variables to parameterize clause body.
+  (define (($$or  ^a ^b) succeed fail $x env) (^a succeed (lambda (env) (^b succeed fail $x env))
+                                                  $x env))
   (define (($$app $proc ^p) succeed fail $x env)
     (let* ((x.app.addr (fresh-address 'x.app)) ($x.app ($ref x.app.addr)))
       (ast:let #f (list x.app.addr) (list ($call $proc $x)) (^p succeed fail $x.app env))))
   (define scope (make-env))
-  (define (loop-true allow-variables? P)
-    (define (loop P) (loop-true allow-variables? P))
+  (let loop ((allow-variables? #t) (P (simplify P)))
     (define tagged? (tagged?/P P))
     (wrap
       (vector-ref P 1)
@@ -290,10 +292,12 @@
                            (lambda (succeed fail $x env)
                              ($let env (list id) (list $x) (lambda (env $x) (succeed env))))))
         ((tagged? '?)    ($$?   (vector-ref P 2)))
-        ((tagged? 'app)  ($$app (vector-ref P 2) (loop (vector-ref P 3))))
-        ((tagged? 'and)  ($$and (loop (vector-ref P 2)) (loop (vector-ref P 3))))
-        ((tagged? 'or)   ($$or (loop-true #f (vector-ref P 2)) (loop-true #f (vector-ref P 3))))
-        ((tagged? 'not)  (loop-false (vector-ref P 2)))
+        ((tagged? 'app)  ($$app (vector-ref P 2) (loop allow-variables? (vector-ref P 3))))
+        ((tagged? 'and)  ($$and (loop allow-variables? (vector-ref P 2))
+                                (loop allow-variables? (vector-ref P 3))))
+        ((tagged? 'or)   ($$or (loop #f (vector-ref P 2)) (loop #f (vector-ref P 3))))
+        ((tagged? 'not)  (let ((^p (loop #f (vector-ref P 2))))
+                           (lambda (succeed fail $x env) (^p fail succeed $x env))))
         ;((tagged? 'rlist/ellipsis)
         ; ;; TODO: improper-reverse $x, match P.tail, then rP*.suffix,
         ; ;; then match the rest against P.ellipsis to build up a list of results.
@@ -304,27 +308,7 @@
         ; ;; then match (length P*.prefix) through (- len (length P*.suffix)) against
         ; ;; P.ellipsis to build up a list of results.
         ; )
-        (else            (raise-syntax-error "unsupported pattern" P)))))
-  (define (loop-false P)
-    (define tagged? (tagged?/P P))
-    (wrap
-      (vector-ref P 1)
-      (cond
-        ((tagged? 'any)  (lambda (succeed fail $x env) (fail    env)))
-        ((tagged? 'none) (lambda (succeed fail $x env) (succeed env)))
-        ((tagged? 'var)  (raise-syntax-error "disallowed pattern variable" (vector-ref P 2)))
-        ((tagged? '?)    ($$? (ast:lambda #f '(x) ($not ($call (vector-ref P 2) ($ref 'x))))))
-        ((tagged? 'app)  ($$app (vector-ref P 2) (loop-false (vector-ref P 3))))
-        ((tagged? 'and)  ($$or  (loop-false (vector-ref P 2)) (loop-false (vector-ref P 3))))
-        ((tagged? 'or)   ($$and (loop-false (vector-ref P 2)) (loop-false (vector-ref P 3))))
-        ((tagged? 'not)  (loop-true #f (vector-ref P 2)))
-        ;; TODO:
-        ;((tagged? 'rlist/ellipsis)
-        ; )
-        ;((tagged? 'vector/ellipsis)
-        ; )
-        (else            (raise-syntax-error "unsupported pattern" P)))))
-  (loop-true #t (simplify P)))
+        (else            (raise-syntax-error "unsupported pattern" P))))))
 
 (define (parse-pattern-any    _ __)                $p:any)
 (define (parse-pattern-var    _ stx.id)            ($p:var stx.id))
