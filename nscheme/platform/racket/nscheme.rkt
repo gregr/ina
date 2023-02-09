@@ -429,9 +429,9 @@
 (define (ast:let bpair* body)              (apply ast:call (ast:lambda #f (map car bpair*) body) (map cdr bpair*)))
 (define (ast:list ast*)                    (apply ast:call (ast:lambda #f 'xs (ast:ref 'xs)) ast*))
 
-(define (ast:binding-pair lhs rhs)   (cons lhs rhs))
-(define (ast:binding-pair-lhs bpair) (car bpair))
-(define (ast:binding-pair-rhs bpair) (cdr bpair))
+(define (ast:binding-pair left right)  (cons left right))
+(define (ast:binding-pair-left  bpair) (car bpair))
+(define (ast:binding-pair-right bpair) (cdr bpair))
 
 (define (ast-lift-complex-values ast value->ast)
   (let loop ((ast ast))
@@ -452,8 +452,8 @@
                                                 cc*)))
       (`#(letrec ,bpair* ,body)    (ast:letrec
                                      (map (lambda (bp) (ast:binding-pair
-                                                         (ast:binding-pair-lhs bp)
-                                                         (loop (ast:binding-pair-rhs bp))))
+                                                         (ast:binding-pair-left bp)
+                                                         (loop (ast:binding-pair-right bp))))
                                           bpair*)
                                      (loop body))))))
 

@@ -143,20 +143,11 @@
 ;; are frozen, we would combine their dictionaries, then propagate our own freeze! event to any
 ;; further registered extensions.
 
-(define env.empty
-  (lambda (method)
-    (caseq method
-      ((ref)      (lambda (fail id) (fail)))
-      ((describe) '())
-      ((freeze!)  (values))
-      ((set!)     (error "invalid immutable environment operation" method))
-      (else       (error "invalid environment operation"           method)))))
-
 (define (env-extend env env.first)
   (lambda (method)
     (caseq method
       ((ref)      (lambda (fail id) ((env.first 'ref) (lambda () ((env 'ref) fail id)) id)))
-      ((describe) `(extend ,(env.first 'describe) ,(env 'describe)))
+      ((describe) (list 'extend (env.first 'describe) (env 'describe)))
       ((freeze!)  (values))
       ((set!)     (error "invalid immutable environment operation" method))
       (else       (error "invalid environment operation"           method)))))
@@ -166,7 +157,7 @@
     (caseq method
       ((ref)      (lambda (fail id) (let ((i (and (identifier? id) (syntax-remove-mark? id m))))
                                       (if i ((env 'ref) fail i) (fail id)))))
-      ((describe) `(add-mark ,m ,(env 'describe)))
+      ((describe) (list 'add-mark m (env 'describe)))
       ((freeze!)  (values))
       ((set!)     (error "invalid immutable environment operation" method))
       (else       (error "invalid environment operation"           method)))))
@@ -185,7 +176,7 @@
         (caseq method
           ((ref)      (lambda (fail id) (or (id-dict-ref (mvector-ref id=>x 0) id) (fail))))
           ((describe) (let ((frame (list->vector (id-dict-keys (mvector-ref id=>x 0)))))
-                        (if (frozen?) frame `(incomplete . ,frame))))
+                        (if (frozen?) frame (cons 'incomplete frame))))
           ((freeze!)  (mvector-set! mv.frozen? 0 #t))
           ((set!)     (lambda (id x)
                         (when (frozen?) (error "invalid immutable environment operation" method))
@@ -196,3 +187,5 @@
 (define (env-freeze!  env)      (env 'freeze!))
 (define (env-set!     env id x) ((env 'set!) id x))
 (define (env-ref      env id)   ((env 'ref) (lambda () #f) id))
+
+(define env.empty (let ((env (make-env))) (env-freeze! env) env))

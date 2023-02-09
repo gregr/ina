@@ -195,7 +195,7 @@
 (define (defstate-entry-^ast     entry)    (vector-ref entry 1))
 (define (defstate-entry-assigner entry)    (vector-ref entry 2))
 
-(define (defstate-definitions dst) (reverse (if (defstate-entry-address (car dst)) dst (cdr dst))))
+(define (defstate-definition* dst) (reverse (if (defstate-entry-address (car dst)) dst (cdr dst))))
 (define (defstate-expression  dst) (and (not (defstate-entry-address (car dst)))
                                         (defstate-entry-^ast (car dst))))
 
@@ -211,12 +211,12 @@
 
 (define (defstate-add-expression dst ^ast) (defstate-define dst #f ^ast))
 
-(define (definitions->binding-pairs def*)
+(define (definition*->binding-pair* def*)
   (map binding-pair
        (map defstate-entry-address def*)
        (map (lambda (^ast) (^ast)) (map defstate-entry-^ast def*))))
 
-(define (definitions->assigners def*) (map defstate-entry-assigner def*))
+(define (definition*->assigner* def*) (map defstate-entry-assigner def*))
 
 (define ($define dst env.scope lhs ^rhs)
   (env-introduce! env.scope lhs)
@@ -231,7 +231,7 @@
          (env       (env-extend env env.scope))
          (dst       (^def defstate.empty env.scope env)))
     (env-freeze! env.scope)
-    (ast:letrec #f (definitions->binding-pairs (defstate-definitions dst))
+    (ast:letrec #f (definition*->binding-pair* (defstate-definition* dst))
                 ((defstate-expression dst)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
