@@ -634,6 +634,32 @@
     ((list x 1 (or (? symbol?) (? boolean?))) 'symbol-or-boolean)
     (_                                        'something-else))
   ==> something-else
+  (match '(1 1 q)
+    ((list x 1 (or (? symbol? y) (? boolean? y))) (cons 'symbol-or-boolean y))
+    (_                                            'something-else))
+  ==> (symbol-or-boolean . q)
+  (match '(1 1 #f)
+    ((list x 1 (or (? symbol? y) (? boolean? y))) (cons 'symbol-or-boolean y))
+    (_                                            'something-else))
+  ==> (symbol-or-boolean . #f)
+  (match '(1 1 q)
+    ((list x 1 (or (? symbol? y) (? boolean? z))) (cons 'symbol-or-boolean y))
+    (_                                            'something-else))
+  ==> error:parse
+  (match '(1 1 #f)
+    ((list x 1 (not (or (? symbol? y) (? boolean? y)))) (cons 'symbol-or-boolean y))
+    (_                                                  'something-else))
+  ==> error:parse
+  (match '(1 1 q)
+    ((list (? (lambda (n) (eqv? (cmp 1 n) -1)) x) 1 y)
+     (cons 'large-enough x))
+    (_ 'something-else))
+  ==> something-else
+  (match '(1 1 q)
+    ((list (app (lambda (n) (+ n 1)) (? (lambda (n) (eqv? (cmp 1 n) -1)) x)) 1 y)
+     (cons 'large-enough x))
+    (_ 'something-else))
+  ==> (large-enough . 2)
 
   ! qmatch
   (qmatch 5
