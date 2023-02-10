@@ -334,12 +334,8 @@
 (define (linear-pattern-compile P)
   (define ((wrap pv ^ast) . args) (ast-provenance-add (apply ^ast args) pv))
   (define (($$?   $?)    succeed fail $x env) ($if ($call $? $x) (succeed env) (fail env)))
-  ;; TODO: if we let-bind ^b as a lambda, it becomes safe for $$app to always use the same variable
-  ;; address.  We would have to coordinate the name of that address with parse-match.
   (define (($$and ^a ^b) succeed fail $x env) (^a (lambda (env) (^b succeed fail $x env))
                                                   fail $x env))
-  ;; TODO: define a join point to avoid duplicating code with succeed.  Requires early communication
-  ;; of pattern variables to parameterize clause body.
   (define (($$or  ^a ^b) succeed fail $x env) (^a succeed (lambda (env) (^b succeed fail $x env))
                                                   $x env))
   (define (($$app $proc ^p) succeed fail $x env)
@@ -484,8 +480,7 @@
     (apply parser env (cdr stx*))))
 
 (define ((parse-match/parse-pattern parse-pattern) env stx.e . stx*.clause*)
-  (let (($x    ($ref 'x))
-        ($fail ($call ($ref 'fail))))
+  (let (($x ($ref 'x)) ($fail ($call ($ref 'fail))))
     (ast:let
       #f '(x) (list (parse-expression env stx.e))
       (ast:let
@@ -503,24 +498,29 @@
                               ((^pattern) (linear-pattern-compile P)))
                   (ast:let
                     #f '(fail) (list (ast:lambda #f '() (loop (cdr stx*.clause*))))
-                    ($provenance
-                      (^pattern
-                        (lambda (env)
-                          (let* ((body    (syntax-unwrap stx.body))
-                                 (fender* (let ((fender (syntax-unwrap (car body))))
-                                            (and (pair? fender)
-                                                 (expression-auxiliary? 'guard env (car fender))
-                                                 (syntax->list (cdr fender))))))
-                            (if fender*
-                                (if (pair? fender*)
-                                    ($if (apply $and (parse-expression* env fender*))
-                                         (parse-body env (cdr body))
-                                         $fail)
-                                    (raise-syntax-error "not a guard" (car body)))
-                                (parse-body env stx.body))))
-                        (lambda (_) $fail)
-                        $x env)
-                      (car stx*.clause*))))))))))))
+                    (ast:let
+                      #f '(succeed)
+                      (list ($lambda
+                              env id*.P
+                              (lambda (env . _)
+                                (let* ((body  (syntax-unwrap stx.body))
+                                       (test* (let ((fender (syntax-unwrap (car body))))
+                                                (and (pair? fender)
+                                                     (expression-auxiliary? 'guard env (car fender))
+                                                     (syntax->list (cdr fender))))))
+                                  (if test*
+                                      (if (pair? test*)
+                                          ($if (apply $and (parse-expression* env test*))
+                                               (parse-body env (cdr body))
+                                               $fail)
+                                          (raise-syntax-error "not a guard" (car body)))
+                                      (parse-body env stx.body))))))
+                      ($provenance
+                        (^pattern
+                          (lambda (env) (apply $call ($ref 'succeed) (parse-expression* env id*.P)))
+                          (lambda (_) $fail)
+                          $x env)
+                        (car stx*.clause*)))))))))))))
 
 (define parse-match  (parse-match/parse-pattern parse-pattern))
 (define parse-qmatch (parse-match/parse-pattern parse-pattern-quasiquote))
