@@ -132,7 +132,7 @@
 (define ($letrec env param* ^rhs* ^body)
   (let* ((addr* (map identifier->fresh-address param*))
          (env   (env-extend-scope env param* addr*)))
-    (ast:letrec #f (map binding-pair addr* (apply ^rhs* env addr*)) (apply ^body env addr*))))
+    (ast:letrec #f addr* (apply ^rhs* env addr*) (apply ^body env addr*))))
 
 (define $and
   (case-lambda
@@ -178,12 +178,11 @@
                                          (else       ($cons (car x*) (loop (cdr x*)))))))
 (define $append.value
   (let (($append ($ref 'append)) ($x* ($ref 'x*)) ($y ($ref 'y)))
-    (ast:letrec #f (list (binding-pair
-                           'append (ast:lambda #f '(x* y)
+    (ast:letrec #f '(append) (list (ast:lambda #f '(x* y)
                                                ($if ($null? $x*)
                                                     $y
                                                     ($cons ($car $x*)
-                                                           ($call $append ($cdr $x*) $y))))))
+                                                           ($call $append ($cdr $x*) $y)))))
                 $append)))
 (define ($append x* y) ($call $append.value x* y))
 ;; TODO: $vector->list.value and $vector->list
@@ -211,11 +210,8 @@
 
 (define (defstate-add-expression dst ^ast) (defstate-define dst #f ^ast))
 
-(define (definition*->binding-pair* def*)
-  (map binding-pair
-       (map defstate-entry-address def*)
-       (map (lambda (^ast) (^ast)) (map defstate-entry-^ast def*))))
-
+(define (definition*->address*  def*) (map defstate-entry-address def*))
+(define (definition*->ast*      def*) (map (lambda (^ast) (^ast)) (map defstate-entry-^ast def*)))
 (define (definition*->assigner* def*) (map defstate-entry-assigner def*))
 
 (define ($define dst env.scope lhs ^rhs)
@@ -229,9 +225,10 @@
 (define ($body env ^def)
   (let* ((env.scope (make-env))
          (env       (env-extend env env.scope))
-         (dst       (^def defstate.empty env.scope env)))
+         (dst       (^def defstate.empty env.scope env))
+         (def*      (defstate-definition* dst)))
     (env-freeze! env.scope)
-    (ast:letrec #f (definition*->binding-pair* (defstate-definition* dst))
+    (ast:letrec #f (definition*->address* def*) (definition*->ast* def*)
                 ((defstate-expression dst)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;

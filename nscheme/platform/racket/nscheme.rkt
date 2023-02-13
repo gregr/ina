@@ -413,6 +413,7 @@
 ;;; Snapshot saving and loading ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; TODO: update this ast representation
 (define (ast:quote v)                      `#(quote ,v))
 (define (ast:ref name)                     `#(ref ,name))
 (define (ast:if ast.c ast.t ast.f)         `#(if ,ast.c ,ast.t ,ast.f))

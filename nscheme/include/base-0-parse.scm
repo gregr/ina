@@ -616,7 +616,7 @@
        ($splicing-etc dst env.scope env
                       (lambda (dst scope env)
                         (foldl (lambda (lhs rhs dst) (parse-def dst scope env lhs rhs))
-                               dst (map binding-pair-left bpair*) (map binding-pair-right bpair*)))
+                               dst (map car bpair*) (map cdr bpair*)))
                       ^body))))
   (define ($splicing-let            . a*) (apply $splicing $splicing-nonrec parse-define        a*))
   (define ($splicing-let-values     . a*) (apply $splicing $splicing-nonrec parse-define-values a*))
