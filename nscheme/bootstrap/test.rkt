@@ -651,12 +651,12 @@
     (_                                                  'something-else))
   ==> error:parse
   (match '(1 1 q)
-    ((list (? (lambda (n) (eqv? (cmp 1 n) -1)) x) 1 y)
+    ((list (? (lambda (n) (< 1 n)) x) 1 y)
      (cons 'large-enough x))
     (_ 'something-else))
   ==> something-else
   (match '(1 1 q)
-    ((list (app (lambda (n) (+ n 1)) (? (lambda (n) (eqv? (cmp 1 n) -1)) x)) 1 y)
+    ((list (app (lambda (n) (+ n 1)) (? (lambda (n) (< 1 n)) x)) 1 y)
      (cons 'large-enough x))
     (_ 'something-else))
   ==> (large-enough . 2)
