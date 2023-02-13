@@ -166,6 +166,9 @@
 (define ($eqv?              a b) ($pcall 'eqv?  a b))
 (define ($null?             x)   ($pcall 'null? x))
 (define ($pair?             x)   ($pcall 'pair? x))
+(define ($<                 a b) ($pcall '<     a b))
+(define ($+                 a b) ($pcall '+     a b))
+(define ($-                 a b) ($pcall '-     a b))
 (define ($cons              a b) ($pcall 'cons  a b))
 (define ($car               x)   ($pcall 'car   x))
 (define ($cdr               x)   ($pcall 'cdr   x))
@@ -176,6 +179,22 @@
 (define ($list             . x*) (let loop ((x* x*))
                                    (cond ((null? x*) ($quote '()))
                                          (else       ($cons (car x*) (loop (cdr x*)))))))
+(define $improper-length.value
+  (let (($loop ($ref 'loop)) ($x* ($ref 'x*)) ($acc ($ref 'acc)))
+    (ast:letrec #f '(loop) (list (ast:lambda #f '(x* acc)
+                                             ($if ($pair? $x*)
+                                                  ($call $loop ($cdr $x*) ($+ $acc ($quote 1)))
+                                                  $acc)))
+                (ast:lambda #f '(x*) ($call $loop $x* ($quote 0))))))
+(define ($improper-length x*) ($call $improper-length.value x*))
+(define $length.value
+  (let (($loop ($ref 'loop)) ($x* ($ref 'x*)) ($acc ($ref 'acc)))
+    (ast:letrec #f '(loop) (list (ast:lambda #f '(x* acc)
+                                             ($if ($null? $x*)
+                                                  $acc
+                                                  ($call $loop ($cdr $x*) ($+ $acc ($quote 1))))))
+    (ast:lambda #f '(x*) ($call $loop $x* ($quote 0))))))
+(define ($length x*) ($call $length.value x*))
 (define $append.value
   (let (($append ($ref 'append)) ($x* ($ref 'x*)) ($y ($ref 'y)))
     (ast:letrec #f '(append) (list (ast:lambda #f '(x* y)

@@ -344,6 +344,19 @@
           ((pattern:not? P) (let-values (((P.inner _) (loop (pattern:not-inner P) #f)))
                               (values (wrap ($p:not P.inner)) id*)))
           (else             (raise-pattern-error "unsupported pattern" P))))))
+  (define (linear-pattern-variables P)
+    (let loop ((P P) (id* '()))
+      (cond
+        ((pattern:var?             P) (cons (pattern:var-identifier P) id*))
+        ((pattern:app?             P) (loop (pattern:app-inner P) id*))
+        ((pattern:and?             P) (loop (pattern:and-right P) (loop (pattern:and-left P) id*)))
+        ((pattern:or?              P) (loop (pattern:or-left P) id*))
+        ((pattern:ellipsis-append? P) (loop (pattern:ellipsis-append-suffix P)
+                                            (loop (pattern:ellipsis-append-ellipsis P) id*)))
+        ((pattern:ellipsis-vector? P) (loop (pattern:ellipsis-vector-suffix P)
+                                            (loop (pattern:ellipsis-vector-ellipsis P)
+                                                  (loop (pattern:ellipsis-vector-prefix P) id*))))
+        (else                         id*))))
   (define ((wrap pv ^ast) . args) (ast-provenance-add (apply ^ast args) pv))
   (define (($$?   $?)    succeed fail $x env) ($if ($call $? $x) (succeed env) (fail env)))
   (define (($$and ^a ^b) succeed fail $x env) (^a (lambda (env) (^b succeed fail $x env))
@@ -370,15 +383,58 @@
             ((pattern:or?   P) ($$or (loop (pattern:or-left P)) (loop (pattern:or-right P))))
             ((pattern:not?  P) (let ((^p (loop (pattern:not-inner P))))
                                  (lambda (succeed fail $x env) (^p fail succeed $x env))))
-            ;((pattern:ellipsis-vector? p)
+            ((pattern:ellipsis-append? P)
+             (let* ((P.a         (pattern:ellipsis-append-ellipsis P))
+                    (^a          (loop P.a))
+                    (^d          (loop (pattern:ellipsis-append-suffix P)))
+                    (id*.a       (linear-pattern-variables P.a))
+                    (addr*.a.acc (iota (length id*.a)))
+                    (len.d       (pattern:ellipsis-append-suffix-length P)))
+               (lambda (succeed fail $x env)
+                 (let* (($x* ($ref 'x*))
+                        ($prefix-length.x ($ref 'prefix-length.x)) ($rprefix* ($ref 'rprefix*))
+                        ($rx* ($ref 'rx*)) ($acc* (map $ref addr*.a.acc))
+                        ($k.a* ($lambda env id*.a (lambda (env . _) (^d succeed fail $x* env))))
+                        ($loop.ellipsis ($ref 'loop.ellipsis))
+                        ($loop.ellipsis
+                          (ast:letrec
+                            #f '(loop.ellipsis)
+                            (list (ast:lambda
+                                    #f (cons 'rx* addr*.a.acc)
+                                    ($if ($null? $rx*)
+                                         (apply $call ($ref 'k.a*) $acc*)
+                                         (^a (lambda (env)
+                                               (apply
+                                                 $call $loop.ellipsis ($cdr $rx*)
+                                                 (map $cons (parse-expression* env id*.a) $acc*)))
+                                             fail ($car $rx*) env))))
+                            $loop.ellipsis))
+                        ($continue/reversed-prefix ($ref 'continue/reversed-prefix))
+                        ($continue/reversed-prefix
+                          (ast:letrec
+                            #f '(continue/reversed-prefix)
+                            (list (ast:lambda
+                                    #f (list 'prefix-length.x 'x* 'rprefix*)
+                                    ($if ($< ($quote 0) $prefix-length.x)
+                                         ($call $continue/reversed-prefix
+                                                ($- $prefix-length.x ($quote 1))
+                                                ($cdr $x*)
+                                                ($cons ($car $x*) $rprefix*))
+                                         (ast:let
+                                           #f '(k.a*) (list $k.a*)
+                                           (apply $call $loop.ellipsis $rprefix*
+                                                  (map (lambda (_) ($quote '())) addr*.a.acc))))))
+                            $continue/reversed-prefix)))
+                   (ast:let
+                     #f '(prefix-length.x) (list ($- ($improper-length $x) ($quote len.d)))
+                     ($if ($< $prefix-length.x ($quote 0))
+                          (fail env)
+                          ($call $continue/reversed-prefix $prefix-length.x $x ($quote '()))))))))
+            ;((pattern:ellipsis-vector? P)
             ; ;; TODO: vector-length must be at least (+ (length P*.prefix) (length P*.suffix))
             ; ;; and (vector-ref v (- len i)) for each i in (length P*.suffix)
             ; ;; then match (length P*.prefix) through (- len (length P*.suffix)) against
             ; ;; P.ellipsis to build up a list of results.
-            ; )
-            ;((pattern:ellipsis-append? p)
-            ; ;; TODO: improper-reverse $x, match P.tail, then rP*.suffix,
-            ; ;; then match the rest against P.ellipsis to build up a list of results.
             ; )
             (else              (raise-pattern-error "unsupported pattern" P)))))
       id*)))
