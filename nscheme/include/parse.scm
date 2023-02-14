@@ -116,6 +116,13 @@
 
 (define (ast:lambda pv param   body) (ast:case-lambda pv (list (case-lambda-clause param body))))
 (define (ast:let    pv p* rhs* body) (ast:call        pv (ast:lambda #f p* body) rhs*))
+(define (ast:let*   pv p* rhs* body)
+  ($provenance
+    (let loop ((p* p*) (rhs* rhs*))
+      (cond ((null? p*) body)
+            (else       (ast:let #f (list (car p*)) (list (car rhs*))
+                                 (loop (cdr p*) (cdr rhs*))))))
+    pv))
 
 (define ($case-lambda-clause env param*~ env&addr*->body)
   (let* ((addr*~ (improper-list-map identifier->fresh-address param*~))

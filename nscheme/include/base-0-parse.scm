@@ -434,13 +434,61 @@
                      ($if ($< $prefix-length.x ($quote 0))
                           (fail env)
                           ($call $continue/reversed-prefix $prefix-length.x $x ($quote '()))))))))
-            ;((pattern:ellipsis-vector? P)
-            ; ;; TODO: vector-length must be at least (+ (length P*.prefix) (length P*.suffix))
-            ; ;; and (vector-ref v (- len i)) for each i in (length P*.suffix)
-            ; ;; then match (length P*.prefix) through (- len (length P*.suffix)) against
-            ; ;; P.ellipsis to build up a list of results.
-            ; )
-            (else              (raise-pattern-error "unsupported pattern" P)))))
+            ((pattern:ellipsis-vector? P)
+             (let* ((P*.prefix       (pattern:ellipsis-vector-prefix P))
+                    (P.ellipsis      (pattern:ellipsis-vector-ellipsis P))
+                    (P*.suffix       (pattern:ellipsis-vector-suffix P))
+                    (length.prefix   (length P*.prefix))
+                    (length.suffix   (length P*.suffix))
+                    (length.fixed    (+ length.prefix length.suffix))
+                    ($i.ellipsis     ($ref 'i.ellipsis))
+                    ($i.suffix.start ($ref 'i.suffix.start))
+                    (^prefix         (loop (apply $$p:and
+                                                  (map $$p:vector-ref P*.prefix
+                                                       (map $quote (iota length.prefix))))))
+                    (^ellipsis       (loop ($$p:vector-ref P.ellipsis $i.ellipsis)))
+                    (^suffix         (loop (apply $$p:and
+                                                  (map $$p:vector-ref P*.suffix
+                                                       (map (lambda (i)
+                                                              ($+ $i.suffix.start ($quote i)))
+                                                            (iota length.suffix))))))
+                    (id*.ellipsis    (linear-pattern-variables P.ellipsis))
+                    (addr*.acc       (iota (length id*.ellipsis))))
+             (lambda (succeed fail $x env)
+               (let* (($length.ellipsis ($ref 'length.ellipsis))
+                      ($length.prefix   ($quote length.prefix))
+                      ($acc*            (map $ref addr*.acc))
+                      ($loop.ellipsis   ($ref 'loop.ellipsis))
+                      (succeed.ellipsis
+                        (lambda (env)
+                          (apply $call $loop.ellipsis
+                                 ($- $i.ellipsis ($quote 1))
+                                 (map $cons (parse-expression* env id*.ellipsis) $acc*))))
+                      (succeed.prefix
+                        (lambda (env)
+                          (ast:let*
+                            #f '(i.suffix.start k.ellipsis)
+                            (list ($+ $length.ellipsis $length.prefix)
+                                  ($lambda env id*.ellipsis
+                                           (lambda (env . _) (^suffix succeed fail $x env))))
+                            (apply $call (ast:letrec
+                                           #f '(loop.ellipsis)
+                                           (list (ast:lambda
+                                                   #f (cons 'i.ellipsis addr*.acc)
+                                                   ($if ($< $i.ellipsis $length.prefix)
+                                                        (apply $call ($ref 'k.ellipsis) $acc*)
+                                                        (^ellipsis succeed.ellipsis fail $x env))))
+                                           $loop.ellipsis)
+                                   ($- $i.suffix.start ($quote 1))
+                                   (map (lambda (_) ($quote '())) addr*.acc))))))
+                 ($if ($vector? $x)
+                      (ast:let
+                        #f '(length.ellipsis) (list ($- ($vector-length $x) ($quote length.fixed)))
+                        ($if ($< $length.ellipsis ($quote 0))
+                             (fail env)
+                             (^prefix succeed.prefix fail $x env)))
+                      (fail env))))))
+            (else (raise-pattern-error "unsupported pattern" P)))))
       id*)))
 
 (define (parse-pattern-any    _ __)                $p:any)
