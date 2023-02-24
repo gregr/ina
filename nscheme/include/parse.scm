@@ -8,9 +8,6 @@
 (define vocab.expression-operator  'expression-operator)
 (define vocab.expression-auxiliary 'expression-auxiliary)
 (define vocab.quasiquote           'quasiquote)
-(define vocab.pattern              'pattern)
-(define vocab.pattern-operator     'pattern-operator)
-(define vocab.pattern-auxiliary    'pattern-auxiliary)
 
 (define vocab-dict.empty '())
 (define (vocab-dict-ref    vocab=>x vocab)    (let ((vx (assq vocab vocab=>x))) (and vx (cdr vx))))
@@ -274,7 +271,6 @@
 (define ((auxiliary?/vocab vocab) a env stx.id)
   (and (identifier? stx.id) (equal? (env-ref^ env stx.id vocab) a)))
 (define expression-auxiliary? (auxiliary?/vocab vocab.expression-auxiliary))
-(define pattern-auxiliary?    (auxiliary?/vocab vocab.pattern-auxiliary))
 
 (define (parse-expression* env e*) (map (lambda (e) (parse-expression env e)) e*))
 

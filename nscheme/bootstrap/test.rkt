@@ -12,6 +12,7 @@
 (include "../include/boot/env-primitive.scm")
 
 (include "../include/base-0-parse.scm")
+(include "../include/match.scm")
 
 ;; TODO: all remaining compiler definitions should be included here, replacing ast-eval.rkt:
 (require "ast-eval.rkt")
@@ -22,7 +23,7 @@
 
 (define verbosity 0)
 
-(define env.test env.base-0)
+(define env.test (env-extend.match (env-extend env.primitive env.base-0)))
 
 (struct error:parse (c) #:prefab)
 (struct error:eval  (c) #:prefab)

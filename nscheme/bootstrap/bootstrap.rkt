@@ -13,6 +13,7 @@
 (include "../include/boot/env-primitive.scm")
 
 (include "../include/base-0-parse.scm")
+(include "../include/match.scm")
 
 ;; TODO: all remaining compiler definitions should be included here, replacing ast-eval.rkt:
 (require "ast-eval.rkt")
