@@ -4,15 +4,21 @@
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an
 ;;; interactive system and its dependencies, targeting each platform.
 
-(include "../include/base-1-source.scm")
+(include "../include/boot/error.scm")
+(include "../include/base/misc.scm")
+(include "../include/base/compare.scm")
+(include "../include/base/list.scm")
+(include "../include/base/mvector.scm")
+(include "../include/base/vector.scm")
+(include "../include/base/mbytevector.scm")
+(include "../include/base/bytevector.scm")
+(include "../include/base/string.scm")
+
 (include "../include/syntax.scm")
 (include "../include/ast.scm")
 (include "../include/parse.scm")
-
-;; TODO: replace this with environments populated using ast:prim instead.
-(include "../include/boot/env-primitive.scm")
-
-(include "../include/base-0-parse.scm")
+(include "../include/primitive.scm")
+(include "../include/minimal.scm")
 (include "../include/match.scm")
 
 ;; TODO: all remaining compiler definitions should be included here, replacing ast-eval.rkt:
@@ -20,7 +26,7 @@
 
 ;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
 ;; depend on the compiler instead of ast-eval:
-(include "../include/base-2-parse.scm")
+(include "../include/extended.scm")
 
 ;; TODO: compile interact.scm and all of its dependencies (almost everything listed above).
 ;; - Other dependencies: read.scm write.scm tty.scm and/or other UI definitions, etc.

@@ -287,7 +287,7 @@
 ;;; Pre-base language syntax environment ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define env.base-0
+(define env.minimal
   (let ((env.scope (make-env))
         (b*.expr-aux '(=> else))
         (b*.def

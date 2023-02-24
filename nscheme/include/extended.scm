@@ -122,7 +122,7 @@
     ;;'define-syntax  (definition-operator-parser parse-define-syntax  2 #f)
     ;))
 
-(define env.base-2
+(define env.extended
   (let ((env.scope (make-env))
         (b*.def-and-expr
           (list
@@ -132,4 +132,4 @@
                                                      vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
     (env-freeze! env.scope)
-    (env-extend env.base-0 env.scope)))
+    env.scope))
