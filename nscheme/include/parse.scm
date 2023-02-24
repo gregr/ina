@@ -250,14 +250,16 @@
     (env-set^! env.scope lhs vocab.expression (lambda arg* (apply (mvector-ref parser 0) arg*)))
     (defstate-define/assign! dst addr ^rhs assign!)))
 
-(define ($body env ^def)
-  (let* ((env.scope (make-env))
-         (env       (env-extend env env.scope))
-         (dst       (^def defstate.empty env.scope env))
-         (def*      (defstate-definition* dst)))
-    (env-freeze! env.scope)
+(define (defstate->expression dst)
+  (let ((def* (defstate-definition* dst)))
     (ast:letrec #f (definition*->address* def*) (definition*->ast* def*)
                 ((defstate-expression dst)))))
+
+(define ($body env ^def)
+  (let* ((env.scope (make-env))
+         (dst       (^def defstate.empty env.scope (env-extend env env.scope))))
+    (env-freeze! env.scope)
+    (defstate->expression dst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
