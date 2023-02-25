@@ -18,16 +18,13 @@
 ;(define vocab.formula 'formula)
 ;(define vocab.term    'term)
 
-(define (defstate-eval! dst)
-  (let* ((addr*    (definition*->address* (defstate-definition* dst)))
-         (dst      (defstate-add-expression dst (lambda () (apply $list (map $ref addr*)))))
-         (assign!* (definition*->assigner* (defstate-definition* dst))))
-    (for-each (lambda (assign! result) (assign! result))
-              assign!* (ast-eval (defstate->expression dst)))))
-
 (define (parse-begin-meta-definition dst env.scope env stx)
-  (defstate-eval! ((definition-operator-parser parse-begin-definition 0 #f) dst env.scope env stx))
-  dst)
+  (let* ((dst.new  ((definition-operator-parser parse-begin-definition 0 #f)
+                    defstate.empty env.scope env stx))
+         (ast.expr ((defstate->ast/eval ast-eval) dst.new)))
+    (if (defstate-expression dst.new)
+        (defstate-add-expression dst (lambda () ast.expr))
+        (defstate-define dst (fresh-address #f) (lambda () ($quote #t))))))
 
 (define (parse-begin-meta-expression env stx)
   ($quote (ast-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx))))

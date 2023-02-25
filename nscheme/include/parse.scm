@@ -234,6 +234,8 @@
   (defstate-define/assign! dst addr ^ast (lambda (v) (values))))
 
 (define (defstate-add-expression dst ^ast) (defstate-define dst #f ^ast))
+(define (defstate-set-expression dst ^ast) (defstate-add-expression
+                                             (if (defstate-expression dst) (cdr dst) dst) ^ast))
 
 (define (definition*->address*  def*) (map defstate-entry-address def*))
 (define (definition*->ast*      def*) (map (lambda (^ast) (^ast)) (map defstate-entry-^ast def*)))
@@ -247,16 +249,25 @@
     (env-set^! env.scope lhs vocab.expression (lambda arg* (apply (mvector-ref parser 0) arg*)))
     (defstate-define/assign! dst addr ^rhs assign!)))
 
-(define (defstate->expression dst)
+(define (defstate->ast dst)
   (let ((def* (defstate-definition* dst)))
     (ast:letrec #f (definition*->address* def*) (definition*->ast* def*)
-                ((defstate-expression dst)))))
+                ((or (defstate-expression dst) $values)))))
+
+(define ((defstate->ast/eval ast-eval) dst)
+  (let* ((addr*    (definition*->address* (defstate-definition* dst)))
+         (ast.^e   (ast:lambda #f '() ((or (defstate-expression dst) $values))))
+         (dst      (defstate-set-expression dst (lambda () (apply $list ast.^e (map $ref addr*)))))
+         (assign!* (definition*->assigner* (defstate-definition* dst))))
+    (let ((result* (ast-eval (defstate->ast dst))))
+      (for-each (lambda (assign! result) (assign! result)) assign!* (cdr result*))
+      (call-with-values (car result*) (lambda x* (apply $values (map $quote x*)))))))
 
 (define ($body env ^def)
   (let* ((env.scope (make-env))
          (dst       (^def defstate.empty env.scope (env-extend env env.scope))))
     (env-freeze! env.scope)
-    (defstate->expression dst)))
+    (defstate->ast dst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
