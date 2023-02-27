@@ -98,7 +98,7 @@
                   panic set-panic-handler!
                   yield set-yield-handler! set-timer enable-interrupts disable-interrupts
                   procedure-metadata
-                  record? make-record record-type-descriptor record-ref record-set!
+                  record? record record-type-descriptor record-ref
                   string->bytevector bytevector->string
                   apply call-with-values values
                   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?

@@ -42,7 +42,7 @@
         panic set-panic-handler!
         yield set-yield-handler! set-timer enable-interrupts disable-interrupts
         procedure-metadata
-        record? make-record record-type-descriptor record-ref record-set!
+        record? record record-type-descriptor record-ref
         ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
         string->bytevector bytevector->string)))
   (define env.primitive

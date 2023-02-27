@@ -23,11 +23,7 @@
 
 (splicing-local
   ((define rtd.error (vector 2)))
-  (define (make-error kind details)
-    (let ((e (make-record rtd.error 0)))
-      (record-set! e 0 kind)
-      (record-set! e 1 details)
-      e))
+  (define (make-error kind details) (record rtd.error kind details))
   (define (error? x) (and (record? x) (eq? (record-type-descriptor x) rtd.error))))
 
 (define (error?!       x) (has-type?! error? 'error x))

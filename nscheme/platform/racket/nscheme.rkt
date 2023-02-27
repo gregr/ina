@@ -15,7 +15,7 @@
   ;; This operator can allocate the vector on demand (which will hopefully be unboxed during
   ;; optimization), populating it based on a lower-level code/closure representation.
   procedure-metadata
-  record? make-record record-type-descriptor record-ref record-set!
+  record? record record-type-descriptor record-ref
   string->bytevector bytevector->string
 
   apply call-with-values values
@@ -167,23 +167,19 @@
 
 (struct mbytevector (bv) #:name mbytevector-struct #:constructor-name mbytevector:new)
 (struct mvector     (v)  #:name mvector-struct     #:constructor-name mvector:new)
-(struct record      (type-descriptor field*))
+(struct record (type-descriptor field*) #:name record-struct #:constructor-name record:new)
 
-(define (make-record rtd initial-value)
+(define (record rtd . x*)
   (unless (and (vector? rtd) (< 0 (vector-length rtd)))
     (error "record-type-descriptor is not a non-empty vector" rtd))
   (let ((field-count (vector-ref rtd 0)))
-    (unless (fixnum? field-count)
-      (error "not a field count" field-count))
-    (record rtd (make-vector field-count initial-value))))
+    (unless (fixnum? field-count) (error "not a field count" field-count))
+    (unless (= (length x*) field-count) (error "incorrect record argument count" field-count x*))
+    (record:new rtd (list->vector x*))))
 
 (define (record-ref x i)
   (unless (record? x) (error "not a record" x))
   (vector-ref (record-field* x) i))
-
-(define (record-set! x i v)
-  (unless (record? x) (error "not a record" x))
-  (vector-set! (record-field* x) i v))
 
 (define (make-mvector    len x)  (mvector:new   (make-vector len x)))
 (define (mvector-length  mv)     (vector-length (mvector-v mv)))
@@ -370,7 +366,7 @@
   panic set-panic-handler!
   yield set-yield-handler! set-timer enable-interrupts disable-interrupts
   procedure-metadata
-  record? make-record record-type-descriptor record-ref record-set!
+  record? record record-type-descriptor record-ref
   string->bytevector bytevector->string
 
   apply call-with-values values
@@ -549,17 +545,17 @@
                                              (loop (mvector-ref value i))))
                                  (range (mvector-length value)))
                             initialization**)))
-                   ((? record?)
-                    ;; TODO: if the RTD transitively points to this record, this will fail to terminate.
-                    ;; This could be solved by thunking initializer creation.
-                    (push! other* name (ast:call (loop make-record) (loop (record-type-descriptor value)) (loop 0)))
-                    (set! initialization**
-                      (cons (map (lambda (i)
-                                   (ast:call (loop record-set!)
-                                             (ast:ref name) (loop i)
-                                             (loop (record-ref value i))))
-                                 (range (vector-ref (record-type-descriptor value) 0)))
-                            initialization**)))
+                   ;((? record?)
+                   ; ;; TODO: if the RTD transitively points to this record, this will fail to terminate.
+                   ; ;; This could be solved by thunking initializer creation.
+                   ; (push! other* name (ast:call (loop make-record) (loop (record-type-descriptor value)) (loop 0)))
+                   ; (set! initialization**
+                   ;   (cons (map (lambda (i)
+                   ;                (ast:call (loop record-set!)
+                   ;                          (ast:ref name) (loop i)
+                   ;                          (loop (record-ref value i))))
+                   ;              (range (vector-ref (record-type-descriptor value) 0)))
+                   ;         initialization**)))
                    (_ (let ((ast (match value
                                    ((cons v.a v.d) (ast:call (loop cons) (loop v.a) (loop v.d)))
                                    ((? vector?)    (apply ast:call (loop vector)

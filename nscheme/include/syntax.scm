@@ -29,18 +29,12 @@
    (define (annotated-syntax form provenance)
      (if (not provenance)
          form
-         (let ((r (make-record rtd.annotated-syntax 0)))
-           (record-set! r 0 form)
-           (record-set! r 1 provenance)
-           r)))
+         (record rtd.annotated-syntax form provenance)))
 
    (define (marked-syntax mark* stx)
      (if (null? mark*)
          stx
-         (let ((r (make-record rtd.marked-syntax 0)))
-           (record-set! r 0 mark*)
-           (record-set! r 1 stx)
-           r)))
+         (record rtd.marked-syntax mark* stx)))
 
    (define (annotated-syntax? x) (and (record? x) (eq? (record-type-descriptor x)
                                                        rtd.annotated-syntax)))

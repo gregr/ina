@@ -50,8 +50,8 @@ way by manipulating programs and live processes as data.
   - This even includes pairs, strings, bytevectors, and vectors.
   - Mutable vectors and bytevectors (i.e., mvectors and mbytevectors) are a distinct type of data,
     disjoint from the s-expression types.
-  - Records are distinct vector-like types which may or may not be mutable.  They are disjoint from
-    the s-expression types.
+  - Records are distinct, immutable, vector-like types.  They are disjoint from the s-expression
+    types.
 - Unlike Scheme, record type descriptors (RTDs) are normal vectors with the following layout:
   - `(vector field-count optional-user-defined-metadata ...)`
   - The field count always comes first so that the system (particularly the garbage collector) can
