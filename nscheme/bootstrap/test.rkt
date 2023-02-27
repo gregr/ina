@@ -55,11 +55,17 @@
                                    (displayln "EVALUATION ERROR:")
                                    (pretty-write c))
                                  (error:eval c))))
-        (let ((result (ast-eval ast)))
-          (when (< 0 verbosity)
-            (displayln "VALUE:")
-            (pretty-write result))
-          result)))))
+        (call-with-values
+          (lambda () (ast-eval ast))
+          (case-lambda
+            ((result) (when (< 0 verbosity)
+                        (displayln "VALUE:")
+                        (pretty-write result))
+                      result)
+            (result*  (when (< 0 verbosity)
+                        (displayln "VALUES:")
+                        (pretty-write result*))
+                      `(values . ,result*))))))))
 
 (define (display-border)
   (displayln "================================================================================"))
