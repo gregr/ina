@@ -144,10 +144,7 @@ Eventually:
   - May also want to simplify defstates
 
 - Split base library code by topic and level of privilege
-  - Particularly error construction and handling (error.scm ?)
-    - Privileges that may be needed: records, escape continuations, dynamic parameters
-    - Make sure to `panic` instead of `raise` when appropriate.
-    - To get started quickly, can initially define `raise` to simply `panic`.
+  - Privileges that may be needed: records, escape continuations, dynamic parameters
   - Split along two privilege levels only? privileged and unprivileged?
     - privileged:
       - dynamic-scope
