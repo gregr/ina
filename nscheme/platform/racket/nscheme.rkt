@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  caseq casev
+  caseq casev assert
   ;; privileged primitives
   call-with-escape-continuation call-in-empty-context
   thread-register set-thread-register!
@@ -84,7 +84,7 @@
 (define (enable-interrupts  . args) (error "TODO: not implemented"))
 (define (disable-interrupts . args) (error "TODO: not implemented"))
 
-(define-syntax-rule (assert test ...) (begin (unless test (panic 'assertion-violation 'test)) ...))
+(define-syntax-rule (assert test ...) (begin (unless test (panic 'violation 'assert 'test)) ...))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Data primitives ;;;

@@ -182,6 +182,7 @@
 (define ($vector           . x*) (apply $pcall 'vector x*))
 (define ($values           . x*) (apply $pcall 'values x*))
 (define ($call-with-values . x*) (apply $pcall 'call-with-values x*))
+(define ($panic            . x*) (apply $pcall 'panic x*))
 (define ($list             . x*) (let loop ((x* x*))
                                    (cond ((null? x*) ($quote '()))
                                          (else       ($cons (car x*) (loop (cdr x*)))))))
