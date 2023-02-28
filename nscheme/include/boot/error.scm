@@ -22,13 +22,11 @@
 (define (has-type?! type? expected value) (unless (type? value) (type-violation expected value)))
 
 (splicing-local
-  ((define rtd.error (vector 2)))
-  (define (make-error kind details) (record rtd.error kind details))
-  (define (error? x) (and (record? x) (eq? (record-type-descriptor x) rtd.error))))
-
-(define (error?!       x) (has-type?! error? 'error x))
-(define (error-kind    e) (error?! e) (record-ref e 0))
-(define (error-details e) (error?! e) (record-ref e 1))
+  ((define rtd.error (make-rtd 'error #f #f '#(kind details))))
+  (define (make-error kind details) ((record-constructor rtd.error) kind details))
+  (define error?        (record-predicate rtd.error))
+  (define error-kind    (record-field-position-accessor rtd.error 0))
+  (define error-details (record-field-position-accessor rtd.error 1)))
 
 (define (make-error:lexical description location)
   (make-error 'lexical (list (cons 'description description)

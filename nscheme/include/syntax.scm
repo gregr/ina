@@ -23,28 +23,24 @@
                    (cond ((null? m*) (cdr m*.inner))
                          (else       (cons m (loop (car m*) (cdr m*)))))))))
 
-   (define rtd.annotated-syntax (vector 2))
-   (define rtd.marked-syntax    (vector 2))
-
+   (define rtd.annotated-syntax (make-rtd 'annotated-syntax #f #t '#(form provenance)))
+   (define (make-annotated-syntax form provenance)
+     ((record-constructor rtd.annotated-syntax) form provenance))
    (define (annotated-syntax form provenance)
-     (if (not provenance)
-         form
-         (record rtd.annotated-syntax form provenance)))
+     (if (not provenance) form (make-annotated-syntax form provenance)))
+   (define annotated-syntax?           (record-predicate rtd.annotated-syntax))
+   (define annotated-syntax-form       (record-field-position-accessor rtd.annotated-syntax 0))
+   (define annotated-syntax-provenance (record-field-position-accessor rtd.annotated-syntax 1))
+   (define (maybe-annotated-syntax-form s) (if (annotated-syntax? s) (annotated-syntax-form s) s))
+   (define (maybe-annotated-syntax-provenance s) (and (annotated-syntax? s)
+                                                      (annotated-syntax-provenance s)))
 
-   (define (marked-syntax mark* stx)
-     (if (null? mark*)
-         stx
-         (record rtd.marked-syntax mark* stx)))
-
-   (define (annotated-syntax? x) (and (record? x) (eq? (record-type-descriptor x)
-                                                       rtd.annotated-syntax)))
-   (define (marked-syntax?    x) (and (record? x) (eq? (record-type-descriptor x)
-                                                       rtd.marked-syntax)))
-
-   (define (marked-syntax-mark*               s) (record-ref s 0))
-   (define (marked-syntax-syntax              s) (record-ref s 1))
-   (define (maybe-annotated-syntax-form       s) (if (annotated-syntax? s) (record-ref s 0) s))
-   (define (maybe-annotated-syntax-provenance s) (if (annotated-syntax? s) (record-ref s 1) #f)))
+   (define rtd.marked-syntax (make-rtd 'marked-syntax #f #t '#(mark* syntax)))
+   (define (make-marked-syntax mark* syntax) ((record-constructor rtd.marked-syntax) mark* syntax))
+   (define (marked-syntax      mark* stx)    (if (null? mark*) stx (make-marked-syntax mark* stx)))
+   (define marked-syntax?       (record-predicate rtd.marked-syntax))
+   (define marked-syntax-mark*  (record-field-position-accessor rtd.marked-syntax 0))
+   (define marked-syntax-syntax (record-field-position-accessor rtd.marked-syntax 1)))
 
   (define (syntax-mark*          s)    (if (marked-syntax? s) (marked-syntax-mark* s) '()))
   (define (syntax-peek           s)    (maybe-annotated-syntax-form
