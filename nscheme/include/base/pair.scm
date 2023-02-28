@@ -1,5 +1,12 @@
-;; TODO:
-;caar
-;cadr
-;cdar
-;etc.
+(define (caar  x) (car (car  x)))
+(define (cadr  x) (car (cdr  x)))
+(define (cdar  x) (cdr (car  x)))
+(define (cddr  x) (cdr (cdr  x)))
+(define (caaar x) (car (caar x)))
+(define (caadr x) (car (cadr x)))
+(define (cadar x) (car (cdar x)))
+(define (caddr x) (car (cddr x)))
+(define (cdaar x) (cdr (caar x)))
+(define (cdadr x) (cdr (cadr x)))
+(define (cddar x) (cdr (cdar x)))
+(define (cdddr x) (cdr (cddr x)))
