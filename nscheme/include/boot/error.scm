@@ -5,8 +5,8 @@
 (define (type-violation expected value)
   (violation 'type (cons 'expected expected) (cons 'given value)))
 
-(define (procedure-arity-violation proc given)
-  (violation 'procedure-arity (cons 'object proc) (cons 'given given)))
+(define (procedure-arity-violation proc expected given)
+  (violation 'procedure-arity (cons 'object proc) (cons 'expected expected) (cons 'given given)))
 
 (define (index-bounds-violation object index)
   (violation 'index-bounds (cons 'object object) (cons 'given index)))

@@ -3,10 +3,11 @@
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 
+(include "../include/base/list.scm")
+(include "../include/boot/record.scm")
 (include "../include/boot/error.scm")
 (include "../include/base/misc.scm")
 (include "../include/base/compare.scm")
-(include "../include/base/list.scm")
 (include "../include/base/mvector.scm")
 (include "../include/base/vector.scm")
 (include "../include/base/mbytevector.scm")
