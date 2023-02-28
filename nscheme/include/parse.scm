@@ -74,11 +74,10 @@
           (raise-syntax-error "duplicate parameter name" id.0 param*))
         (loop (cdr id*))))))
 
-(define (parse-binding-pairs e.bpairs)
+(define (parse-binding-pair* e.bpairs)
   (define (parse-binding-pair e.bpair)
     (let ((e* (syntax->list e.bpair)))
       (unless (= (length e*) 2) (raise-syntax-error "binding pair without 2 elements" e.bpair))
-      (parse-identifier (car e*))
       (cons (car e*) (cadr e*))))
   (map parse-binding-pair (syntax->list e.bpairs)))
 

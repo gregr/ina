@@ -86,13 +86,15 @@
 
 (define (parse-let env e0 e1 . e*)
   (if (identifier? e0)
-      (let* ((bpair* (parse-binding-pairs e1)) (param* (map car bpair*)))
+      (let* ((bpair* (parse-binding-pair* e1)) (param* (map car bpair*)))
+        (parse-param* param*)
         (apply $call ($letrec env (list e0)
                               (lambda (env _)  (list ($lambda env param* (lambda (env . _)
                                                                            (parse-body env e*)))))
                               (lambda (_ addr) ($ref addr)))
                (parse-expression* env (map cdr bpair*))))
-      (let* ((bpair* (parse-binding-pairs e0)) (param* (map car bpair*)))
+      (let* ((bpair* (parse-binding-pair* e0)) (param* (map car bpair*)))
+        (parse-param* param*)
         ($let env param* (parse-expression* env (map cdr bpair*))
               (lambda (env . _) (parse-body env (cons e1 e*)))))))
 
@@ -253,7 +255,7 @@
 
 (splicing-local
   ((define ($splicing $splicing-etc parse-def dst env.scope env stx.bpair* ^body)
-     (let ((bpair* (parse-binding-pairs stx.bpair*)))
+     (let ((bpair* (parse-binding-pair* stx.bpair*)))
        ($splicing-etc dst env.scope env
                       (lambda (dst scope env)
                         (foldl (lambda (lhs rhs dst) (parse-def dst scope env lhs rhs))
