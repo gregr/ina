@@ -236,6 +236,20 @@
   ! cond
   (cond (1 2))        ==> 2
   (cond (#f 3) (4 5)) ==> 5
+  (cond ((<    2 1) '(< 2 1))
+        ((eqv? 2 1) '(eqv? 2 1))
+        (else       'else))
+  ==> else
+  (cond ((<    2 1) '(< 2 1))
+        ((eqv? 2 1) '(eqv? 2 1))
+        (else       'else)
+        (#t         'unreachable))
+  ==> error:parse
+  (cond ((<    2 1) '(< 2 1))
+        ((eqv? 2 1) '(eqv? 2 1))
+        (7          => (lambda (x) (+ x 1)))
+        (else       'else))
+  ==> 8
 
   ! lambda
   ((lambda (x y) x) 5 6)                             ==> 5
