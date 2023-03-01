@@ -56,8 +56,11 @@
                 "../include/minimal.scm"
                 "../include/match.scm"))))
 
+(require profile)
+
 (define env.test (env-extend.match (env-extend env.primitive.privileged
                                                (env-extend env.primitive env.minimal))))
+;(pretty-write (env-describe env.test))
 (define stx*.test (append stx*
                           (list
                             ;'(+ 1 2)
@@ -70,8 +73,9 @@
                                     '(1 2) '(3 4 5) '(a b c))
                             )))
 (displayln "parsing test:")
-;; TODO: ~200ms, profile
+;; ~47ms
 (define ast.test (time (parse-body env.test stx*.test)))
+;(define ast.test (profile (parse-body env.test stx*.test)))
 ;(pretty-write ast.test)
 ;(pretty-write (ast-pretty ast.test))
 (displayln "evaluating test:")
@@ -91,13 +95,15 @@
                                                 '(1 2) '(3 4 5) '(a b c))))))
                (parse-body env.test stx*.test)))))
 (displayln "parsing self-apply1:")
-;; TODO: ~218ms, profile
+;; ~49ms
 (define ast.self-apply1 (time (parse-body env.test stx*.self-apply1)))
+;(define ast.self-apply1 (profile (parse-body env.test stx*.self-apply1)))
 ;(pretty-write ast.self-apply1)
 ;(pretty-write (ast-pretty ast.self-apply1))
 (displayln "evaluating self-apply1 to parse self-apply2:")
-;; TODO: ~51820ms, profile
+;; ~7573ms
 (define ast.self-apply2 (time (ast-eval ast.self-apply1)))
+;(define ast.self-apply2 (profile (ast-eval ast.self-apply1)))
 (displayln "evaluating self-apply2:")
 ;; ~4ms
 (pretty-write (time (ast-eval ast.self-apply2)))

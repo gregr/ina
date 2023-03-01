@@ -153,12 +153,27 @@
       (else       (error "invalid environment operation"           method)))))
 
 (splicing-local
-  ((define id=? bound-identifier=?)
-   (define id-dict.empty '())
-   (define (id-dict-keys id=>x)      (map car id=>x))  ; TODO: cache description once frozen.
-   (define (id-dict-ref  id=>x id)   (let ((kv (assp (lambda (id.key) (id=? id.key id)) id=>x)))
-                                       (and kv (cdr kv))))
-   (define (id-dict-set  id=>x id x) (cons (cons id x) id=>x)))  ; TODO: should we strip provenance?
+  ((splicing-local
+     ((define (id-dict-top-symbol id=>x) (vector-ref id=>x 0))
+      (define (id-dict-top-mark*  id=>x) (vector-ref id=>x 1))
+      (define (id-dict-top-value  id=>x) (vector-ref id=>x 2))
+      (define (id-dict-pop        id=>x) (vector-ref id=>x 3)))
+     (define id-dict.empty '())
+     (define (id-dict-keys id=>x)
+       (let loop ((id=>x id=>x))
+         (cond ((null? id=>x) '())
+               (else (cons (syntax-wrap (id-dict-top-symbol id=>x) (id-dict-top-mark* id=>x))
+                           (loop (id-dict-pop id=>x)))))))
+     (define (id-dict-set id=>x id x) (vector (syntax-peek id) (syntax-mark* id) x id=>x))
+     (define (id-dict-ref id=>x id)
+       (identifier?! id)
+       (let ((sym (syntax-peek id)) (m* (syntax-mark* id)))
+         (let loop ((id=>x id=>x))
+           (and (not (null? id=>x))
+                (cond ((and (eq? (id-dict-top-symbol id=>x) sym)
+                            (mark*=? (id-dict-top-mark* id=>x) m*))
+                       (id-dict-top-value id=>x))
+                      (else (loop (id-dict-pop id=>x))))))))))
   (define (make-env)
     (let ((id=>x (mvector id-dict.empty)) (mv.frozen? (mvector #f)))
       (define (frozen?) (mvector-ref mv.frozen? 0))
