@@ -1,10 +1,13 @@
 #lang racket/base
-(require "../platform/racket/nscheme.rkt" racket/include racket/splicing)
+(require "../platform/racket/nscheme.rkt"
+         racket/file racket/include racket/pretty racket/runtime-path racket/splicing)
 
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an
 ;;; interactive system and its dependencies, targeting each platform.
 
+(include "../include/base/pair.scm")
 (include "../include/base/list.scm")
+(include "../include/base/number.scm")
 (include "../include/boot/record.scm")
 (include "../include/boot/error.scm")
 (include "../include/base/misc.scm")
@@ -21,6 +24,84 @@
 (include "../include/primitive.scm")
 (include "../include/minimal.scm")
 (include "../include/match.scm")
+
+(define-runtime-path path.here ".")
+
+(define stx*
+  (apply append
+         (map (lambda (fname)
+                (call-with-input-file
+                  (build-path path.here fname)
+                  (lambda (in)
+                    (let loop ()
+                      (let ((x (read in)))
+                        (cond ((eof-object? x) '())
+                              (else            (cons x (loop)))))))))
+              '("../include/base/pair.scm"
+                "../include/base/list.scm"
+                "../include/base/number.scm"
+                "../include/boot/record.scm"
+                "../include/boot/error.scm"
+                "../include/base/misc.scm"
+                "../include/base/compare.scm"
+                "../include/base/mvector.scm"
+                "../include/base/vector.scm"
+                "../include/base/mbytevector.scm"
+                "../include/base/bytevector.scm"
+                "../include/base/string.scm"
+                "../include/syntax.scm"
+                "../include/ast.scm"
+                "../include/parse.scm"
+                "../include/primitive.scm"
+                "../include/minimal.scm"
+                "../include/match.scm"))))
+
+(define env.test (env-extend.match (env-extend env.primitive.privileged
+                                               (env-extend env.primitive env.minimal))))
+(define stx*.test (append stx*
+                          (list
+                            ;'(+ 1 2)
+                            ;'(foldr + 0 '(1 2 3 4 5))
+                            ;'(foldr cons '(1 2) '(3 4 5))
+                            ;'(foldl cons '(1 2) '(3 4 5))
+                            ;'(foldl (lambda (x y acc) (cons (cons x y) acc))
+                            ;        '(1 2) '(3 4 5) '(a b c))
+                            '(foldr (lambda (x y acc) (cons (cons x y) acc))
+                                    '(1 2) '(3 4 5) '(a b c))
+                            )))
+(displayln "parsing test:")
+;; TODO: ~200ms, profile
+(define ast.test (time (parse-body env.test stx*.test)))
+;(pretty-write ast.test)
+;(pretty-write (ast-pretty ast.test))
+(displayln "evaluating test:")
+;; ~4ms
+(pretty-write (time (ast-eval ast.test)))
+;==> ((3 . a) (4 . b) (5 . c) 1 2)
+
+(define stx*.self-apply1
+  (append stx*
+          (list
+            `(let ((env.test
+                     (env-extend.match (env-extend env.primitive.privileged
+                                                   (env-extend env.primitive env.minimal))))
+                   (stx*.test (append ',stx*
+                                      (list
+                                        '(foldr (lambda (x y acc) (cons (cons x y) acc))
+                                                '(1 2) '(3 4 5) '(a b c))))))
+               (parse-body env.test stx*.test)))))
+(displayln "parsing self-apply1:")
+;; TODO: ~218ms, profile
+(define ast.self-apply1 (time (parse-body env.test stx*.self-apply1)))
+;(pretty-write ast.self-apply1)
+;(pretty-write (ast-pretty ast.self-apply1))
+(displayln "evaluating self-apply1 to parse self-apply2:")
+;; TODO: ~51820ms, profile
+(define ast.self-apply2 (time (ast-eval ast.self-apply1)))
+(displayln "evaluating self-apply2:")
+;; ~4ms
+(pretty-write (time (ast-eval ast.self-apply2)))
+;==> ((3 . a) (4 . b) (5 . c) 1 2)
 
 ;; TODO: all remaining compiler definitions should be included here, replacing ast-eval.rkt:
 (require "ast-eval.rkt")

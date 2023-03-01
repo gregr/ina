@@ -3,7 +3,9 @@
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 
+(include "../include/base/pair.scm")
 (include "../include/base/list.scm")
+(include "../include/base/number.scm")
 (include "../include/boot/record.scm")
 (include "../include/boot/error.scm")
 (include "../include/base/misc.scm")

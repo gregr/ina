@@ -292,7 +292,7 @@
         ((identifier? expr)
          (let ((op (env-ref^ env expr vocab.expression)))
            (cond ((procedure? op)    (op env expr))
-                 ((env-ref env expr) (raise-syntax-error "invalid context for identifier" expr))
+                 ((env-ref env expr) (raise-syntax-error "non-expression identifier" expr))
                  (else               (raise-syntax-error "unbound identifier" expr)))))
         ((pair?    x) (let* ((e.op (car x))
                              (op   (and (identifier? e.op)
