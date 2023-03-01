@@ -168,5 +168,31 @@
                                                              (cons (length y*) (map1 length y**))))
                                                     (apply f x (map1 car x**)))
                                         (else (or (apply f x (map1 car x**))
-                                                  (loop (car x*) (cdr x*) (map1 cdr x**))))))))))))
+                                                  (loop (car x*) (cdr x*) (map1 cdr x**)))))))))))
 
+  (define foldl
+    (case-lambda
+      ((f acc x*) (let loop ((x* x*) (acc acc))
+                    (cond ((null? x*) acc)
+                          (else       (loop (cdr x*) (f (car x*) acc))))))
+      ((f acc y* . y**)
+       (let loop ((x* y*) (x** y**) (acc acc))
+         (cond ((null? x*) (unless (andmap1 null? x**)
+                             (error "lists of different length"
+                                    (cons (length y*) (map1 length y**))))
+                           acc)
+               (else       (loop (cdr x*) (map1 cdr x**)
+                                 (apply f (car x*) (append (map1 car x**) (list acc))))))))))
+  (define foldr
+    (case-lambda
+      ((f acc x*) (let loop ((x* x*))
+                    (cond ((null? x*) acc)
+                          (else       (f (car x*) (loop (cdr x*)))))))
+      ((f acc y* . y**)
+       (let loop ((x* y*) (x** y**))
+         (cond ((null? x*) (unless (andmap1 null? x**)
+                             (error "lists of different length"
+                                    (cons (length y*) (map1 length y**))))
+                           acc)
+               (else (apply f (car x*) (append (map1 car x**)
+                                               (list (loop (cdr x*) (map1 cdr x**))))))))))))
