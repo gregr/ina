@@ -18,6 +18,13 @@
 ;(define vocab.formula 'formula)
 ;(define vocab.term    'term)
 
+(define (env:parse-begin-definition env stx*.def)
+  (let ((env.scope (make-env)))
+    ((defstate->ast/eval ast-eval)
+     (apply parse-begin-definition defstate.empty env.scope (env-extend env env.scope) stx*.def))
+    (env-freeze! env.scope)
+    env.scope))
+
 (define (parse-begin-meta-definition dst env.scope env stx)
   (let* ((dst.new  ((definition-operator-parser parse-begin-definition 0 #f)
                     defstate.empty env.scope env stx))
