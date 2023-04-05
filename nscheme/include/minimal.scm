@@ -81,7 +81,7 @@
 (define (parse-assert env . stx*.test)
   (apply $begin (map (lambda (stx.test)
                        ($unless (parse-expression env stx.test)
-                                ($panic ($quote 'violation) ($quote 'assert) ($quote stx.test))))
+                                ($panic ($quote 'assert) ($quote stx.test))))
                      stx*.test)))
 
 (define (parse-let env e0 e1 . e*)

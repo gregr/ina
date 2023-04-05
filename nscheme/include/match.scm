@@ -438,7 +438,7 @@
       #f '(x) (list (parse-expression env stx.e))
       (ast:let
         #f '(fail) (list (ast:lambda
-                           #f '() ($panic ($quote 'violation) ($quote "no matching clause") $x)))
+                           #f '() ($panic ($quote 'match) ($quote "no matching clause") $x)))
         (let loop ((stx*.clause* stx*.clause*))
           (cond
             ((null? stx*.clause*) $fail)

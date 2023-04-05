@@ -761,11 +761,14 @@ Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
 - Programming mistakes should panic, not raise
   - Examples of programming mistakes:
     - assertion violations
-    - type violations
-    - procedure arity violations
+    - type errors
+    - calling a procedure with the wrong number of arguments
     - accessing an out-of-bounds index
     - accessing an uninitialized variable (possible with letrec)
-    - dividing an exact integer by zero
+    - arithmetic errors such as:
+      - divide-by-zero
+      - overflow
+      - underflow
   - The compiler will generate code for implicit error-checking that calls panic upon failure
     - This implicit error-checking will take place inside primitive operator definitions, sites that
       call unknown procedures, arity-checking preludes of non-primitive procedure definitions, and
