@@ -28,7 +28,7 @@
 ;; TODO: all remaining compiler definitions should be included here, replacing ast-eval.rkt:
 (require "ast-eval.rkt")
 
-(define env.base (env-extend.match (env-extend env.primitive env.minimal)))
+(define env.base (env-compose.match (env-compose env.primitive env.minimal)))
 
 (define def*.microkanren
   '(;;;;;;;;;;;;;;;;;
@@ -208,7 +208,7 @@
 (define (parse-fresh env param* . fm*)
   ($fresh env param* (lambda (env . _) ($conj* (parse-expression* env fm*)))))
 
-(define (env-extend.minikanren env)
+(define (env-compose.minikanren env)
   (let ((env.scope (make-env))
         (b*.expr-op
           (list
@@ -220,9 +220,9 @@
               (map car b*.expr-op) (map cdr b*.expr-op))
     (env-bind! env.scope '== vocab.expression (lambda (_ __) $==))
     (env-freeze! env.scope)
-    (env-extend env env.scope)))
+    (env-compose env env.scope)))
 
-(define env.mk (env-extend.minikanren env.base))
+(define env.mk (env-compose.minikanren env.base))
 
 (define (test-mk* body)
   (let ((ast (time (parse-body env.mk body))))

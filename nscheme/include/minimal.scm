@@ -239,13 +239,13 @@
 
 (define ($splicing-rec dst env.scope env ^def ^body)
   (let* ((env.scope.inner (make-env))
-         (env             (env-extend env env.scope.inner))
+         (env             (env-compose env env.scope.inner))
          (dst             (^def dst env.scope.inner env)))
     (^body dst env.scope env)))
 
 (define ($splicing-nonrec dst env.scope env ^def ^body)
   (let ((env.scope.inner (make-env)))
-    (^body (^def dst env.scope.inner env) env.scope (env-extend env env.scope.inner))))
+    (^body (^def dst env.scope.inner env) env.scope (env-compose env env.scope.inner))))
 
 (define ($splicing-local dst env.scope env stx.def* ^body)
   (let ((def* (syntax->list stx.def*)))

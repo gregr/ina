@@ -58,9 +58,9 @@
 
 (require profile)
 
-(define env.test (env-extend.match (env-extend env.primitive.privileged
-                                               (env-extend env.primitive env.minimal))))
-;(pretty-write (env-describe env.test))
+(define env.test (env-compose.match (env-compose env.primitive.privileged
+                                                 (env-compose env.primitive env.minimal))))
+(pretty-write (env-describe env.test))
 (define stx*.test (append stx*
                           (list
                             ;'(+ 1 2)
@@ -87,8 +87,8 @@
   (append stx*
           (list
             `(let ((env.test
-                     (env-extend.match (env-extend env.primitive.privileged
-                                                   (env-extend env.primitive env.minimal))))
+                     (env-compose.match (env-compose env.primitive.privileged
+                                                     (env-compose env.primitive env.minimal))))
                    (stx*.test (append ',stx*
                                       (list
                                         '(foldr (lambda (x y acc) (cons (cons x y) acc))

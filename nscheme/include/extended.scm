@@ -21,7 +21,7 @@
 (define (env:parse-begin-definition env stx*.def)
   (let ((env.scope (make-env)))
     ((defstate->ast/eval ast-eval)
-     (apply parse-begin-definition defstate.empty env.scope (env-extend env env.scope) stx*.def))
+     (apply parse-begin-definition defstate.empty env.scope (env-compose env env.scope) stx*.def))
     (env-freeze! env.scope)
     env.scope))
 

@@ -125,18 +125,18 @@
 ;; NOTE: lookup is currently O(n^2), but may not be a problem in practice.  Consider more efficient
 ;; dictionary data structures If we need to harden this.
 ;;
-;; In order for a better dictionary structure to help, env-extend would have to combine
+;; In order for a better dictionary structure to help, env-compose would have to combine
 ;; sub-dictionaries.  But this is only possible if the sub-dictionaries are immutable, which is not
 ;; the case for definition-style environments until they are frozen.
 ;;
-;; We could have env-extend listen for freeze! events coming from its children.  Once both children
+;; We could have env-compose listen for freeze! events coming from its children.  Once both children
 ;; are frozen, we would combine their dictionaries, then propagate our own freeze! event to any
 ;; further registered extensions.
 
-(define (env-extend env env.first)
+(define (env-compose env env.first)
   (lambda (method)
     (caseq method
-      ((describe) (list 'extend (env.first 'describe) (env 'describe)))
+      ((describe) (list 'compose (env.first 'describe) (env 'describe)))
       ((ref)      (lambda (fail id)   ((env.first 'ref)  (lambda () ((env 'ref)  fail id))   id)))
       ((set!)     (lambda (fail id x) ((env.first 'set!) (lambda () ((env 'set!) fail id x)) id x)))
       ((freeze!)  (values))

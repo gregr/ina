@@ -36,16 +36,14 @@
 (define (env-ref^  env id vocab) (let ((vocab=>v (env-ref env id)))
                                    (and vocab=>v (vocab-dict-ref vocab=>v vocab))))
 
-(define (env:scope param* addr*)
-  (let ((env.scope (make-env)))
-    (parse-param* param*)
-    (for-each (lambda (id a) (env-bind! env.scope id vocab.expression
-                                        (parse-variable-ref/address a)))
-              param* addr*)
-    (env-freeze! env.scope)
-    env.scope))
-
-(define (env-extend-scope env param* addr*) (env-extend env (env:scope param* addr*)))
+(define (env-extend env param* addr*)
+  (parse-param* param*)
+  (env-compose env (let ((env.scope (make-env)))
+                     (for-each (lambda (id a) (env-bind! env.scope id vocab.expression
+                                                         (parse-variable-ref/address a)))
+                               param* addr*)
+                     (env-freeze! env.scope)
+                     env.scope)))
 
 (define (env-introduce! env.scope stx.id) (env-introduce*! env.scope (list stx.id)))
 
@@ -100,14 +98,14 @@
 
 (define (transcribe-and-parse-expression env.use env.op op stx)
   (let* ((m   (fresh-mark))
-         (env (env-extend env.use (env-mark env.op m))))
+         (env (env-compose env.use (env-mark env.op m))))
     (parse-expression env (transcribe env.op op m env stx))))
 
 (define (transcribe-and-parse-definition dst env.scope.use env.use env.op op stx)
   (let* ((m            (fresh-mark))
          (env.scope.op (make-env))
-         (env.scope    (env-extend env.scope.use (env-mark env.scope.op m)))
-         (env          (env-extend env.use       (env-mark (env-extend env.op env.scope.op) m)))
+         (env.scope    (env-compose env.scope.use (env-mark env.scope.op m)))
+         (env          (env-compose env.use       (env-mark (env-compose env.op env.scope.op) m)))
          (dst          (parse-definition dst env.scope env (transcribe env.op op m env stx))))
     (env-freeze! env.scope.op)
     dst))
@@ -134,7 +132,7 @@
 (define ($case-lambda-clause env param*~ env&addr*->body)
   (let* ((addr*~ (improper-list-map identifier->fresh-address param*~))
          (addr*  (improper-list->list addr*~))
-         (env    (env-extend-scope env (improper-list->list param*~) addr*)))
+         (env    (env-extend env (improper-list->list param*~) addr*)))
     (case-lambda-clause addr*~ (apply env&addr*->body env addr*))))
 
 (define ($case-lambda env . cc*)
@@ -145,7 +143,7 @@
 
 (define ($letrec env param* ^rhs* ^body)
   (let* ((addr* (map identifier->fresh-address param*))
-         (env   (env-extend-scope env param* addr*)))
+         (env   (env-extend env param* addr*)))
     (ast:letrec #f addr* (apply ^rhs* env addr*) (apply ^body env addr*))))
 
 (define $and
@@ -276,7 +274,7 @@
 
 (define ($body env ^def)
   (let* ((env.scope (make-env))
-         (dst       (^def defstate.empty env.scope (env-extend env env.scope))))
+         (dst       (^def defstate.empty env.scope (env-compose env env.scope))))
     (env-freeze! env.scope)
     (defstate->ast dst)))
 

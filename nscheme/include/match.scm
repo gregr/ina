@@ -478,7 +478,7 @@
 (define parse-match  (parse-match/parse-pattern parse-pattern))
 (define parse-qmatch (parse-match/parse-pattern parse-pattern-quasiquote))
 
-(define (env-extend.match env)
+(define (env-compose.match env)
   (let ((env.scope (make-env))
         (b*.expr-aux '(guard))
         (b*.pattern-aux '(...))
@@ -517,4 +517,4 @@
                       (env-bind! env.scope id vocab.pattern-operator op))))
               (map car b*.match-pattern-operator) (map cdr b*.match-pattern-operator))
     (env-freeze! env.scope)
-    (env-extend env env.scope)))
+    (env-compose env env.scope)))

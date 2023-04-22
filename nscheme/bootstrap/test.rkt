@@ -32,7 +32,7 @@
 
 (define verbosity 0)
 
-(define env.test (env-extend.match (env-extend env.primitive env.minimal)))
+(define env.test (env-compose.match (env-compose env.primitive env.minimal)))
 
 (struct error:parse (c) #:prefab)
 (struct error:eval  (c) #:prefab)
