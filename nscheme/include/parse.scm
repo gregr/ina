@@ -85,21 +85,32 @@
 ;;; Program construction ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (transcribe env.op op env.use stx)
-  (let* ((result (op (syntax-add-mark stx antimark)))
-         (m      (fresh-mark))
-         (env    (env-extend (env-add-mark env.op m) env.use))
-         (stx    (syntax-provenance-add
-                   (if (procedure? result)
-                       (let* ((lookup    (lambda (vocab id)
-                                           (env-ref^ env (syntax-add-mark id m) vocab)))
-                              (free-id=? (lambda (a b)
-                                           (free-identifier=?/env
-                                             env (syntax-add-mark a m) (syntax-add-mark b m)))))
-                         (result lookup free-id=?))
-                       result)
-                   (syntax-provenance stx))))
-    (values env (syntax-add-mark stx m))))
+(define (transcribe env.op op m env stx)
+  (let ((result (op (syntax-add-mark stx antimark))))
+    (syntax-add-mark
+      (syntax-provenance-add
+        (if (procedure? result)
+            (let* ((lookup    (lambda (vocab id) (env-ref^ env (syntax-add-mark id m) vocab)))
+                   (free-id=? (lambda (a b) (free-identifier=?/env
+                                              env (syntax-add-mark a m) (syntax-add-mark b m)))))
+              (result lookup free-id=?))
+            result)
+        (syntax-provenance stx))
+      m)))
+
+(define (transcribe-and-parse-expression env.use env.op op stx)
+  (let* ((m   (fresh-mark))
+         (env (env-extend env.use (env-mark env.op m))))
+    (parse-expression env (transcribe env.op op m env stx))))
+
+(define (transcribe-and-parse-definition dst env.scope.use env.use env.op op stx)
+  (let* ((m            (fresh-mark))
+         (env.scope.op (make-env))
+         (env.scope    (env-extend env.scope.use (env-mark env.scope.op m)))
+         (env          (env-extend env.use       (env-mark (env-extend env.op env.scope.op) m)))
+         (dst          (parse-definition dst env.scope env (transcribe env.op op m env stx))))
+    (env-freeze! env.scope.op)
+    dst))
 
 (define (identifier->fresh-address p) (fresh-address (syntax-peek p)))
 
@@ -275,10 +286,6 @@
 
 (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
 
-(define (transcribe-and-parse-expression env.use env.op op stx)
-  (let-values (((env.use stx) (transcribe env.op op env.use stx)))
-    (parse-expression env.use stx)))
-
 (define ((auxiliary?/vocab vocab) a env stx.id)
   (and (identifier? stx.id) (equal? (env-ref^ env stx.id vocab) a)))
 (define expression-auxiliary? (auxiliary?/vocab vocab.expression-auxiliary))
@@ -318,10 +325,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (transcribe-and-parse-definition dst env.scope env.use env.op op stx)
-  (let-values (((env.use stx) (transcribe env.op op env.use stx)))
-    (parse-definition dst env.scope env.use stx)))
 
 (define (parse-definition dst env.scope env stx)
   (define (default) (defstate-add-expression dst (lambda () (parse-expression env stx))))
