@@ -52,6 +52,32 @@
     (cond ((= i n) '())
           (else    (cons i (loop (+ i 1)))))))
 
+(define range-for-each
+  (let ((go (lambda (f start end inc)
+              (let ((? (if (< inc 0) > <)))
+                (let loop ((i start))
+                  (when (? i end)
+                    (f i)
+                    (loop (+ i inc))))))))
+    (case-lambda
+      ((f end)           (go f 0 end 1))
+      ((f start end)     (go f start end 1))
+      ((f start end inc) (go f start end inc)))))
+
+(define range-map
+  (let ((go (lambda (f start end inc)
+              (let ((? (if (< inc 0) > <)))
+                (let loop ((i start))
+                  (if (? i end)
+                      (cons (f i) (loop (+ i inc)))
+                      '()))))))
+    (case-lambda
+      ((f end)           (go f 0 end 1))
+      ((f start end)     (go f start end 1))
+      ((f start end inc) (go f start end inc)))))
+
+(define (range . arg*) (apply range-map (lambda (x) x) arg*))
+
 (define (assp ? alist)
   (let loop ((alist alist))
     (and (not (null? alist))
