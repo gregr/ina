@@ -75,7 +75,7 @@
            (marked (cdr m*) (marked-form s))))))
 
 (define (identifier?  s) (symbol? (syntax-peek s)))
-(define (identifier?! s) (has-type?! identifier? 'identifier? s))
+(define (identifier?! s) (unless (identifier? s) (error "not an identifier" s)))
 
 (define (syntax-add-mark s m) (syntax-wrap s (list m)))
 

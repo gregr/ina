@@ -1,9 +1,5 @@
 (define (error . detail*) (apply panic 'error detail*))
 
-(define (type-error expected value) (error 'type 'expected expected 'given value))
-
-(define (has-type?! type? expected value) (unless (type? value) (type-error expected value)))
-
 (define (make-error . detail*) (vector 'error detail*))
 (define (error? x) (and (vector? x) (= (vector-length x) 2) (eq? (vector-ref x 0) 'error)))
 (define (error-detail* x) (vector-ref x 1))

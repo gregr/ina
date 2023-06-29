@@ -2,8 +2,8 @@
 (define (inexact? x) (or (f32? x) (f64? x)))
 (define (number?  x) (or (rational? x) (inexact? x)))
 
-(define (integer?!  x) (has-type?! integer?  'integer?  x))
-(define (rational?! x) (has-type?! rational? 'rational? x))
+(define (integer?!  x) (unless (integer?  x) (error "not an integer" x)))
+(define (rational?! x) (unless (rational? x) (error "not a rational" x)))
 
 (define (=  a b) (rational?! a) (rational?! b) (eqv? a b))
 (define (<= a b) (rational?! a) (rational?! b) (or (eqv? a b) (< a b)))

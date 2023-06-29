@@ -33,7 +33,9 @@
     (unless (and (integer? i) (<= 0 i) (< i count.field*)) (error "not a field position" rtd i))
     (let ((? (record-predicate rtd))
           (i (+ (- (rtd-record-length rtd) count.field*) i)))
-      (lambda (r) (has-type?! ? rtd r) (record-ref r i)))))
+      (lambda (r)
+        (unless (? r) (error "not the right kind of record" rtd r))
+        (record-ref r i)))))
 
 (define (record-field-name-accessor rtd name)
   (record-field-position-accessor rtd (record-field-name->position rtd name)))
