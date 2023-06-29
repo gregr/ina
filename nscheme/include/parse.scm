@@ -170,8 +170,8 @@
 (define ($prim  name)        (ast:prim #f name))
 (define ($pcall name . args) (apply $call ($prim name) args))
 
-(define ($begin  a . a*)
-  (foldr (lambda (a1 a0) ($call-with-values (ast:lambda #f '() a0) (ast:lambda #f #f a1))) a a*))
+(define ($begin a . a*)
+  (foldl (lambda (a1 a0) ($call-with-values (ast:lambda #f '() a0) (ast:lambda #f #f a1))) a a*))
 
 (define $void                    ($pcall 'values))
 (define ($eq?              a b)  ($pcall 'eq?     a b))
