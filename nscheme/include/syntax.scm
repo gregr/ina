@@ -239,3 +239,6 @@
 (define (env-ref      env id)   ((env 'ref) (lambda () #f) id))
 
 (define env.empty (let ((env (make-env))) (env-freeze! env) env))
+
+(define (raise-syntax-error description . stx*)
+  (raise (make-error 'syntax (cons 'description description) (cons 'location* stx*))))
