@@ -1,8 +1,8 @@
-(define (error . detail*) (apply panic 'error detail*))
-
 (define (make-error . detail*) (vector 'error detail*))
 (define (error? x) (and (vector? x) (= (vector-length x) 2) (eq? (vector-ref x 0) 'error)))
 (define (error-detail* x) (vector-ref x 1))
+
+(define (error . detail*) (raise (apply make-error detail*)))
 
 ;; TODO: move these to where they are used.  And system-error should be more specific.
 ;(define (make-lexical-error description location)
