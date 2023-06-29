@@ -57,11 +57,11 @@
 ;;; Parsing helpers ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (parse-identifier id) (unless (identifier? id) (raise-syntax-error "not an identifier" id)))
+(define (parse-identifier id) (unless (identifier? id) (error "not an identifier" id)))
 
 (define (parse-undefined-identifier env id)
   (parse-identifier id)
-  (when (env-ref env id) (raise-syntax-error "name defined multiple times" id)))
+  (when (env-ref env id) (error "name defined multiple times" id)))
 
 (define (parse-param* param*)
   (for-each parse-identifier param*)
@@ -69,13 +69,13 @@
     (unless (null? id*)
       (let ((id.0 (car id*)))
         (when (memp (lambda (id) (bound-identifier=? id id.0)) (cdr id*))
-          (raise-syntax-error "duplicate parameter name" id.0 param*))
+          (error "duplicate parameter name" id.0 param*))
         (loop (cdr id*))))))
 
 (define (parse-binding-pair* e.bpairs)
   (define (parse-binding-pair e.bpair)
     (let ((e* (syntax->list e.bpair)))
-      (unless (= (length e*) 2) (raise-syntax-error "binding pair without 2 elements" e.bpair))
+      (unless (= (length e*) 2) (error "binding pair without 2 elements" e.bpair))
       (cons (car e*) (cadr e*))))
   (map parse-binding-pair (syntax->list e.bpairs)))
 
@@ -297,8 +297,8 @@
         ((identifier? expr)
          (let ((op (env-ref^ env expr vocab.expression)))
            (cond ((procedure? op)    (op env expr))
-                 ((env-ref env expr) (raise-syntax-error "non-expression identifier" expr))
-                 (else               (raise-syntax-error "unbound identifier" expr)))))
+                 ((env-ref env expr) (error "non-expression identifier" expr))
+                 (else               (error "unbound identifier" expr)))))
         ((pair?    x) (let* ((e.op (car x))
                              (op   (and (identifier? e.op)
                                         (env-ref^ env e.op vocab.expression-operator))))
@@ -307,13 +307,13 @@
                             (apply $call (parse-expression env e.op)
                                    (parse-expression* env (syntax->list (cdr x)))))))
         ((literal? x) ($quote x))
-        (else         (raise-syntax-error "not an expression" expr)))
+        (else         (error "not an expression" expr)))
       expr)))
 
 (define ((expression-operator-parser parser argc.min argc.max) env expr)
   (let* ((e* (syntax->list expr)) (argc (- (length e*) 1)))
-    (unless (<= argc.min argc)           (raise-syntax-error "too few operator arguments"  expr))
-    (unless (<= argc (or argc.max argc)) (raise-syntax-error "too many operator arguments" expr))
+    (unless (<= argc.min argc)           (error "too few operator arguments"  expr))
+    (unless (<= argc (or argc.max argc)) (error "too many operator arguments" expr))
     (apply parser env (cdr e*))))
 
 (define ((parse-variable-ref/address    addr)  env e) (ast:ref   (syntax-provenance e) addr))
@@ -341,6 +341,6 @@
 
 (define ((definition-operator-parser parser argc.min argc.max) dst env.scope env stx)
   (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
-    (unless (<= argc.min argc)           (raise-syntax-error "too few operator arguments"  stx))
-    (unless (<= argc (or argc.max argc)) (raise-syntax-error "too many operator arguments" stx))
+    (unless (<= argc.min argc)           (error "too few operator arguments"  stx))
+    (unless (<= argc (or argc.max argc)) (error "too many operator arguments" stx))
     (apply parser dst env.scope env (cdr stx*))))

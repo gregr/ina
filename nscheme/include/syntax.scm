@@ -116,7 +116,7 @@
           (and (pair? x)
                (loop (cdr x) (cons (car x) parts)))))))
 
-(define (syntax->list s) (or (syntax->list? s) (raise-syntax-error "not a list" s)))
+(define (syntax->list s) (or (syntax->list? s) (error "not a list" s)))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Environments ;;;
@@ -239,6 +239,3 @@
 (define (env-ref      env id)   ((env 'ref) (lambda () #f) id))
 
 (define env.empty (let ((env (make-env))) (env-freeze! env) env))
-
-(define (raise-syntax-error description . stx*)
-  (error 'syntax (cons 'description description) (cons 'location* stx*)))

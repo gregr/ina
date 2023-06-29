@@ -76,8 +76,6 @@
   (pattern:ellipsis-vector #f P*.prefix P.ellipsis P*.suffix))
 
 (define (linear-pattern-compile P)
-  (define (raise-pattern-error msg P)
-    (raise-syntax-error msg (syntax-provenance-set (ast-provenance-set P #f) (ast-provenance P))))
   (define ($$p:and        . p*)  (if (null? p*)
                                      $p:any
                                      (let loop ((p (car p*)) (p* (cdr p*)))
@@ -104,9 +102,9 @@
           ((or (pattern:any? P) (pattern:none? P) (pattern:?? P)) (values P id*))
           ((pattern:var? P)
            (let ((id (pattern:var-identifier P)))
-             (unless id* (raise-syntax-error "disallowed pattern variable" id))
+             (unless id* (error "disallowed pattern variable" id))
              (when (id-set-member? id* id)
-               (raise-syntax-error "duplicate pattern variable" id))
+               (error "duplicate pattern variable" id))
              (values P (id-set-add id* id))))
           ((pattern:quote? P)
            (values (wrap (let loop ((stx.value (pattern:quote-value-syntax P)))
@@ -124,8 +122,7 @@
                    (let ((len (let len+check ((P P.d) (len 0))
                                 (cond ((pattern:cons? P)
                                        (when (pattern:ellipsis? (pattern:cons-car P))
-                                         (raise-pattern-error "too many ellipses"
-                                                              (pattern:cons-car P)))
+                                         (error "too many ellipses" (pattern:cons-car P)))
                                        (len+check (pattern:cons-cdr P) (+ len 1)))
                                       (else len)))))
                      (let*-values (((P.a id*) (loop P.a id*))
@@ -138,7 +135,7 @@
            (let* ((P*  (pattern:vector-element* P))
                   (Pe* (filter pattern:ellipsis? P*)))
              (cond ((pair? Pe*)
-                    (when (pair? (cdr Pe*)) (raise-pattern-error "too many ellipses" P))
+                    (when (pair? (cdr Pe*)) (error "too many ellipses" P))
                     (let vloop ((P (car P*)) (P* (cdr P*)) (prefix* '()) (id* id*))
                       (cond ((pattern:ellipsis? P)
                              (let-values (((P id*) (loop (pattern:ellipsis-inner P) id*)))
@@ -166,17 +163,16 @@
                               (define (check id*.0 id*.1)
                                 (for-each (lambda (id)
                                             (unless (id-set-member? id*.1 id)
-                                              (raise-syntax-error
-                                                "pattern variable not in both disjuncts" id))
+                                              (error "pattern variable not in both disjuncts" id))
                                             (when (id-set-member? id* id)
-                                              (raise-syntax-error "duplicate pattern variable" id)))
+                                              (error "duplicate pattern variable" id)))
                                           id*.0))
                               (when id* (check id*.l id*.r) (check id*.r id*.l))
                               (values (wrap ($p:or P.l P.r))
                                       (foldl (lambda (id id*) (id-set-add id* id)) id* id*.l))))
           ((pattern:not? P) (let-values (((P.inner _) (loop (pattern:not-inner P) #f)))
                               (values (wrap ($p:not P.inner)) id*)))
-          (else             (raise-pattern-error "unsupported pattern" P))))))
+          (else             (error "unsupported pattern" P))))))
   (define (linear-pattern-variables P)
     (let loop ((P P) (id* '()))
       (cond
@@ -286,41 +282,43 @@
                                                             (iota length.suffix))))))
                     (id*.ellipsis    (linear-pattern-variables P.ellipsis))
                     (addr*.acc       (iota (length id*.ellipsis))))
-             (lambda (succeed fail $x env)
-               (let* (($length.ellipsis ($ref 'length.ellipsis))
-                      ($length.prefix   ($quote length.prefix))
-                      ($acc*            (map $ref addr*.acc))
-                      ($loop.ellipsis   ($ref 'loop.ellipsis))
-                      (succeed.ellipsis
-                        (lambda (env)
-                          (apply $call $loop.ellipsis
-                                 ($- $i.ellipsis ($quote 1))
-                                 (map $cons (parse-expression* env id*.ellipsis) $acc*))))
-                      (succeed.prefix
-                        (lambda (env)
-                          (ast:let*
-                            #f '(i.suffix.start k.ellipsis)
-                            (list ($+ $length.ellipsis $length.prefix)
-                                  ($lambda env id*.ellipsis
-                                           (lambda (env . _) (^suffix succeed fail $x env))))
-                            (apply $call (ast:letrec
-                                           #f '(loop.ellipsis)
-                                           (list (ast:lambda
-                                                   #f (cons 'i.ellipsis addr*.acc)
-                                                   ($if ($< $i.ellipsis $length.prefix)
-                                                        (apply $call ($ref 'k.ellipsis) $acc*)
-                                                        (^ellipsis succeed.ellipsis fail $x env))))
-                                           $loop.ellipsis)
-                                   ($- $i.suffix.start ($quote 1))
-                                   (map (lambda (_) ($quote '())) addr*.acc))))))
-                 ($if ($vector? $x)
-                      (ast:let
-                        #f '(length.ellipsis) (list ($- ($vector-length $x) ($quote length.fixed)))
-                        ($if ($< $length.ellipsis ($quote 0))
-                             (fail env)
-                             (^prefix succeed.prefix fail $x env)))
-                      (fail env))))))
-            (else (raise-pattern-error "unsupported pattern" P)))))
+               (lambda (succeed fail $x env)
+                 (let* (($length.ellipsis ($ref 'length.ellipsis))
+                        ($length.prefix   ($quote length.prefix))
+                        ($acc*            (map $ref addr*.acc))
+                        ($loop.ellipsis   ($ref 'loop.ellipsis))
+                        (succeed.ellipsis
+                          (lambda (env)
+                            (apply $call $loop.ellipsis
+                                   ($- $i.ellipsis ($quote 1))
+                                   (map $cons (parse-expression* env id*.ellipsis) $acc*))))
+                        (succeed.prefix
+                          (lambda (env)
+                            (ast:let*
+                              #f '(i.suffix.start k.ellipsis)
+                              (list ($+ $length.ellipsis $length.prefix)
+                                    ($lambda env id*.ellipsis
+                                             (lambda (env . _) (^suffix succeed fail $x env))))
+                              (apply $call
+                                     (ast:letrec
+                                       #f '(loop.ellipsis)
+                                       (list (ast:lambda
+                                               #f (cons 'i.ellipsis addr*.acc)
+                                               ($if ($< $i.ellipsis $length.prefix)
+                                                    (apply $call ($ref 'k.ellipsis) $acc*)
+                                                    (^ellipsis succeed.ellipsis fail $x env))))
+                                       $loop.ellipsis)
+                                     ($- $i.suffix.start ($quote 1))
+                                     (map (lambda (_) ($quote '())) addr*.acc))))))
+                   ($if ($vector? $x)
+                        (ast:let
+                          #f '(length.ellipsis) (list ($- ($vector-length $x)
+                                                          ($quote length.fixed)))
+                          ($if ($< $length.ellipsis ($quote 0))
+                               (fail env)
+                               (^prefix succeed.prefix fail $x env)))
+                        (fail env))))))
+            (else (error "unsupported pattern" P)))))
       id*)))
 
 (define (parse-pattern-any    _ __)                $p:any)
@@ -379,9 +377,9 @@
                                              (env-ref^ env e.op vocab.pattern-operator))))
                              (if (procedure? op)
                                  (op env stx)
-                                 (raise-syntax-error "not a match pattern" stx))))
+                                 (error "not a match pattern" stx))))
         ((literal? x)      ($p:quote x))
-        (else              (raise-syntax-error "not a pattern" stx))))
+        (else              (error "not a pattern" stx))))
     stx))
 (define (parse-pattern-quasiquote env stx.qq)
   (define (operand qq) (car (syntax-unwrap (cdr qq))))
@@ -422,14 +420,14 @@
                                                ($p:cons $p:a (loop (cdr qq) level)))))
             ((vector?    qq)             ($p:vector (pqq* (vector->list qq) level)))
             (else (when (and (identifier? stx.qq) (env-ref^ env stx.qq vocab.quasiquote))
-                    (raise-syntax-error "misplaced quasiquote pattern operator" stx.qq))
+                    (error "misplaced quasiquote pattern operator" stx.qq))
                   ($p:quote stx.qq)))))
   (loop stx.qq 0))
 
 (define ((match-pattern-operator-parser parser argc.min argc.max) env stx)
   (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
-    (unless (<= argc.min argc)           (raise-syntax-error "too few operator arguments"  stx))
-    (unless (<= argc (or argc.max argc)) (raise-syntax-error "too many operator arguments" stx))
+    (unless (<= argc.min argc)           (error "too few operator arguments"  stx))
+    (unless (<= argc (or argc.max argc)) (error "too many operator arguments" stx))
     (apply parser env (cdr stx*))))
 
 (define ((parse-match/parse-pattern parse-pattern) env stx.e . stx*.clause*)
@@ -445,7 +443,7 @@
             (else
               (let ((clause (syntax-unwrap (car stx*.clause*))))
                 (unless (and (pair? clause) (pair? (syntax-unwrap (cdr clause))))
-                  (raise-syntax-error "not a match clause" (car stx*.clause*)))
+                  (error "not a match clause" (car stx*.clause*)))
                 (let*-values (((stx.body)       (cdr clause))
                               ((^pattern id*.P) (linear-pattern-compile
                                                   (parse-pattern env (car clause)))))
@@ -466,7 +464,7 @@
                                           ($if (apply $and (parse-expression* env test*))
                                                (parse-body env (cdr body))
                                                $fail)
-                                          (raise-syntax-error "not a guard" (car body)))
+                                          (error "not a guard" (car body)))
                                       (parse-body env stx.body))))))
                       ($provenance
                         (^pattern

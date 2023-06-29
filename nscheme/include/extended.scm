@@ -43,11 +43,11 @@
 ;  (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))
 ;    (cond ((identifier? e.lhs)
 ;           (unless (= (length e*.rhs) 1)
-;             (raise-syntax-error "multiple expressions in declaration body" e*.rhs))
+;             (error "multiple expressions in declaration body" e*.rhs))
 ;           (let* ((addr   (env-address env e.lhs))
 ;                  (vocab  (ast-eval (parse-expression env e.vocab)))
 ;                  (parser ((ast-eval (parse-expression env (car e*.rhs))) env)))
-;             (unless addr (raise-syntax-error "unbound identifier" e.lhs))
+;             (unless addr (error "unbound identifier" e.lhs))
 ;             (env-set! env.scope vocab addr parser)))
 ;          (else (let ((x (syntax-unwrap e.lhs)))
 ;                  (cond ((pair? x) (loop (car x)
@@ -56,7 +56,7 @@
 ;                                                   ($provenance
 ;                                                     (apply parse-lambda env (cdr x) e*.rhs)
 ;                                                     (cdr x)))))))
-;                        (else      (raise-syntax-error "not a definable form" e.lhs)))))))
+;                        (else      (error "not a definable form" e.lhs)))))))
 ;  dst)
 
 ;; TODO: do without this (and anything else using ast-eval) until late stage bootstrapping
@@ -64,7 +64,7 @@
 ;  (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))
 ;    (cond ((identifier? e.lhs)
 ;           (unless (= (length e*.rhs) 1)
-;             (raise-syntax-error "multiple expressions in definition body" e*.rhs))
+;             (error "multiple expressions in definition body" e*.rhs))
 ;           (env-introduce env.scope e.lhs)
 ;           (let ((op (ast-eval (parse-expression env (car e*.rhs)))))
 ;             (parse-declare-parser
@@ -84,7 +84,7 @@
 ;                                                   ($provenance
 ;                                                     (apply parse-lambda env (cdr x) e*.rhs)
 ;                                                     (cdr x)))))))
-;                        (else      (raise-syntax-error "not a definable form" e.lhs)))))))
+;                        (else      (error "not a definable form" e.lhs)))))))
 ;  dst)
 
 ;; Would syntax-dismantle be helpful enough to justify implementing it?
