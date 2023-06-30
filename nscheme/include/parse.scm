@@ -36,12 +36,12 @@
 (define (env-ref^  env id vocab) (let ((vocab=>v (env-ref env id)))
                                    (and vocab=>v (vocab-dict-ref vocab=>v vocab))))
 
-(define (env-extend env param* addr*)
+(define (env-extend env param* E*)
   (parse-param* param*)
   (env-compose env (let ((env.scope (make-env)))
-                     (for-each (lambda (id a) (env-bind! env.scope id vocab.expression
-                                                         (parse-variable-ref/address a)))
-                               param* addr*)
+                     (for-each (lambda (id E) (env-bind! env.scope id vocab.expression
+                                                         (parse/constant-expression E)))
+                               param* E*)
                      (env-freeze! env.scope)
                      env.scope)))
 
@@ -132,7 +132,8 @@
 (define ($case-lambda-clause env param*~ env&addr*->body)
   (let* ((addr*~ (improper-list-map identifier->fresh-address param*~))
          (addr*  (improper-list->list addr*~))
-         (env    (env-extend env (improper-list->list param*~) addr*)))
+         (arg*   (map $ref addr*))
+         (env    (env-extend env (improper-list->list param*~) arg*)))
     (case-lambda-clause addr*~ (apply env&addr*->body env addr*))))
 
 (define ($case-lambda env . cc*)
@@ -143,7 +144,8 @@
 
 (define ($letrec env param* ^rhs* ^body)
   (let* ((addr* (map identifier->fresh-address param*))
-         (env   (env-extend env param* addr*)))
+         (arg*  (map $ref addr*))
+         (env   (env-extend env param* arg*)))
     (ast:letrec #f addr* (apply ^rhs* env addr*) (apply ^body env addr*))))
 
 (define $and
@@ -253,8 +255,9 @@
 (define ($define dst env.scope lhs ^rhs)
   (env-introduce! env.scope lhs)
   (let* ((addr    (identifier->fresh-address lhs))
-         (parser  (mvector (parse-variable-ref/address addr)))
-         (assign! (lambda (value) (mvector-set! parser 0 (parse-variable-quote/value value)))))
+         (parser  (mvector (parse/constant-expression ($ref addr))))
+         (assign! (lambda (value)
+                    (mvector-set! parser 0 (parse/constant-expression ($quote value))))))
     (env-set^! env.scope lhs vocab.expression (lambda arg* (apply (mvector-ref parser 0) arg*)))
     (defstate-define/assign! dst addr ^rhs assign!)))
 
@@ -316,9 +319,7 @@
     (unless (<= argc (or argc.max argc)) (error "too many operator arguments" expr))
     (apply parser env (cdr e*))))
 
-(define ((parse-variable-ref/address    addr)  env e) (ast:ref   (syntax-provenance e) addr))
-(define ((parse-variable-quote/value    value) env e) (ast:quote (syntax-provenance e) value))
-(define ((parse-variable-primitive/name name)  env e) (ast:prim  (syntax-provenance e) name))
+(define ((parse/constant-expression E) env _) E)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;

@@ -2,7 +2,7 @@
   ((define (primitive*->env primitive*)
      (let ((env.scope (make-env)))
        (for-each (lambda (id) (env-bind! env.scope id vocab.expression
-                                         (parse-variable-primitive/name id)))
+                                         (parse/constant-expression ($prim id))))
                  primitive*)
        (env-freeze! env.scope)
        env.scope)))
