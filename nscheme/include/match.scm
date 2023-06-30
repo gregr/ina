@@ -206,7 +206,7 @@
             ((pattern:none? P) (lambda (succeed fail $x env) (fail    env)))
             ((pattern:var?  P) (let ((id (pattern:var-identifier P)))
                                  (lambda (succeed fail $x env)
-                                   ($let env (list id) (list $x) (lambda (env $x) (succeed env))))))
+                                   ($let/env env (list id) (list $x) (lambda (env) (succeed env))))))
             ((pattern:??    P) ($$? (pattern:?-predicate P)))
             ((pattern:app?  P) ($$app (pattern:app-procedure P) (loop (pattern:app-inner P))))
             ((pattern:and?  P) ($$and (loop (pattern:and-left P)) (loop (pattern:and-right P))))
@@ -226,7 +226,7 @@
                         ($rprefix*        ($ref 'rprefix*))
                         ($rx*             ($ref 'rx*))
                         ($acc*            (map $ref addr*.a.acc))
-                        ($k.a* ($lambda env id*.a (lambda (env . _) (^d succeed fail $x* env))))
+                        ($k.a* ($lambda/env env id*.a (lambda (env) (^d succeed fail $x* env))))
                         ($loop.ellipsis ($ref 'loop.ellipsis))
                         ($loop.ellipsis
                           (ast:letrec
@@ -297,8 +297,8 @@
                             (ast:let*
                               #f '(i.suffix.start k.ellipsis)
                               (list ($+ $length.ellipsis $length.prefix)
-                                    ($lambda env id*.ellipsis
-                                             (lambda (env . _) (^suffix succeed fail $x env))))
+                                    ($lambda/env env id*.ellipsis
+                                                 (lambda (env) (^suffix succeed fail $x env))))
                               (apply $call
                                      (ast:letrec
                                        #f '(loop.ellipsis)
@@ -451,9 +451,9 @@
                     #f '(fail) (list (ast:lambda #f '() (loop (cdr stx*.clause*))))
                     (ast:let
                       #f '(succeed)
-                      (list ($lambda
+                      (list ($lambda/env
                               env id*.P
-                              (lambda (env . _)
+                              (lambda (env)
                                 (let* ((body  (syntax-unwrap stx.body))
                                        (test* (let ((fender (syntax-unwrap (car body))))
                                                 (and (pair? fender)

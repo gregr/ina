@@ -129,23 +129,27 @@
                                  (loop (cdr p*) (cdr rhs*))))))
     pv))
 
-(define ($case-lambda-clause env param*~ env&arg*->body)
-  (let* ((addr*~ (improper-list-map identifier->fresh-address param*~))
-         (arg*   (map $ref (improper-list->list addr*~)))
-         (env    (env-extend env (improper-list->list param*~) arg*)))
-    (case-lambda-clause addr*~ (apply env&arg*->body env arg*))))
+(define ($case-lambda . cc*)
+  (define ($case-lambda-clause param*~ arg*->body)
+    (let* ((addr*~ (improper-list-map identifier->fresh-address param*~)))
+      (case-lambda-clause addr*~ (apply arg*->body (map $ref (improper-list->list addr*~))))))
+  (ast:case-lambda #f (map (lambda (cc) ($case-lambda-clause (car cc) (cdr cc))) cc*)))
+(define ($case-lambda/env env . cc*)
+  (define (convert cc)
+    (let ((param*~ (car cc)) (env->body (cdr cc)))
+      (cons param*~ (lambda arg* (env->body (env-extend env (improper-list->list param*~) arg*))))))
+  (apply $case-lambda (map convert cc*)))
 
-(define ($case-lambda env . cc*)
-  (ast:case-lambda #f (map (lambda (cc) ($case-lambda-clause env (car cc) (cdr cc))) cc*)))
-
-(define ($lambda env param*~     ^body) ($case-lambda env (cons param*~ ^body)))
-(define ($let    env param* rhs* ^body) (apply $call ($lambda env param* ^body) rhs*))
-
-(define ($letrec env param* ^rhs* ^body)
-  (let* ((addr* (map identifier->fresh-address param*))
-         (arg*  (map $ref addr*))
-         (env   (env-extend env param* arg*)))
-    (ast:letrec #f addr* (apply ^rhs* env arg*) (apply ^body env arg*))))
+(define ($lambda         param*~     ^body) ($case-lambda (cons param*~ ^body)))
+(define ($lambda/env env param*~     ^body) ($case-lambda/env env (cons param*~ ^body)))
+(define ($let            param* rhs* ^body) (apply $call ($lambda param* ^body) rhs*))
+(define ($let/env    env param* rhs* ^body) (apply $call ($lambda/env env param* ^body) rhs*))
+(define ($letrec param* ^rhs*&body)
+  (let ((addr* (map identifier->fresh-address param*)))
+    (let-values ((($rhs* $body) (apply ^rhs*&body (map $ref addr*))))
+      (ast:letrec #f addr* $rhs* $body))))
+(define ($letrec/env env param* ^rhs*&body)
+  ($letrec param* (lambda arg* (^rhs*&body (env-extend env param* arg*)))))
 
 (define $and
   (case-lambda

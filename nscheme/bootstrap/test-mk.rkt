@@ -159,26 +159,25 @@
 (define $map         ($mk 'map))
 
 (define ($run env $count param ^body)
-  (let ((param* (if (identifier? param) (list param) (syntax->list param))))
-    ($call $map (ast:lambda #f '(st) ($call $reify $var.initial ($ref 'st)))
-           ($call $s-take $count
-                  ($call $pause $state.empty
-                         ($fresh env param*
-                                 (lambda (env . $x*)
-                                   ($call $conj
-                                          ($call $== $var.initial (if (identifier? param)
-                                                                      (car $x*)
-                                                                      (apply $list $x*)))
-                                          (apply ^body env $x*)))))))))
+  ($call $map (ast:lambda #f '(st) ($call $reify $var.initial ($ref 'st)))
+         ($call $s-take $count
+                ($call $pause $state.empty
+                       (if (identifier? param)
+                           ($let/env env (list param) (list $var.initial) ^body)
+                           (let ((param* (syntax->list param)))
+                             ($fresh env param*
+                                     (lambda (env)
+                                       (let (($x* (parse-expression* env param*)))
+                                         ($call $conj ($call $== $var.initial (apply $list $x*))
+                                                (^body env)))))))))))
 
 (define ($fresh env param* ^body)
   (parse-param* param*)
-  (let loop ((env env) (param* param*) (rarg* '()))
+  (let loop ((env env) (param* param*))
     (cond
-      ((null? param*) (apply ^body env (reverse rarg*)))
+      ((null? param*) (^body env))
       (else ($call $call/fresh
-                   ($lambda env (list (car param*))
-                            (lambda (env arg) (loop env (cdr param*) (cons arg rarg*)))))))))
+                   ($lambda/env env (list (car param*)) (lambda (env) (loop env (cdr param*)))))))))
 
 (define ($conj* $g*)
   (if (null? $g*)
@@ -197,15 +196,14 @@
 (define (parse-run* env param . fm*) (apply parse-run env #f param fm*))
 
 (define (parse-run env count param . fm*)
-  ($run env (parse-expression env count) param
-        (lambda (env . _) ($conj* (parse-expression* env fm*)))))
+  ($run env (parse-expression env count) param (lambda (env) ($conj* (parse-expression* env fm*)))))
 
 (define (parse-conde env . stx*.fm*)
   ($disj* (map (lambda (stx.fm*) ($conj* (parse-expression* env (syntax->list stx.fm*))))
                stx*.fm*)))
 
 (define (parse-fresh env param* . fm*)
-  ($fresh env param* (lambda (env . _) ($conj* (parse-expression* env fm*)))))
+  ($fresh env param* (lambda (env) ($conj* (parse-expression* env fm*)))))
 
 (define (env-compose.minikanren env)
   (let ((env.scope (make-env))
