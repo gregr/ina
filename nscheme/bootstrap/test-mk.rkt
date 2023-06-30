@@ -164,22 +164,21 @@
            ($call $s-take $count
                   ($call $pause $state.empty
                          ($fresh env param*
-                                 (lambda (env . addr*)
-                                   (let (($x* (map $ref addr*)))
-                                     ($call $conj
-                                            ($call $== $var.initial (if (identifier? param)
-                                                                        (car $x*)
-                                                                        (apply $list $x*)))
-                                            (apply ^body env $x*))))))))))
+                                 (lambda (env . $x*)
+                                   ($call $conj
+                                          ($call $== $var.initial (if (identifier? param)
+                                                                      (car $x*)
+                                                                      (apply $list $x*)))
+                                          (apply ^body env $x*)))))))))
 
 (define ($fresh env param* ^body)
   (parse-param* param*)
-  (let loop ((env env) (param* param*) (raddr* '()))
+  (let loop ((env env) (param* param*) (rarg* '()))
     (cond
-      ((null? param*) (apply ^body env (reverse raddr*)))
+      ((null? param*) (apply ^body env (reverse rarg*)))
       (else ($call $call/fresh
                    ($lambda env (list (car param*))
-                            (lambda (env addr) (loop env (cdr param*) (cons addr raddr*)))))))))
+                            (lambda (env arg) (loop env (cdr param*) (cons arg rarg*)))))))))
 
 (define ($conj* $g*)
   (if (null? $g*)

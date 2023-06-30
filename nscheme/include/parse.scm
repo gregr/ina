@@ -129,12 +129,11 @@
                                  (loop (cdr p*) (cdr rhs*))))))
     pv))
 
-(define ($case-lambda-clause env param*~ env&addr*->body)
+(define ($case-lambda-clause env param*~ env&arg*->body)
   (let* ((addr*~ (improper-list-map identifier->fresh-address param*~))
-         (addr*  (improper-list->list addr*~))
-         (arg*   (map $ref addr*))
+         (arg*   (map $ref (improper-list->list addr*~)))
          (env    (env-extend env (improper-list->list param*~) arg*)))
-    (case-lambda-clause addr*~ (apply env&addr*->body env addr*))))
+    (case-lambda-clause addr*~ (apply env&arg*->body env arg*))))
 
 (define ($case-lambda env . cc*)
   (ast:case-lambda #f (map (lambda (cc) ($case-lambda-clause env (car cc) (cdr cc))) cc*)))
@@ -146,7 +145,7 @@
   (let* ((addr* (map identifier->fresh-address param*))
          (arg*  (map $ref addr*))
          (env   (env-extend env param* arg*)))
-    (ast:letrec #f addr* (apply ^rhs* env addr*) (apply ^body env addr*))))
+    (ast:letrec #f addr* (apply ^rhs* env arg*) (apply ^body env arg*))))
 
 (define $and
   (case-lambda
