@@ -190,7 +190,7 @@
                     (unless (defstate-expression dst)
                       (error "no expression after definitions" stx.body))
                     dst))
-                ($provenance ($body env ^def) stx.body)))))
+                ($provenance/syntax ($body env ^def) stx.body)))))
 
 (define (parse-begin-definition dst env.scope env . stx*)
   (foldl (lambda (stx dst) (parse-definition dst env.scope env stx)) dst stx*))

@@ -53,7 +53,7 @@
 ;                  (cond ((pair? x) (loop (car x)
 ;                                         (list (expression-parser
 ;                                                 (lambda (env _)
-;                                                   ($provenance
+;                                                   ($provenance/syntax
 ;                                                     (apply parse-lambda env (cdr x) e*.rhs)
 ;                                                     (cdr x)))))))
 ;                        (else      (error "not a definable form" e.lhs)))))))
@@ -81,7 +81,7 @@
 ;                  (cond ((pair? x) (loop (car x)
 ;                                         (list (expression-parser
 ;                                                 (lambda (env _)
-;                                                   ($provenance
+;                                                   ($provenance/syntax
 ;                                                     (apply parse-lambda env (cdr x) e*.rhs)
 ;                                                     (cdr x)))))))
 ;                        (else      (error "not a definable form" e.lhs)))))))

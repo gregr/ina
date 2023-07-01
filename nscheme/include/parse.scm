@@ -112,7 +112,8 @@
 
 (define (identifier->fresh-address p) (fresh-address (syntax-peek p)))
 
-(define ($provenance ast stx) (ast-provenance-add ast (syntax-provenance stx)))
+(define ($provenance        ast pv)  (ast-provenance-add ast pv))
+(define ($provenance/syntax ast stx) ($provenance ast (syntax-provenance stx)))
 
 (define ($quote value)       (ast:quote #f value))
 (define ($ref   addr)        (ast:ref   #f addr))
@@ -296,27 +297,27 @@
   (and (identifier? stx.id) (equal? (env-ref^ env stx.id vocab) a)))
 (define expression-auxiliary? (auxiliary?/vocab vocab.expression-auxiliary))
 
-(define (parse-expression* env e*) (map (lambda (e) (parse-expression env e)) e*))
+(define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
 
-(define (parse-expression env expr)
-  (let ((x (syntax-unwrap expr)))
-    ($provenance
+(define (parse-expression env stx)
+  (let ((x (syntax-unwrap stx)))
+    ($provenance/syntax
       (cond
-        ((identifier? expr)
-         (let ((op (env-ref^ env expr vocab.expression)))
-           (cond ((procedure? op)    (op env expr))
-                 ((env-ref env expr) (error "non-expression identifier" expr))
-                 (else               (error "unbound identifier" expr)))))
+        ((identifier? stx)
+         (let ((op (env-ref^ env stx vocab.expression)))
+           (cond ((procedure? op)   (op env stx))
+                 ((env-ref env stx) (error "non-expression identifier" stx))
+                 (else              (error "unbound identifier" stx)))))
         ((pair?    x) (let* ((e.op (car x))
                              (op   (and (identifier? e.op)
                                         (env-ref^ env e.op vocab.expression-operator))))
                         (if (procedure? op)
-                            (op env expr)
+                            (op env stx)
                             (apply $call (parse-expression env e.op)
                                    (parse-expression* env (syntax->list (cdr x)))))))
         ((literal? x) ($quote x))
-        (else         (error "not an expression" expr)))
-      expr)))
+        (else         (error "not an expression" stx)))
+      stx)))
 
 (define ((expression-operator-parser parser argc.min argc.max) env expr)
   (let* ((e* (syntax->list expr)) (argc (- (length e*) 1)))
