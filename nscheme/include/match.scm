@@ -81,15 +81,15 @@
                                      (let loop ((p (car p*)) (p* (cdr p*)))
                                        (cond ((null? p*) p)
                                              (else       ($p:and p (loop (car p*) (cdr p*))))))))
-  (define ($$p:quote      value) ($p:? (ast:lambda #f '(x) ($eqv? ($ref 'x) ($quote value)))))
+  (define ($$p:quote      value) ($p:? ($lambda '(x) (lambda ($x) ($eqv? $x ($quote value))))))
   (define ($$p:cons       a b)   ($$p:and ($p:? ($prim 'pair?))
                                           ($p:app ($prim 'car) a) ($p:app ($prim 'cdr) b)))
-  (define ($$p:vector-ref p $i)  ($p:app (ast:lambda #f '(x) ($vector-ref ($ref 'x) $i)) p))
+  (define ($$p:vector-ref p $i)  ($p:app ($lambda '(x) (lambda ($x) ($vector-ref $x $i))) p))
   (define ($$p:vector     p*)    (let ((len (length p*)))
                                    (apply $$p:and ($p:? ($prim 'vector?))
-                                          ($p:? (ast:lambda #f '(x)
-                                                            ($eqv? ($vector-length ($ref 'x))
-                                                                   ($quote len))))
+                                          ($p:? ($lambda '(x) (lambda ($x)
+                                                                ($eqv? ($vector-length $x)
+                                                                       ($quote len)))))
                                           (map $$p:vector-ref p* (map $quote (iota len))))))
   (define (pattern->linear-pattern&variable* P)
     (define id-set.empty            '())
@@ -195,7 +195,7 @@
                                                   $x env))
   (define (($$app $proc ^p) succeed fail $x env)
     (let* ((x.app.addr (fresh-address 'x.app)) ($x.app ($ref x.app.addr)))
-      (ast:let #f (list x.app.addr) (list ($call $proc $x)) (^p succeed fail $x.app env))))
+      ($let '(x.app) (list ($call $proc $x)) (lambda ($x.app) (^p succeed fail $x.app env)))))
   (let-values (((P id*) (pattern->linear-pattern&variable* P)))
     (values
       (let loop ((P P))
@@ -214,109 +214,95 @@
             ((pattern:not?  P) (let ((^p (loop (pattern:not-inner P))))
                                  (lambda (succeed fail $x env) (^p fail succeed $x env))))
             ((pattern:ellipsis-append? P)
-             (let* ((P.a         (pattern:ellipsis-append-ellipsis P))
-                    (^a          (loop P.a))
-                    (^d          (loop (pattern:ellipsis-append-suffix P)))
-                    (id*.a       (linear-pattern-variables P.a))
-                    (addr*.a.acc (iota (length id*.a)))
-                    (len.d       (pattern:ellipsis-append-suffix-length P)))
+             (let* ((P.a   (pattern:ellipsis-append-ellipsis P))
+                    (^a    (loop P.a))
+                    (^d    (loop (pattern:ellipsis-append-suffix P)))
+                    (id*.a (linear-pattern-variables P.a))
+                    (len.d (pattern:ellipsis-append-suffix-length P)))
                (lambda (succeed fail $x env)
-                 (let* (($x*              ($ref 'x*))
-                        ($prefix-length.x ($ref 'prefix-length.x))
-                        ($rprefix*        ($ref 'rprefix*))
-                        ($rx*             ($ref 'rx*))
-                        ($acc*            (map $ref addr*.a.acc))
-                        ($k.a* ($lambda/env env id*.a (lambda (env) (^d succeed fail $x* env))))
-                        ($loop.ellipsis ($ref 'loop.ellipsis))
-                        ($loop.ellipsis
-                          (ast:letrec
-                            #f '(loop.ellipsis)
-                            (list (ast:lambda
-                                    #f (cons 'rx* addr*.a.acc)
-                                    ($if ($null? $rx*)
-                                         (apply $call ($ref 'k.a*) $acc*)
-                                         (^a (lambda (env)
-                                               (apply
-                                                 $call $loop.ellipsis ($cdr $rx*)
-                                                 (map $cons (parse-expression* env id*.a) $acc*)))
-                                             fail ($car $rx*) env))))
-                            $loop.ellipsis))
-                        ($continue/reversed-prefix ($ref 'continue/reversed-prefix))
-                        ($continue/reversed-prefix
-                          (ast:letrec
-                            #f '(continue/reversed-prefix)
-                            (list (ast:lambda
-                                    #f (list 'prefix-length.x 'x* 'rprefix*)
-                                    ($if ($< ($quote 0) $prefix-length.x)
-                                         ($call $continue/reversed-prefix
-                                                ($- $prefix-length.x ($quote 1))
-                                                ($cdr $x*)
-                                                ($cons ($car $x*) $rprefix*))
-                                         (ast:let
-                                           #f '(k.a*) (list $k.a*)
-                                           (apply $call $loop.ellipsis $rprefix*
-                                                  (map (lambda (_) ($quote '())) addr*.a.acc))))))
-                            $continue/reversed-prefix)))
-                   (ast:let
-                     #f '(prefix-length.x) (list ($- ($improper-length $x) ($quote len.d)))
-                     ($if ($< $prefix-length.x ($quote 0))
-                          (fail env)
-                          ($call $continue/reversed-prefix $prefix-length.x $x ($quote '()))))))))
+                 ($let '(len.pre.x) (list ($- ($improper-length $x) ($quote len.d)))
+                       (lambda ($len.pre.x)
+                         ($if ($< $len.pre.x ($quote 0))
+                              (fail env)
+                              ($call
+                                ($loop 'continue/reversed-prefix
+                                       (lambda ($continue/reversed-prefix)
+                                         ($lambda
+                                           (list 'len.pre.x 'x* 'rprefix*)
+                                           (lambda ($len.pre.x $x* $rprefix*)
+                                             ($if ($< ($quote 0) $len.pre.x)
+                                                  ($call $continue/reversed-prefix
+                                                         ($- $len.pre.x ($quote 1))
+                                                         ($cdr $x*)
+                                                         ($cons ($car $x*) $rprefix*))
+                                                  ($let '(k.a*) (list ($lambda/env env id*.a (lambda (env) (^d succeed fail $x* env))))
+                                                        (lambda ($k.a*)
+                                                          (apply
+                                                            $call
+                                                            ($loop 'loop.ellipsis
+                                                                   (lambda ($loop.ellipsis)
+                                                                     ($lambda (cons 'rx* (iota (length id*.a)))
+                                                                              (lambda ($rx* . $acc*)
+                                                                                ($if ($null? $rx*)
+                                                                                     (apply $call $k.a* $acc*)
+                                                                                     (^a (lambda (env)
+                                                                                           (apply
+                                                                                             $call $loop.ellipsis ($cdr $rx*)
+                                                                                             (map $cons
+                                                                                                  (parse-expression* env id*.a)
+                                                                                                  $acc*)))
+                                                                                         fail ($car $rx*) env))))))
+                                                            $rprefix*
+                                                            (map (lambda (_) ($quote '())) id*.a)))))))))
+                                $len.pre.x $x ($quote '()))))))))
             ((pattern:ellipsis-vector? P)
-             (let* ((P*.prefix       (pattern:ellipsis-vector-prefix P))
-                    (P.ellipsis      (pattern:ellipsis-vector-ellipsis P))
-                    (P*.suffix       (pattern:ellipsis-vector-suffix P))
-                    (length.prefix   (length P*.prefix))
-                    (length.suffix   (length P*.suffix))
-                    (length.fixed    (+ length.prefix length.suffix))
-                    ($i.ellipsis     ($ref 'i.ellipsis))
-                    ($i.suffix.start ($ref 'i.suffix.start))
-                    (^prefix         (loop (apply $$p:and
-                                                  (map $$p:vector-ref P*.prefix
-                                                       (map $quote (iota length.prefix))))))
-                    (^ellipsis       (loop ($$p:vector-ref P.ellipsis $i.ellipsis)))
-                    (^suffix         (loop (apply $$p:and
-                                                  (map $$p:vector-ref P*.suffix
-                                                       (map (lambda (i)
-                                                              ($+ $i.suffix.start ($quote i)))
-                                                            (iota length.suffix))))))
-                    (id*.ellipsis    (linear-pattern-variables P.ellipsis))
-                    (addr*.acc       (iota (length id*.ellipsis))))
+             (let* ((P*.pre       (pattern:ellipsis-vector-prefix P))
+                    (P.ell        (pattern:ellipsis-vector-ellipsis P))
+                    (P*.suf       (pattern:ellipsis-vector-suffix P))
+                    (length.pre   (length P*.pre))
+                    (length.suf   (length P*.suf))
+                    (length.fixed (+ length.pre length.suf))
+                    (^pre         (loop (apply $$p:and (map $$p:vector-ref P*.pre (map $quote (iota length.pre))))))
+                    (id*.ell      (linear-pattern-variables P.ell)))
                (lambda (succeed fail $x env)
-                 (let* (($length.ellipsis ($ref 'length.ellipsis))
-                        ($length.prefix   ($quote length.prefix))
-                        ($acc*            (map $ref addr*.acc))
-                        ($loop.ellipsis   ($ref 'loop.ellipsis))
-                        (succeed.ellipsis
-                          (lambda (env)
-                            (apply $call $loop.ellipsis
-                                   ($- $i.ellipsis ($quote 1))
-                                   (map $cons (parse-expression* env id*.ellipsis) $acc*))))
-                        (succeed.prefix
-                          (lambda (env)
-                            (ast:let*
-                              #f '(i.suffix.start k.ellipsis)
-                              (list ($+ $length.ellipsis $length.prefix)
-                                    ($lambda/env env id*.ellipsis
-                                                 (lambda (env) (^suffix succeed fail $x env))))
-                              (apply $call
-                                     (ast:letrec
-                                       #f '(loop.ellipsis)
-                                       (list (ast:lambda
-                                               #f (cons 'i.ellipsis addr*.acc)
-                                               ($if ($< $i.ellipsis $length.prefix)
-                                                    (apply $call ($ref 'k.ellipsis) $acc*)
-                                                    (^ellipsis succeed.ellipsis fail $x env))))
-                                       $loop.ellipsis)
-                                     ($- $i.suffix.start ($quote 1))
-                                     (map (lambda (_) ($quote '())) addr*.acc))))))
+                 (let* (($length.pre ($quote length.pre)))
                    ($if ($vector? $x)
-                        (ast:let
-                          #f '(length.ellipsis) (list ($- ($vector-length $x)
-                                                          ($quote length.fixed)))
-                          ($if ($< $length.ellipsis ($quote 0))
-                               (fail env)
-                               (^prefix succeed.prefix fail $x env)))
+                        ($let '(length.ell)
+                              (list ($- ($vector-length $x) ($quote length.fixed)))
+                              (lambda ($length.ell)
+                                (let ((succeed.pre
+                                        (lambda (env)
+                                          ($let '(i.suf.0)
+                                                (list ($+ $length.ell $length.pre))
+                                                (lambda ($i.suf.0)
+                                                  (let* (($i*.suf (map (lambda (i) ($+ $i.suf.0 ($quote i))) (iota length.suf)))
+                                                         ($p*.suf (map $$p:vector-ref P*.suf $i*.suf))
+                                                         (^suf    (loop (apply $$p:and $p*.suf))))
+                                                    ($let '(k.ell)
+                                                          (list ($lambda/env env id*.ell (lambda (env) (^suf succeed fail $x env))))
+                                                          (lambda ($k.ell)
+                                                            (apply
+                                                              $call
+                                                              ($loop 'loop.ell
+                                                                     (lambda ($loop.ell)
+                                                                       ($lambda (cons 'i.ell (iota (length id*.ell)))
+                                                                                (lambda ($i.ell . $acc*)
+                                                                                  (let ((succeed.ell
+                                                                                          (lambda (env)
+                                                                                            (apply
+                                                                                              $call $loop.ell ($- $i.ell ($quote 1))
+                                                                                              (map $cons
+                                                                                                   (parse-expression* env id*.ell)
+                                                                                                   $acc*)))))
+                                                                                    ($if ($< $i.ell $length.pre)
+                                                                                         (apply $call $k.ell $acc*)
+                                                                                         ((loop ($$p:vector-ref P.ell $i.ell))
+                                                                                          succeed.ell fail $x env)))))))
+                                                              ($- $i.suf.0 ($quote 1))
+                                                              (map (lambda (_) ($quote '())) id*.ell))))))))))
+                                  ($if ($< $length.ell ($quote 0))
+                                       (fail env)
+                                       (^pre succeed.pre fail $x env)))))
                         (fail env))))))
             (else (error "unsupported pattern" P)))))
       id*)))
@@ -431,47 +417,42 @@
     (apply parser env (cdr stx*))))
 
 (define ((parse-match/parse-pattern parse-pattern) env stx.e . stx*.clause*)
-  (let (($x ($ref 'x)) ($fail ($call ($ref 'fail))))
-    (ast:let
-      #f '(x) (list (parse-expression env stx.e))
-      (ast:let
-        #f '(fail) (list (ast:lambda
-                           #f '() ($panic ($quote 'match) ($quote "no matching clause") $x)))
-        (let loop ((stx*.clause* stx*.clause*))
-          (cond
-            ((null? stx*.clause*) $fail)
-            (else
-              (let ((clause (syntax-unwrap (car stx*.clause*))))
-                (unless (and (pair? clause) (pair? (syntax-unwrap (cdr clause))))
-                  (error "not a match clause" (car stx*.clause*)))
-                (let*-values (((stx.body)       (cdr clause))
-                              ((^pattern id*.P) (linear-pattern-compile
-                                                  (parse-pattern env (car clause)))))
-                  (ast:let
-                    #f '(fail) (list (ast:lambda #f '() (loop (cdr stx*.clause*))))
-                    (ast:let
-                      #f '(succeed)
-                      (list ($lambda/env
-                              env id*.P
-                              (lambda (env)
-                                (let* ((body  (syntax-unwrap stx.body))
-                                       (test* (let ((fender (syntax-unwrap (car body))))
-                                                (and (pair? fender)
-                                                     (expression-auxiliary? 'guard env (car fender))
-                                                     (syntax->list (cdr fender))))))
-                                  (if test*
-                                      (if (pair? test*)
-                                          ($if (apply $and (parse-expression* env test*))
-                                               (parse-body env (cdr body))
-                                               $fail)
-                                          (error "not a guard" (car body)))
-                                      (parse-body env stx.body))))))
-                      ($provenance
-                        (^pattern
-                          (lambda (env) (apply $call ($ref 'succeed) (parse-expression* env id*.P)))
-                          (lambda (_) $fail)
-                          $x env)
-                        (car stx*.clause*)))))))))))))
+  ($let '(x) (list (parse-expression env stx.e))
+        (lambda ($x)
+          ($let '(fail) (list ($thunk ($panic ($quote 'match) ($quote "no matching clause") $x)))
+                (lambda ($fail)
+                  (let loop ((stx*.clause* stx*.clause*))
+                    (if (null? stx*.clause*)
+                        ($call $fail)
+                        (let ((clause (syntax-unwrap (car stx*.clause*))))
+                          (unless (and (pair? clause) (pair? (syntax-unwrap (cdr clause))))
+                            (error "not a match clause" (car stx*.clause*)))
+                          (let*-values (((stx.body)       (cdr clause))
+                                        ((^pattern id*.P) (linear-pattern-compile (parse-pattern env (car clause)))))
+                            ($let '(fail) (list ($thunk (loop (cdr stx*.clause*))))
+                                  (lambda ($fail)
+                                    ($let '(succeed)
+                                          (list ($lambda/env
+                                                  env id*.P
+                                                  (lambda (env)
+                                                    (let* ((body  (syntax-unwrap stx.body))
+                                                           (test* (let ((fender (syntax-unwrap (car body))))
+                                                                    (and (pair? fender)
+                                                                         (expression-auxiliary? 'guard env (car fender))
+                                                                         (syntax->list (cdr fender))))))
+                                                      (cond ((not test*) (parse-body env stx.body))
+                                                            ((pair? test*)
+                                                             ($if (apply $and (parse-expression* env test*))
+                                                                  (parse-body env (cdr body))
+                                                                  ($call $fail)))
+                                                            (else (error "not a guard" (car body))))))))
+                                          (lambda ($succeed)
+                                            ($provenance
+                                              (^pattern
+                                                (lambda (env) (apply $call $succeed (parse-expression* env id*.P)))
+                                                (lambda (_) ($call $fail))
+                                                $x env)
+                                              (car stx*.clause*)))))))))))))))
 
 (define parse-match  (parse-match/parse-pattern parse-pattern))
 (define parse-qmatch (parse-match/parse-pattern parse-pattern-quasiquote))

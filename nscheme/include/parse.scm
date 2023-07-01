@@ -119,16 +119,6 @@
 (define ($call  proc . args) (ast:call  #f proc args))
 (define ($if    c t f)       (ast:if    #f c t f))
 
-(define (ast:lambda pv param   body) (ast:case-lambda pv (list (case-lambda-clause param body))))
-(define (ast:let    pv p* rhs* body) (ast:call        pv (ast:lambda #f p* body) rhs*))
-(define (ast:let*   pv p* rhs* body)
-  (ast-provenance-add
-    (let loop ((p* p*) (rhs* rhs*))
-      (cond ((null? p*) body)
-            (else       (ast:let #f (list (car p*)) (list (car rhs*))
-                                 (loop (cdr p*) (cdr rhs*))))))
-    pv))
-
 (define ($case-lambda . cc*)
   (define ($case-lambda-clause param*~ arg*->body)
     (let* ((addr*~ (improper-list-map identifier->fresh-address param*~)))
@@ -150,6 +140,9 @@
       (ast:letrec #f addr* $rhs* $body))))
 (define ($letrec/env env param* ^rhs*&body)
   ($letrec param* (lambda arg* (^rhs*&body (env-extend env param* arg*)))))
+(define ($loop name ^rhs) ($letrec (list name) (lambda ($self) (values (list (^rhs $self)) $self))))
+(define ($thunk  body) ($lambda '() (lambda ()  body)))
+(define ($thunk* body) ($lambda #f  (lambda (_) body)))
 
 (define $and
   (case-lambda
@@ -163,9 +156,9 @@
     (()       ($quote #f))
     ((a . a*) (let loop ((a a) (a* a*))
                 (cond ((null? a*) a)
-                      (else (ast:let #f '(t ^rest)
-                                     (list a (ast:lambda #f '() (loop (car a*) (cdr a*))))
-                                     ($if ($ref 't) ($ref 't) ($call ($ref '^rest))))))))))
+                      (else ($let '(t ^rest)
+                                  (list a ($thunk (loop (car a*) (cdr a*))))
+                                  (lambda ($t $^rest) ($if $t $t ($call $^rest))))))))))
 
 (define ($not  x) ($if x ($quote #f) ($quote #t)))
 
@@ -175,8 +168,7 @@
 (define ($prim  name)        (ast:prim #f name))
 (define ($pcall name . args) (apply $call ($prim name) args))
 
-(define ($begin a . a*)
-  (foldl (lambda (a1 a0) ($call-with-values (ast:lambda #f '() a0) (ast:lambda #f #f a1))) a a*))
+(define ($begin a . a*) (foldl (lambda (a1 a0) ($call-with-values ($thunk a0) ($thunk* a1))) a a*))
 
 (define $void                    ($pcall 'values))
 (define ($eq?              a b)  ($pcall 'eq?     a b))
@@ -200,29 +192,37 @@
                                    (cond ((null? x*) ($quote '()))
                                          (else       ($cons (car x*) (loop (cdr x*)))))))
 (define $improper-length.value
-  (let (($loop ($ref 'loop)) ($x* ($ref 'x*)) ($acc ($ref 'acc)))
-    (ast:letrec #f '(loop) (list (ast:lambda #f '(x* acc)
-                                             ($if ($pair? $x*)
-                                                  ($call $loop ($cdr $x*) ($+ $acc ($quote 1)))
-                                                  $acc)))
-                (ast:lambda #f '(x*) ($call $loop $x* ($quote 0))))))
+  ($lambda '(x*) (lambda ($x*)
+                   ($call ($loop '(self)
+                                 (lambda ($self)
+                                   ($lambda '(x* acc)
+                                            (lambda ($x* $acc)
+                                              ($if ($pair? $x*)
+                                                   ($call $self ($cdr $x*) ($+ $acc ($quote 1)))
+                                                   $acc)))))
+                          $x* ($quote 0)))))
 (define ($improper-length x*) ($call $improper-length.value x*))
 (define $length.value
-  (let (($loop ($ref 'loop)) ($x* ($ref 'x*)) ($acc ($ref 'acc)))
-    (ast:letrec #f '(loop) (list (ast:lambda #f '(x* acc)
-                                             ($if ($null? $x*)
-                                                  $acc
-                                                  ($call $loop ($cdr $x*) ($+ $acc ($quote 1))))))
-    (ast:lambda #f '(x*) ($call $loop $x* ($quote 0))))))
+  ($lambda '(x*) (lambda ($x*)
+                   ($call ($loop '(self)
+                                 (lambda ($self)
+                                   ($lambda '(x* acc)
+                                            (lambda ($x* $acc)
+                                              ($if ($null? $x*)
+                                                   $acc
+                                                   ($call $self ($cdr $x*) ($+ $acc ($quote 1))))))))
+                          $x* ($quote 0)))))
 (define ($length x*) ($call $length.value x*))
 (define $append.value
-  (let (($append ($ref 'append)) ($x* ($ref 'x*)) ($y ($ref 'y)))
-    (ast:letrec #f '(append) (list (ast:lambda #f '(x* y)
-                                               ($if ($null? $x*)
-                                                    $y
-                                                    ($cons ($car $x*)
-                                                           ($call $append ($cdr $x*) $y)))))
-                $append)))
+  ($lambda '(x* y)
+           (lambda ($x* $y)
+             ($call ($loop '(self)
+                           (lambda ($self)
+                             ($lambda '(x*) (lambda ($x*)
+                                              ($if ($null? $x*)
+                                                   $y
+                                                   ($cons ($car $x*) ($call $self ($cdr $x*))))))))
+                    $x*))))
 (define ($append x* y) ($call $append.value x* y))
 ;; TODO: $vector->list.value and $vector->list
 
@@ -266,12 +266,14 @@
 
 (define (defstate->ast dst)
   (let ((def* (defstate-definition* dst)))
+    ;; TODO: redo defstates in terms of identifiers instead of addresses so that we can eliminate
+    ;; this ast: construction.
     (ast:letrec #f (definition*->address* def*) (definition*->ast* def*)
                 ((or (defstate-expression dst) $values)))))
 
 (define ((defstate->ast/eval ast-eval) dst)
   (let* ((addr*    (definition*->address* (defstate-definition* dst)))
-         (ast.^e   (ast:lambda #f '() ((or (defstate-expression dst) $values))))
+         (ast.^e   ($thunk ((or (defstate-expression dst) $values))))
          (dst      (defstate-set-expression dst (lambda () (apply $list ast.^e (map $ref addr*)))))
          (assign!* (definition*->assigner* (defstate-definition* dst))))
     (let ((result* (ast-eval (defstate->ast dst))))

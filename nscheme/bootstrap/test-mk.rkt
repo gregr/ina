@@ -159,7 +159,7 @@
 (define $map         ($mk 'map))
 
 (define ($run env $count param ^body)
-  ($call $map (ast:lambda #f '(st) ($call $reify $var.initial ($ref 'st)))
+  ($call $map ($lambda '(st) (lambda ($st) ($call $reify $var.initial $st)))
          ($call $s-take $count
                 ($call $pause $state.empty
                        (if (identifier? param)

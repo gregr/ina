@@ -2,8 +2,8 @@
 ;;; Parsing expressions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (parse-quote        env e)           (ast:quote (syntax-provenance e) (syntax->datum e)))
-(define (parse-quote-syntax env e)           (ast:quote (syntax-provenance e) e))
+(define (parse-quote        env stx)         ($quote (syntax->datum stx)))
+(define (parse-quote-syntax env stx)         ($quote stx))
 (define (parse-if           env e.c e.t e.f) ($if (parse-expression env e.c)
                                                   (parse-expression env e.t)
                                                   (parse-expression env e.f)))
@@ -221,9 +221,8 @@
 (define (parse-define-values dst env.scope env stx.lhs*~ e.rhs)
   (let* ((lhs*~   (syntax->improper-list stx.lhs*~))
          (lhs*    (improper-list->list lhs*~))
-         (v*.^rhs (lambda ()
-                    ($call-with-values (ast:lambda #f '() (parse-expression env e.rhs))
-                                       ($lambda lhs*~ $vector))))
+         (v*.^rhs (lambda () ($call-with-values ($thunk (parse-expression env e.rhs))
+                                                ($lambda lhs*~ $vector))))
          (v*.addr (fresh-address 'vec.value*))
          ($v*     ($ref v*.addr)))
     (foldl (lambda (i lhs dst)
