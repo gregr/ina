@@ -382,6 +382,22 @@
     w)
   ==> 88
 
+  ! internal-define-values
+  (let ((a 5) (b 6))
+    (define-values (a b c) (values 1 2 3))
+    ((lambda x* x*) c b a))
+  ==> (3 2 1)
+  (let ((a 5) (b 6))
+    (define vec.value* 'irrelevant)
+    (define-values (a b c) (values 1 2 3))
+    ((lambda x* x*) c b a))
+  ==> (3 2 1)
+  (let ((a 5) (b 6))
+    (define-values (a b c) (values 1 2 3))
+    (define vec.value* 'irrelevant)
+    ((lambda x* x*) c b a))
+  ==> (3 2 1)
+
   ! letrec*
   (letrec* ((w (lambda () (y)))
             (x 32)
