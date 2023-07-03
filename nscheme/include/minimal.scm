@@ -115,8 +115,7 @@
   (define (splicing-expression-operator-parser $splicing)
     (etc-splicing-expression-operator-parser
       $splicing (lambda (stx*) (lambda (dst scope env)
-                                 (defstate-add-expression
-                                   dst (lambda () (parse-begin-expression env stx*))))))))
+                                 (defstate-add-expression dst (lambda () (apply parse-begin-expression env stx*))))))))
 
 (define (parse-quasiquote env stx.qq)
   (define (finish quote? x) (if quote? (parse-quote env x) x))
@@ -183,14 +182,12 @@
 
 (define (parse-body env stx.body)
   (let ((stx* (syntax->list stx.body)))
-    (cond ((null? stx*)       (error "no expression" stx.body))
-          ((null? (cdr stx*)) (parse-expression env (car stx*)))
-          (else (define (^def dst scope env)
-                  (let ((dst (foldl (lambda (s dst) (parse-definition dst scope env s)) dst stx*)))
-                    (unless (defstate-expression dst)
-                      (error "no expression after definitions" stx.body))
-                    dst))
-                ($provenance/syntax ($body env ^def) stx.body)))))
+    (when (null? stx*) (error "no expression" stx.body))
+    (define (^def dst scope env)
+      (let ((dst (apply parse-begin-definition dst scope env stx*)))
+        (unless (defstate-expression dst) (error "no expression after definitions" stx.body))
+        dst))
+    ($provenance/syntax ($body env ^def) stx.body)))
 
 (define (parse-begin-definition dst env.scope env . stx*)
   (foldl (lambda (stx dst) (parse-definition dst env.scope env stx)) dst stx*))

@@ -418,6 +418,67 @@
       y))
   ==> 1
 
+  ! splicing
+  (let ()
+    (splicing-let
+      ((y 1))
+      y))
+  ==> 1
+  (let ()
+    (splicing-let
+      ((y 2))
+      (define z y)
+      z))
+  ==> 2
+  (let ()
+    (splicing-local
+      ((define y 3))
+      (define z y)
+      z))
+  ==> 3
+  (let ((x (splicing-let
+             ((y 4))
+             4)))
+    x)
+  ==> 4
+  (let ((x (begin
+             (splicing-let
+               ((y 44))
+               44))))
+    x)
+  ==> 44
+  (let ((x (splicing-local
+             ((define y 5))
+             y)))
+    x)
+  ==> 5
+  (let ((x (begin
+             (splicing-local
+               ((define y 55))
+               y))))
+    x)
+  ==> 55
+  (let ((x (begin
+             (splicing-let
+               ((y 6))
+               (define z y)
+               z))))
+    x)
+  ==> error:parse
+  (let ((x (begin
+             (splicing-local
+               ((define y 7))
+               y))))
+    x)
+  ==> 7
+  (let ((x (begin
+             (splicing-local
+               ((define y 7))
+               (define z y)
+               z))))
+    x)
+  ==> error:parse
+
   ! fixed-points
   (let ((list (lambda xs xs))
         (fix (lambda (f)

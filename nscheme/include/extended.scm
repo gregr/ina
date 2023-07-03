@@ -31,7 +31,7 @@
          (ast.expr ((defstate->ast/eval ast-eval) dst.new)))
     (if (defstate-expression dst.new)
         (defstate-add-expression dst (lambda () ast.expr))
-        (defstate-define dst (fresh-address #f) (lambda () ($quote #t))))))
+        dst)))
 
 (define (parse-begin-meta-expression env stx)
   ($quote (ast-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx))))
