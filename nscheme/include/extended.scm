@@ -19,19 +19,19 @@
 ;(define vocab.term    'term)
 
 (define (env:parse-begin-definition env stx*.def)
-  (let ((env.scope (make-env)))
+  (let ((env.d (make-env)))
     ((defstate->ast/eval ast-eval)
-     (apply parse-begin-definition defstate.empty env.scope (env-compose env env.scope) stx*.def))
-    (env-freeze! env.scope)
-    env.scope))
+     (D->defstate (apply parse-begin-definition env.d (env-compose env env.d) stx*.def)))
+    (env-freeze! env.d)
+    env.d))
 
-(define (parse-begin-meta-definition dst env.scope env stx)
-  (let* ((dst.new  ((definition-operator-parser parse-begin-definition 0 #f)
-                    defstate.empty env.scope env stx))
-         (ast.expr ((defstate->ast/eval ast-eval) dst.new)))
+(define (parse-begin-meta-definition env.d env stx)
+  (let* ((D       ((definition-operator-parser parse-begin-definition 0 #f) env.d env stx))
+         (dst.new (D->defstate D))
+         (E       ((defstate->ast/eval ast-eval) dst.new)))
     (if (defstate-expression dst.new)
-        (defstate-add-expression dst (lambda () ast.expr))
-        dst)))
+        ($d:expression (lambda () E))
+        ($d:begin))))
 
 (define (parse-begin-meta-expression env stx)
   (call-with-values
@@ -41,7 +41,7 @@
 ;; The right-hand-side expression of declare-parser must evaluate to a procedure which takes the
 ;; current environment, and produces a parser.  This gives the parser access to its definition
 ;; environment.
-;(define (parse-declare-parser dst env.scope env e.vocab e.lhs . e*.rhs)
+;(define (parse-declare-parser env.d env e.vocab e.lhs . e*.rhs)
 ;  (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))
 ;    (cond ((identifier? e.lhs)
 ;           (unless (= (length e*.rhs) 1)
@@ -50,7 +50,7 @@
 ;                  (vocab  (ast-eval (parse-expression env e.vocab)))
 ;                  (parser ((ast-eval (parse-expression env (car e*.rhs))) env)))
 ;             (unless addr (error "unbound identifier" e.lhs))
-;             (env-set! env.scope vocab addr parser)))
+;             (env-set! env.d vocab addr parser)))
 ;          (else (let ((x (syntax-unwrap e.lhs)))
 ;                  (cond ((pair? x) (loop (car x)
 ;                                         (list (expression-parser
@@ -59,26 +59,26 @@
 ;                                                     (apply parse-lambda env (cdr x) e*.rhs)
 ;                                                     (cdr x)))))))
 ;                        (else      (error "not a definable form" e.lhs)))))))
-;  dst)
+;  ($d:begin))
 
 ;; TODO: do without this (and anything else using ast-eval) until late stage bootstrapping
-;(define (parse-define-syntax dst env.scope env e.lhs . e*.rhs)
+;(define (parse-define-syntax env.d env e.lhs . e*.rhs)
 ;  (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))
 ;    (cond ((identifier? e.lhs)
 ;           (unless (= (length e*.rhs) 1)
 ;             (error "multiple expressions in definition body" e*.rhs))
-;           (env-introduce env.scope e.lhs)
+;           (env-introduce env.d e.lhs)
 ;           (let ((op (ast-eval (parse-expression env (car e*.rhs)))))
 ;             (parse-declare-parser
-;               dst (parse-quote env vocab.expression)
+;               (parse-quote env vocab.expression)
 ;               e.lhs (lambda (env.op)
 ;                       (lambda (env.use stx)
 ;                         (transcribe-and-parse-expression env.use env.op op stx))))
 ;             (parse-declare-parser
-;               dst (parse-quote env vocab.definition)
+;               (parse-quote env vocab.definition)
 ;               e.lhs (lambda (env.op)
-;                       (lambda (dst.use env.scope env.use stx)
-;                         (transcribe-and-parse-definition dst.use env.scope env.use env.op op stx))))))
+;                       (lambda (env.d env.use stx)
+;                         (transcribe-and-parse-definition env.d env.use env.op op stx))))))
 ;          (else (let ((x (syntax-unwrap e.lhs)))
 ;                  (cond ((pair? x) (loop (car x)
 ;                                         (list (expression-parser
@@ -87,7 +87,7 @@
 ;                                                     (apply parse-lambda env (cdr x) e*.rhs)
 ;                                                     (cdr x)))))))
 ;                        (else      (error "not a definable form" e.lhs)))))))
-;  dst)
+;  ($d:begin))
 
 ;; Would syntax-dismantle be helpful enough to justify implementing it?
 ;(define-syntax syntax-dismantle
@@ -129,13 +129,13 @@
     ;))
 
 (define env.extended
-  (let ((env.scope (make-env))
+  (let ((env (make-env))
         (b*.def-and-expr
           (list
             (list 'begin-meta parse-begin-meta-definition parse-begin-meta-expression))))
-    (for-each (lambda (id op.def op.expr) (env-bind! env.scope id
+    (for-each (lambda (id op.def op.expr) (env-bind! env id
                                                      vocab.definition-operator op.def
                                                      vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
-    (env-freeze! env.scope)
-    env.scope))
+    (env-freeze! env)
+    env))

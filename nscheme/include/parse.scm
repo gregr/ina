@@ -45,12 +45,12 @@
                      (env-freeze! env.scope)
                      env.scope)))
 
-(define (env-introduce! env.scope stx.id) (env-introduce*! env.scope (list stx.id)))
+(define (env-introduce! env stx.id) (env-introduce*! env (list stx.id)))
 
-(define (env-introduce*! env.scope stx*.id)
+(define (env-introduce*! env stx*.id)
   (for-each (lambda (stx.id)
-              (parse-undefined-identifier env.scope stx.id)
-              (env-bind! env.scope stx.id))
+              (parse-undefined-identifier env stx.id)
+              (env-bind! env stx.id))
             stx*.id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
@@ -101,15 +101,15 @@
          (env (env-compose env.use (env-mark env.op m))))
     (parse-expression env (transcribe env.op op m env stx))))
 
-(define (transcribe-and-parse-definition dst env.scope.use env.use env.op op stx)
-  (let* ((m            (fresh-mark))
-         (env.scope.op (make-env))
-         (env.scope    (env-compose env.scope.use (env-mark env.scope.op m)))
-         (env          (env-compose env.use       (env-mark (env-compose env.op env.scope.op) m)))
-         (dst          (parse-definition dst env.scope env (transcribe env.op op m env stx))))
+(define (transcribe-and-parse-definition env.d.use env.use env.op op stx)
+  (let* ((m        (fresh-mark))
+         (env.d.op (make-env))
+         (env.d    (env-compose env.d.use (env-mark env.d.op m)))
+         (env      (env-compose env.use   (env-mark (env-compose env.op env.d.op) m)))
+         (D        (parse-definition env.d env (transcribe env.op op m env stx))))
     ;; TODO: defer this freeze until after the entire definition body has been processed.
-    ;(env-freeze! env.scope.op)
-    dst))
+    ;(env-freeze! env.d.op)
+    D))
 
 (define (identifier->fresh-address p) (fresh-address (syntax-peek p)))
 
@@ -247,10 +247,8 @@
       (let ((^E (let ((^E.prev (defstate-entry-^rhs (car dst))))
                   (lambda () ($begin (^E.prev) (^E))))))
         (cons (defstate-entry id env ^E) (cdr dst)))))
-
-(define (defstate-add-expression dst ^E) (defstate-define dst #f #f ^E))
-(define (defstate-set-expression dst ^E) (defstate-add-expression
-                                           (if (defstate-expression dst) (cdr dst) dst) ^E))
+(define (defstate-replace-expression dst ^E)
+  (defstate-define (if (defstate-expression dst) (cdr dst) dst) #f #f ^E))
 
 (define (definition*->id*  def*) (map defstate-entry-id  def*))
 (define (definition*->env* def*) (map defstate-entry-env def*))
@@ -270,8 +268,8 @@
            (id*  (definition*->id*  def*))
            (env* (definition*->env* def*))
            (E.^e ($thunk ((or (defstate-expression dst) $values))))
-           (dst  (defstate-set-expression dst (lambda () (apply $list E.^e
-                                                                (map parse-expression env* id*))))))
+           (dst  (defstate-replace-expression
+                   dst (lambda () (apply $list E.^e (map parse-expression env* id*))))))
       (let ((result* (ast-eval (defstate->ast dst))))
         (for-each env-set-variable! env* id* (map $quote (cdr result*)))
         (call-with-values (car result*) $quote-values)))))
@@ -297,17 +295,19 @@
           ((D-tagged? D 'D:expression) (defstate-define dst #f #f (D:expression-^E D)))
           (else                        (error "invalid definition" D)))))
 
-(define ($d:expression dst ^E) (defstate-define dst #f #f ^E))
-(define ($define dst env.scope lhs ^rhs)
-  (env-introduce! env.scope lhs)
-  (defstate-define dst lhs env.scope ^rhs))
+(define ($d:begin            . D*) (D:begin D*))
+(define ($d:expression         ^E) (D:expression ^E))
+(define ($d:define env.d lhs ^rhs) (env-introduce! env.d lhs) (D:definition lhs env.d ^rhs))
 
 (define ($body env ^def)
-  (let* ((env.scope (make-env))
-         (dst       (^def defstate.empty env.scope (env-compose env env.scope)))
-         (E         (defstate->ast dst)))
-    (env-freeze! env.scope)
-    E))
+  (let* ((env.d (make-env))
+         (dst   (D->defstate (^def env.d (env-compose env env.d)))))
+    ;; TODO: provide provenance for a better error report
+    ;; Or we can return (values) in this situation.
+    (unless (defstate-expression dst) (error "no expression after definitions"))
+    (let ((E (defstate->ast dst)))
+      (env-freeze! env.d)
+      E)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
@@ -353,23 +353,23 @@
 ;;; Parsing definitions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (parse-definition dst env.scope env stx)
-  (define (default) ($d:expression dst (lambda () (parse-expression env stx))))
+(define (parse-definition env.d env stx)
+  (define (default) ($d:expression (lambda () (parse-expression env stx))))
   (let ((x (syntax-unwrap stx)))
     (cond ((identifier? stx) (let ((op (env-ref^ env stx vocab.definition)))
                                (if (procedure? op)
-                                   (op dst env.scope env stx)
+                                   (op env.d env stx)
                                    (default))))
           ((pair? x)         (let* ((stx.op (car x))
                                     (op     (and (identifier? stx.op)
                                                  (env-ref^ env stx.op vocab.definition-operator))))
                                (if (procedure? op)
-                                   (op dst env.scope env stx)
+                                   (op env.d env stx)
                                    (default))))
           (else              (default)))))
 
-(define ((definition-operator-parser parser argc.min argc.max) dst env.scope env stx)
+(define ((definition-operator-parser parser argc.min argc.max) env.d env stx)
   (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
     (unless (<= argc.min argc)           (error "too few operator arguments"  stx))
     (unless (<= argc (or argc.max argc)) (error "too many operator arguments" stx))
-    (apply parser dst env.scope env (cdr stx*))))
+    (apply parser env.d env (cdr stx*))))

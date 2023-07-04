@@ -104,18 +104,18 @@
   ((define (etc-splicing-expression-operator-parser $splicing stx*->^body)
      (expression-operator-parser
        (lambda (env stx.def* . stx*)
-         ($body env (lambda (dst scope env) ($splicing dst scope env stx.def* (stx*->^body stx*)))))
+         ($body env (lambda (env.d env) ($splicing env.d env stx.def* (stx*->^body stx*)))))
        2 #f)))
 
   (define (nonsplicing-expression-operator-parser $splicing)
     (etc-splicing-expression-operator-parser
-      $splicing (lambda (stx*) (lambda (dst scope env)
-                                 ($d:expression dst (lambda () (parse-body env stx*)))))))
+      $splicing (lambda (stx*) (lambda (env.d env)
+                                 ($d:expression (lambda () (parse-body env stx*)))))))
 
   (define (splicing-expression-operator-parser $splicing)
     (etc-splicing-expression-operator-parser
-      $splicing (lambda (stx*) (lambda (dst scope env)
-                                 ($d:expression dst (lambda () (apply parse-begin-expression env stx*))))))))
+      $splicing (lambda (stx*) (lambda (env.d env)
+                                 ($d:expression (lambda () (apply parse-begin-expression env stx*))))))))
 
 (define (parse-quasiquote env stx.qq)
   (define (finish quote? x) (if quote? (parse-quote env x) x))
@@ -183,75 +183,71 @@
 (define (parse-body env stx.body)
   (let ((stx* (syntax->list stx.body)))
     (when (null? stx*) (error "no expression" stx.body))
-    (define (^def dst scope env)
-      (let ((dst (apply parse-begin-definition dst scope env stx*)))
-        (unless (defstate-expression dst) (error "no expression after definitions" stx.body))
-        dst))
+    (define (^def env.d env) (apply parse-begin-definition env.d env stx*))
     ($provenance/syntax ($body env ^def) stx.body)))
 
-(define (parse-begin-definition dst env.scope env . stx*)
-  (foldl (lambda (stx dst) (parse-definition dst env.scope env stx)) dst stx*))
+(define (parse-begin-definition env.d env . stx*)
+  (apply $d:begin (map (lambda (stx) (parse-definition env.d env stx)) stx*)))
 
-(define (parse-introduce dst env.scope env . stx*) (env-introduce*! env.scope stx*) dst)
+(define (parse-introduce env.d env . stx*) (env-introduce*! env.d stx*) ($d:begin))
 
-(define (parse-introduce-alias dst env.scope env id.lhs id.rhs)
-  (parse-undefined-identifier env.scope id.lhs)
+(define (parse-introduce-alias env.d env id.lhs id.rhs)
+  (parse-undefined-identifier env.d id.lhs)
   (parse-identifier id.rhs)
   (let ((v=>v (env-ref env id.rhs)))
     (unless v=>v (error "unbound identifier" id.rhs))
-    (env-set! env.scope id.lhs v=>v))
-  dst)
+    (env-set! env.d id.lhs v=>v))
+  ($d:begin))
 
-(define (parse-define dst env.scope env lhs . stx*.rhs)
+(define (parse-define env.d env lhs . stx*.rhs)
   (cond
     ((identifier? lhs)
      (unless (and (pair? stx*.rhs) (null? (cdr stx*.rhs)))
        (error "not a single expression" stx*.rhs))
-     ($define dst env.scope lhs (lambda () (parse-expression env (car stx*.rhs)))))
+     ($d:define env.d lhs (lambda () (parse-expression env (car stx*.rhs)))))
     (else (let loop ((lhs lhs) (^rhs (lambda (env) (parse-body env stx*.rhs))))
             (let ((x (syntax-unwrap lhs)))
               (cond ((pair?       x) (let ((p*~ (syntax->improper-list (cdr x))))
                                        (loop (car x) (lambda (env) ($lambda/env env p*~ ^rhs)))))
-                    ((identifier? x) ($define dst env.scope x (lambda () (^rhs env))))
+                    ((identifier? x) ($d:define env.d x (lambda () (^rhs env))))
                     (else            (error "not a definable form" lhs))))))))
 
-(define (parse-define-values dst env.scope env stx.lhs*~ e.rhs)
+(define (parse-define-values env.d env stx.lhs*~ e.rhs)
   (let* ((lhs*~     (syntax->improper-list stx.lhs*~))
          (lhs*      (improper-list->list lhs*~))
          (v*.id     'vec.value*)
          (env.local (make-env)))
-    (foldl (lambda (i lhs dst)
-             ($define dst env.scope lhs
-                      (lambda () ($vector-ref (parse-expression env.local v*.id) ($quote i)))))
-           ($define dst env.local v*.id
-                    (lambda () ($call-with-values ($thunk (parse-expression env e.rhs))
-                                                  ($lambda lhs*~ $vector))))
-           (iota (length lhs*))
-           lhs*)))
+    (apply $d:begin
+           ($d:define env.local v*.id (lambda () ($call-with-values
+                                                   ($thunk (parse-expression env e.rhs))
+                                                   ($lambda lhs*~ $vector))))
+           (map (lambda (i lhs)
+                  ($d:define env.d lhs (lambda () ($vector-ref (parse-expression env.local v*.id)
+                                                               ($quote i)))))
+                (iota (length lhs*))
+                lhs*))))
 
-(define ($splicing-rec dst env.scope env ^def ^body)
-  (let* ((env.scope.inner (make-env))
-         (env             (env-compose env env.scope.inner))
-         (dst             (^def dst env.scope.inner env)))
-    (^body dst env.scope env)))
+(define ($splicing-rec env.d env ^def ^body)
+  (let* ((env.d.inner (make-env))
+         (env         (env-compose env env.d.inner)))
+    ($d:begin (^def env.d.inner env) (^body env.d env))))
 
-(define ($splicing-nonrec dst env.scope env ^def ^body)
-  (let ((env.scope.inner (make-env)))
-    (^body (^def dst env.scope.inner env) env.scope (env-compose env env.scope.inner))))
+(define ($splicing-nonrec env.d env ^def ^body)
+  (let ((env.d.inner (make-env)))
+    ($d:begin (^def env.d.inner env) (^body env.d (env-compose env env.d.inner)))))
 
-(define ($splicing-local dst env.scope env stx.def* ^body)
+(define ($splicing-local env.d env stx.def* ^body)
   (let ((def* (syntax->list stx.def*)))
-    ($splicing-rec dst env.scope env
-                   (lambda (dst scope env) (apply parse-begin-definition dst scope env def*))
+    ($splicing-rec env.d env (lambda (env.d env) (apply parse-begin-definition env.d env def*))
                    ^body)))
 
 (splicing-local
-  ((define ($splicing $splicing-etc parse-def dst env.scope env stx.bpair* ^body)
+  ((define ($splicing $splicing-etc parse-def env.d env stx.bpair* ^body)
      (let ((bpair* (parse-binding-pair* stx.bpair*)))
-       ($splicing-etc dst env.scope env
-                      (lambda (dst scope env)
-                        (foldl (lambda (lhs rhs dst) (parse-def dst scope env lhs rhs))
-                               dst (map car bpair*) (map cdr bpair*)))
+       ($splicing-etc env.d env
+                      (lambda (env.d env)
+                        (apply $d:begin (map (lambda (lhs rhs) (parse-def env.d env lhs rhs))
+                                             (map car bpair*) (map cdr bpair*))))
                       ^body))))
   (define ($splicing-let            . a*) (apply $splicing $splicing-nonrec parse-define        a*))
   (define ($splicing-let-values     . a*) (apply $splicing $splicing-nonrec parse-define-values a*))
@@ -259,22 +255,20 @@
   (define ($splicing-letrec*-values . a*) (apply $splicing $splicing-rec parse-define-values a*)))
 
 (splicing-local
-  ((define ($splicing $splicing-etc dst env.scope env stx.bpair* ^body)
+  ((define ($splicing $splicing-etc env.d env stx.bpair* ^body)
      (let loop ((stx*.bpair* (syntax->list stx.bpair*))
-                (dst         dst)
-                (scope       env.scope)
+                (env.d       env.d)
                 (env         env))
-       (cond ((null? stx*.bpair*) (^body dst scope env))
-             (else ($splicing-etc dst scope env (list (car stx*.bpair*))
-                                  (lambda (dst scope env)
-                                    (loop (cdr stx*.bpair*) dst scope env))))))))
+       (cond ((null? stx*.bpair*) (^body env.d env))
+             (else ($splicing-etc env.d env (list (car stx*.bpair*))
+                                  (lambda (env.d env) (loop (cdr stx*.bpair*) env.d env))))))))
   (define ($splicing-let*        . a*) (apply $splicing $splicing-let        a*))
   (define ($splicing-let*-values . a*) (apply $splicing $splicing-let-values a*)))
 
 (splicing-local
-  ((define (parse-splicing $splicing dst env.scope env stx.def* . stx*)
-     ($splicing dst env.scope env stx.def*
-                (lambda (dst scope env) (apply parse-begin-definition dst scope env stx*)))))
+  ((define (parse-splicing $splicing env.d env stx.def* . stx*)
+     ($splicing env.d env stx.def* (lambda (env.d env)
+                                     (apply parse-begin-definition env.d env stx*)))))
   (define (parse-splicing-local          . a*) (apply parse-splicing $splicing-local          a*))
   (define (parse-splicing-let            . a*) (apply parse-splicing $splicing-let            a*))
   (define (parse-splicing-let-values     . a*) (apply parse-splicing $splicing-let-values     a*))
@@ -288,7 +282,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define env.minimal
-  (let ((env.scope (make-env))
+  (let ((env (make-env))
         (b*.expr-aux '(=> else))
         (b*.def
           (list (cons 'define          (definition-operator-parser parse-define          2 #f))
@@ -345,21 +339,21 @@
             (list 'splicing-letrec*-values
                   (definition-operator-parser parse-splicing-letrec*-values 2 #f)
                   (splicing-expression-operator-parser $splicing-letrec*-values)))))
-    (for-each (lambda (id) (env-bind! env.scope id vocab.expression-auxiliary (syntax-peek id)))
+    (for-each (lambda (id) (env-bind! env id vocab.expression-auxiliary (syntax-peek id)))
               b*.expr-aux)
-    (for-each (lambda (id op) (env-bind! env.scope id vocab.definition-operator op))
+    (for-each (lambda (id op) (env-bind! env id vocab.definition-operator op))
               (map car b*.def) (map cdr b*.def))
-    (for-each (lambda (id op.def op.expr) (env-bind! env.scope id
+    (for-each (lambda (id op.def op.expr) (env-bind! env id
                                                      vocab.definition-operator op.def
                                                      vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
-    (for-each (lambda (id) (env-bind! env.scope id vocab.quasiquote (syntax-peek id)))
+    (for-each (lambda (id) (env-bind! env id vocab.quasiquote (syntax-peek id)))
               b*.qq)
-    (for-each (lambda (id op) (env-bind! env.scope id
+    (for-each (lambda (id op) (env-bind! env id
                                          vocab.expression-operator op
                                          vocab.quasiquote          (syntax-peek id)))
               (map car b*.qq-and-expr) (map cdr b*.qq-and-expr))
-    (for-each (lambda (id op) (env-bind! env.scope id vocab.expression-operator op))
+    (for-each (lambda (id op) (env-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
-    (env-freeze! env.scope)
-    env.scope))
+    (env-freeze! env)
+    env))
