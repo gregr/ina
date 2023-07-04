@@ -107,7 +107,8 @@
          (env.scope    (env-compose env.scope.use (env-mark env.scope.op m)))
          (env          (env-compose env.use       (env-mark (env-compose env.op env.scope.op) m)))
          (dst          (parse-definition dst env.scope env (transcribe env.op op m env stx))))
-    (env-freeze! env.scope.op)
+    ;; TODO: defer this freeze until after the entire definition body has been processed.
+    ;(env-freeze! env.scope.op)
     dst))
 
 (define (identifier->fresh-address p) (fresh-address (syntax-peek p)))
@@ -228,63 +229,59 @@
 ;; TODO: $vector->list.value and $vector->list
 
 (define defstate.empty '())
+(define (defstate-entry id env ^E)  (vector id env ^E))
+(define (defstate-entry-id   entry) (vector-ref entry 0))
+(define (defstate-entry-env  entry) (vector-ref entry 1))
+(define (defstate-entry-^rhs entry) (vector-ref entry 2))
+(define (defstate-definition* dst)  (reverse (if (defstate-entry-id (car dst)) dst (cdr dst))))
+(define (defstate-expression  dst)  (and (not (defstate-entry-id (car dst)))
+                                         (defstate-entry-^rhs (car dst))))
+(define (defstate-define dst id env ^E)
+  (if (or (null? dst) (defstate-entry-id (car dst)))
+      (cons (defstate-entry id env ^E) dst)
+      (let ((^E (let ((^E.prev (defstate-entry-^rhs (car dst))))
+                  (lambda () ($begin (^E.prev) (^E))))))
+        (cons (defstate-entry id env ^E) (cdr dst)))))
 
-(define (defstate-entry addr ^ast assign!) (vector addr ^ast assign!))
-(define (defstate-entry-address  entry)    (vector-ref entry 0))
-(define (defstate-entry-^ast     entry)    (vector-ref entry 1))
-(define (defstate-entry-assigner entry)    (vector-ref entry 2))
+(define (defstate-add-expression dst ^E) (defstate-define dst #f #f ^E))
+(define (defstate-set-expression dst ^E) (defstate-add-expression
+                                           (if (defstate-expression dst) (cdr dst) dst) ^E))
 
-(define (defstate-definition* dst) (reverse (if (defstate-entry-address (car dst)) dst (cdr dst))))
-(define (defstate-expression  dst) (and (not (defstate-entry-address (car dst)))
-                                        (defstate-entry-^ast (car dst))))
+(define (definition*->id*  def*) (map defstate-entry-id  def*))
+(define (definition*->env* def*) (map defstate-entry-env def*))
+(define (definition*->rhs* def*) (map (lambda (^E) (^E)) (map defstate-entry-^rhs def*)))
 
-(define (defstate-define/assign! dst addr ^ast assign!)
-  (if (or (null? dst) (defstate-entry-address (car dst)))
-      (cons (defstate-entry addr ^ast assign!) dst)
-      (let ((^ast (let ((^ast.prev (defstate-entry-^ast (car dst))))
-                    (lambda () ($begin (^ast.prev) (^ast))))))
-        (cons (defstate-entry addr ^ast assign!) (cdr dst)))))
+(splicing-local
+  ((define (env-set-variable! env id E) (env-set^! env id vocab.expression
+                                                   (parse/constant-expression E))))
+  (define (defstate->ast dst)
+    (let* ((def* (defstate-definition* dst))
+           (id*  (definition*->id* def*)))
+      ($letrec id* (lambda E*
+                     (for-each env-set-variable! (definition*->env* def*) id* E*)
+                     (values (definition*->rhs* def*) ((or (defstate-expression dst) $values)))))))
+  (define ((defstate->ast/eval ast-eval) dst)
+    (let* ((def* (defstate-definition* dst))
+           (id*  (definition*->id*  def*))
+           (env* (definition*->env* def*))
+           (E.^e ($thunk ((or (defstate-expression dst) $values))))
+           (dst  (defstate-set-expression dst (lambda () (apply $list E.^e
+                                                                (map parse-expression env* id*))))))
+      (let ((result* (ast-eval (defstate->ast dst))))
+        (for-each env-set-variable! env* id* (map $quote (cdr result*)))
+        (call-with-values (car result*) (lambda x* (apply $values (map $quote x*))))))))
 
-(define (defstate-add-expression dst ^ast) (defstate-define/assign!
-                                             dst #f ^ast (lambda (v) (values))))
-(define (defstate-set-expression dst ^ast) (defstate-add-expression
-                                             (if (defstate-expression dst) (cdr dst) dst) ^ast))
-
-(define (definition*->address*  def*) (map defstate-entry-address def*))
-(define (definition*->ast*      def*) (map (lambda (^ast) (^ast)) (map defstate-entry-^ast def*)))
-(define (definition*->assigner* def*) (map defstate-entry-assigner def*))
-
-(define ($d:expression dst ^E) (defstate-define/assign! dst #f ^E (lambda (v) (values))))
-
+(define ($d:expression dst ^E) (defstate-define dst #f #f ^E))
 (define ($define dst env.scope lhs ^rhs)
   (env-introduce! env.scope lhs)
-  (let ((addr  (identifier->fresh-address lhs))
-        (bind! (lambda (E) (env-set^! env.scope lhs vocab.expression
-                                      (parse/constant-expression E)))))
-    (bind! ($ref addr))
-    (defstate-define/assign! dst addr ^rhs bind!)))
-
-(define (defstate->ast dst)
-  (let ((def* (defstate-definition* dst)))
-    ;; TODO: redo defstates in terms of identifiers instead of addresses so that we can eliminate
-    ;; this ast: construction.
-    (ast:letrec #f (definition*->address* def*) (definition*->ast* def*)
-                ((or (defstate-expression dst) $values)))))
-
-(define ((defstate->ast/eval ast-eval) dst)
-  (let* ((addr*  (definition*->address* (defstate-definition* dst)))
-         (ast.^e ($thunk ((or (defstate-expression dst) $values))))
-         (dst    (defstate-set-expression dst (lambda () (apply $list ast.^e (map $ref addr*)))))
-         (bind!* (definition*->assigner* (defstate-definition* dst))))
-    (let ((result* (ast-eval (defstate->ast dst))))
-      (for-each (lambda (assign! result) (assign! ($quote result))) bind!* (cdr result*))
-      (call-with-values (car result*) (lambda x* (apply $values (map $quote x*)))))))
+  (defstate-define dst lhs env.scope ^rhs))
 
 (define ($body env ^def)
   (let* ((env.scope (make-env))
-         (dst       (^def defstate.empty env.scope (env-compose env env.scope))))
+         (dst       (^def defstate.empty env.scope (env-compose env env.scope)))
+         (E         (defstate->ast dst)))
     (env-freeze! env.scope)
-    (defstate->ast dst)))
+    E))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
