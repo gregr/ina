@@ -229,6 +229,10 @@
 (define ($append x* y) ($call $append.value x* y))
 ;; TODO: $vector->list.value and $vector->list
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Definition contexts ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define defstate.empty '())
 (define (defstate-entry id env ^E)  (vector id env ^E))
 (define (defstate-entry-id   entry) (vector-ref entry 0))
@@ -271,6 +275,27 @@
       (let ((result* (ast-eval (defstate->ast dst))))
         (for-each env-set-variable! env* id* (map $quote (cdr result*)))
         (call-with-values (car result*) $quote-values)))))
+
+(define (D:begin               D*) (vector 'D:begin      D*))
+(define (D:definition id env ^rhs) (vector 'D:definition id env ^rhs))
+(define (D:expression          ^E) (vector 'D:expression ^E))
+
+(define (D-tag             D) (vector-ref D 0))
+(define (D:begin-D*        D) (vector-ref D 1))
+(define (D:definition-id   D) (vector-ref D 1))
+(define (D:definition-env  D) (vector-ref D 2))
+(define (D:definition-^rhs D) (vector-ref D 3))
+(define (D:expression-^E   D) (vector-ref D 1))
+
+(define (D-tagged? D tag) (eq? (D-tag D) tag))
+
+(define (D->defstate D)
+  (let loop ((D D) (dst defstate.empty))
+    (cond ((D-tagged? D 'D:begin)      (foldl loop dst (D:begin-D* D)))
+          ((D-tagged? D 'D:definition) (defstate-define dst (D:definition-id D) (D:definition-env D)
+                                                        (D:definition-^rhs D)))
+          ((D-tagged? D 'D:expression) (defstate-define dst #f #f (D:expression-^E D)))
+          (else                        (error "invalid definition" D)))))
 
 (define ($d:expression dst ^E) (defstate-define dst #f #f ^E))
 (define ($define dst env.scope lhs ^rhs)
