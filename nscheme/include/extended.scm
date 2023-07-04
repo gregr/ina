@@ -34,7 +34,9 @@
         dst)))
 
 (define (parse-begin-meta-expression env stx)
-  ($quote (ast-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx))))
+  (call-with-values
+    (lambda () (ast-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx)))
+    $quote-values))
 
 ;; The right-hand-side expression of declare-parser must evaluate to a procedure which takes the
 ;; current environment, and produces a parser.  This gives the parser access to its definition

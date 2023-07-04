@@ -189,6 +189,7 @@
 (define ($vector           . x*) (apply $pcall 'vector x*))
 (define ($values           . x*) (apply $pcall 'values x*))
 (define ($call-with-values . x*) (apply $pcall 'call-with-values x*))
+(define ($quote-values     . x*) (apply $values (map $quote x*)))
 (define ($panic            . x*) (apply $pcall 'panic x*))
 (define ($list             . x*) (let loop ((x* x*))
                                    (cond ((null? x*) ($quote '()))
@@ -269,7 +270,7 @@
                                                                 (map parse-expression env* id*))))))
       (let ((result* (ast-eval (defstate->ast dst))))
         (for-each env-set-variable! env* id* (map $quote (cdr result*)))
-        (call-with-values (car result*) (lambda x* (apply $values (map $quote x*))))))))
+        (call-with-values (car result*) $quote-values)))))
 
 (define ($d:expression dst ^E) (defstate-define dst #f #f ^E))
 (define ($define dst env.scope lhs ^rhs)
