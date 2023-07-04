@@ -110,12 +110,12 @@
   (define (nonsplicing-expression-operator-parser $splicing)
     (etc-splicing-expression-operator-parser
       $splicing (lambda (stx*) (lambda (dst scope env)
-                                 (defstate-add-expression dst (lambda () (parse-body env stx*)))))))
+                                 ($d:expression dst (lambda () (parse-body env stx*)))))))
 
   (define (splicing-expression-operator-parser $splicing)
     (etc-splicing-expression-operator-parser
       $splicing (lambda (stx*) (lambda (dst scope env)
-                                 (defstate-add-expression dst (lambda () (apply parse-begin-expression env stx*))))))))
+                                 ($d:expression dst (lambda () (apply parse-begin-expression env stx*))))))))
 
 (define (parse-quasiquote env stx.qq)
   (define (finish quote? x) (if quote? (parse-quote env x) x))
@@ -216,15 +216,16 @@
                     (else            (error "not a definable form" lhs))))))))
 
 (define (parse-define-values dst env.scope env stx.lhs*~ e.rhs)
-  (let* ((lhs*~   (syntax->improper-list stx.lhs*~))
-         (lhs*    (improper-list->list lhs*~))
-         (v*.^rhs (lambda () ($call-with-values ($thunk (parse-expression env e.rhs))
-                                                ($lambda lhs*~ $vector))))
-         (v*.addr (fresh-address 'vec.value*))
-         ($v*     ($ref v*.addr)))
+  (let* ((lhs*~     (syntax->improper-list stx.lhs*~))
+         (lhs*      (improper-list->list lhs*~))
+         (v*.id     'vec.value*)
+         (env.local (make-env)))
     (foldl (lambda (i lhs dst)
-             ($define dst env.scope lhs (lambda () ($vector-ref $v* ($quote i)))))
-           (defstate-define dst v*.addr v*.^rhs)
+             ($define dst env.scope lhs
+                      (lambda () ($vector-ref (parse-expression env.local v*.id) ($quote i)))))
+           ($define dst env.local v*.id
+                    (lambda () ($call-with-values ($thunk (parse-expression env e.rhs))
+                                                  ($lambda lhs*~ $vector))))
            (iota (length lhs*))
            lhs*)))
 

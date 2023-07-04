@@ -137,8 +137,8 @@
 (define ($let/env    env param* rhs* ^body) (apply $call ($lambda/env env param* ^body) rhs*))
 (define ($letrec param* ^rhs*&body)
   (let ((addr* (map identifier->fresh-address param*)))
-    (let-values ((($rhs* $body) (apply ^rhs*&body (map $ref addr*))))
-      (ast:letrec #f addr* $rhs* $body))))
+    (let-values (((rhs* body) (apply ^rhs*&body (map $ref addr*))))
+      (ast:letrec #f addr* rhs* body))))
 (define ($letrec/env env param* ^rhs*&body)
   ($letrec param* (lambda arg* (^rhs*&body (env-extend env param* arg*)))))
 (define ($loop name ^rhs) ($letrec (list name) (lambda ($self) (values (list (^rhs $self)) $self))))
@@ -245,10 +245,8 @@
                     (lambda () ($begin (^ast.prev) (^ast))))))
         (cons (defstate-entry addr ^ast assign!) (cdr dst)))))
 
-(define (defstate-define dst addr ^ast)
-  (defstate-define/assign! dst addr ^ast (lambda (v) (values))))
-
-(define (defstate-add-expression dst ^ast) (defstate-define dst #f ^ast))
+(define (defstate-add-expression dst ^ast) (defstate-define/assign!
+                                             dst #f ^ast (lambda (v) (values))))
 (define (defstate-set-expression dst ^ast) (defstate-add-expression
                                              (if (defstate-expression dst) (cdr dst) dst) ^ast))
 
@@ -256,14 +254,15 @@
 (define (definition*->ast*      def*) (map (lambda (^ast) (^ast)) (map defstate-entry-^ast def*)))
 (define (definition*->assigner* def*) (map defstate-entry-assigner def*))
 
+(define ($d:expression dst ^E) (defstate-define/assign! dst #f ^E (lambda (v) (values))))
+
 (define ($define dst env.scope lhs ^rhs)
   (env-introduce! env.scope lhs)
-  (let* ((addr    (identifier->fresh-address lhs))
-         (parser  (mvector (parse/constant-expression ($ref addr))))
-         (assign! (lambda (value)
-                    (mvector-set! parser 0 (parse/constant-expression ($quote value))))))
-    (env-set^! env.scope lhs vocab.expression (lambda arg* (apply (mvector-ref parser 0) arg*)))
-    (defstate-define/assign! dst addr ^rhs assign!)))
+  (let ((addr  (identifier->fresh-address lhs))
+        (bind! (lambda (E) (env-set^! env.scope lhs vocab.expression
+                                      (parse/constant-expression E)))))
+    (bind! ($ref addr))
+    (defstate-define/assign! dst addr ^rhs bind!)))
 
 (define (defstate->ast dst)
   (let ((def* (defstate-definition* dst)))
@@ -273,12 +272,12 @@
                 ((or (defstate-expression dst) $values)))))
 
 (define ((defstate->ast/eval ast-eval) dst)
-  (let* ((addr*    (definition*->address* (defstate-definition* dst)))
-         (ast.^e   ($thunk ((or (defstate-expression dst) $values))))
-         (dst      (defstate-set-expression dst (lambda () (apply $list ast.^e (map $ref addr*)))))
-         (assign!* (definition*->assigner* (defstate-definition* dst))))
+  (let* ((addr*  (definition*->address* (defstate-definition* dst)))
+         (ast.^e ($thunk ((or (defstate-expression dst) $values))))
+         (dst    (defstate-set-expression dst (lambda () (apply $list ast.^e (map $ref addr*)))))
+         (bind!* (definition*->assigner* (defstate-definition* dst))))
     (let ((result* (ast-eval (defstate->ast dst))))
-      (for-each (lambda (assign! result) (assign! result)) assign!* (cdr result*))
+      (for-each (lambda (assign! result) (assign! ($quote result))) bind!* (cdr result*))
       (call-with-values (car result*) (lambda x* (apply $values (map $quote x*)))))))
 
 (define ($body env ^def)
@@ -332,7 +331,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (parse-definition dst env.scope env stx)
-  (define (default) (defstate-add-expression dst (lambda () (parse-expression env stx))))
+  (define (default) ($d:expression dst (lambda () (parse-expression env stx))))
   (let ((x (syntax-unwrap stx)))
     (cond ((identifier? stx) (let ((op (env-ref^ env stx vocab.definition)))
                                (if (procedure? op)
