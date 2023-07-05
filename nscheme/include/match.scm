@@ -210,8 +210,7 @@
   (define (($$or  ^a ^b) succeed fail $x env) (^a succeed (lambda (env) (^b succeed fail $x env))
                                                   $x env))
   (define (($$app $proc ^p) succeed fail $x env)
-    (let* ((x.app.addr (fresh-address 'x.app)) ($x.app ($ref x.app.addr)))
-      ($let '(x.app) (list ($call $proc $x)) (lambda ($x.app) (^p succeed fail $x.app env)))))
+    ($let '(x.app) (list ($call $proc $x)) (lambda ($x.app) (^p succeed fail $x.app env))))
   (let-values (((P id*) (P->linear-pattern&variable* P)))
     (values
       (let loop ((P P))

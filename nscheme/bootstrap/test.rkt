@@ -18,6 +18,7 @@
 
 (include "../include/syntax.scm")
 (include "../include/ast.scm")
+(include "../include/stage-simple.scm")
 (include "../include/parse.scm")
 (include "../include/primitive.scm")
 (include "../include/minimal.scm")
