@@ -1,7 +1,7 @@
 #lang racket/base
 (provide E-eval E-pretty)
 (require "../platform/racket/nscheme.rkt" racket/include racket/match)
-(include "../include/ast.scm")
+(include "../include/ir.scm")
 
 ;;; NOTE: this code is only intended for testing until the compiler is finished.  The bootstrapping
 ;;; process should not depend on E-eval.

@@ -19,7 +19,7 @@
 (include "../include/base/string.scm")
 
 (include "../include/syntax.scm")
-(include "../include/ast.scm")
+(include "../include/ir.scm")
 (include "../include/stage-simple.scm")
 (include "../include/parse.scm")
 (include "../include/primitive.scm")
@@ -51,7 +51,7 @@
                 "../include/base/bytevector.scm"
                 "../include/base/string.scm"
                 "../include/syntax.scm"
-                "../include/ast.scm"
+                "../include/ir.scm"
                 "../include/stage-simple.scm"
                 "../include/parse.scm"
                 "../include/primitive.scm"
@@ -111,8 +111,8 @@
 (pretty-write (time (E-eval E.self-apply2)))
 ;==> ((3 . a) (4 . b) (5 . c) 1 2)
 
-;; TODO: all remaining compiler definitions should be included here, replacing ast-eval.rkt:
-(require "ast-eval.rkt")
+;; TODO: all remaining compiler definitions should be included here, replacing eval.rkt:
+(require "eval.rkt")
 
 ;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
 ;; depend on the compiler instead of E-eval:

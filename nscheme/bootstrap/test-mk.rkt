@@ -17,7 +17,7 @@
 (include "../include/base/string.scm")
 
 (include "../include/syntax.scm")
-(include "../include/ast.scm")
+(include "../include/ir.scm")
 (include "../include/stage-simple.scm")
 (include "../include/parse.scm")
 (include "../include/primitive.scm")
@@ -26,8 +26,8 @@
 
 (include "../include/extended.scm")
 
-;; TODO: all remaining compiler definitions should be included here, replacing ast-eval.rkt:
-(require "ast-eval.rkt")
+;; TODO: all remaining compiler definitions should be included here, replacing eval.rkt:
+(require "eval.rkt")
 
 (define env.base (env-compose.match (env-compose env.primitive env.minimal)))
 

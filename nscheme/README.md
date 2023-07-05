@@ -211,7 +211,7 @@ Eventually:
 ### Procedures and metadata
 
 - When a primitive procedure (according to metadata) ends up in the operator position of a call
-  `(ast:call PV (ast:quote _ PRIM) ARGS)` replace it with the corresponding `(ast:prim _ NAME)`
+  `(E:call PV (E:quote _ PRIM) ARGS)` replace it with the corresponding `(E:prim _ NAME)`
 
 - We would like to treat captured variables as opaque to support compiler optimization of their
   representation. e.g., unboxing.  But if procedure-metadata exposes these, the representation
