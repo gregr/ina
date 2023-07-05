@@ -1,9 +1,6 @@
 (define (fresh-address name) (vector name))
 
-(define (case-lambda-clause param body) (vector param body))
-(define (case-lambda-clause-param cc)   (vector-ref cc 0))
-(define (case-lambda-clause-body  cc)   (vector-ref cc 1))
-
+;; TODO: define IR with record types for capability security
 ;; TODO: support for lower-level language integration:
 ;; - E:unchecked-call, E:let with type info, E:case-lambda with type info, etc.
 (define (E:annotated   pv E)           (vector 'E:annotated   pv E))
@@ -12,7 +9,7 @@
 (define (E:ref         address)        (vector 'E:ref         address))
 (define (E:if          c t f)          (vector 'E:if          c t f))
 (define (E:call        proc args)      (vector 'E:call        proc args))
-(define (E:case-lambda clause*)        (vector 'E:case-lambda clause*))
+(define (E:case-lambda param* body*)   (vector 'E:case-lambda param* body*))
 (define (E:letrec      lhs* rhs* body) (vector 'E:letrec      lhs* rhs* body))
 
 (define (E-tag                   E)     (vector-ref E 0))
@@ -35,7 +32,8 @@
 (define (E:if-alternative        E)     (vector-ref E 3))
 (define (E:call-procedure        E)     (vector-ref E 1))
 (define (E:call-argument*        E)     (vector-ref E 2))
-(define (E:case-lambda-clause*   E)     (vector-ref E 1))
+(define (E:case-lambda-param*    E)     (vector-ref E 1))
+(define (E:case-lambda-body*     E)     (vector-ref E 2))
 (define (E:letrec-binding-left*  E)     (vector-ref E 1))
 (define (E:letrec-binding-right* E)     (vector-ref E 2))
 (define (E:letrec-body           E)     (vector-ref E 3))

@@ -317,7 +317,7 @@
         ((identifier? stx)
          (let ((op (env-ref^ env stx vocab.expression)))
            (cond ((procedure? op)   (op env stx))
-                 ((env-ref env stx) (error "non-expression identifier" stx))
+                 ((env-ref env stx) (error "non-expression or out-of-phase identifier" stx))
                  (else              (error "unbound identifier" stx)))))
         ((pair?    x) (let* ((e.op (car x))
                              (op   (and (identifier? e.op)

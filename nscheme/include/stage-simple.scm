@@ -8,10 +8,10 @@
 (define ($if         c t f) (E:if    c t f))
 
 (define ($case-lambda . cc*)
-  (define ($case-lambda-clause param*~ arg*->body)
-    (let* ((addr*~ (improper-list-map identifier->fresh-address param*~)))
-      (case-lambda-clause addr*~ (apply arg*->body (map $ref (improper-list->list addr*~))))))
-  (E:case-lambda (map (lambda (cc) ($case-lambda-clause (car cc) (cdr cc))) cc*)))
+  (let* ((addr*~* (map (lambda (cc) (improper-list-map identifier->fresh-address (car cc))) cc*))
+         (body*   (map (lambda (addr*~ cc) (apply (cdr cc) (map $ref (improper-list->list addr*~))))
+                       addr*~* cc*)))
+    (E:case-lambda addr*~* body*)))
 
 (define ($letrec param* ^rhs*&body)
   (let ((addr* (map identifier->fresh-address param*)))
