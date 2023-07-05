@@ -381,6 +381,9 @@
     (begin (define a 5) (define w (z y)))
     w)
   ==> 88
+  (let ())              ==> error:parse
+  (let () (begin))      ==> error:parse
+  (let () (define x 5)) ==> error:parse
 
   ! internal-define-values
   (let ((a 5) (b 6))

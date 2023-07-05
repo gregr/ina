@@ -182,8 +182,7 @@
 
 (define (parse-body env stx.body)
   (let ((stx* (syntax->list stx.body)))
-    (when (null? stx*) (error "no expression" stx.body))
-    (define (^def env.d env) (apply parse-begin-definition env.d env stx*))
+    (define (^def env.d env) ($d:provenance stx.body (apply parse-begin-definition env.d env stx*)))
     ($provenance/syntax ($body env ^def) stx.body)))
 
 (define (parse-begin-definition env.d env . stx*)

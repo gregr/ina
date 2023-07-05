@@ -31,7 +31,7 @@
          (E       ((defstate->ast/eval ast-eval) dst.new)))
     (if (defstate-expression dst.new)
         ($d:expression (lambda () E))
-        ($d:begin))))
+        ($d:define '_ (make-env) (lambda () E)))))
 
 (define (parse-begin-meta-expression env stx)
   (call-with-values

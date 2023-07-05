@@ -238,8 +238,10 @@
 (define (defstate-entry-id   entry) (vector-ref entry 0))
 (define (defstate-entry-env  entry) (vector-ref entry 1))
 (define (defstate-entry-^rhs entry) (vector-ref entry 2))
-(define (defstate-definition* dst)  (reverse (if (defstate-entry-id (car dst)) dst (cdr dst))))
-(define (defstate-expression  dst)  (and (not (defstate-entry-id (car dst)))
+(define (defstate-definition* dst)  (if (null? dst)
+                                        '()
+                                        (reverse (if (defstate-entry-id (car dst)) dst (cdr dst)))))
+(define (defstate-expression  dst)  (and (pair? dst) (not (defstate-entry-id (car dst)))
                                          (defstate-entry-^rhs (car dst))))
 (define (defstate-define dst id env ^E)
   (if (or (null? dst) (defstate-entry-id (car dst)))
@@ -274,11 +276,14 @@
         (for-each env-set-variable! env* id* (map $quote (cdr result*)))
         (call-with-values (car result*) $quote-values)))))
 
+(define (D:annotated         pv D) (vector 'D:annotated  pv D))
 (define (D:begin               D*) (vector 'D:begin      D*))
 (define (D:definition id env ^rhs) (vector 'D:definition id env ^rhs))
 (define (D:expression          ^E) (vector 'D:expression ^E))
 
 (define (D-tag             D) (vector-ref D 0))
+(define (D:annotated-pv    D) (vector-ref D 1))
+(define (D:annotated-D     D) (vector-ref D 2))
 (define (D:begin-D*        D) (vector-ref D 1))
 (define (D:definition-id   D) (vector-ref D 1))
 (define (D:definition-env  D) (vector-ref D 2))
@@ -286,6 +291,7 @@
 (define (D:expression-^E   D) (vector-ref D 1))
 
 (define (D-tagged? D tag) (eq? (D-tag D) tag))
+(define (D-provenance D) (and (D-tagged? D 'D:annotated) (D:annotated-pv D)))
 
 (define (D->defstate D)
   (let loop ((D D) (dst defstate.empty))
@@ -293,18 +299,22 @@
           ((D-tagged? D 'D:definition) (defstate-define dst (D:definition-id D) (D:definition-env D)
                                                         (D:definition-^rhs D)))
           ((D-tagged? D 'D:expression) (defstate-define dst #f #f (D:expression-^E D)))
+          ((D-tagged? D 'D:annotated)  (loop (D:annotated-D D) dst))
           (else                        (error "invalid definition" D)))))
 
+(define ($d:provenance       pv D) (D:annotated pv D))
 (define ($d:begin            . D*) (D:begin D*))
 (define ($d:expression         ^E) (D:expression ^E))
 (define ($d:define env.d lhs ^rhs) (env-introduce! env.d lhs) (D:definition lhs env.d ^rhs))
 
 (define ($body env ^def)
   (let* ((env.d (make-env))
-         (dst   (D->defstate (^def env.d (env-compose env env.d)))))
-    ;; TODO: provide provenance for a better error report
-    ;; Or we can return (values) in this situation.
-    (unless (defstate-expression dst) (error "no expression after definitions"))
+         (D     (^def env.d (env-compose env env.d)))
+         (dst   (D->defstate D)))
+    (unless (defstate-expression dst)
+      (error
+        (if (null? (defstate-definition* dst)) "no expression" "no expression after definitions")
+        (D-provenance D)))
     (let ((E (defstate->ast dst)))
       (env-freeze! env.d)
       E)))
