@@ -203,7 +203,7 @@
                                        (append (P:ellipsis-vector-prefix P)
                                                (P:ellipsis-vector-suffix P))))
         (else                         id*))))
-  (define ((wrap pv ^ast) . args) ($provenance pv (apply ^ast args)))
+  (define ((wrap pv ^E) . args) ($provenance pv (apply ^E args)))
   (define (($$?   $?)    succeed fail $x env) ($if ($call $? $x) (succeed env) (fail env)))
   (define (($$and ^a ^b) succeed fail $x env) (^a (lambda (env) (^b succeed fail $x env))
                                                   fail $x env))

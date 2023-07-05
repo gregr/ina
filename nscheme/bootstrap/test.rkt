@@ -28,7 +28,7 @@
 (require "ast-eval.rkt")
 
 ;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
-;; depend on the compiler instead of ast-eval:
+;; depend on the compiler instead of E-eval:
 (include "../include/extended.scm")
 
 (define verbosity 0)
@@ -47,20 +47,20 @@
                                (displayln "PARSE ERROR:")
                                (pretty-write c))
                              (error:parse c))))
-    (let ((ast (parse-expression env.test stx)))
+    (let ((E (parse-expression env.test stx)))
       (when (< 2 verbosity)
-        (displayln "AST:")
-        (pretty-write ast))
+        (displayln "PARSED:")
+        (pretty-write E))
       (when (< 1 verbosity)
-        (displayln "PRETTY AST:")
-        (pretty-write (ast-pretty ast)))
+        (displayln "PRETTY PARSED:")
+        (pretty-write (E-pretty E)))
       (with-handlers ((vector? (lambda (c)
                                  (when (< 0 verbosity)
                                    (displayln "EVALUATION ERROR:")
                                    (pretty-write c))
                                  (error:eval c))))
         (call-with-values
-          (lambda () (ast-eval ast))
+          (lambda () (E-eval E))
           (case-lambda
             ((result) (when (< 0 verbosity)
                         (displayln "VALUE:")

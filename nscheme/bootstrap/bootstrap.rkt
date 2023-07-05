@@ -76,13 +76,13 @@
                             )))
 (displayln "parsing test:")
 ;; ~47ms
-(define ast.test (time (parse-body env.test stx*.test)))
-;(define ast.test (profile (parse-body env.test stx*.test)))
-;(pretty-write ast.test)
-;(pretty-write (ast-pretty ast.test))
+(define E.test (time (parse-body env.test stx*.test)))
+;(define E.test (profile (parse-body env.test stx*.test)))
+;(pretty-write E.test)
+;(pretty-write (E-pretty E.test))
 (displayln "evaluating test:")
 ;; ~4ms
-(pretty-write (time (ast-eval ast.test)))
+(pretty-write (time (E-eval E.test)))
 ;==> ((3 . a) (4 . b) (5 . c) 1 2)
 
 (define stx*.self-apply1
@@ -98,24 +98,24 @@
                (parse-body env.test stx*.test)))))
 (displayln "parsing self-apply1:")
 ;; ~49ms
-(define ast.self-apply1 (time (parse-body env.test stx*.self-apply1)))
-;(define ast.self-apply1 (profile (parse-body env.test stx*.self-apply1)))
-;(pretty-write ast.self-apply1)
-;(pretty-write (ast-pretty ast.self-apply1))
+(define E.self-apply1 (time (parse-body env.test stx*.self-apply1)))
+;(define E.self-apply1 (profile (parse-body env.test stx*.self-apply1)))
+;(pretty-write E.self-apply1)
+;(pretty-write (E-pretty E.self-apply1))
 (displayln "evaluating self-apply1 to parse self-apply2:")
 ;; ~7573ms
-(define ast.self-apply2 (time (ast-eval ast.self-apply1)))
-;(define ast.self-apply2 (profile (ast-eval ast.self-apply1)))
+(define E.self-apply2 (time (E-eval E.self-apply1)))
+;(define E.self-apply2 (profile (E-eval E.self-apply1)))
 (displayln "evaluating self-apply2:")
 ;; ~4ms
-(pretty-write (time (ast-eval ast.self-apply2)))
+(pretty-write (time (E-eval E.self-apply2)))
 ;==> ((3 . a) (4 . b) (5 . c) 1 2)
 
 ;; TODO: all remaining compiler definitions should be included here, replacing ast-eval.rkt:
 (require "ast-eval.rkt")
 
 ;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
-;; depend on the compiler instead of ast-eval:
+;; depend on the compiler instead of E-eval:
 (include "../include/extended.scm")
 
 ;; TODO: compile interact.scm and all of its dependencies (almost everything listed above).

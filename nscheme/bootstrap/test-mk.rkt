@@ -223,8 +223,8 @@
 (define env.mk (env-compose.minikanren env.base))
 
 (define (test-mk* body)
-  (let ((ast (time (parse-body env.mk body))))
-    (pretty-write (time (ast-eval ast)))))
+  (let ((E (time (parse-body env.mk body))))
+    (pretty-write (time (E-eval E)))))
 
 (define (test-mk expr)
   (newline)

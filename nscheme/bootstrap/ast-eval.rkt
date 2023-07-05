@@ -1,10 +1,10 @@
 #lang racket/base
-(provide ast-eval ast-pretty)
+(provide E-eval E-pretty)
 (require "../platform/racket/nscheme.rkt" racket/include racket/match)
 (include "../include/ast.scm")
 
 ;;; NOTE: this code is only intended for testing until the compiler is finished.  The bootstrapping
-;;; process should not depend on ast-eval.
+;;; process should not depend on E-eval.
 
 (define cenv.empty '())
 (define renv.empty '())
@@ -48,10 +48,10 @@
          (= arity count))
        (lambda (renv args) (cons args renv))))
 
-(define (ast-stage ast cenv)
-  (let loop.full ((ast ast) (cenv cenv))
-    (define (loop ast) (loop.full ast cenv))
-    (match ast
+(define (E-stage E cenv)
+  (let loop.full ((E E) (cenv cenv))
+    (define (loop E) (loop.full E cenv))
+    (match E
       (`#(E:quote ,_ ,value)          (lambda (renv) value))
       (`#(E:ref   ,_ ,address)        (cenv-ref cenv address))
       (`#(E:if    ,_ ,a.c ,a.t ,a.f)  (let ((s.c (loop a.c)) (s.t (loop a.t)) (s.f (loop a.f)))
@@ -121,11 +121,11 @@
                   f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/)))
           (lambda (renv) prim))))))
 
-(define (ast-eval ast) ((ast-stage ast cenv.empty) renv.empty))
+(define (E-eval E) ((E-stage E cenv.empty) renv.empty))
 
-(define (ast-pretty ast)
-  (let loop ((ast ast))
-    (match ast
+(define (E-pretty E)
+  (let loop ((E E))
+    (match E
       (`#(E:quote ,_ ,value)             `(quote ,value))
       (`#(E:ref   ,_ ,address)           `(ref ,address))
       (`#(E:if    ,_ ,c ,t ,f)           `(if ,(loop c) ,(loop t) ,(loop f)))

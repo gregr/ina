@@ -20,7 +20,7 @@
 
 (define (env:parse-begin-definition env stx*.def)
   (let ((env.d (make-env)))
-    ((defstate->ast/eval ast-eval)
+    ((defstate->E/eval E-eval)
      (D->defstate (apply parse-begin-definition env.d (env-compose env env.d) stx*.def)))
     (env-freeze! env.d)
     env.d))
@@ -28,14 +28,14 @@
 (define (parse-begin-meta-definition env.d env stx)
   (let* ((D       ((definition-operator-parser parse-begin-definition 0 #f) env.d env stx))
          (dst.new (D->defstate D))
-         (E       ((defstate->ast/eval ast-eval) dst.new)))
+         (E       ((defstate->E/eval E-eval) dst.new)))
     (if (defstate-expression dst.new)
         ($d:expression (lambda () E))
         ($d:define '_ (make-env) (lambda () E)))))
 
 (define (parse-begin-meta-expression env stx)
   (call-with-values
-    (lambda () (ast-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx)))
+    (lambda () (E-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx)))
     $quote-values))
 
 ;; The right-hand-side expression of declare-parser must evaluate to a procedure which takes the
@@ -47,8 +47,8 @@
 ;           (unless (= (length e*.rhs) 1)
 ;             (error "multiple expressions in declaration body" e*.rhs))
 ;           (let* ((addr   (env-address env e.lhs))
-;                  (vocab  (ast-eval (parse-expression env e.vocab)))
-;                  (parser ((ast-eval (parse-expression env (car e*.rhs))) env)))
+;                  (vocab  (E-eval (parse-expression env e.vocab)))
+;                  (parser ((E-eval (parse-expression env (car e*.rhs))) env)))
 ;             (unless addr (error "unbound identifier" e.lhs))
 ;             (env-set! env.d vocab addr parser)))
 ;          (else (let ((x (syntax-unwrap e.lhs)))
@@ -61,14 +61,14 @@
 ;                        (else      (error "not a definable form" e.lhs)))))))
 ;  ($d:begin))
 
-;; TODO: do without this (and anything else using ast-eval) until late stage bootstrapping
+;; TODO: do without this (and anything else using E-eval) until late stage bootstrapping
 ;(define (parse-define-syntax env.d env e.lhs . e*.rhs)
 ;  (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))
 ;    (cond ((identifier? e.lhs)
 ;           (unless (= (length e*.rhs) 1)
 ;             (error "multiple expressions in definition body" e*.rhs))
 ;           (env-introduce env.d e.lhs)
-;           (let ((op (ast-eval (parse-expression env (car e*.rhs)))))
+;           (let ((op (E-eval (parse-expression env (car e*.rhs)))))
 ;             (parse-declare-parser
 ;               (parse-quote env vocab.expression)
 ;               e.lhs (lambda (env.op)

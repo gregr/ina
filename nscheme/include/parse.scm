@@ -115,7 +115,7 @@
 ;;; Program construction ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define ($provenance/syntax stx ast) ($provenance (syntax-provenance stx) ast))
+(define ($provenance/syntax stx E) ($provenance (syntax-provenance stx) E))
 (define ($case-lambda/env env . cc*)
   (define (convert cc)
     (let ((param*~ (car cc)) (env->body (cdr cc)))
@@ -237,20 +237,20 @@
 (splicing-local
   ((define (env-set-variable! env id E) (env-set^! env id vocab.expression
                                                    (parse/constant-expression E))))
-  (define (defstate->ast dst)
+  (define (defstate->E dst)
     (let* ((def* (defstate-definition* dst))
            (id*  (definition*->id* def*)))
       ($letrec id* (lambda E*
                      (for-each env-set-variable! (definition*->env* def*) id* E*)
                      (values (definition*->rhs* def*) ((or (defstate-expression dst) $values)))))))
-  (define ((defstate->ast/eval ast-eval) dst)
+  (define ((defstate->E/eval E-eval) dst)
     (let* ((def* (defstate-definition* dst))
            (id*  (definition*->id*  def*))
            (env* (definition*->env* def*))
            (E.^e ($thunk ((or (defstate-expression dst) $values))))
            (dst  (defstate-replace-expression
                    dst (lambda () (apply $list E.^e (map parse-expression env* id*))))))
-      (let ((result* (ast-eval (defstate->ast dst))))
+      (let ((result* (E-eval (defstate->E dst))))
         (for-each env-set-variable! env* id* (map $quote (cdr result*)))
         (call-with-values (car result*) $quote-values)))))
 
@@ -293,7 +293,7 @@
       (error
         (if (null? (defstate-definition* dst)) "no expression" "no expression after definitions")
         (D-provenance D)))
-    (let ((E (defstate->ast dst)))
+    (let ((E (defstate->E dst)))
       (env-freeze! env.d)
       E)))
 
