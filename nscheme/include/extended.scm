@@ -56,8 +56,8 @@
 ;                                         (list (expression-parser
 ;                                                 (lambda (env _)
 ;                                                   ($provenance/syntax
-;                                                     (apply parse-lambda env (cdr x) e*.rhs)
-;                                                     (cdr x)))))))
+;                                                     (cdr x)
+;                                                     (apply parse-lambda env (cdr x) e*.rhs)))))))
 ;                        (else      (error "not a definable form" e.lhs)))))))
 ;  ($d:begin))
 
@@ -84,8 +84,8 @@
 ;                                         (list (expression-parser
 ;                                                 (lambda (env _)
 ;                                                   ($provenance/syntax
-;                                                     (apply parse-lambda env (cdr x) e*.rhs)
-;                                                     (cdr x)))))))
+;                                                     (cdr x)
+;                                                     (apply parse-lambda env (cdr x) e*.rhs)))))))
 ;                        (else      (error "not a definable form" e.lhs)))))))
 ;  ($d:begin))
 

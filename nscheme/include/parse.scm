@@ -113,8 +113,8 @@
 
 (define (identifier->fresh-address p) (fresh-address (syntax-peek p)))
 
-(define ($provenance        ast pv)  (ast-provenance-add ast pv))
-(define ($provenance/syntax ast stx) ($provenance ast (syntax-provenance stx)))
+(define ($provenance        pv  ast) (ast-provenance-add ast pv))
+(define ($provenance/syntax stx ast) ($provenance (syntax-provenance stx) ast))
 
 (define ($quote value)       (ast:quote #f value))
 (define ($ref   addr)        (ast:ref   #f addr))
@@ -334,6 +334,7 @@
 (define (parse-expression env stx)
   (let ((x (syntax-unwrap stx)))
     ($provenance/syntax
+      stx
       (cond
         ((identifier? stx)
          (let ((op (env-ref^ env stx vocab.expression)))
@@ -348,8 +349,7 @@
                             (apply $call (parse-expression env e.op)
                                    (parse-expression* env (syntax->list (cdr x)))))))
         ((literal? x) ($quote x))
-        (else         (error "not an expression" stx)))
-      stx)))
+        (else         (error "not an expression" stx))))))
 
 (define ((expression-operator-parser parser argc.min argc.max) env expr)
   (let* ((e* (syntax->list expr)) (argc (- (length e*) 1)))

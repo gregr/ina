@@ -203,7 +203,7 @@
                                        (append (P:ellipsis-vector-prefix P)
                                                (P:ellipsis-vector-suffix P))))
         (else                         id*))))
-  (define ((wrap pv ^ast) . args) ($provenance (apply ^ast args) pv))
+  (define ((wrap pv ^ast) . args) ($provenance pv (apply ^ast args)))
   (define (($$?   $?)    succeed fail $x env) ($if ($call $? $x) (succeed env) (fail env)))
   (define (($$and ^a ^b) succeed fail $x env) (^a (lambda (env) (^b succeed fail $x env))
                                                   fail $x env))
@@ -464,11 +464,11 @@
                                                             (else (error "not a guard" (car body))))))))
                                           (lambda ($succeed)
                                             ($provenance
+                                              (car stx*.clause*)
                                               (^pattern
                                                 (lambda (env) (apply $call $succeed (parse-expression* env id*.P)))
                                                 (lambda (_) ($call $fail))
-                                                $x env)
-                                              (car stx*.clause*)))))))))))))))
+                                                $x env)))))))))))))))
 
 (define parse-match  (parse-match/parse-pattern parse-pattern))
 (define parse-qmatch (parse-match/parse-pattern parse-pattern-quasiquote))

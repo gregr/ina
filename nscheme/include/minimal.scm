@@ -183,7 +183,7 @@
 (define (parse-body env stx.body)
   (let ((stx* (syntax->list stx.body)))
     (define (^def env.d env) ($d:provenance stx.body (apply parse-begin-definition env.d env stx*)))
-    ($provenance/syntax ($body env ^def) stx.body)))
+    ($provenance/syntax stx.body ($body env ^def))))
 
 (define (parse-begin-definition env.d env . stx*)
   (apply $d:begin (map (lambda (stx) (parse-definition env.d env stx)) stx*)))
