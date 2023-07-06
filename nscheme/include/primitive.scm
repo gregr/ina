@@ -34,13 +34,14 @@
   ;  extend/truncate between different N of sN,uN
   ;  vectorized ops
   ;  )
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;; Platform-independent capabilities ;;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (define env.primitive.privileged
     (primitive*->env
       '(
-        call-with-escape-continuation call-in-empty-context
-        thread-register set-thread-register!
         panic set-panic-handler!
-        yield set-yield-handler! set-timer enable-interrupts disable-interrupts
         procedure-metadata
         record? record record-type-descriptor record-ref
         ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
@@ -55,16 +56,34 @@
         cons car cdr
         vector vector-length vector-ref
         make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-        bytevector bytevector-length
-        bytevector-u8-ref bytevector-u16-ref bytevector-u32-ref bytevector-u64-ref
+        bytevector bytevector-length bytevector-u8-ref
         make-mbytevector mbytevector->bytevector mbytevector-length
-        mbytevector-u8-ref mbytevector-u16-ref mbytevector-u32-ref mbytevector-u64-ref
-        mbytevector-u8-set! mbytevector-u16-set! mbytevector-u32-set! mbytevector-u64-set!
+        mbytevector-u8-ref mbytevector-u8-set!
         bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
         bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
         numerator denominator < + - * /
+        ;; TODO: these shouldn't be primitive.  We should be able to use the bitwise representation
+        ;; to compute the nearest exact rationals.
+        f32->rational rational->f32 f64->rational rational->f64
         ;;; NOTE: u32->f32 and u64->f64 must quiet any NaNs produced.
-        f32->u32 u32->f32 f64->u64 u64->f64
-        f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
+        f32->u32 u32->f32 f64->u64 u64->f64 f32->f64 f64->f32
         f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
-        f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/))))
+        f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/)))
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;; Platform-dependent capabilities ;;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (define env.primitive.control
+    (primitive*->env
+      '(
+        call-with-escape-continuation call-in-empty-context
+        thread-register set-thread-register!
+        yield set-yield-handler! set-timer enable-interrupts disable-interrupts)))
+  ;; TODO: since these are already platform-dependent, we should define these in terms of
+  ;; lower-level native memory primitives.
+  (define env.primitive.native-bytevector
+    (primitive*->env
+      '(
+        bytevector-u16-ref bytevector-u32-ref bytevector-u64-ref
+        mbytevector-u16-ref mbytevector-u32-ref mbytevector-u64-ref
+        mbytevector-u16-set! mbytevector-u32-set! mbytevector-u64-set!)))
+  )
