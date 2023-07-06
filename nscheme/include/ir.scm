@@ -40,9 +40,7 @@
 
 (define (E-provenance     E) (and (E:annotated? E) (E:annotated-provenance E)))
 (define (E-provenance-add E pv)
-  (E:annotated (let ((pv1 pv) (pv2 (E-provenance E)))
-                 (cond ((not pv1)     pv2)
-                       ((not pv2)     pv1)
-                       ((eq? pv1 pv2) pv1)
-                       (else          (cons pv1 pv2))))
-               (if (E:annotated? E) (E:annotated-E E) E)))
+  (if pv
+      (E:annotated (let ((pv2 (E-provenance E))) (if (eq? pv pv2) pv (cons pv pv2)))
+                   (if (E:annotated? E) (E:annotated-E E) E))
+      E))
