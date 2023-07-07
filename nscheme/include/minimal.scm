@@ -64,7 +64,7 @@
                        (parse-body env e*))
                       ((expression-auxiliary? '=> env e.data)
                        (unless (null? (cdr e*)) (error "=> is not followed by one procedure" c))
-                       (unless (null? clause*) (error "=> clause is not last" c))
+                       (unless (null? c*)       (error "=> clause is not last" c))
                        ($call (parse-expression env (car e*)) $x))
                       (else ($if (apply $or (map (lambda (d) ($= $x ($quote d)))
                                                  (syntax->list e.data)))
@@ -73,6 +73,22 @@
 
 (define parse-caseq (parse-case/$= $eq?))
 (define parse-casev (parse-case/$= $eqv?))
+
+(define ((parse-case1/$= $=) env e clause . clause*)
+  (apply (parse-case/$= $=) env e
+         (map (lambda (c)
+                (let ((x (syntax-unwrap c)))
+                  (unless (pair? x) (error "empty clause" c))
+                  (cons (let ((e.data (car x)))
+                          (if (or (expression-auxiliary? 'else env e.data)
+                                  (expression-auxiliary? '=>   env e.data))
+                              e.data
+                              (list e.data)))
+                        (cdr x))))
+              (cons clause clause*))))
+
+(define parse-case1q (parse-case1/$= $eq?))
+(define parse-case1v (parse-case1/$= $eqv?))
 
 (define (parse-assert env . stx*.test)
   (apply $begin (map (lambda (stx.test)
@@ -300,6 +316,8 @@
             (cons 'cond           (expression-operator-parser parse-cond         1 #f))
             (cons 'caseq          (expression-operator-parser parse-caseq        2 #f))
             (cons 'casev          (expression-operator-parser parse-casev        2 #f))
+            (cons 'case1q         (expression-operator-parser parse-case1q       2 #f))
+            (cons 'case1v         (expression-operator-parser parse-case1v       2 #f))
             (cons 'assert         (expression-operator-parser parse-assert       1 #f))
             (cons 'case-lambda    (expression-operator-parser parse-case-lambda  0 #f))
             (cons 'lambda         (expression-operator-parser parse-lambda       2 #f))

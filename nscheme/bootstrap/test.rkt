@@ -254,6 +254,46 @@
         (else       'else))
   ==> 8
 
+  ! caseq
+  (caseq 5
+    ((1 2 3) 'a)
+    ((4 5 6) 'b)
+    ((7 8 9) 'c)
+    (else    'd))
+  ==> b
+  (caseq 15
+    ((1 2 3) 'a)
+    ((4 5 6) 'b)
+    ((7 8 9) 'c)
+    (else    'd))
+  ==> d
+  (caseq 15
+    ((1 2 3) 'a)
+    ((4 5 6) 'b)
+    ((7 8 9) 'c)
+    (=> (lambda (x) (+ x 1))))
+  ==> 16
+
+  ! case1q
+  (case1q 5
+    (2    'a)
+    (5    'b)
+    (8    'c)
+    (else 'd))
+  ==> b
+  (case1q 15
+    (2    'a)
+    (5    'b)
+    (8    'c)
+    (else 'd))
+  ==> d
+  (case1q 15
+    (2 'a)
+    (5 'b)
+    (8 'c)
+    (=> (lambda (x) (+ x 1))))
+  ==> 16
+
   ! lambda
   ((lambda (x y) x) 5 6)                             ==> 5
   ((lambda (x y) y) 5 6)                             ==> 6
