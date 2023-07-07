@@ -26,8 +26,8 @@
 
 (include "../include/extended.scm")
 
-;; TODO: all remaining compiler definitions should be included here, replacing eval.rkt:
-(require "eval.rkt")
+;; TODO: all remaining compiler definitions should be included here, replacing eval-simple.scm:
+(include "../include/eval-simple.scm")
 
 (define env.base (env-compose.match (env-compose env.primitive env.minimal)))
 

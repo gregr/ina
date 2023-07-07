@@ -24,8 +24,8 @@
 (include "../include/minimal.scm")
 (include "../include/match.scm")
 
-;; TODO: all remaining compiler definitions should be included here, replacing eval.rkt:
-(require "eval.rkt")
+;; TODO: all remaining compiler definitions should be included here, replacing eval-simple.scm:
+(include "../include/eval-simple.scm")
 
 ;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
 ;; depend on the compiler instead of E-eval:

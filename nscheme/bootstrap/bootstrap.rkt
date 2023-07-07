@@ -1,6 +1,7 @@
 #lang racket/base
 (require "../platform/racket/nscheme.rkt"
          racket/file racket/include racket/pretty racket/runtime-path racket/splicing)
+;(require profile)
 
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an
 ;;; interactive system and its dependencies, targeting each platform.
@@ -25,6 +26,13 @@
 (include "../include/primitive.scm")
 (include "../include/minimal.scm")
 (include "../include/match.scm")
+
+;; TODO: all remaining compiler definitions should be included here, replacing eval-simple.scm:
+(include "../include/eval-simple.scm")
+
+;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
+;; depend on the compiler instead of E-eval:
+(include "../include/extended.scm")
 
 (define-runtime-path path.here ".")
 
@@ -57,8 +65,6 @@
                 "../include/primitive.scm"
                 "../include/minimal.scm"
                 "../include/match.scm"))))
-
-(require profile)
 
 (define env.test (env-compose.match (env-compose env.primitive.privileged
                                                  (env-compose env.primitive env.minimal))))
@@ -111,12 +117,6 @@
 (pretty-write (time (E-eval E.self-apply2)))
 ;==> ((3 . a) (4 . b) (5 . c) 1 2)
 
-;; TODO: all remaining compiler definitions should be included here, replacing eval.rkt:
-(require "eval.rkt")
-
-;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
-;; depend on the compiler instead of E-eval:
-(include "../include/extended.scm")
 
 ;; TODO: compile interact.scm and all of its dependencies (almost everything listed above).
 ;; - Other dependencies: read.scm write.scm tty.scm and/or other UI definitions, etc.
