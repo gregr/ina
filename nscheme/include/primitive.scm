@@ -61,7 +61,7 @@
         mbytevector-u8-ref mbytevector-u8-set!
         bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
         bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
-        numerator denominator < + - * /
+        numerator denominator = <= >= < > + - * /
         ;; TODO: these shouldn't be primitive.  We should be able to use the bitwise representation
         ;; to compute the nearest exact rationals.
         f32->rational rational->f32 f64->rational rational->f64

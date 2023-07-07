@@ -33,7 +33,7 @@
   mbytevector-u8-set! mbytevector-u16-set! mbytevector-u32-set! mbytevector-u64-set!
   bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
   bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
-  numerator denominator < + - * /
+  numerator denominator = <= >= < > + - * /
   f32->u32 u32->f32 f64->u64 u64->f64
   f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
   f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
@@ -383,7 +383,7 @@
   mbytevector-u8-set! mbytevector-u16-set! mbytevector-u32-set! mbytevector-u64-set!
   bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
   bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
-  numerator denominator < + - * /
+  numerator denominator = <= >= < > + - * /
   f32->u32 u32->f32 f64->u64 u64->f64
   f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
   f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
