@@ -2,9 +2,6 @@
 (splicing-local
   ((define cenv.empty '())
    (define renv.empty '())
-   (define (box        x) (mvector x))
-   (define (unbox      b) (mvector-ref  b 0))
-   (define (set-box! b x) (mvector-set! b 0 x))
    (define (cenv-ref cenv.0 addr)
      (let loop ((j 0) (cenv.1 cenv.0))
        (when (null? cenv.1) (error "unbound or out-of-phase reference" addr))

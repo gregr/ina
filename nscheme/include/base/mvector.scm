@@ -26,3 +26,7 @@
       (error "invalid source range" 'length (length src) 'start start.src 'end end.src))
     (mvector-transform-range! mv start (+ start (- end.src start.src))
                               (lambda (i) (ref src (+ start.src (- i start)))))))
+
+(define (box        x) (mvector x))
+(define (unbox      b) (mvector-ref  b 0))
+(define (set-box! b x) (mvector-set! b 0 x))
