@@ -37,86 +37,139 @@
 
 (define-runtime-path path.here ".")
 
-(define stx*
-  (apply append
-         (map (lambda (fname)
-                (call-with-input-file
-                  (build-path path.here fname)
-                  (lambda (in)
-                    (let loop ()
-                      (let ((x (read in)))
-                        (cond ((eof-object? x) '())
-                              (else            (cons x (loop)))))))))
-              '("../include/base/pair.scm"
-                "../include/base/list.scm"
-                "../include/base/number.scm"
-                "../include/boot/record.scm"
-                "../include/boot/error.scm"
-                "../include/base/misc.scm"
-                "../include/base/compare.scm"
-                "../include/base/mvector.scm"
-                "../include/base/vector.scm"
-                "../include/base/mbytevector.scm"
-                "../include/base/bytevector.scm"
-                "../include/base/string.scm"
-                "../include/syntax.scm"
-                "../include/ir.scm"
-                "../include/stage-simple.scm"
-                "../include/parse.scm"
-                "../include/primitive.scm"
-                "../include/minimal.scm"
-                "../include/match.scm"))))
+(define (file-name->stx* fname)
+  (call-with-input-file
+    (build-path path.here fname)
+    (lambda (in)
+      (let loop ()
+        (let ((x (read in)))
+          (cond ((eof-object? x) '())
+                (else            (cons x (loop)))))))))
 
-(define env.test (env-compose.match (env-compose env.primitive.privileged
-                                                 (env-compose env.primitive env.minimal))))
-(pretty-write (env-describe env.test))
-(define stx*.test (append stx*
-                          (list
-                            ;'(+ 1 2)
-                            ;'(foldr + 0 '(1 2 3 4 5))
-                            ;'(foldr cons '(1 2) '(3 4 5))
-                            ;'(foldl cons '(1 2) '(3 4 5))
-                            ;'(foldl (lambda (x y acc) (cons (cons x y) acc))
-                            ;        '(1 2) '(3 4 5) '(a b c))
-                            '(foldr (lambda (x y acc) (cons (cons x y) acc))
-                                    '(1 2) '(3 4 5) '(a b c))
-                            )))
+(define (file-name*->stx* fname*) (apply append (map file-name->stx* fname*)))
+
+(define def*.include/boot
+  (file-name*->stx*
+    '("../include/boot/error.scm"
+      "../include/boot/record.scm"
+      "../include/boot/string.scm")))
+(define def*.include/base
+  (file-name*->stx*
+    '("../include/base/pair.scm"
+      "../include/base/list.scm"
+      "../include/base/number.scm"
+      "../include/base/misc.scm"
+      "../include/base/compare.scm"
+      "../include/base/mvector.scm"
+      "../include/base/vector.scm"
+      "../include/base/mbytevector.scm"
+      "../include/base/bytevector.scm"
+      "../include/base/string.scm")))
+(define def*.include
+  (file-name*->stx*
+    '("../include/syntax.scm"
+      "../include/ir.scm"
+      "../include/stage-simple.scm"
+      "../include/parse.scm"
+      "../include/primitive.scm"
+      "../include/minimal.scm"
+      "../include/match.scm")))
+(define def*.eval     (file-name->stx* "../include/eval-simple.scm"))
+(define def*.extended (file-name->stx* "../include/extended.scm"))
+
+(define env.include/boot
+  (env-compose* (env:parse-begin-definition
+                  (env-compose* env.primitive.privileged env.primitive env.minimal)
+                  def*.include/boot)
+                env.primitive
+                env.minimal))
+(define env.include/base
+  (env-compose (env:parse-begin-definition env.include/boot def*.include/base)
+               env.include/boot))
+(define env.include
+  (env-compose (env:parse-begin-definition env.include/base def*.include) env.include/base))
+(define stx*.test (list '(list
+                           (+ 1 2)
+                           (foldr + 0 '(1 2 3 4 5))
+                           (foldr cons '(1 2) '(3 4 5))
+                           (foldl cons '(1 2) '(3 4 5))
+                           (foldl (lambda (x y acc) (cons (cons x y) acc))
+                                  '(1 2) '(3 4 5) '(a b c))
+                           (foldr (lambda (x y acc) (cons (cons x y) acc))
+                                  '(1 2) '(3 4 5) '(a b c)))))
+
+(pretty-write (env-describe env.include))
+
 (displayln "parsing test:")
-;; ~47ms
-(define E.test (time (parse-body env.test stx*.test)))
-;(define E.test (profile (parse-body env.test stx*.test)))
+;; ~0ms
+(define E.test (time (parse-body env.include stx*.test)))
+;(define E.test (profile (parse-body env.include stx*.test)))
 ;(pretty-write E.test)
 ;(pretty-write (E-pretty E.test))
 (displayln "evaluating test:")
-;; ~4ms
+;; ~0ms
 (pretty-write (time (E-eval E.test)))
-;==> ((3 . a) (4 . b) (5 . c) 1 2)
+;==>
+;(3
+; 15
+; (3 4 5 1 2)
+; (5 4 3 1 2)
+; ((5 . c) (4 . b) (3 . a) 1 2)
+; ((3 . a) (4 . b) (5 . c) 1 2))
+
+(define env.eval
+  (env:parse-begin-definition
+    (env-compose* env.primitive.native-bytevector env.primitive.control
+                  env.primitive.privileged env.include)
+    def*.eval))
+(define env.include.extended
+  (env-compose* (env:parse-begin-definition
+                  (env-compose* env.eval env.include)
+                  def*.extended)
+                env.include))
 
 (define stx*.self-apply1
-  (append stx*
-          (list
-            `(let ((env.test
-                     (env-compose.match (env-compose env.primitive.privileged
-                                                     (env-compose env.primitive env.minimal))))
-                   (stx*.test (append ',stx*
-                                      (list
-                                        '(foldr (lambda (x y acc) (cons (cons x y) acc))
-                                                '(1 2) '(3 4 5) '(a b c))))))
-               (parse-body env.test stx*.test)))))
+  `((define env.include/boot
+      (env-compose* (env:parse-begin-definition
+                      (env-compose* env.primitive.privileged env.primitive env.minimal)
+                      ',def*.include/boot)
+                    env.primitive
+                    env.minimal))
+    (define env.include/base
+      (env-compose (env:parse-begin-definition env.include/boot ',def*.include/base)
+                   env.include/boot))
+    (define env.include
+      (env-compose (env:parse-begin-definition env.include/base ',def*.include) env.include/base))
+    (define stx*.test (list '(list
+                               (+ 1 2)
+                               (foldr + 0 '(1 2 3 4 5))
+                               (foldr cons '(1 2) '(3 4 5))
+                               (foldl cons '(1 2) '(3 4 5))
+                               (foldl (lambda (x y acc) (cons (cons x y) acc))
+                                      '(1 2) '(3 4 5) '(a b c))
+                               (foldr (lambda (x y acc) (cons (cons x y) acc))
+                                      '(1 2) '(3 4 5) '(a b c)))))
+    (parse-body env.include stx*.test)))
 (displayln "parsing self-apply1:")
-;; ~49ms
-(define E.self-apply1 (time (parse-body env.test stx*.self-apply1)))
-;(define E.self-apply1 (profile (parse-body env.test stx*.self-apply1)))
+;; ~1ms
+(define E.self-apply1 (time (parse-body env.include.extended stx*.self-apply1)))
+;(define E.self-apply1 (profile (parse-body env.include.extended stx*.self-apply1)))
 ;(pretty-write E.self-apply1)
 ;(pretty-write (E-pretty E.self-apply1))
 (displayln "evaluating self-apply1 to parse self-apply2:")
-;; ~7573ms
+;; ~4550ms
 (define E.self-apply2 (time (E-eval E.self-apply1)))
 ;(define E.self-apply2 (profile (E-eval E.self-apply1)))
 (displayln "evaluating self-apply2:")
-;; ~4ms
+;; ~3ms
 (pretty-write (time (E-eval E.self-apply2)))
-;==> ((3 . a) (4 . b) (5 . c) 1 2)
+;==>
+;(3
+; 15
+; (3 4 5 1 2)
+; (5 4 3 1 2)
+; ((5 . c) (4 . b) (3 . a) 1 2)
+; ((3 . a) (4 . b) (5 . c) 1 2))
 
 
 ;; TODO: compile interact.scm and all of its dependencies (almost everything listed above).
