@@ -343,7 +343,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (parse-definition env.d env stx)
-  (define (default) ($d:expression (lambda () (parse-expression env stx))))
+  (define (default) (parse-definition-expression env.d env stx))
   (let ((x (syntax-unwrap stx)))
     (cond ((identifier? stx) (let ((op (env-ref^ env stx vocab.definition)))
                                (if (procedure? op)
@@ -356,6 +356,9 @@
                                    (op env.d env stx)
                                    (default))))
           (else              (default)))))
+
+(define (parse-definition-expression env.d env stx)
+  ($d:expression (lambda () (parse-expression env stx))))
 
 (define ((definition-operator-parser parser argc.min argc.max) env.d env stx)
   (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))

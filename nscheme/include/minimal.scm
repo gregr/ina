@@ -331,6 +331,9 @@
         (b*.qq-and-expr (list (cons 'quasiquote (expression-operator-parser parse-quasiquote 1 1))))
         (b*.def-and-expr
           (list
+            (list 'expression
+                  (definition-operator-parser parse-definition-expression 1 1)
+                  (expression-operator-parser parse-expression            1 1))
             (list 'begin
                   (definition-operator-parser parse-begin-definition 0 #f)
                   (expression-operator-parser parse-begin-expression 1 #f))
