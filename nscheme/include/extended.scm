@@ -18,7 +18,7 @@
 ;(define vocab.formula 'formula)
 ;(define vocab.term    'term)
 
-(define (env:parse-begin-definition env stx*.def)
+(define (eval-definition* env stx*.def)
   (let ((env.d (make-env)))
     ((defstate->E/eval E-eval)
      (D->defstate (parse-begin-definition* env.d (env-compose env env.d) stx*.def)))

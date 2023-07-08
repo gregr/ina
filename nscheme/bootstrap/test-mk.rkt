@@ -146,7 +146,7 @@
     (define (reify t st) (walk* t (state-sub st)))))
 
 (define $mk
-  (let ((env.microkanren (env:parse-begin-definition env.base def*.microkanren)))
+  (let ((env.microkanren (eval-definition* env.base def*.microkanren)))
     (lambda (name) (parse-expression env.microkanren name))))
 
 (define $==          ($mk '==))

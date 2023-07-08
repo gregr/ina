@@ -78,16 +78,15 @@
 (define def*.extended (file-name->stx* "../include/extended.scm"))
 
 (define env.include/boot
-  (env-compose* (env:parse-begin-definition
-                  (env-compose* env.primitive.privileged env.primitive env.minimal)
-                  def*.include/boot)
+  (env-compose* (eval-definition* (env-compose* env.primitive.privileged env.primitive env.minimal)
+                                  def*.include/boot)
                 env.primitive
                 env.minimal))
 (define env.include/base
-  (env-compose (env:parse-begin-definition env.include/boot def*.include/base)
+  (env-compose (eval-definition* env.include/boot def*.include/base)
                env.include/boot))
 (define env.include
-  (env-compose (env:parse-begin-definition env.include/base def*.include) env.include/base))
+  (env-compose (eval-definition* env.include/base def*.include) env.include/base))
 (define stx*.test (list '(list
                            (+ 1 2)
                            (foldr + 0 '(1 2 3 4 5))
@@ -118,28 +117,26 @@
 ; ((3 . a) (4 . b) (5 . c) 1 2))
 
 (define env.eval
-  (env:parse-begin-definition
-    (env-compose* env.primitive.native-bytevector env.primitive.control
-                  env.primitive.privileged env.include)
-    def*.eval))
+  (eval-definition* (env-compose* env.primitive.native-bytevector env.primitive.control
+                                  env.primitive.privileged env.include)
+                    def*.eval))
 (define env.include.extended
-  (env-compose* (env:parse-begin-definition
-                  (env-compose* env.eval env.include)
-                  def*.extended)
+  (env-compose* (eval-definition* (env-compose* env.eval env.include)
+                                  def*.extended)
                 env.include))
 
 (define stx*.self-apply1
   `((define env.include/boot
-      (env-compose* (env:parse-begin-definition
+      (env-compose* (eval-definition*
                       (env-compose* env.primitive.privileged env.primitive env.minimal)
                       ',def*.include/boot)
                     env.primitive
                     env.minimal))
     (define env.include/base
-      (env-compose (env:parse-begin-definition env.include/boot ',def*.include/base)
+      (env-compose (eval-definition* env.include/boot ',def*.include/base)
                    env.include/boot))
     (define env.include
-      (env-compose (env:parse-begin-definition env.include/base ',def*.include) env.include/base))
+      (env-compose (eval-definition* env.include/base ',def*.include) env.include/base))
     (define stx*.test (list '(list
                                (+ 1 2)
                                (foldr + 0 '(1 2 3 4 5))
