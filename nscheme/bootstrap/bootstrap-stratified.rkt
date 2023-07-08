@@ -6,8 +6,8 @@
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an
 ;;; interactive system and its dependencies, targeting each platform.
 
-;;; This variant of bootstrapping is unstratified, mixing values computed at different phases.  That
-;;; means compilation must support cross-stage persistence.
+;;; This variant of bootstrapping stratifies evaluation so that values computed at different phases
+;;; do not mix.  That means compilation does not need to support cross-stage persistence.
 
 (include "../include/boot/error.scm")
 (include "../include/boot/record.scm")
@@ -80,16 +80,22 @@
 (define def*.eval     (file-name->stx* "../include/eval-simple.scm"))
 (define def*.extended (file-name->stx* "../include/extended.scm"))
 
+(define &D.program (box ($d:begin)))
+(define (link-definition* env def*)
+  (let ((env.d (make-env)))
+    (set-box! &D.program ($d:begin (unbox &D.program)
+                                   (parse-begin-definition* env.d (env-compose env env.d) def*)))
+    env.d))
 (define env.include/boot
-  (env-compose* (eval-definition* (env-compose* env.primitive.privileged env.primitive env.minimal)
+  (env-compose* (link-definition* (env-compose* env.primitive.privileged env.primitive env.minimal)
                                   def*.include/boot)
                 env.primitive
                 env.minimal))
 (define env.include/base
-  (env-compose (eval-definition* env.include/boot def*.include/base)
+  (env-compose (link-definition* env.include/boot def*.include/base)
                env.include/boot))
 (define env.include
-  (env-compose (eval-definition* env.include/base def*.include) env.include/base))
+  (env-compose (link-definition* env.include/base def*.include) env.include/base))
 (define stx*.test (list '(list
                            (+ 1 2)
                            (foldr + 0 '(1 2 3 4 5))
@@ -101,12 +107,10 @@
                                   '(1 2) '(3 4 5) '(a b c)))))
 
 ;(pretty-write (env-describe env.include))
+(void (link-definition* env.include stx*.test))
 (displayln "parsing test:")
 ;; ~0ms
-(define E.test (time (parse-body env.include stx*.test)))
-;(define E.test (profile (parse-body env.include stx*.test)))
-;(pretty-write E.test)
-;(pretty-write (E-pretty E.test))
+(define E.test (time (D->E (unbox &D.program))))
 (displayln "evaluating test:")
 ;; ~0ms
 (pretty-write (time (E-eval E.test)))
@@ -119,7 +123,17 @@
 ; ((3 . a) (4 . b) (5 . c) 1 2))
 
 (splicing-local
-  ((define env.eval
+  ((define env.include/boot
+     (env-compose* (eval-definition* (env-compose* env.primitive.privileged env.primitive env.minimal)
+                                     def*.include/boot)
+                   env.primitive
+                   env.minimal))
+   (define env.include/base
+     (env-compose (eval-definition* env.include/boot def*.include/base)
+                  env.include/boot))
+   (define env.include
+     (env-compose (eval-definition* env.include/base def*.include) env.include/base))
+   (define env.eval
      (eval-definition* (env-compose* env.primitive.native-bytevector env.primitive.control
                                      env.primitive.privileged env.include)
                        def*.eval)))
@@ -135,16 +149,22 @@
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; Begin copy of earlier definitions ;;
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    (define &D.program (box ($d:begin)))
+    (define (link-definition* env def*)
+      (let ((env.d (make-env)))
+        (set-box! &D.program ($d:begin (unbox &D.program)
+                                       (parse-begin-definition* env.d (env-compose env env.d) def*)))
+        env.d))
     (define env.include/boot
-      (env-compose* (eval-definition* (env-compose* env.primitive.privileged env.primitive env.minimal)
+      (env-compose* (link-definition* (env-compose* env.primitive.privileged env.primitive env.minimal)
                                       def*.include/boot)
                     env.primitive
                     env.minimal))
     (define env.include/base
-      (env-compose (eval-definition* env.include/boot def*.include/base)
+      (env-compose (link-definition* env.include/boot def*.include/base)
                    env.include/boot))
     (define env.include
-      (env-compose (eval-definition* env.include/base def*.include) env.include/base))
+      (env-compose (link-definition* env.include/base def*.include) env.include/base))
     (define stx*.test (list '(list
                                (+ 1 2)
                                (foldr + 0 '(1 2 3 4 5))
@@ -154,23 +174,23 @@
                                       '(1 2) '(3 4 5) '(a b c))
                                (foldr (lambda (x y acc) (cons (cons x y) acc))
                                       '(1 2) '(3 4 5) '(a b c)))))
+    (void (link-definition* env.include stx*.test))
     ;;;;;;;;;;;;;;
     ;; End copy ;;
     ;;;;;;;;;;;;;;
-    (parse-body env.include stx*.test)))
+    (D->E (unbox &D.program))))
 (displayln "parsing self-apply1:")
 ;; ~1ms
 (define E.self-apply1 (time (parse-body env.include.extended stx*.self-apply1)))
 ;(define E.self-apply1 (profile (parse-body env.include.extended stx*.self-apply1)))
-;(pretty-write E.self-apply1)
 ;(pretty-write (E-pretty E.self-apply1))
 (displayln "evaluating self-apply1 to parse self-apply2:")
-;; ~4550ms
+;; ~3200ms
 (define E.self-apply2 (time (E-eval E.self-apply1)))
 ;(define E.self-apply2 (profile (E-eval E.self-apply1)))
 ;(pretty-write (E-pretty E.self-apply2))
 (displayln "evaluating self-apply2:")
-;; ~3ms
+;; ~14ms
 (pretty-write (time (E-eval E.self-apply2)))
 ;==>
 ;(3

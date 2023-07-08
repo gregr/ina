@@ -279,6 +279,7 @@
           ((D-tagged? D 'D:expression) (defstate-define dst #f #f (D:expression-^E D)))
           ((D-tagged? D 'D:annotated)  (loop (D:annotated-D D) dst))
           (else                        (error "invalid definition" D)))))
+(define (D->E D) (defstate->E (D->defstate D)))
 
 (define ($d:provenance       pv D) (D:annotated pv D))
 (define ($d:begin            . D*) (D:begin D*))
