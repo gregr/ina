@@ -198,11 +198,12 @@
 
 (define (parse-body env stx.body)
   (let ((stx* (syntax->list stx.body)))
-    (define (^def env.d env) ($d:provenance stx.body (apply parse-begin-definition env.d env stx*)))
+    (define (^def env.d env) ($d:provenance stx.body (parse-begin-definition* env.d env stx*)))
     ($provenance/syntax stx.body ($body env ^def))))
 
-(define (parse-begin-definition env.d env . stx*)
+(define (parse-begin-definition* env.d env stx*)
   (apply $d:begin (map (lambda (stx) (parse-definition env.d env stx)) stx*)))
+(define (parse-begin-definition env.d env . stx*) (parse-begin-definition* env.d env stx*))
 
 (define (parse-introduce env.d env . stx*) (env-introduce*! env.d stx*) ($d:begin))
 
@@ -253,8 +254,7 @@
 
 (define ($splicing-local env.d env stx.def* ^body)
   (let ((def* (syntax->list stx.def*)))
-    ($splicing-rec env.d env (lambda (env.d env) (apply parse-begin-definition env.d env def*))
-                   ^body)))
+    ($splicing-rec env.d env (lambda (env.d env) (parse-begin-definition* env.d env def*)) ^body)))
 
 (splicing-local
   ((define ($splicing $splicing-etc parse-def env.d env stx.bpair* ^body)
@@ -282,8 +282,7 @@
 
 (splicing-local
   ((define (parse-splicing $splicing env.d env stx.def* . stx*)
-     ($splicing env.d env stx.def* (lambda (env.d env)
-                                     (apply parse-begin-definition env.d env stx*)))))
+     ($splicing env.d env stx.def* (lambda (env.d env) (parse-begin-definition* env.d env stx*)))))
   (define (parse-splicing-local          . a*) (apply parse-splicing $splicing-local          a*))
   (define (parse-splicing-let            . a*) (apply parse-splicing $splicing-let            a*))
   (define (parse-splicing-let-values     . a*) (apply parse-splicing $splicing-let-values     a*))
