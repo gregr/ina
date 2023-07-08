@@ -6,11 +6,12 @@
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an
 ;;; interactive system and its dependencies, targeting each platform.
 
+(include "../include/boot/error.scm")
+(include "../include/boot/record.scm")
+(include "../include/boot/string.scm")
 (include "../include/base/pair.scm")
 (include "../include/base/list.scm")
 (include "../include/base/number.scm")
-(include "../include/boot/record.scm")
-(include "../include/boot/error.scm")
 (include "../include/base/misc.scm")
 (include "../include/base/compare.scm")
 (include "../include/base/mvector.scm")

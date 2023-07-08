@@ -142,6 +142,12 @@
       ((freeze!)  (values))
       (else       (error "invalid environment operation" method)))))
 
+(define (env-compose* env . env*)
+  (let loop ((env env) (env* env*))
+    (if (null? env*)
+        env
+        (env-compose env (loop (car env*) (cdr env*))))))
+
 (define (env-mark env m)
   (define (unmark id) (and (identifier? id) (syntax-remove-mark? id m)))
   (lambda (method)

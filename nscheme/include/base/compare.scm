@@ -15,7 +15,7 @@
                     (loop (+ i 1))))))))
 
 ;; TODO: variadic?
-(define (string=? a b) (bytevector=? (string->bytevector a) (string->bytevector b)))
+(define (string=? a b) (bytevector=? (string->utf8 a) (string->utf8 b)))
 
 ;; TODO: string<? string<=? string-compare
 

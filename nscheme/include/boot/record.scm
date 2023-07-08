@@ -4,8 +4,8 @@
   (let ((ancestor* (let loop ((parent parent) (a* '()))
                      (cond (parent (loop (rtd-parent parent) (cons parent a*)))
                            (else   a*)))))
-    (apply vector (cons* (+ (if parent (rtd-record-length parent) 0) (vector-length field*))
-                         name final? field* ancestor*))))
+    (apply vector (+ (if parent (rtd-record-length parent) 0) (vector-length field*))
+           name final? field* ancestor*)))
 
 (define rtd-base-length 4)
 (define (rtd-record-length  rtd) (vector-ref    rtd 0))
