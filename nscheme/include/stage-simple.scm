@@ -7,10 +7,10 @@
 (define ($call proc . args) (E:call  proc args))
 (define ($if         c t f) (E:if    c t f))
 
-(define ($case-lambda . cc*)
-  (let* ((addr*~* (map (lambda (cc) (improper-list-map identifier->fresh-address (car cc))) cc*))
-         (body*   (map (lambda (addr*~ cc) (apply (cdr cc) (map $ref (improper-list->list addr*~))))
-                       addr*~* cc*)))
+(define ($case-lambda param* ^body*)
+  (let* ((addr*~* (map (lambda (param) (improper-list-map identifier->fresh-address param)) param*))
+         (body*   (map (lambda (addr*~ ^body) (apply ^body (map $ref (improper-list->list addr*~))))
+                       addr*~* ^body*)))
     (E:case-lambda addr*~* body*)))
 
 (define ($letrec param* ^rhs*&body)
