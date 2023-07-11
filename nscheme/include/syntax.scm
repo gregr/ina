@@ -135,12 +135,12 @@
 
 (define (env-compose env env.first)
   (lambda (method)
-    (caseq method
-      ((describe) (list 'compose (env.first 'describe) (env 'describe)))
-      ((ref)      (lambda (fail id)   ((env.first 'ref)  (lambda () ((env 'ref)  fail id))   id)))
-      ((set!)     (lambda (fail id x) ((env.first 'set!) (lambda () ((env 'set!) fail id x)) id x)))
-      ((freeze!)  (values))
-      (else       (error "invalid environment operation" method)))))
+    (case1 method
+      (describe (list 'compose (env.first 'describe) (env 'describe)))
+      (ref      (lambda (fail id)   ((env.first 'ref)  (lambda () ((env 'ref)  fail id))   id)))
+      (set!     (lambda (fail id x) ((env.first 'set!) (lambda () ((env 'set!) fail id x)) id x)))
+      (freeze!  (values))
+      (else     (error "invalid environment operation" method)))))
 
 (define (env-compose* env . env*)
   (let loop ((env env) (env* env*))
@@ -151,12 +151,12 @@
 (define (env-mark env m)
   (define (unmark id) (and (identifier? id) (syntax-remove-mark? id m)))
   (lambda (method)
-    (caseq method
-      ((describe) (list 'mark m (env 'describe)))
-      ((ref)      (lambda (fail id)   (let ((i (unmark id))) (if i ((env 'ref)  fail i)   (fail)))))
-      ((set!)     (lambda (fail id x) (let ((i (unmark id))) (if i ((env 'set!) fail i x) (fail)))))
-      ((freeze!)  (values))
-      (else       (error "invalid environment operation" method)))))
+    (case1 method
+      (describe (list 'mark m (env 'describe)))
+      (ref      (lambda (fail id)   (let ((i (unmark id))) (if i ((env 'ref)  fail i)   (fail)))))
+      (set!     (lambda (fail id x) (let ((i (unmark id))) (if i ((env 'set!) fail i x) (fail)))))
+      (freeze!  (values))
+      (else     (error "invalid environment operation" method)))))
 
 (splicing-local
   ;((splicing-local
@@ -227,17 +227,17 @@
       (define (frozen?) (mvector-ref mv.frozen? 0))
       (define (^id=>x) (mvector-ref &id=>x 0))
       (lambda (method)
-        (caseq method
-          ((describe) (let ((frame (list->vector (id-dict-key* (^id=>x)))))
-                        (if (frozen?) frame (cons 'incomplete frame))))
-          ((ref)      (lambda (fail id) (or (id-dict-ref (^id=>x) id) (fail))))
-          ((set!)     (lambda (fail id x)
-                        ;; We do not want to invoke the failure continuation since it could lead to
-                        ;; unintended set! behavior in composed environments.
-                        (when (frozen?) (error "invalid immutable environment operation" method id))
-                        (mvector-set! &id=>x 0 (id-dict-set (^id=>x) id x))))
-          ((freeze!)  (mvector-set! mv.frozen? 0 #t))
-          (else       (error "invalid environment operation" method)))))))
+        (case1 method
+          (describe (let ((frame (list->vector (id-dict-key* (^id=>x)))))
+                      (if (frozen?) frame (cons 'incomplete frame))))
+          (ref      (lambda (fail id) (or (id-dict-ref (^id=>x) id) (fail))))
+          (set!     (lambda (fail id x)
+                      ;; We do not want to invoke the failure continuation since it could lead to
+                      ;; unintended set! behavior in composed environments.
+                      (when (frozen?) (error "invalid immutable environment operation" method id))
+                      (mvector-set! &id=>x 0 (id-dict-set (^id=>x) id x))))
+          (freeze!  (mvector-set! mv.frozen? 0 #t))
+          (else     (error "invalid environment operation" method)))))))
 
 (define (env-describe env)      (env 'describe))
 (define (env-freeze!  env)      (env 'freeze!))

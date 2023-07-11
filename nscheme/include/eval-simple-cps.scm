@@ -101,7 +101,7 @@
          ;; - panic, but we'll ignore this for now
          ;; - the special control primitives, which we'll ignore for now
          ((E:prim? E)
-          (let ((p (caseq (E:prim-name E)
+          (let ((p (case (E:prim-name E)
                      ((call-with-escape-continuation) call-with-escape-continuation/k)
                      ((call-in-empty-context) call-in-empty-context/k)
                      ((thread-register) thread-register/k)

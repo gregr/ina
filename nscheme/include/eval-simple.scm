@@ -82,7 +82,7 @@
                                (for-each (lambda (loc arg) (set-box! loc (arg renv))) loc* arg*))
                              (body (renv-extend renv (map unbox loc*)))))))
          ((E:prim? E)
-          (let ((p (caseq (E:prim-name E)
+          (let ((p (case (E:prim-name E)
                      ((call-with-escape-continuation) call-with-escape-continuation)
                      ((call-in-empty-context) call-in-empty-context)
                      ((thread-register) thread-register)

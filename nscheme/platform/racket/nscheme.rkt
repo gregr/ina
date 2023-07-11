@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  caseq casev assert
+  case case1 assert
   ;; privileged primitives
   call-with-escape-continuation call-in-empty-context
   thread-register set-thread-register!
@@ -393,17 +393,23 @@
 ;;; Syntax extensions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-syntax case-etc
+(define-syntax case
   (syntax-rules (else =>)
-    ((_ mem x)                              (error "no matching clause" x))
-    ((_ mem x (else rhs ...))               (let () rhs ...))
-    ((_ mem x (=> proc))                    (proc x))
-    ((_ mem x ((d ...) rhs ...) clause ...) (if (mem x '(d ...))
+    ((_ x)                              (values))
+    ((_ x (else rhs ...))               (let () rhs ...))
+    ((_ x (=> proc))                    (proc x))
+    ((_ x ((d ...) rhs ...) clause ...) (if (memv x '(d ...))
                                                 (let () rhs ...)
-                                                (case-etc mem x clause ...)))))
+                                                (case x clause ...)))))
 
-(define-syntax-rule (caseq e clause ...) (let ((x e)) (case-etc memq x clause ...)))
-(define-syntax-rule (casev e clause ...) (let ((x e)) (case-etc memv x clause ...)))
+(define-syntax case1
+  (syntax-rules (else =>)
+    ((_ x)                        (values))
+    ((_ x (else rhs ...))         (let () rhs ...))
+    ((_ x (=> proc))              (proc x))
+    ((_ x (d rhs ...) clause ...) (if (eqv? x 'd)
+                                      (let () rhs ...)
+                                      (case1 x clause ...)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Snapshot saving and loading ;;;
