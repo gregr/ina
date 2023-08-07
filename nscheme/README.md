@@ -699,6 +699,92 @@ Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
   - symbol
     - the bytevector pointed to is both a valid string, and is the backing data for a symbol
 
+## Possible calling conventions
+
+Control-transfer conventions are more general than just calling conventions.  The same kind of code
+object and control-transfer is used for procedures, return points, and first-class control contexts.
+
+For instance, an illustration of symmetry between calling and returning:
+- `(call-with-values values-thunk callee)` would place the `callee` procedure's code object on the
+  call stack as the return point before calling `values-thunk`.  When `values-thunk` returns
+  normally, the behavior is exactly like calling `callee` with the return values as arguments.
+
+code object layout:
+```
+             tagged-address points here
+                       ||
+                       \/
+[other-metadata][header][first instruction][remaining instructions]
+                       /\                 /\
+                       ||                 ||
+          call with 1 arg                 call with any number of args
+          (no need to set argc register   (must set argc register before call)
+           before call)
+```
+
+- General convention for unknown callers (and returners) and callees (and returnees):
+  - The motivation of this convention is to make the common case for returns more efficient, and to
+    simplify the implementation of `call-with-values`.  Single-value returns are more common than
+    multi-value returns.  By having a dedicated instruction offset to handle the single-value case,
+    the caller (the returner) may omit setting the argc register, and the callee (the returnee) may
+    specialize its handling of that case.
+  - Pass the first k arguments (or return values) in registers, and the rest on the call stack.
+  - When k is not equal to 1, the caller must also set the argc register to communicate the number
+    of arguments to the callee.
+  - When k is not equal to 1, we must jump to the second instruction in the code object.  The code
+    can dispatch based on the argc register in whatever way it sees fit.
+  - When k is equal to 1, we may instead, but are not required to, jump to the very first
+    instruction in the code object.  This instruction will dispatch in whatever way is appropriate
+    to handle a single argument.  A simple implementation possibility would be to itself set argc to
+    1, and automatically fall into the second instruction that handles the general case.
+  - Because we may still jump to the second instruction when k is equal to 1, it must be capable of
+    handling that case.
+- When more information is known about the caller or callee, more efficient conventions could be
+  chosen on a case-by-case basis.
+  - When a callee may appear unknown in some contexts, its instructions must still adhere to the
+    general convention.  However, when it is called in a context where it is known, the caller
+    may use its knowledge of the callee to jump directly to an unconventional instruction that
+    handles the caller's case.
+    - For instance, when calling with k arguments, if the caller knows which instruction the callee
+      dispatches to for handling k arguments, the caller can jump there directly.
+  - When a callee is always known when called, its instructions do not need to adhere to the general
+    convention.
+
+- Unknown calls, returns, and control-context transfers:
+  - When passing 1 argument (or 1 return value), place that argument in the
+
+
+## First-class control contexts
+
+First-class control contexts behave like full, symmetric coroutines.  They should be as expressive
+as one-shot delimited continuations, and may be used to implement exception handling, threads, and
+generators.  They seem to be simpler to use, and may be implementable with less call-stack copying
+than first-class continuations.
+
+`(make-control-context proc)` creates a new calling context whose control-flow is independent of
+any other.  It also creates and returns a control procedure that, when called, transfers control
+from the current context the created one.  The first time this procedure is called, it passes its
+arguments to `proc` on a new call stack.
+
+`(current-control-context)` returns the control procedure corresponding to the currently-active
+context.
+
+Whenever a control procedure is called, the caller's own control procedure is immediately updated
+such that calling it will to return to the point of this call.  That is, transferring control back
+to the caller at some later time corresponds to the caller returning from its original call.  The
+callee's context then becomes the active one.
+
+When the callee becomes active after having become inactive due to calling a control procedure, then
+it will behave like it is returning from that earlier call.  The arguments that were just passed to
+the callee become the return values of that earlier call.
+
+If the callee is becoming active for the first time, the arguments that were just passed to it
+become the arguments of the `proc` in the `(make-control-context proc)` that created the callee.
+
+It is safe for a context to transfer control directly to itself.  In that case, the call arguments
+immediately become the return values, as if `values` had been called instead.
+
+
 ## Control operators
 
 - No first-class control operator will copy any part of the current continuation/stack
