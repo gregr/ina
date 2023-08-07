@@ -83,6 +83,8 @@
                              (body (renv-extend renv (map unbox loc*)))))))
          ((E:prim? E)
           (let ((p (case (E:prim-name E)
+                     ((current-control-context) current-control-context)
+                     ((make-control-context) make-control-context)
                      ((call-with-escape-continuation) call-with-escape-continuation)
                      ((call-in-empty-context) call-in-empty-context)
                      ((thread-register) thread-register)

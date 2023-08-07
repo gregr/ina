@@ -35,7 +35,7 @@
 
 (define verbosity 0)
 
-(define env.test (env-compose.match (env-compose env.primitive env.minimal)))
+(define env.test (env-compose.match (env-compose* env.primitive env.primitive.control env.minimal)))
 
 (struct error:parse (c) #:prefab)
 (struct error:eval  (c) #:prefab)
@@ -1006,4 +1006,83 @@
     (`#(1 ,,x 3) (cons 'vector-second: (cons x '())))
     (,_          'something-else))
   ==> (vector-second: 2)
+
+  ! coroutines
+  ;; The co-range result looks like a generator, but the next text case
+  ;; demonstrates that it is not a generator.
+  (let ()
+    (define (list . x*) x*)
+    (define (co-range n)
+      (define yield (current-control-context))
+      (make-control-context
+        (lambda (inc)
+          (let loop ((i inc))
+            (when (< i n)
+              (loop (+ i (yield i)))))
+          (let loop ()
+            (yield 'done)
+            (loop)))))
+    (define r10 (co-range 10))
+    (list (r10 -1) (r10 0) (r10 1) (r10 3) (r10 3) (r10 3) (r10 3) (r10 3)))
+  ==> (-1 -1 0 3 6 9 done done)
+
+  ;; Using a third context, we see that co-range does not create a generator.
+  ;; The problem is that the co-range result always yields to the same context.
+  ;; To be a generator, it should yield to the context that transferred control.
+  (let ()
+    (define (list . x*) x*)
+    (define (co-range n)
+      (define yield (current-control-context))
+      (make-control-context
+        (lambda (inc)
+          (let loop ((i inc))
+            (when (< i n)
+              (loop (+ i (yield i)))))
+          (let loop ()
+            (yield 'done)
+            (loop)))))
+    (define (indirect)
+      (define yield (current-control-context))
+      (make-control-context
+        (lambda (g)
+          (let loop ()
+            (yield (list (g 3) (g 3) (g 3)))
+            (loop)))))
+    (define ind (indirect))
+    (define r10 (co-range 10))
+    (list (ind r10) (ind r10) (ind r10)))
+  ==> (3 6 9)
+
+  ! generators
+  ;; The result of g-range is a generator because it dynamically adjusts yield
+  ;; to transfer control back to the context that most recently invoked the
+  ;; generator.
+  (let ()
+    (define (list . x*) x*)
+    (define (g-range n)
+      (define g
+        (make-control-context
+          (lambda (inc)
+            (let loop ((i inc))
+              (when (< i n)
+                (loop (+ i (yield i)))))
+            (let loop ()
+              (yield 'done)
+              (loop)))))
+      (define context.yield (make-mvector 1 #t))
+      (define (yield . x*) (apply (mvector-ref context.yield 0) x*))
+      (lambda (inc)
+        (mvector-set! context.yield 0 (current-control-context))
+        (g inc)))
+    (define (indirect)
+      (define yield (current-control-context))
+      (make-control-context
+        (lambda (g)
+          (let loop ()
+            (yield (list (g 3) (g 3) (g 3)))
+            (loop)))))
+    (define r10 (g-range 10))
+    (define ind (indirect))
+    (list (ind r10) (ind r10)))
+  ==> ((3 6 9) (done done done))
   )

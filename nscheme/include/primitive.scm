@@ -75,6 +75,8 @@
   (define env.primitive.control
     (primitive*->env
       '(
+        current-control-context make-control-context
+        ;; TODO: remove call-with-escape-continuation and call-in-empty-context
         call-with-escape-continuation call-in-empty-context
         thread-register set-thread-register!
         yield set-yield-handler! set-timer enable-interrupts disable-interrupts)))

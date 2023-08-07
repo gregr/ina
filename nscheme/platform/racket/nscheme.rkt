@@ -2,6 +2,8 @@
 (provide
   case case1 assert
   ;; privileged primitives
+  current-control-context make-control-context
+  ;; TODO: remove call-with-escape-continuation and call-in-empty-context
   call-with-escape-continuation call-in-empty-context
   thread-register set-thread-register!
   panic set-panic-handler!
@@ -83,6 +85,14 @@
 (define (set-timer          . args) (error "TODO: not implemented"))
 (define (enable-interrupts  . args) (error "TODO: not implemented"))
 (define (disable-interrupts . args) (error "TODO: not implemented"))
+
+(define (thread->control-context t)
+  (lambda arg*
+    (thread-send t arg*)
+    (apply values (thread-receive))))
+(define (current-control-context)   (thread->control-context (current-thread)))
+(define (make-control-context proc) (thread->control-context
+                                      (thread (lambda () (apply proc (thread-receive))))))
 
 (define-syntax-rule (assert test ...) (begin (unless test (panic 'violation 'assert 'test)) ...))
 
@@ -361,6 +371,8 @@
 
 (declare-primitives!
   ;; privileged primitives
+  current-control-context make-control-context
+  ;; TODO: remove call-with-escape-continuation and call-in-empty-context
   call-with-escape-continuation call-in-empty-context
   thread-register set-thread-register!
   panic set-panic-handler!
