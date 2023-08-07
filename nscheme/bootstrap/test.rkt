@@ -28,12 +28,14 @@
 ;; TODO: all remaining compiler definitions should be included here, replacing eval-simple.scm:
 (include "../include/eval-simple.scm")
 ;(include "../include/eval-simple-cps.scm")
+(include "../include/compile-rkt-simple.scm")
 
 ;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
 ;; depend on the compiler instead of E-eval:
 (include "../include/extended.scm")
 
-(define verbosity 0)
+(define verbosity 1)
+(define show-compiled-racket? (and #t (< 0 verbosity)))
 
 (define env.test (env-compose.match (env-compose* env.primitive env.primitive.control env.minimal)))
 
@@ -56,6 +58,9 @@
       (when (< 1 verbosity)
         (displayln "PRETTY PARSED:")
         (pretty-write (E-pretty E)))
+      (when show-compiled-racket?
+        (displayln "EQUIVALENT RACKET CODE:")
+        (pretty-write (E-compile-rkt E)))
       (with-handlers ((vector? (lambda (c)
                                  (when (< 0 verbosity)
                                    (displayln "EVALUATION ERROR:")
