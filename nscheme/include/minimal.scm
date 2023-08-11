@@ -235,9 +235,8 @@
          (v*.id     'vec.value*)
          (env.local (make-env)))
     (apply $d:begin
-           ($d:define env.local v*.id (lambda () ($call-with-values
-                                                   ($thunk (parse-expression env e.rhs))
-                                                   ($lambda lhs*~ $vector))))
+           ($d:define env.local v*.id (lambda () ($apply/values ($lambda lhs*~ $vector)
+                                                                (parse-expression env e.rhs))))
            (map (lambda (i lhs)
                   ($d:define env.d lhs (lambda () ($vector-ref (parse-expression env.local v*.id)
                                                                ($quote i)))))

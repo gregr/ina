@@ -749,14 +749,14 @@ L.single: ...
 ```
 
 Multi-value continuation:
-- Used for the general case of `call-with-values`
+- Used for the general case of `apply/values`
 ```
 L.multi: jump L.rest
 L.single: argc := 1
 L.rest: ...
 ```
 
-The general case of `(call-with-values values-thunk callee)` installs a multi-value continuation
+The general case of `(apply/values callee values-producer)` installs a multi-value continuation
 that dispatches to `callee`.  The return convention places return values the same way that the
 calling convention places arguments, so this dispatch should be straightforward.
 
@@ -769,9 +769,9 @@ With closure-based control contexts, the same kind of code object and control-tr
 for procedures, return points, and first-class control contexts.
 
 For instance, an illustration of symmetry between calling and returning:
-- `(call-with-values values-thunk callee)` would compose the current continuation with the `callee`
-  procedure before calling `values-thunk`.  When `values-thunk` returns normally, the behavior is
-  exactly like calling `callee` with the return values as arguments.
+- `(apply/values values-producer callee)` would compose the current continuation with the `callee`
+  procedure before evaluating `values-producer`.  When `values-producer` returns normally, the
+  behavior is exactly like calling `callee` with the return values as arguments.
 
 code object layout:
 ```
@@ -788,7 +788,7 @@ code object layout:
 
 General convention for unknown callers (and returners) and callees (and returnees):
 - The motivation of this convention is to make the common case for returns more efficient, and to
-  simplify the implementation of `call-with-values`.  Single-value returns are more common than
+  simplify the implementation of `apply/values`.  Single-value returns are more common than
   multi-value returns.  By having a dedicated instruction offset to handle the single-value case,
   the caller (the returner) may omit setting the argc register, and the callee (the returnee) may
   specialize its handling of that case.
