@@ -122,11 +122,11 @@ way by manipulating programs and live processes as data.
     - Motivated by a desire to textually specify proper fractions, but more general
     - e.g., 5/3 could be written as 1+2/3, or as 1+1/3+1/3, or as +18-20+3+7/3-3/3-2/3e0
   - Complex numbers are not built in.
-- First-class control operators produce continuations that are one-shot.
-  - No primitive operators produce multi-shot, delimited continuations.
-  - These operators only produce virtual thread contexts and same-thread escape continuations.
+- There are no operators that directly capture continuations.  First-class control context operators
+  manipulate disjoint call stacks, and avoid copying frames.  They have the same expressiveness as
+  one-shot delimited continuations.
 - There is no prescribed object-level error handling model.
-  - You can define your own handling using escape continuations and dynamically-scoped parameters.
+  - You can define your own handling using control contexts and dynamically-scoped parameters.
 
 ## Run tests and bootstrap
 
@@ -146,7 +146,7 @@ Eventually:
   - May also want to simplify defstates
 
 - Split base library code by topic and level of privilege
-  - Privileges that may be needed: records, escape continuations, dynamic parameters
+  - Privileges that may be needed: records, control operators, dynamic parameters
   - Split along two privilege levels only? privileged and unprivileged?
     - privileged:
       - dynamic-scope
@@ -166,13 +166,6 @@ Eventually:
     persisted data values
   - Safe vs. unsafe ?  Varying degrees of safety?  Pure vs. impure?  IO?
   - languages: boot (privileged) vs. base (user) vs. io (platform-specific)
-
-- Maybe simulate call-in-empty-context and call-with-escape-continuation in Racket
-  - Each empty context is a Racket thread
-    - The thread owns a channel on which it waits for requests to invoke one of its local escape
-      continuations
-    - When the thread is ready to yield, it blocks while receiving on the channel
-    - When the thread is resumed, it will do so by invoking an escape continuation
 
 ### Primitives
 
@@ -246,7 +239,7 @@ Eventually:
         ```
         ((boot
           (procedure-metadata . <_>)
-          (call-with-escape-continuation . <_>)
+          (make-control-context . <_>)
           etc. ...)
          (base
           (cons . <_>)
@@ -852,15 +845,13 @@ become the arguments of the `proc` in the `(make-control-context proc)` that cre
 It is safe for a context to transfer control directly to itself.  In that case, the call arguments
 immediately become the return values, as if `values` had been called instead.
 
-
 ## Control operators
 
 - No first-class control operator will copy any part of the current continuation/stack
-  - An escape continuation references an earlier point on the current stack
-    - Invoking an escape continuation will unwind the current stack to the point of its creation
-  - Creating a virtual thread produces a new stack with no connection to the current one
-    - Invoking a virtual thread jumps directly to its stack, computes until the given resource
-      budget is exhausted, then jumps back to the invoking stack
+  - Each control context uses a disjoint call stack
+  - Creating a virtual thread produces a new control context
+    - Invoking a virtual thread transfers control to its context, computes until the given resource
+      budget is exhausted, then transfers control back to the invoking context
   - Nonvirtual threads do not involve transfers of control and are not first-class values
 
 - Dynamically-scoped parameters implemented using a control-context-local (i.e., thread-local)
@@ -892,7 +883,7 @@ immediately become the return values, as if `values` had been called instead.
       - if `ticks` is zero, the corresponding budget is unbounded
     - `(enable-interrupts) ==> decremented-disable-count`
     - `(disable-interrupts) ==> incremented-disable-count`
-    - `(call-with-escape-continuation proc) (call-in-empty-context thunk)`
+    - `(make-control-context proc) (current-control-context)`
 
 - Parallel processing
   - Platform-specific primitives for spawning parallel threads/processes
@@ -936,7 +927,7 @@ immediately become the return values, as if `values` had been called instead.
 - Errors that are not programming mistakes should raise
   - Unlike panic, raise is not a primitive, it can be defined in a library
   - This library should support error handling with restarts and finalization, built on top of
-    escape continuations and dynamic parameters
+    control contexts and dynamic parameters
 
 ## Numbers
 

@@ -88,8 +88,6 @@
           (let ((p (case (E:prim-name E)
                      ((current-control-context) current-control-context)
                      ((make-control-context) make-control-context)
-                     ((call-with-escape-continuation) call-with-escape-continuation)
-                     ((call-in-empty-context) call-in-empty-context)
                      ((control-context-register) control-context-register)
                      ((set-control-context-register!) set-control-context-register!)
                      ((panic) panic) ((set-panic-handler!) set-panic-handler!)

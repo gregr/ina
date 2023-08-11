@@ -2,21 +2,20 @@
 (require "../platform/racket/nscheme.rkt" (for-syntax "../platform/racket/nscheme.rkt")
          profile racket/function racket/include racket/list racket/match
          racket/pretty racket/string
-         (for-syntax (except-in racket/base integer? rational? append string-ref string-length
-                                string-append string->list list->string
-                                call-with-escape-continuation)
+         (for-syntax (except-in racket/base case eqv? integer? rational? append string-ref string-length
+                                string-append string->list list->string number->string)
                      racket/list)
          (rename-in racket/port
                     (call-with-input-string  racket:call-with-input-string)
                     (call-with-output-string racket:call-with-output-string))
-         (rename-in (except-in racket/base integer? rational? append string-ref string-length
-                               string-append string->list list->string
-                               call-with-escape-continuation)
+         (rename-in (except-in racket/base case eqv? integer? rational? append string-ref string-length
+                               string-append string->list list->string number->string)
                     (eof-object? racket:eof-object?)
                     (read racket:read) (write racket:write)))
 (module nscm:base racket
   (provide (all-defined-out))
   (require "../platform/racket/nscheme.rkt" (for-syntax racket/list))
+  (include "../include/boot/string.scm")
   (include "../include/base/bytevector.scm")
   (include "../include/base/string.scm"))
 (require 'nscm:base (for-syntax 'nscm:base))

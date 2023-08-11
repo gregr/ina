@@ -108,8 +108,6 @@
           (let ((p (case (E:prim-name E)
                      ((current-control-context) current-control-context/k)
                      ((make-control-context) make-control-context/k)
-                     ((call-with-escape-continuation) call-with-escape-continuation/k)
-                     ((call-in-empty-context) call-in-empty-context/k)
                      ((control-context-register) control-context-register/k)
                      ((set-control-context-register!) set-control-context-register!)
                      ((yield) yield/k) ((set-yield-handler!) set-yield-handler!/k)
@@ -176,8 +174,6 @@
    ;; TODO: control context operators need special treatment for k
    (define (current-control-context/k k . x*) (k (apply current-control-context x*)))
    (define (make-control-context/k k . x*) (k (apply make-control-context x*)))
-   (define (call-with-escape-continuation/k k . x*) (k (apply call-with-escape-continuation x*)))
-   (define (call-in-empty-context/k k . x*) (k (apply call-in-empty-context x*)))
    (define (control-context-register/k k . x*) (k (apply control-context-register x*)))
    (define (set-control-context-register!/k k . x*) (k (apply set-control-context-register! x*)))
    (define (yield/k k . x*) (k (apply yield x*)))

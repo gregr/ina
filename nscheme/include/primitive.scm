@@ -76,8 +76,6 @@
     (primitive*->env
       '(
         current-control-context make-control-context
-        ;; TODO: remove call-with-escape-continuation and call-in-empty-context
-        call-with-escape-continuation call-in-empty-context
         control-context-register set-control-context-register!
         yield set-yield-handler! set-timer enable-interrupts disable-interrupts)))
   ;; TODO: since these are already platform-dependent, we should define these in terms of
