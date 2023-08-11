@@ -5,7 +5,7 @@
   current-control-context make-control-context
   ;; TODO: remove call-with-escape-continuation and call-in-empty-context
   call-with-escape-continuation call-in-empty-context
-  thread-register set-thread-register!
+  control-context-register set-control-context-register!
   panic set-panic-handler!
   yield set-yield-handler! set-timer enable-interrupts disable-interrupts
   ;; procedure-metadata returns a vector with this shape:
@@ -77,14 +77,14 @@
           (and (bytevector? a) (bytevector? b) (bytes=? a b)))))
 
 (define (panic . args) (raise (vector 'panic args)))
-(define (thread-register)           (error "TODO: not implemented"))
-(define (set-thread-register! x)    (error "TODO: not implemented"))
 (define (yield              . args) (error "TODO: not implemented"))
 (define (set-panic-handler! . args) (error "TODO: not implemented"))
 (define (set-yield-handler! . args) (error "TODO: not implemented"))
 (define (set-timer          . args) (error "TODO: not implemented"))
 (define (enable-interrupts  . args) (error "TODO: not implemented"))
 (define (disable-interrupts . args) (error "TODO: not implemented"))
+(define (control-context-register)        (error "TODO: not implemented"))
+(define (set-control-context-register! x) (error "TODO: not implemented"))
 
 (define (thread->control-context t)
   (lambda arg*
@@ -374,7 +374,7 @@
   current-control-context make-control-context
   ;; TODO: remove call-with-escape-continuation and call-in-empty-context
   call-with-escape-continuation call-in-empty-context
-  thread-register set-thread-register!
+  control-context-register set-control-context-register!
   panic set-panic-handler!
   yield set-yield-handler! set-timer enable-interrupts disable-interrupts
   procedure-metadata

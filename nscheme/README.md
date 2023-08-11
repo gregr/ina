@@ -861,8 +861,9 @@ immediately become the return values, as if `values` had been called instead.
       budget is exhausted, then jumps back to the invoking stack
   - Nonvirtual threads do not involve transfers of control and are not first-class values
 
-- Dynamically-scoped parameters implemented via a thread-local register
-  - `(thread-register) (set-thread-register! new-register-value)`
+- Dynamically-scoped parameters implemented using a control-context-local (i.e., thread-local)
+  register:
+  - `(control-context-register) (set-control-context-register! new-register-value)`
 
 - Nestable pre-emptive and cooperative multitasking via virtual threads
   - `(make-virtual-thread thunk)` produces a controller procedure with this signature:
