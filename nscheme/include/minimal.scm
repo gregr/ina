@@ -20,6 +20,9 @@
          (env->body* (map (lambda (body) (lambda (env) (parse-body env body))) (map cdr cc*))))
     ($case-lambda/env env param* env->body*)))
 
+(define (parse-apply/values env rator vrand)
+  ($apply/values (parse-expression env rator) (parse-expression env vrand)))
+
 (define (parse-and    env . e*) (apply $and    (parse-expression* env e*)))
 (define (parse-or     env . e*) (apply $or     (parse-expression* env e*)))
 (define (parse-when   env . e*) (apply $when   (parse-expression* env e*)))
@@ -314,6 +317,7 @@
             (cons 'case           (expression-operator-parser parse-case         2 #f))
             (cons 'case1          (expression-operator-parser parse-case1        2 #f))
             (cons 'assert         (expression-operator-parser parse-assert       1 #f))
+            (cons 'apply/values   (expression-operator-parser parse-apply/values 2 2))
             (cons 'case-lambda    (expression-operator-parser parse-case-lambda  0 #f))
             (cons 'lambda         (expression-operator-parser parse-lambda       2 #f))
             (cons 'local          (nonsplicing-expression-operator-parser $splicing-local))

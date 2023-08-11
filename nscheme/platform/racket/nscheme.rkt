@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  case case1 assert
+  apply/values case case1 assert
   ;; privileged primitives
   current-control-context make-control-context
   ;; TODO: remove call-with-escape-continuation and call-in-empty-context
@@ -404,6 +404,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Syntax extensions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-syntax-rule (apply/values rator vrand) (call-with-values (lambda () vrand) rator))
 
 (define-syntax case
   (syntax-rules (else =>)
