@@ -699,15 +699,79 @@ Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
   - symbol
     - the bytevector pointed to is both a valid string, and is the backing data for a symbol
 
-## Possible calling conventions
+## Ideas about control-transfer conventions
 
-Control-transfer conventions are more general than just calling conventions.  The same kind of code
-object and control-transfer is used for procedures, return points, and first-class control contexts.
+### Asymmetric returning and calling conventions with stack-based control contexts
+
+Based on:
+[An Efficient Implementation of Multiple Return Values in Scheme](https://dl.acm.org/doi/10.1145/182590.156784)
+
+Code objects for procedures only have one entry point.  But code objects for returns have two: a
+multi-value entry point followed by a single-value entry point.  The purpose is to support efficient
+multi-value returns, yet also make the common case of single-value returns just as efficient as it
+would be if multi-value returns were not part of the language.
+
+code object layout for a return point:
+```
+  return-address points here
+         ||
+         \/
+[metadata][first instruction][remaining instructions]
+         /\                 /\
+         ||                 ||
+  call with argc =/= 1      call with 1 return value
+```
+
+For a call with n arguments:
+- Pass the first k values in registers, the rest on the stack
+- Set argc to n
+- Jump to the first instruction of the procedure's code object
+
+For a return of n values:
+- Pass the first k values in registers, the rest on the stack (like a call with n arguments)
+- If n = 1: jump to the single-value entry offset of the return-address (no need to set argc)
+- If n =/= 1: set argc to n and jump to the multi-value entry offset of the return-address
+
+Instruction layouts for different kinds of return points:
+
+Single-value continuation:
+- The common case when evaluating a sub-expression
+```
+L.multi: error
+L.single: ...
+```
+
+Any-value continuation :
+- e.g. the kind produced by `begin` for expressions that are only computed for effect.
+```
+L.multi: no-op ; fall through to L.single
+L.single: ...
+```
+
+Multi-value continuation:
+- Used for the general case of `call-with-values`
+```
+L.multi: jump L.rest
+L.single: argc := 1
+L.rest: ...
+```
+
+The general case of `(call-with-values values-thunk callee)` installs a multi-value continuation
+that dispatches to `callee`.  The return convention places return values the same way that the
+calling convention places arguments, so this dispatch should be straightforward.
+
+Control transfer to a first-class control context will be implemented as a call that returns to a
+different stack (except in the special case of a self-transfer).
+
+### Symmetric returning and calling conventions with closure-based control contexts
+
+With closure-based control contexts, the same kind of code object and control-transfer could be used
+for procedures, return points, and first-class control contexts.
 
 For instance, an illustration of symmetry between calling and returning:
-- `(call-with-values values-thunk callee)` would place the `callee` procedure's code object on the
-  call stack as the return point before calling `values-thunk`.  When `values-thunk` returns
-  normally, the behavior is exactly like calling `callee` with the return values as arguments.
+- `(call-with-values values-thunk callee)` would compose the current continuation with the `callee`
+  procedure before calling `values-thunk`.  When `values-thunk` returns normally, the behavior is
+  exactly like calling `callee` with the return values as arguments.
 
 code object layout:
 ```
@@ -722,34 +786,39 @@ code object layout:
            before call)
 ```
 
-- General convention for unknown callers (and returners) and callees (and returnees):
-  - The motivation of this convention is to make the common case for returns more efficient, and to
-    simplify the implementation of `call-with-values`.  Single-value returns are more common than
-    multi-value returns.  By having a dedicated instruction offset to handle the single-value case,
-    the caller (the returner) may omit setting the argc register, and the callee (the returnee) may
-    specialize its handling of that case.
-  - Of the n arguments, pass the first k arguments (or return values) in registers, and the rest on
-    the call stack.
-  - When n is not equal to 1, the caller must also set the argc register to communicate the number
-    of arguments to the callee.
-  - When n is not equal to 1, we must jump to the second instruction in the code object.  The code
-    can dispatch based on the argc register in whatever way it sees fit.
-  - When n is equal to 1, we may instead, but are not required to, jump to the very first
-    instruction in the code object.  This instruction will dispatch in whatever way is appropriate
-    to handle a single argument.  A simple implementation possibility would be to itself set argc to
-    1, and automatically fall into the second instruction that handles the general case.
-  - Because we may still jump to the second instruction when n is equal to 1, it must be capable of
-    handling that case.
-- When more information is known about the caller or callee, more efficient conventions could be
-  chosen on a case-by-case basis.
-  - When a callee may appear unknown in some contexts, its instructions must still adhere to the
-    general convention.  However, when it is called in a context where it is known, the caller
-    may use its knowledge of the callee to jump directly to an unconventional instruction that
-    handles the caller's case.
-    - For instance, when calling with n arguments, if the caller knows which instruction the callee
-      dispatches to for handling n arguments, the caller can jump there directly.
-  - When a callee is always known when called, its instructions do not need to adhere to the general
-    convention.
+General convention for unknown callers (and returners) and callees (and returnees):
+- The motivation of this convention is to make the common case for returns more efficient, and to
+  simplify the implementation of `call-with-values`.  Single-value returns are more common than
+  multi-value returns.  By having a dedicated instruction offset to handle the single-value case,
+  the caller (the returner) may omit setting the argc register, and the callee (the returnee) may
+  specialize its handling of that case.
+- For n arguments, pass the first k arguments (or return values) in registers, and the rest in
+  the control-transfer buffer.
+  - The control-transfer buffer is similar to the stack when using a stack-based control context.
+    The difference is that when using a closure-based control context, all calls behave like tail
+    calls, and so there is no stacking.  During a call, the buffer contents are placed in a closure
+    representing the return point, and the buffer contents are then replaced by the new call.
+- When n is not equal to 1, the caller must also set the argc register to communicate the number
+  of arguments to the callee.
+- When n is not equal to 1, we must jump to the second instruction in the code object.  The code
+  can dispatch based on the argc register in whatever way it sees fit.
+- When n is equal to 1, we may instead, but are not required to, jump to the very first
+  instruction in the code object.  This instruction will dispatch in whatever way is appropriate
+  to handle a single argument.  A simple implementation possibility would be to itself set argc to
+  1, and automatically fall into the second instruction that handles the general case.
+- Because we may still jump to the second instruction when n is equal to 1, it must be capable of
+  handling that case.
+
+When more information is known about the caller or callee, more efficient conventions could be
+chosen on a case-by-case basis:
+- When a callee may appear unknown in some contexts, its instructions must still adhere to the
+  general convention.  However, when it is called in a context where it is known, the caller
+  may use its knowledge of the callee to jump directly to an unconventional instruction that
+  handles the caller's case.
+  - For instance, when calling with n arguments, if the caller knows which instruction the callee
+    dispatches to for handling n arguments, the caller can jump there directly.
+- When a callee is always known when called, its instructions do not need to adhere to the general
+  convention.
 
 ## First-class control contexts
 
