@@ -1,11 +1,12 @@
 (define (identifier->fresh-address p) (fresh-address (syntax-peek p)))
 
-(define ($provenance  pv E) (E-provenance-add E pv))
-(define ($prim        name) (E:prim  name))
-(define ($quote      value) (E:quote value))
-(define ($ref         addr) (E:ref   addr))
-(define ($call proc . args) (E:call  proc args))
-(define ($if         c t f) (E:if    c t f))
+(define ($provenance   pv E)          (E-provenance-add E pv))
+(define ($prim         name)          (E:prim           name))
+(define ($quote        value)         (E:quote          value))
+(define ($ref          addr)          (E:ref            addr))
+(define ($call         rator . rand*) (E:call           rator rand*))
+(define ($apply/values rator vrand)   (E:apply/values   rator vrand))
+(define ($if           c t f)         (E:if             c t f))
 
 (define ($case-lambda param* ^body*)
   (let* ((addr*~* (map (lambda (param) (improper-list-map identifier->fresh-address param)) param*))
