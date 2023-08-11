@@ -20,7 +20,7 @@
   record? record record-type-descriptor record-ref
   string->bytevector bytevector->string
 
-  apply call-with-values values
+  apply values
   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
   pair? vector? mvector? bytevector? mbytevector?
   string->symbol symbol->string
@@ -381,7 +381,7 @@
   record? record record-type-descriptor record-ref
   string->bytevector bytevector->string
 
-  apply call-with-values values
+  apply values
   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
   pair? vector? mvector? bytevector? mbytevector?
   string->symbol symbol->string

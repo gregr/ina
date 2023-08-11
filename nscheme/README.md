@@ -44,6 +44,8 @@ way by manipulating programs and live processes as data.
     previous binding information of the same identifier.
 - Expressions that would typically return a single `(void)` value (like `set!`, `when`, etc.),
   instead return 0 values (i.e., `(values)`).
+- `(apply/values consumer produce)` is primitive syntax where `produce` is an ordinary expression.
+  - `(call-with-values producer consumer)` is defined as `(apply/values consumer (producer))`.
 - Variables are immutable by default.
   - `set!` is only supported for variables introduced by special binders.
 - All s-expression types are immutable.

@@ -101,7 +101,7 @@
                      ((record-type-descriptor) record-type-descriptor) ((record-ref) record-ref)
                      ((string->bytevector) string->bytevector)
                      ((bytevector->string) bytevector->string)
-                     ((apply) apply) ((call-with-values) call-with-values) ((values) values)
+                     ((apply) apply) ((values) values)
                      ((eq?) eq?) ((eqv?) eqv?) ((null?) null?) ((boolean?) boolean?)
                      ((procedure?) procedure?) ((symbol?) symbol?) ((string?) string?)
                      ((rational?) rational?) ((integer?) integer?)

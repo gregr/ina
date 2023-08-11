@@ -101,7 +101,6 @@
                                            (loop (cdr loc*) (cdr rhs*)))))))))))
          ;; TODO: primitives can be run directly, with these exceptions:
          ;; - apply
-         ;; - call-with-values
          ;; - values
          ;; - panic, but we'll ignore this for now
          ;; - the special control primitives, which we'll ignore for now
@@ -123,7 +122,6 @@
                      ((string->bytevector) string->bytevector/k)
                      ((bytevector->string) bytevector->string/k)
                      ((apply) apply/k)
-                     ((call-with-values) call-with-values/k)
                      ((values) values/k)
                      ((eq?) eq?/k) ((eqv?) eqv?/k) ((null?) null?/k) ((boolean?) boolean?/k)
                      ((procedure?) procedure?/k) ((symbol?) symbol?/k) ((string?) string?/k)
@@ -290,7 +288,6 @@
    (define (f64*/k k . x*) (k (apply f64* x*)))
    (define (f64//k k . x*) (k (apply f64/ x*)))
    (define (apply/k            k proc arg*) (apply proc k arg*))
-   (define (call-with-values/k k ^v* v*->x) (^v* (lambda v* (apply v*->x k v*))))
    (define (values/k           k . x*)      (apply k x*)))
   (define (E-eval E) ((E-stage E cenv.empty) renv.empty values)))
 
