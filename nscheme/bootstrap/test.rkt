@@ -243,6 +243,30 @@
   (let-values ((v* (unless 1 2))) v*) ==> ()
   (unless #f 3)                       ==> 3
 
+  ! case-values
+  (case-values (values 1 2 3)
+    (()         'nothing)
+    ((a)        (vector 'one a))
+    ((a b)      (vector 'two a b))
+    ((a b c)    (vector 'three a b c))
+    ((a b c d)  (vector 'four a b c d))
+    ((a b . x*) (vector '>=2 a b x*)))
+  ==> #(three 1 2 3)
+  (case-values (values 1 2 3)
+    (()         'nothing)
+    ((a)        (vector 'one a))
+    ((a b)      (vector 'two a b))
+    ((a b . x*) (vector '>=2 a b x*))
+    ((a b c)    (vector 'three a b c))
+    ((a b c d)  (vector 'four a b c d)))
+  ==> #(>=2 1 2 (3))
+  (case-values (values 1 2 3)
+    (()         'nothing)
+    ((a)        (vector 'one a))
+    ((a b)      (vector 'two a b))
+    ((a b c d)  (vector 'four a b c d)))
+  ==> error:eval
+
   ! cond
   (cond (1 2))        ==> 2
   (cond (#f 3) (4 5)) ==> 5

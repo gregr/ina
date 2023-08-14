@@ -23,6 +23,9 @@
 (define (parse-apply/values env rator vrand)
   ($apply/values (parse-expression env rator) (parse-expression env vrand)))
 
+(define (parse-case-values env ve . clause*)
+  ($apply/values (apply parse-case-lambda env clause*) (parse-expression env ve)))
+
 (define (parse-and    env . e*) (apply $and    (parse-expression* env e*)))
 (define (parse-or     env . e*) (apply $or     (parse-expression* env e*)))
 (define (parse-when   env . e*) (apply $when   (parse-expression* env e*)))
@@ -319,6 +322,7 @@
             (cons 'apply/values   (expression-operator-parser parse-apply/values 2 2))
             (cons 'case-lambda    (expression-operator-parser parse-case-lambda  0 #f))
             (cons 'lambda         (expression-operator-parser parse-lambda       2 #f))
+            (cons 'case-values    (expression-operator-parser parse-case-values  1 #f))
             (cons 'local          (nonsplicing-expression-operator-parser $splicing-local))
             (cons 'let*           (nonsplicing-expression-operator-parser $splicing-let*))
             (cons 'letrec*        (nonsplicing-expression-operator-parser $splicing-letrec*))
