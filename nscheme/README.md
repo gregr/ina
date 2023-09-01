@@ -101,27 +101,17 @@ way by manipulating programs and live processes as data.
   - code points are not characters, but suffice for some higher-level string manipulation
   - grapheme clusters (substrings) are the right notion of character for user interaction
 - No primitive eof-object type: IO operations may return `#f` or `(values)` instead
-- A numerical tower inspired by: https://www.deinprogramm.de/sperber/papers/numerical-tower.pdf
+- Inspired by: https://www.deinprogramm.de/sperber/papers/numerical-tower.pdf
+  - Inexact numbers are not s-expressions, and are not part of the base language.  But platforms
+    can provide primitives for floating-point data and arithmetic when they support it.
+    - All numeric literals describe exact numbers by default, for reproducibility and portability.
+  - Complex numbers are also not built in.
   - Exact/inexact arithmetic that emphasizes "exactness" on operators rather than values
-    - Floating-point values will still exist, but a mismatch will either be
-      coerced or signal an error
-  - Most of the usual numeric operators will only be applicable to exact numbers
-    - Typical arithmetic operators could coerce to exact
-      - Different from `fx+`, etc., which assume arguments are already in some exact format
-    - A separate set of operators will be provided for manipulating inexact numbers
-      - Possibly `.+`, `.*`, `.<=`, etc., which coerce to inexact
-      - These are different from `fl+`, etc., which assume arguments are already inexact
-  - `integer?` `rational?` etc. will return `#f` for all inexact numbers.
-  - All numeric literals describe exact numbers by default.
-    - Inexact literals are distinguished by a suffix, not the `#i` prefix found in Scheme.
-      - Bit-sized floating point suffixes: #f32 #f64 (maybe also #f16 and #f8 ?)
-        - e.g. 3.14#f32
-  - Optional decimal representation for fractions, with repeating portion prefixed by ~
-    - e.g., 0.~3 for 1/3, 0.~17 for 17/99, etc.
-  - Arbitrary sums-and-differences representation for rationals, for convenience
-    - Motivated by a desire to textually specify proper fractions, but more general
-    - e.g., 5/3 could be written as 1+2/3, or as 1+1/3+1/3, or as +18-20+3+7/3-3/3-2/3e0
-  - Complex numbers are not built in.
+  - The usual numeric operators will only be applicable to exact numbers.
+    - A separate set of operators would need to be provided for manipulating inexact numbers.
+  - `integer?` `rational?` etc. must return `#f` for all inexact numbers.
+- Optional decimal representation for fractions, with repeating portion prefixed by ~
+  - e.g., 0.~3 for 1/3, 0.~17 for 17/99, etc.
 - There are no operators that directly capture continuations.  First-class control context operators
   manipulate disjoint call stacks, and avoid copying frames.  They have the same expressiveness as
   one-shot delimited continuations.
@@ -138,12 +128,68 @@ Eventually:
 
 ## TODO
 
+### Implementation complexity notes
+
+implementation complexity cost:
+- all of pattern matching: 492 lines
+  - complex patterns: (+ 193 39) = 232 lines
+    - ellipsis patterns: 193 lines
+    - or and not patterns: 39 lines
+  - simple patterns: (- 492 (+ 193 39)) = 260 lines
+- all of bootstrap parsing at the moment: (+ 195 70 336 871) = 1472 lines
+- all of bootstrap compiler at the moment: (+ 50 195 70 336 871) = 1522 lines
+
+include
+├── [ 476 Mar  1  9:46]  base/
+│   ├── [ 335 Jan 24 12:08]  bytevector.scm
+│   ├── [1.1K Jan 23 21:24]  compare.scm
+│   ├── [8.1K Mar  1  9:45]  list.scm
+│   ├── [1.4K Jan 23 11:33]  mbytevector.scm
+│   ├── [  68 Jan 20 19:50]  misc.scm
+│   ├── [1.4K Oct 24 15:42]  mvector.scm
+│   ├── [2.2K Mar  1  9:45]  number.scm
+│   ├── [ 408 Mar  1  9:45]  pair.scm
+│   ├── [ 291 Jan 26 11:53]  string.scm
+│   └── [ 540 Jan 24 12:08]  vector.scm
+├── [ 204 Mar  1  9:46]  boot/
+│   ├── [2.3K Feb 28 15:54]  error.scm
+│   └── [2.3K Feb 28 15:57]  record.scm
+├── [2.7K Feb 13 16:24]  ast.scm
+├── [6.7K Feb 25  6:03]  extended.scm
+├── [ 24K Jan 26 12:00]  grammar.scm
+├── [ 31K Feb 27  9:54]  match.scm
+├── [ 20K Mar  1  9:45]  minimal.scm
+├── [ 16K Mar  1  9:54]  parse.scm
+├── [4.3K Mar  1  9:46]  primitive.scm
+├── [ 28K Jan 26 12:32]  read.scm
+├── [8.8K Mar  1 15:56]  syntax.scm
+├── [7.6K Apr  4  2021]  tty.scm
+├── [6.1K Jan 26 12:34]  unicode.scm
+└── [8.4K Jan 26 12:37]  write.scm
+
+2 directories, 24 files
+
+      50 ./include/ast.scm
+       9 ./include/base/bytevector.scm
+      30 ./include/base/compare.scm
+     198 ./include/base/list.scm
+      27 ./include/base/mbytevector.scm
+       2 ./include/base/misc.scm
+      28 ./include/base/mvector.scm
+      65 ./include/base/number.scm
+      12 ./include/base/pair.scm
+       8 ./include/base/string.scm
+      13 ./include/base/vector.scm
+      61 ./include/boot/error.scm
+      47 ./include/boot/record.scm
+     520 ./include/match.scm
+     373 ./include/minimal.scm
+     345 ./include/parse.scm
+      75 ./include/primitive.scm
+     196 ./include/syntax.scm
+    2059 total
+
 ### bootstrap
-
-- Try to bootstrap without reflection first (eliminate all Racket value dependencies when bootstrap compiling)
-
-- Keep meta-evaluation syntax (like begin-meta and define-syntax) out of the initial environment
-  - May also want to simplify defstates
 
 - Split base library code by topic and level of privilege
   - Privileges that may be needed: records, control operators, dynamic parameters
