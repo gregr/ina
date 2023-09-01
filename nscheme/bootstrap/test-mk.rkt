@@ -217,7 +217,7 @@
             (cons 'run*  (expression-operator-parser parse-run*  2 #f)))))
     (for-each (lambda (id op) (env-bind! env.scope id vocab.expression-operator op))
               (map car b*.expr-op) (map cdr b*.expr-op))
-    (env-bind! env.scope '== vocab.expression (lambda (_ __) $==))
+    (env-bind! env.scope '== vocab.expression (parse/constant-expression $==))
     (env-freeze! env.scope)
     (env-compose env env.scope)))
 
