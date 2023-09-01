@@ -35,9 +35,6 @@
   ;  vectorized ops
   ;  )
 
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;;; Platform-independent capabilities ;;;
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (define env.primitive.privileged
     (primitive*->env
       '(
@@ -46,11 +43,17 @@
         record? record record-type-descriptor record-ref
         ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
         string->bytevector bytevector->string)))
+  (define env.primitive.privileged.control
+    (primitive*->env
+      '(
+        current-control-context make-control-context
+        control-context-register set-control-context-register!
+        yield set-yield-handler! set-timer enable-interrupts disable-interrupts)))
   (define env.primitive
     (primitive*->env
       '(
         apply values
-        eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
+        eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
         pair? vector? mvector? bytevector? mbytevector?
         string->symbol symbol->string
         cons car cdr
@@ -62,28 +65,5 @@
         bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
         bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
         numerator denominator = <= >= < > + - * /
-        ;; TODO: these shouldn't be primitive.  We should be able to use the bitwise representation
-        ;; to compute the nearest exact rationals.
-        f32->rational rational->f32 f64->rational rational->f64
-        ;;; NOTE: u32->f32 and u64->f64 must quiet any NaNs produced.
-        f32->u32 u32->f32 f64->u64 u64->f64 f32->f64 f64->f32
-        f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
-        f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/)))
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;;; Platform-dependent capabilities ;;;
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (define env.primitive.control
-    (primitive*->env
-      '(
-        current-control-context make-control-context
-        control-context-register set-control-context-register!
-        yield set-yield-handler! set-timer enable-interrupts disable-interrupts)))
-  ;; TODO: since these are already platform-dependent, we should define these in terms of
-  ;; lower-level native memory primitives.
-  (define env.primitive.native-bytevector
-    (primitive*->env
-      '(
-        bytevector-u16-ref bytevector-u32-ref bytevector-u64-ref
-        mbytevector-u16-ref mbytevector-u32-ref mbytevector-u64-ref
-        mbytevector-u16-set! mbytevector-u32-set! mbytevector-u64-set!)))
+        )))
   )

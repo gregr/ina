@@ -1,6 +1,5 @@
-(define exact? rational?)
-(define (inexact? x) (or (f32? x) (f64? x)))
-(define (number?  x) (or (rational? x) (inexact? x)))
+(define (exact? x) (rational? x))
+(define (number? x) (exact? x))
 
 (define (zero?     x) (= x 0))
 (define (positive? x) (> x 0))

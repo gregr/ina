@@ -124,8 +124,9 @@
 
 (splicing-local
   ((define env.include/boot
-     (env-compose* (eval-definition* (env-compose* env.primitive.privileged env.primitive env.minimal)
-                                     def*.include/boot)
+     (env-compose* (eval-definition*
+                     (env-compose* env.primitive.privileged env.primitive env.minimal)
+                     def*.include/boot)
                    env.primitive
                    env.minimal))
    (define env.include/base
@@ -134,8 +135,8 @@
    (define env.include
      (env-compose (eval-definition* env.include/base def*.include) env.include/base))
    (define env.eval
-     (eval-definition* (env-compose* env.primitive.native-bytevector env.primitive.control
-                                     env.primitive.privileged env.include)
+     (eval-definition* (env-compose* env.primitive.privileged.control env.primitive.privileged
+                                     env.include)
                        def*.eval)))
   (define env.include.extended
     (env-compose* (eval-definition* (env-compose* env.eval env.include)

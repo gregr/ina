@@ -36,7 +36,8 @@
 (define verbosity 1)
 (define show-compiled-racket? (and #t (< 0 verbosity)))
 
-(define env.test (env-compose.match (env-compose* env.primitive env.primitive.control env.minimal)))
+(define env.test (env-compose.match
+                   (env-compose* env.primitive env.primitive.privileged.control env.minimal)))
 
 (struct error:parse (c) #:prefab)
 (struct error:eval  (c) #:prefab)
