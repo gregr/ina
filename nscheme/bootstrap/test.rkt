@@ -27,7 +27,6 @@
 
 ;; TODO: all remaining compiler definitions should be included here, replacing eval-simple.scm:
 (include "../include/eval-simple.scm")
-;(include "../include/eval-simple-cps.scm")
 (include "../include/compile-rkt-simple.scm")
 
 ;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
