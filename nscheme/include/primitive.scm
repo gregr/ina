@@ -38,13 +38,13 @@
   (define env.primitive.privileged
     (name*primitive*->env
       '(
-        panic set-panic-handler!
+        set-panic-handler!
         procedure-metadata
         record? record record-type-descriptor record-ref
         ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
         string->bytevector bytevector->string)
       (list
-        panic set-panic-handler!
+        set-panic-handler!
         procedure-metadata
         record? record record-type-descriptor record-ref
         ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
@@ -62,7 +62,7 @@
   (define env.primitive
     (name*primitive*->env
       '(
-        apply values
+        panic apply values
         eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
         pair? vector? mvector? bytevector? mbytevector?
         string->symbol symbol->string
@@ -76,7 +76,7 @@
         bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
         numerator denominator = <= >= < > + - * /)
       (list
-        apply values
+        panic apply values
         eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
         pair? vector? mvector? bytevector? mbytevector?
         string->symbol symbol->string

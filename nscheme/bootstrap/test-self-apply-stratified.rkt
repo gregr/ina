@@ -9,13 +9,12 @@
 ;;; This variant of bootstrapping stratifies evaluation so that values computed at different phases
 ;;; do not mix.  That means compilation does not need to support cross-stage persistence.
 
-(include "../include/boot/error.scm")
+(include "../include/base/misc.scm")
 (include "../include/boot/record.scm")
 (include "../include/boot/string.scm")
 (include "../include/base/pair.scm")
 (include "../include/base/list.scm")
 (include "../include/base/number.scm")
-(include "../include/base/misc.scm")
 (include "../include/base/compare.scm")
 (include "../include/base/mvector.scm")
 (include "../include/base/vector.scm")
@@ -53,7 +52,7 @@
 
 (define def*.include/boot
   (file-name*->stx*
-    '("../include/boot/error.scm"
+    '("../include/base/misc.scm"  ; convenient for bootstrap, but no privilege needed
       "../include/boot/record.scm"
       "../include/boot/string.scm")))
 (define def*.include/base
@@ -61,7 +60,6 @@
     '("../include/base/pair.scm"
       "../include/base/list.scm"
       "../include/base/number.scm"
-      "../include/base/misc.scm"
       "../include/base/compare.scm"
       "../include/base/mvector.scm"
       "../include/base/vector.scm"
