@@ -190,7 +190,7 @@
                  (let-values (((quote? e) (loop (vector->list qq) level)))
                    (if quote?
                        (values #t stx.qq)
-                       (values #f ($pcall 'apply ($prim 'vector) e)))))
+                       (values #f ($pcall apply ($quote vector) e)))))
                 (else (when (and (identifier? stx.qq) (env-ref^ env stx.qq vocab.quasiquote))
                         (error "misplaced quasiquote operator" stx.qq))
                       (values #t stx.qq)))))))

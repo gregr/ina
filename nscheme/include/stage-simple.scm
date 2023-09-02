@@ -1,7 +1,6 @@
 (define (identifier->fresh-address p) (fresh-address (syntax-peek p)))
 
 (define ($provenance   pv E)          (E-provenance-add E pv))
-(define ($prim         name)          (E:prim           name))
 (define ($quote        value)         (E:quote          value))
 (define ($ref          addr)          (E:ref            addr))
 (define ($call         rator . rand*) (E:call           rator rand*))
