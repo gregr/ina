@@ -224,6 +224,7 @@
 (define (code-captured-variable-count c)         (vector-ref c 2))
 
 (define (procedure-metadata p)
+  (unless (procedure? p) (error "not a procedure" p))
   (let ((pmd (hash-ref procedure=>metadata p (lambda () (error "procedure has no metadata" p)))))
     (match-define (proc-metadata primitive captured code*) pmd)
     ;; When a procedure is constructed in a letrec alongside captured values, those values may not

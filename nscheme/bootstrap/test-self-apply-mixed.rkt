@@ -74,22 +74,29 @@
       "../include/ir.scm"
       "../include/stage-simple.scm"
       "../include/parse.scm"
-      "../include/primitive.scm"
       "../include/minimal.scm"
       "../include/match.scm")))
-(define def*.eval     (file-name->stx* "../include/eval-simple.scm"))
-(define def*.extended (file-name->stx* "../include/extended.scm"))
+(define def*.primitive (file-name->stx* "../include/primitive.scm"))
+(define def*.eval      (file-name->stx* "../include/eval-simple.scm"))
+(define def*.extended  (file-name->stx* "../include/extended.scm"))
 
+(define env.primitive.privileged.all
+  (env-compose env.primitive.privileged env.primitive.privileged.control))
 (define env.include/boot
-  (env-compose* (eval-definition* (env-compose* env.primitive.privileged env.primitive env.minimal)
-                                  def*.include/boot)
+  (env-compose* (eval-definition*
+                  (env-compose* env.primitive.privileged env.primitive env.minimal)
+                  def*.include/boot)
                 env.primitive
                 env.minimal))
 (define env.include/base
-  (env-compose (eval-definition* env.include/boot def*.include/base)
-               env.include/boot))
+  (env-compose env.include/boot (eval-definition* env.include/boot def*.include/base)))
+(define env.include.0
+  (env-compose env.include/base (eval-definition* env.include/base def*.include)))
 (define env.include
-  (env-compose (eval-definition* env.include/base def*.include) env.include/base))
+  (env-compose env.include.0
+               (eval-definition* (env-compose env.primitive.privileged.all env.include.0)
+                                 def*.primitive)))
+
 (define stx*.test (list '(list
                            (+ 1 2)
                            (foldr + 0 '(1 2 3 4 5))
@@ -120,8 +127,7 @@
 
 (splicing-local
   ((define env.eval
-     (eval-definition* (env-compose* env.primitive.privileged.control env.primitive.privileged
-                                     env.include)
+     (eval-definition* (env-compose* env.primitive.privileged.all env.include)
                        def*.eval)))
   (define env.include.extended
     (env-compose* (eval-definition* (env-compose* env.eval env.include)
@@ -132,19 +138,26 @@
   `((define def*.include/boot ',def*.include/boot)
     (define def*.include/base ',def*.include/base)
     (define def*.include      ',def*.include)
+    (define def*.primitive    ',def*.primitive)
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; Begin copy of earlier definitions ;;
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    (define env.primitive.privileged.all
+      (env-compose env.primitive.privileged env.primitive.privileged.control))
     (define env.include/boot
-      (env-compose* (eval-definition* (env-compose* env.primitive.privileged env.primitive env.minimal)
-                                      def*.include/boot)
+      (env-compose* (eval-definition*
+                      (env-compose* env.primitive.privileged env.primitive env.minimal)
+                      def*.include/boot)
                     env.primitive
                     env.minimal))
     (define env.include/base
-      (env-compose (eval-definition* env.include/boot def*.include/base)
-                   env.include/boot))
+      (env-compose env.include/boot (eval-definition* env.include/boot def*.include/base)))
+    (define env.include.0
+      (env-compose env.include/base (eval-definition* env.include/base def*.include)))
     (define env.include
-      (env-compose (eval-definition* env.include/base def*.include) env.include/base))
+      (env-compose env.include.0
+                   (eval-definition* (env-compose env.primitive.privileged.all env.include.0)
+                                     def*.primitive)))
     (define stx*.test (list '(list
                                (+ 1 2)
                                (foldr + 0 '(1 2 3 4 5))

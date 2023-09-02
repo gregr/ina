@@ -1,8 +1,13 @@
 (splicing-local
   ((define (primitive*->env primitive*)
      (let ((env.scope (make-env)))
-       (for-each (lambda (id) (env-bind! env.scope id vocab.expression
-                                         (parse/constant-expression ($prim id))))
+       (for-each (lambda (p) (let* ((pm (procedure-metadata p))
+                                    (id (or (and (vector? pm)
+                                                 (= (vector-length pm) 3)
+                                                 (vector-ref pm 0))
+                                            (error "not a primitive" p))))
+                               (env-bind! env.scope id vocab.expression
+                                          (parse/constant-expression ($quote p)))))
                  primitive*)
        (env-freeze! env.scope)
        env.scope)))
@@ -37,7 +42,7 @@
 
   (define env.primitive.privileged
     (primitive*->env
-      '(
+      (list
         panic set-panic-handler!
         procedure-metadata
         record? record record-type-descriptor record-ref
@@ -45,13 +50,13 @@
         string->bytevector bytevector->string)))
   (define env.primitive.privileged.control
     (primitive*->env
-      '(
+      (list
         current-control-context make-control-context
         control-context-register set-control-context-register!
         yield set-yield-handler! set-timer enable-interrupts disable-interrupts)))
   (define env.primitive
     (primitive*->env
-      '(
+      (list
         apply values
         eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
         pair? vector? mvector? bytevector? mbytevector?
@@ -64,6 +69,5 @@
         mbytevector-u8-ref mbytevector-u8-set!
         bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
         bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
-        numerator denominator = <= >= < > + - * /
-        )))
+        numerator denominator = <= >= < > + - * /)))
   )
