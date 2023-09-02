@@ -434,7 +434,7 @@
 (define ((parse-match/parse-pattern parse-pattern) env stx.e . stx*.clause*)
   ($let '(x) (list (parse-expression env stx.e))
         (lambda ($x)
-          ($let '(fail) (list ($thunk ($panic ($quote 'match) ($quote "no matching clause") $x)))
+          ($let '(fail) (list ($thunk ($error ($quote "no matching clause") $x)))
                 (lambda ($fail)
                   (let loop ((stx*.clause* stx*.clause*))
                     (if (null? stx*.clause*)

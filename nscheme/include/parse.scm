@@ -166,7 +166,7 @@
 (define ($vector           . x*) (apply $pcall vector x*))
 (define ($values           . x*) (apply $pcall values x*))
 (define ($quote-values     . x*) (apply $values (map $quote x*)))
-(define ($panic            . x*) (apply $pcall panic x*))
+(define ($error       . detail*) (apply $pcall panic ($quote 'error) detail*))
 (define ($list             . x*) (let loop ((x* x*))
                                    (cond ((null? x*) ($quote '()))
                                          (else       ($cons (car x*) (loop (cdr x*)))))))

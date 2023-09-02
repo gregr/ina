@@ -660,6 +660,7 @@
   ``#(7 ,@',(cons 8 (cons 9 '())) 10) ==> `#(7 ,@'(8 9) 10)
 
   ! match
+  (match 5 (6 'six)) ==> error:eval
   (match 5
     (6 'six)
     (5 'five)
@@ -907,6 +908,7 @@
   ==> #(ellipsis-matched 1 (a b c d) ((2 22 222) (3 33) () (4)) 5 6)
 
   ! qmatch
+  (qmatch 5 (6 'six)) ==> error:eval
   (qmatch 5
     (6  'six)
     (5  'five)
