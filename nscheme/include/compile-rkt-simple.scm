@@ -47,5 +47,4 @@
                                                                (E:letrec-binding-right* E))
                                                           (loop/env (E:letrec-body E) env))))))
                              ($rkt:letrec lhs* ^rhs*&body)))
-      ((E:prim?         E) (E:prim-name E))
       (else                (error "not an expression" E)))))

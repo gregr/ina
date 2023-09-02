@@ -4,7 +4,6 @@
 ;; TODO: support for lower-level language integration:
 ;; - E:unchecked-call, E:let with type info, E:case-lambda with type info, etc.
 (define (E:annotated    pv E)           (vector 'E:annotated    pv E))
-(define (E:prim         name)           (vector 'E:prim         name))
 (define (E:quote        v)              (vector 'E:quote        v))
 (define (E:ref          address)        (vector 'E:ref          address))
 (define (E:if           c t f)          (vector 'E:if           c t f))
@@ -16,7 +15,6 @@
 (define (E-tag                   E)     (vector-ref E 0))
 (define (E-tagged?               E tag) (eq? (E-tag E) tag))
 (define (E:annotated?            E)     (E-tagged? E 'E:annotated))
-(define (E:prim?                 E)     (E-tagged? E 'E:prim))
 (define (E:quote?                E)     (E-tagged? E 'E:quote))
 (define (E:ref?                  E)     (E-tagged? E 'E:ref))
 (define (E:if?                   E)     (E-tagged? E 'E:if))
@@ -26,7 +24,6 @@
 (define (E:letrec?               E)     (E-tagged? E 'E:letrec))
 (define (E:annotated-provenance  E)     (vector-ref E 1))
 (define (E:annotated-E           E)     (vector-ref E 2))
-(define (E:prim-name             E)     (vector-ref E 1))
 (define (E:quote-value           E)     (vector-ref E 1))
 (define (E:ref-address           E)     (vector-ref E 1))
 (define (E:if-condition          E)     (vector-ref E 1))
