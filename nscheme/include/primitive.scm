@@ -1,14 +1,9 @@
 (splicing-local
-  ((define (primitive*->env primitive*)
+  ((define (name*primitive*->env name* primitive*)
      (let ((env.scope (make-env)))
-       (for-each (lambda (p) (let* ((pm (procedure-metadata p))
-                                    (id (or (and (vector? pm)
-                                                 (= (vector-length pm) 3)
-                                                 (vector-ref pm 0))
-                                            (error "not a primitive" p))))
-                               (env-bind! env.scope id vocab.expression
-                                          (parse/constant-expression ($quote p)))))
-                 primitive*)
+       (for-each (lambda (id p) (env-bind! env.scope id vocab.expression
+                                           (parse/constant-expression ($quote p))))
+                 name* primitive*)
        (env-freeze! env.scope)
        env.scope)))
   ;; TODO: provide low-level, possibly platform-dependent, privileged primitives
@@ -39,9 +34,15 @@
   ;  extend/truncate between different N of sN,uN
   ;  vectorized ops
   ;  )
-
+  ;; TODO: generate this repetitive code to avoid careless mistakes:
   (define env.primitive.privileged
-    (primitive*->env
+    (name*primitive*->env
+      '(
+        panic set-panic-handler!
+        procedure-metadata
+        record? record record-type-descriptor record-ref
+        ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
+        string->bytevector bytevector->string)
       (list
         panic set-panic-handler!
         procedure-metadata
@@ -49,13 +50,31 @@
         ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
         string->bytevector bytevector->string)))
   (define env.primitive.privileged.control
-    (primitive*->env
+    (name*primitive*->env
+      '(
+        current-control-context make-control-context
+        control-context-register set-control-context-register!
+        yield set-yield-handler! set-timer enable-interrupts disable-interrupts)
       (list
         current-control-context make-control-context
         control-context-register set-control-context-register!
         yield set-yield-handler! set-timer enable-interrupts disable-interrupts)))
   (define env.primitive
-    (primitive*->env
+    (name*primitive*->env
+      '(
+        apply values
+        eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
+        pair? vector? mvector? bytevector? mbytevector?
+        string->symbol symbol->string
+        cons car cdr
+        vector vector-length vector-ref
+        make-mvector mvector->vector mvector-length mvector-ref mvector-set!
+        bytevector bytevector-length bytevector-u8-ref
+        make-mbytevector mbytevector->bytevector mbytevector-length
+        mbytevector-u8-ref mbytevector-u8-set!
+        bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
+        bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
+        numerator denominator = <= >= < > + - * /)
       (list
         apply values
         eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
