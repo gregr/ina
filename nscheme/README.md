@@ -923,7 +923,7 @@ immediately become the return values, as if `values` had been called instead.
     - `(panic-handler) (set-panic-handler! proc)`
     - `(yield-handler) (set-yield-handler! proc)`
       - called automatically when time budget is exceeded
-    - `(set-timer new-ticks) ==> previous-remaining-ticks`
+    - `(set-yield-timer new-ticks) ==> previous-remaining-ticks`
       - if `ticks` is zero, the corresponding budget is unbounded
     - `(enable-interrupts) ==> decremented-disable-count`
     - `(disable-interrupts) ==> incremented-disable-count`
