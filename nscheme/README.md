@@ -898,9 +898,49 @@ immediately become the return values, as if `values` had been called instead.
       budget is exhausted, then transfers control back to the invoking context
   - Nonvirtual threads do not involve transfers of control and are not first-class values
 
-- Dynamically-scoped parameters implemented using a control-context-local (i.e., thread-local)
-  register:
+- Dynamically-scoped parameters can be implemented using a control-context-local (i.e.,
+  virtual-thread-local) register:
   - `(control-context-register) (set-control-context-register! new-register-value)`
+  - The register value can adhere to this grammar:
+    ```
+    SCOPE ::= (cons (cons KEY VALUE) SCOPE) ; a binding followed by more bindings
+            | (mvector SCOPE)               ; a reassignable link to more bindings
+            | #f                            ; empty, no bindings available
+    ```
+    - Lookup will scan bindings in order until it finds the desired key, or `#f` if the desired key
+      is not bound, following any `mvector` links it encounters along the way.
+  - By using `control-context-register`, each control context remembers its own set of dynamic
+    bindings.
+  - Control context calls are symmetric, and a context does not automatically remember its caller.
+    This is a fine default for contexts that act as virtual threads or coroutines that are not
+    intended to behave as if they are nested within one another.  But in some cases, such as
+    generators or structured concurrency, where there should be a parent-child relationship, we want
+    to call a child context in a way that it can access dynamically-scoped parameters from the
+    parent context.  And this parent context may not be fixed.  It could change from call to call.
+    For instance, a single generator may be partially consumed from one site, and then partially
+    consumed from a different site.
+    - To support access to dynamically-scoped parameters from a parent context, where that parent
+      may change, we can set the child's initial register value to include a base
+      `(mvector ,parent-scope)` cell.  When a parent calls the child context, it should install
+      its own register value in the child's cell.
+
+- Control handlers for `panic` and `yield`
+  - Unlike the control-context-register, these handler settings are OS-thread-local rather than
+    virtual-thread-local
+    - These settings do not stick to each control context, but do stick to an OS-level thread
+    - To implement `panic` handling that sticks to a control context, set an initial handler that
+      consults `control-context-register` to find the context-local handler to dispatch to
+      - Don't forget to have the initial handler re-establish itself
+  - When panic is invoked, the panic-handler is reset to `#f` after being retrieved
+    - This prevents infinite looping if we `panic` while running the panic handling procedure itself
+    - If a panic-handling procedure is meant to persist across multiple panics, then it is
+      responsible for re-establishing itself
+  - When yield is invoked, the yield-handler is reset to `#f` after being retrieved
+    - This prevents a race condition between a synchronous call to `yield` and an asynchronous
+      (timer-triggered) call to `yield`
+      - If we don't perform this reset, and `yield` is called while the timer is still active, the
+        invoked yield-handling procedure itself could inadvertently trigger the timer before having
+        a chance to disable it
 
 - Nestable pre-emptive and cooperative multitasking via virtual threads
   - `(make-virtual-thread thunk)` produces a controller procedure with this signature:
@@ -935,17 +975,20 @@ immediately become the return values, as if `values` had been called instead.
   - High-level synchronizable actions interface
     - as in Concurrent ML and Racket synchronizable events
 
-- A system interrupt/signal is a meta-level concept and should not be dispatched as an exception.
-  - Particularly, we should not raise interrupts asynchronously in user programs.  Instead, provide
-    an input channel/stream that we can choose to synchronously listen to for interrupts/signals.
+- A system signal is a meta-level concept and should not be dispatched as an exception.
+  - These include hardware-level interrupts, such as those coming from input devices.
+    - These do not include the virtual interrupts for memory management and the yield-timer, which
+      must interrupt a user program asynchronously.
+  - Particularly, we should not raise signals asynchronously in user programs.  Instead, provide
+    an input channel/stream that we can choose to synchronously listen to for signals.
     - e.g., we can have a thread that blocks on this channel, and translates incoming signals
       to events that can be consumed by other threads, possibly downstream.
-  - Interrupts/signals are handled top-down, not bottom-up.  The host system sees them first, and
+  - Signals are handled top-down, not bottom-up.  The host system sees them first, and
     optionally delegates their handling to subprocesses via channels as described above.
     - e.g., consider a main meta-level program (such as an IDE or debugger) that is virtually
       evaluating an object-level program when a "break" is signaled.  This meta-level program should
       be designed as an event loop that evaluates the object-level program in time slices as a
-      virtual-thread, while listening for possible interrupts/signals.  When it receives the break,
+      virtual-thread, while listening for possible signals.  When it receives the break,
       it responds by pausing its evaluation of the object-level program.
 
 - Programming mistakes should panic, not raise
