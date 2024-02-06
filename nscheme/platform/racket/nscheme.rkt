@@ -5,7 +5,7 @@
   current-control-context make-control-context
   control-context-register set-control-context-register!
   panic set-panic-handler!
-  yield set-yield-handler! set-yield-timer enable-interrupts disable-interrupts
+  interrupt set-interrupt-handler! set-interrupt-timer enable-interrupts disable-interrupts
   ;; procedure-metadata returns a vector with this shape:
   ;;   #(,primitive ,captured ,code*)
   ;; where:
@@ -70,12 +70,12 @@
           (and (bytevector? a) (bytevector? b) (bytes=? a b)))))
 
 (define (panic . args) (raise (vector 'panic args)))
-(define (yield              . args) (error "TODO: not implemented"))
-(define (set-panic-handler! . args) (error "TODO: not implemented"))
-(define (set-yield-handler! . args) (error "TODO: not implemented"))
-(define (set-yield-timer    . args) (error "TODO: not implemented"))
-(define (enable-interrupts  . args) (error "TODO: not implemented"))
-(define (disable-interrupts . args) (error "TODO: not implemented"))
+(define (interrupt              . args) (error "TODO: not implemented"))
+(define (set-panic-handler!     . args) (error "TODO: not implemented"))
+(define (set-interrupt-handler! . args) (error "TODO: not implemented"))
+(define (set-interrupt-timer    . args) (error "TODO: not implemented"))
+(define (enable-interrupts      . args) (error "TODO: not implemented"))
+(define (disable-interrupts     . args) (error "TODO: not implemented"))
 (define (control-context-register)        (error "TODO: not implemented"))
 (define (set-control-context-register! x) (error "TODO: not implemented"))
 
@@ -280,7 +280,7 @@
   current-control-context make-control-context
   control-context-register set-control-context-register!
   panic set-panic-handler!
-  yield set-yield-handler! set-yield-timer enable-interrupts disable-interrupts
+  interrupt set-interrupt-handler! set-interrupt-timer enable-interrupts disable-interrupts
   procedure-metadata
   record? record record-type-descriptor record-ref
   string->bytevector bytevector->string

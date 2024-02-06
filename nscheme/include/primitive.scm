@@ -54,11 +54,11 @@
       '(
         current-control-context make-control-context
         control-context-register set-control-context-register!
-        yield set-yield-handler! set-yield-timer enable-interrupts disable-interrupts)
+        interrupt set-interrupt-handler! set-interrupt-timer enable-interrupts disable-interrupts)
       (list
         current-control-context make-control-context
         control-context-register set-control-context-register!
-        yield set-yield-handler! set-yield-timer enable-interrupts disable-interrupts)))
+        interrupt set-interrupt-handler! set-interrupt-timer enable-interrupts disable-interrupts)))
   (define env.primitive
     (name*primitive*->env
       '(

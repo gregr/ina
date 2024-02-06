@@ -924,7 +924,7 @@ immediately become the return values, as if `values` had been called instead.
       `(mvector ,parent-scope)` cell.  When a parent calls the child context, it should install
       its own register value in the child's cell.
 
-- Control handlers for `panic` and `yield`
+- Control handlers for `panic` and `interrupt`
   - Unlike the control-context-register, these handler settings are OS-thread-local rather than
     virtual-thread-local
     - These settings do not stick to each control context, but do stick to an OS-level thread
@@ -935,11 +935,11 @@ immediately become the return values, as if `values` had been called instead.
     - This prevents infinite looping if we `panic` while running the panic handling procedure itself
     - If a panic-handling procedure is meant to persist across multiple panics, then it is
       responsible for re-establishing itself
-  - When yield is invoked, the yield-handler is reset to `#f` after being retrieved
-    - This prevents a race condition between a synchronous call to `yield` and an asynchronous
-      (timer-triggered) call to `yield`
-      - If we don't perform this reset, and `yield` is called while the timer is still active, the
-        invoked yield-handling procedure itself could inadvertently trigger the timer before having
+  - When interrupt is invoked, the interrupt-handler is reset to `#f` after being retrieved
+    - This prevents a race condition between a synchronous call to `interrupt` and an asynchronous
+      (timer-triggered) call to `interrupt`
+      - If we don't perform this reset, and `interrupt` is called while the timer is still active, the
+        invoked interrupt-handling procedure itself could inadvertently trigger the timer before having
         a chance to disable it
 
 - Nestable pre-emptive and cooperative multitasking via virtual threads
@@ -949,7 +949,7 @@ immediately become the return values, as if `values` had been called instead.
       | circumstance          | ticks-remaining        |
       |-----------------------|------------------------|
       | successful return     | positive               |
-      | cooperative yield     | negative               |
+      | cooperative interrupt | negative               |
       | exhausted time budget | 0                      |
       | panic                 | <list-of-panic-values> |
       - `<panic-val*>` is the list of arguments passed to `panic`
@@ -961,9 +961,9 @@ immediately become the return values, as if `values` had been called instead.
   - Can be used to express threads, generators, coroutines
   - Alternative implementation of this interface in terms of lower-level primitives
     - `(panic-handler) (set-panic-handler! proc)`
-    - `(yield-handler) (set-yield-handler! proc)`
+    - `(interrupt-handler) (set-interrupt-handler! proc)`
       - called automatically when time budget is exceeded
-    - `(set-yield-timer new-ticks) ==> previous-remaining-ticks`
+    - `(set-interrupt-timer new-ticks) ==> previous-remaining-ticks`
       - if `ticks` is zero, the corresponding budget is unbounded
     - `(enable-interrupts) ==> decremented-disable-count`
     - `(disable-interrupts) ==> incremented-disable-count`
@@ -977,7 +977,7 @@ immediately become the return values, as if `values` had been called instead.
 
 - A system signal is a meta-level concept and should not be dispatched as an exception.
   - These include hardware-level interrupts, such as those coming from input devices.
-    - These do not include the virtual interrupts for memory management and the yield-timer, which
+    - These do not include the virtual interrupts for memory management and the interrupt-timer, which
       must interrupt a user program asynchronously.
   - Particularly, we should not raise signals asynchronously in user programs.  Instead, provide
     an input channel/stream that we can choose to synchronously listen to for signals.
