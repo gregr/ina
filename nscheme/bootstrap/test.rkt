@@ -1045,6 +1045,7 @@
     (define (co-range n)
       (define yield (current-control-context))
       (make-control-context
+        #f
         (lambda (inc)
           (let loop ((i inc))
             (when (< i n)
@@ -1064,6 +1065,7 @@
     (define (co-range n)
       (define yield (current-control-context))
       (make-control-context
+        #f
         (lambda (inc)
           (let loop ((i inc))
             (when (< i n)
@@ -1074,6 +1076,7 @@
     (define (indirect)
       (define yield (current-control-context))
       (make-control-context
+        #f
         (lambda (g)
           (let loop ()
             (yield (list (g 3) (g 3) (g 3)))
@@ -1092,6 +1095,7 @@
     (define (g-range n)
       (define g
         (make-control-context
+          #f
           (lambda (inc)
             (let loop ((i inc))
               (when (< i n)
@@ -1107,6 +1111,7 @@
     (define (indirect)
       (define yield (current-control-context))
       (make-control-context
+        #f
         (lambda (g)
           (let loop ()
             (yield (list (g 3) (g 3) (g 3)))

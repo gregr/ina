@@ -2,8 +2,7 @@
 (provide
   apply/values case case1 assert
   ;; privileged primitives
-  current-control-context make-control-context
-  control-context-register set-control-context-register!
+  current-control-context make-control-context current-control-context-register
   panic set-panic-handler!
   interrupt set-interrupt-handler! set-interrupt-timer enable-interrupts disable-interrupts
   ;; procedure-metadata returns a vector with this shape:
@@ -76,16 +75,16 @@
 (define (set-interrupt-timer    . args) (error "TODO: not implemented"))
 (define (enable-interrupts      . args) (error "TODO: not implemented"))
 (define (disable-interrupts     . args) (error "TODO: not implemented"))
-(define (control-context-register)        (error "TODO: not implemented"))
-(define (set-control-context-register! x) (error "TODO: not implemented"))
+(define (current-control-context-register) (error "TODO: not implemented"))
 
 (define (thread->control-context t)
   (lambda arg*
     (thread-send t arg*)
     (apply values (thread-receive))))
-(define (current-control-context)   (thread->control-context (current-thread)))
-(define (make-control-context proc) (thread->control-context
-                                      (thread (lambda () (apply proc (thread-receive))))))
+(define (current-control-context) (thread->control-context (current-thread)))
+(define (make-control-context register-value proc)
+  ;; TODO: bind register
+  (thread->control-context (thread (lambda () (apply proc (thread-receive))))))
 
 (define-syntax-rule (assert test ...) (begin (unless test (panic 'violation 'assert 'test)) ...))
 
@@ -277,8 +276,7 @@
 
 (declare-primitives!
   ;; privileged primitives
-  current-control-context make-control-context
-  control-context-register set-control-context-register!
+  current-control-context make-control-context current-control-context-register
   panic set-panic-handler!
   interrupt set-interrupt-handler! set-interrupt-timer enable-interrupts disable-interrupts
   procedure-metadata

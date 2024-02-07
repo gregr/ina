@@ -866,10 +866,11 @@ as one-shot delimited continuations, and may be used to implement exception hand
 generators, and one-shot algebraic effects.  They seem to be simpler to use, and may be
 implementable with less call-stack copying than first-class continuations.
 
-`(make-control-context proc)` creates a new calling context whose control-flow is independent of
-any other.  It also creates and returns a control procedure that, when called, transfers control
-from the current context the created one.  The first time this procedure is called, it passes its
-arguments to `proc` on a new call stack.
+`(make-control-context register-value proc)` creates a new calling context whose control-flow is
+independent of any other.  Code running within this context has access to `register-value` via
+`(current-control-context-register)`.  It also creates and returns a control procedure that, when
+called, transfers control from the current context to the created one.  The first time this
+procedure is called, it passes its arguments to `proc` on a new call stack.
 
 `(current-control-context)` returns the control procedure corresponding to the currently-active
 context.
@@ -884,7 +885,8 @@ it will behave like it is returning from that earlier call.  The arguments that 
 the callee become the return values of that earlier call.
 
 If the callee is becoming active for the first time, the arguments that were just passed to it
-become the arguments of the `proc` in the `(make-control-context proc)` that created the callee.
+become the arguments of the `proc` in the `(make-control-context register-value proc)` that created
+the callee.
 
 It is safe for a context to transfer control directly to itself.  In that case, the call arguments
 immediately become the return values, as if `values` had been called instead.
@@ -898,10 +900,10 @@ immediately become the return values, as if `values` had been called instead.
       budget is exhausted, then transfers control back to the invoking context
   - Nonvirtual threads do not involve transfers of control and are not first-class values
 
-- Dynamically-scoped parameters can be implemented using a control-context-local (i.e.,
-  virtual-thread-local) register:
-  - `(control-context-register) (set-control-context-register! new-register-value)`
-  - The register value can adhere to this grammar:
+- Dynamically-scoped parameters can be implemented by storing a control-context-local scope value:
+  - `(mvector-ref (current-control-context-register) 0)` to retrieve the current scope, and
+    `(mvector-set! (current-control-context-register) 0 new-scope)` to set a new scope.
+  - The scope can adhere to this grammar:
     ```
     SCOPE ::= (cons (cons KEY VALUE) SCOPE) ; a binding followed by more bindings
             | (mvector SCOPE)               ; a reassignable link to more bindings
@@ -909,8 +911,7 @@ immediately become the return values, as if `values` had been called instead.
     ```
     - Lookup will scan bindings in order until it finds the desired key, or `#f` if the desired key
       is not bound, following any `mvector` links it encounters along the way.
-  - By using `control-context-register`, each control context remembers its own set of dynamic
-    bindings.
+  - By using the local register, each control context remembers its own set of dynamic bindings.
   - Control context calls are symmetric, and a context does not automatically remember its caller.
     This is a fine default for contexts that act as virtual threads or coroutines that are not
     intended to behave as if they are nested within one another.  But in some cases, such as
@@ -920,16 +921,15 @@ immediately become the return values, as if `values` had been called instead.
     For instance, a single generator may be partially consumed from one site, and then partially
     consumed from a different site.
     - To support access to dynamically-scoped parameters from a parent context, where that parent
-      may change, we can set the child's initial register value to include a base
+      may change, we can set the child's initial scope value to include a base
       `(mvector ,parent-scope)` cell.  When a parent calls the child context, it should install
-      its own register value in the child's cell.
+      its own scope value in the child's cell.
 
 - Control handlers for `panic` and `interrupt`
-  - Unlike the control-context-register, these handler settings are OS-thread-local rather than
-    virtual-thread-local
-    - These settings do not stick to each control context, but do stick to an OS-level thread
+  - Unlike a control-context register, these handler settings are OS-thread-local
+    - i.e., these settings do not stick to each control context, but do stick to an OS-level thread
     - To implement `panic` handling that sticks to a control context, set an initial handler that
-      consults `control-context-register` to find the context-local handler to dispatch to
+      consults `current-control-context-register` to find the context-local handler to dispatch to
       - Don't forget to have the initial handler re-establish itself
   - When panic is invoked, the panic-handler is reset to `#f` after being retrieved
     - This prevents infinite looping if we `panic` while running the panic handling procedure itself
@@ -967,7 +967,7 @@ immediately become the return values, as if `values` had been called instead.
       - if `ticks` is zero, the corresponding budget is unbounded
     - `(enable-interrupts) ==> decremented-disable-count`
     - `(disable-interrupts) ==> incremented-disable-count`
-    - `(make-control-context proc) (current-control-context)`
+    - `(make-control-context register-value proc) (current-control-context)`
 
 - Parallel processing
   - Platform-specific primitives for spawning parallel threads/processes

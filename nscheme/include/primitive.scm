@@ -52,12 +52,10 @@
   (define env.primitive.privileged.control
     (name*primitive*->env
       '(
-        current-control-context make-control-context
-        control-context-register set-control-context-register!
+        current-control-context make-control-context current-control-context-register
         interrupt set-interrupt-handler! set-interrupt-timer enable-interrupts disable-interrupts)
       (list
-        current-control-context make-control-context
-        control-context-register set-control-context-register!
+        current-control-context make-control-context current-control-context-register
         interrupt set-interrupt-handler! set-interrupt-timer enable-interrupts disable-interrupts)))
   (define env.primitive
     (name*primitive*->env
