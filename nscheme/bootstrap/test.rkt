@@ -1043,8 +1043,8 @@
   (let ()
     (define (list . x*) x*)
     (define (co-range n)
-      (define yield (current-control-context))
-      (make-control-context
+      (define yield (current-coroutine))
+      (make-coroutine
         #f
         (lambda (inc)
           (let loop ((i inc))
@@ -1063,8 +1063,8 @@
   (let ()
     (define (list . x*) x*)
     (define (co-range n)
-      (define yield (current-control-context))
-      (make-control-context
+      (define yield (current-coroutine))
+      (make-coroutine
         #f
         (lambda (inc)
           (let loop ((i inc))
@@ -1074,8 +1074,8 @@
             (yield 'done)
             (loop)))))
     (define (indirect)
-      (define yield (current-control-context))
-      (make-control-context
+      (define yield (current-coroutine))
+      (make-coroutine
         #f
         (lambda (g)
           (let loop ()
@@ -1094,7 +1094,7 @@
     (define (list . x*) x*)
     (define (g-range n)
       (define g
-        (make-control-context
+        (make-coroutine
           #f
           (lambda (inc)
             (let loop ((i inc))
@@ -1106,11 +1106,11 @@
       (define context.yield (make-mvector 1 #t))
       (define (yield . x*) (apply (mvector-ref context.yield 0) x*))
       (lambda (inc)
-        (mvector-set! context.yield 0 (current-control-context))
+        (mvector-set! context.yield 0 (current-coroutine))
         (g inc)))
     (define (indirect)
-      (define yield (current-control-context))
-      (make-control-context
+      (define yield (current-coroutine))
+      (make-coroutine
         #f
         (lambda (g)
           (let loop ()

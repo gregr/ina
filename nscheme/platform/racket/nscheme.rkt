@@ -2,7 +2,7 @@
 (provide
   apply/values case case1 assert
   ;; privileged primitives
-  current-control-context make-control-context current-control-context-register
+  current-coroutine make-coroutine current-coroutine-register
   panic set-panic-handler!
   set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts
   ;; procedure-metadata returns a vector with this shape:
@@ -50,12 +50,12 @@
 (require racket/control racket/file racket/flonum racket/list racket/match racket/port racket/string
          racket/struct racket/system racket/tcp racket/udp racket/vector (prefix-in rkt: racket/base))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Resource budget interrupts and control contexts ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Control transfer and interrupts ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; TODO:
-;; - Racket platform implementations for control-context register and budget handlers.
+;; - Racket platform implementations for coroutine register and budget handlers.
 ;;   - Should we emulate nScheme dynamic environments, or use Racket
 ;;     parameters directly?  If we use Racket parameters, how do we make them
 ;;     compatible with system snapshots?
@@ -74,16 +74,16 @@
 (define (set-timer                    . args) (error "TODO: not implemented"))
 (define (enable-interrupts            . args) (error "TODO: not implemented"))
 (define (disable-interrupts           . args) (error "TODO: not implemented"))
-(define (current-control-context-register) (error "TODO: not implemented"))
+(define (current-coroutine-register) (error "TODO: not implemented"))
 
-(define (thread->control-context t)
+(define (thread->coroutine t)
   (lambda arg*
     (thread-send t arg*)
     (apply values (thread-receive))))
-(define (current-control-context) (thread->control-context (current-thread)))
-(define (make-control-context register-value proc)
+(define (current-coroutine) (thread->coroutine (current-thread)))
+(define (make-coroutine register-value proc)
   ;; TODO: bind register
-  (thread->control-context (thread (lambda () (apply proc (thread-receive))))))
+  (thread->coroutine (thread (lambda () (apply proc (thread-receive))))))
 
 (define-syntax-rule (assert test ...) (begin (unless test (panic 'violation 'assert 'test)) ...))
 
@@ -275,7 +275,7 @@
 
 (declare-primitives!
   ;; privileged primitives
-  current-control-context make-control-context current-control-context-register
+  current-coroutine make-coroutine current-coroutine-register
   panic set-panic-handler!
   set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts
   procedure-metadata

@@ -113,11 +113,11 @@ way by manipulating programs and live processes as data.
   - `integer?` `rational?` etc. must return `#f` for all inexact numbers.
 - Optional decimal representation for fractions, with repeating portion prefixed by ~
   - e.g., 0.~3 for 1/3, 0.~17 for 17/99, etc.
-- There are no operators that directly capture continuations.  First-class control context operators
-  manipulate disjoint call stacks, and avoid copying frames.  They have the same expressiveness as
-  one-shot delimited continuations.
+- There are no operators that directly capture continuations.  First-class coroutines manipulate
+  disjoint call stacks, and avoid copying frames.  They have the same expressiveness as one-shot
+  delimited continuations.
 - There is no prescribed object-level error handling model.
-  - You can define your own handling using control contexts and dynamically-scoped parameters.
+  - You can define your own handling using coroutines and dynamically-scoped parameters.
 
 ## Run tests and bootstrap
 
@@ -283,7 +283,7 @@ include
         ```
         ((boot
           (procedure-metadata . <_>)
-          (make-control-context . <_>)
+          (make-coroutine . <_>)
           etc. ...)
          (base
           (cons . <_>)
@@ -799,13 +799,13 @@ The general case of `(apply/values callee values-producer)` installs a multi-val
 that dispatches to `callee`.  The return convention places return values the same way that the
 calling convention places arguments, so this dispatch should be straightforward.
 
-Control transfer to a first-class control context will be implemented as a call that returns to a
+Control transfer to a first-class coroutine will be implemented as a call that returns to a
 different stack (except in the special case of a self-transfer).
 
 ### Symmetric returning and calling conventions with closure-based control contexts
 
 With closure-based control contexts, the same kind of code object and control-transfer could be used
-for procedures, return points, and first-class control contexts.
+for procedures, return points, and coroutines.
 
 For instance, an illustration of symmetry between calling and returning:
 - `(apply/values values-producer callee)` would compose the current continuation with the `callee`
@@ -859,48 +859,59 @@ chosen on a case-by-case basis:
 - When a callee is always known when called, its instructions do not need to adhere to the general
   convention.
 
-## First-class control contexts
+## First-class coroutines
 
-First-class control contexts behave like full, symmetric coroutines.  They should be as expressive
-as one-shot delimited continuations, and may be used to implement exception handling, threads,
-generators, and one-shot algebraic effects.  They seem to be simpler to use, and may be
-implementable with less call-stack copying than first-class continuations.
+Instead of building on first-class continuations, we build a foundation for control operators using
+first-class coroutines.
 
-`(make-control-context register-value proc)` creates a new calling context whose control-flow is
-independent of any other.  Code running within this context has access to `register-value` via
-`(current-control-context-register)`.  It also creates and returns a control procedure that, when
-called, transfers control from the current context to the created one.  The first time this
+These coroutines are full and symmetric.
+- Full means they can "yield" at any level of procedure call, not just the outermost level.
+  - Contrast this with a Python generator, which can only yield from the outermost level.
+- Symmetric means there is no general yield operator.  Instead, a coroutine transfers control to
+  another by calling it explicitly.
+
+They are as expressive as one-shot delimited continuations, and may be used to implement exception
+handling, engines, threads, generators, and one-shot algebraic effects.  They seem to be simpler
+to use, and may be implementable with less call-stack copying than first-class continuations.
+
+`(make-coroutine register-value proc)` creates a new calling context whose control-flow is
+independent of any other.  Code running within this coroutine has access to a private register via
+`(current-coroutine-register)`.  It also creates and returns a control procedure that, when
+called, transfers control from the current coroutine to the created one.  The first time this
 procedure is called, it passes its arguments to `proc` on a new call stack.
 
-`(current-control-context)` returns the control procedure corresponding to the currently-active
-context.
+`(current-coroutine)` returns the control procedure corresponding to the currently-active coroutine.
 
 Whenever a control procedure is called, the caller's own control procedure is immediately updated
 such that calling it will to return to the point of this call.  That is, transferring control back
 to the caller at some later time corresponds to the caller returning from its original call.  The
-callee's context then becomes the active one.
+callee's coroutine then becomes the active one.
 
-When the callee becomes active after having become inactive due to calling a control procedure, then
+When the callee becomes active after having become inactive due to calling another coroutine, then
 it will behave like it is returning from that earlier call.  The arguments that were just passed to
 the callee become the return values of that earlier call.
 
+In other words, calling a coroutine resumes that coroutine's computation by returning from its own
+last call to a coroutine.
+- And the call arguments become the return values of the resumption.
+
 If the callee is becoming active for the first time, the arguments that were just passed to it
-become the arguments of the `proc` in the `(make-control-context register-value proc)` that created
+become the arguments of the `proc` in the `(make-coroutine register-value proc)` that created
 the callee.
 
-It is safe for a context to transfer control directly to itself.  In that case, the call arguments
+It is safe for a coroutine to transfer control directly to itself.  In that case, the call arguments
 immediately become the return values, as if `values` had been called instead.
 
 ## Control operators
 
 - No first-class control operator will copy any part of the current continuation/stack
-  - Each control context uses a disjoint call stack
-  - Creating a virtual thread produces a new control context
-    - Invoking a virtual thread transfers control to its context, computes until the given resource
-      budget is exhausted, then transfers control back to the invoking context
+  - Each coroutine uses a disjoint call stack
+  - Creating a virtual thread produces a new coroutine
+    - Invoking a virtual thread transfers control to its coroutine, computes until the given
+      resource budget is exhausted, then transfers control back to the invoking coroutine
   - Nonvirtual threads do not involve transfers of control and are not first-class values
 
-- Dynamically-scoped parameters can be implemented by storing a control-context-local scope value:
+- Dynamically-scoped parameters can be implemented by storing a coroutine-local scope value:
   - The scope can adhere to this grammar:
     ```
     SCOPE ::= (cons (cons KEY VALUE) SCOPE) ; a binding followed by more bindings
@@ -909,28 +920,28 @@ immediately become the return values, as if `values` had been called instead.
     ```
     - Lookup will scan bindings in order until it finds the desired key, or `#f` if the desired key
       is not bound, following any `mvector` links it encounters along the way.
-  - By using the local register, each control context remembers its own set of dynamic bindings.
-  - Control context calls are symmetric, and a context does not automatically remember its caller.
-    This is a fine default for contexts that act as virtual threads or coroutines that are not
-    intended to behave as if they are nested within one another.  But in some cases, such as
-    generators or structured concurrency, where there should be a parent-child relationship, we want
-    to call a child context in a way that it can access dynamically-scoped parameters from the
-    parent context.  And this parent context may not be fixed.  It could change from call to call.
-    For instance, a single generator may be partially consumed from one site, and then partially
-    consumed from a different site.
-    - To support access to dynamically-scoped parameters from a parent context, where that parent
+  - By using the local register, each coroutine remembers its own set of dynamic bindings.
+  - Coroutine calls are symmetric, and a coroutine does not automatically remember its caller.  This
+    is a fine default for coroutines that act as virtual threads or coroutines that are not intended
+    to behave as if they are nested within one another.  But in some cases, such as generators or
+    structured concurrency, where there should be a parent-child relationship, we want to call a
+    child coroutine in a way that it can access dynamically-scoped parameters from the parent.  And
+    this parent coroutine may not be fixed.  It could change from call to call.  For instance, a
+    single generator may be partially consumed from one site, and then partially consumed from a
+    different site.
+    - To support access to dynamically-scoped parameters from a parent coroutine, where that parent
       may change, we can set the child's initial scope value to include a base
-      `(mvector ,parent-scope)` cell.  When a parent calls the child context, it should install
+      `(mvector ,parent-scope)` cell.  When a parent calls the child coroutine, it should install
       its own scope value in the child's cell.
-  - Instead of an embedded `mvector`, we could traverse the outer parent link that is stored in
-    `current-control-context-register` alongside the dynamic scope value(s).
+  - Alternatively, instead of an embedded `mvector`, we could traverse the outer parent link that is
+    stored in `current-coroutine-register` alongside the dynamic scope value(s).
 
 - Control handlers for `panic` and timed interruption
-  - Unlike a control-context register, these handler settings are OS-thread-local
-    - i.e., these settings do not stick to each control context, but do stick to an OS-level thread
-    - To implement `panic` handling that sticks to a control context, set an initial handler that
-      consults `current-control-context-register` to find the context-local handler to dispatch to
-      - Don't forget to have the initial handler re-establish itself
+  - Unlike a coroutine register, these handler settings are OS-thread-local.
+    - i.e., these settings do not stick to each coroutine, but do stick to an OS-level thread.
+    - To implement `panic` handling that sticks to a coroutine, set an initial handler that consults
+      `current-coroutine-register` to find the coroutine-local handler to dispatch to.
+      - Don't forget to have the initial handler re-establish itself.
   - When `panic` is invoked, interrupts are disabled (disable-interrupts-count is incremented), and
     the panic-handler is reset to `#f` after being retrieved.
     - Setting the panic-handler to `#f` prevents infinite looping in case we `panic` while running
@@ -963,14 +974,14 @@ immediately become the return values, as if `values` had been called instead.
       - if `ticks` is zero, the corresponding budget is unbounded
     - `(enable-interrupts) ==> decremented-disable-count`
     - `(disable-interrupts) ==> incremented-disable-count`
-    - `(make-control-context register-value proc)`
-      `(current-control-context)`
-      `(current-control-context-register)`
+    - `(make-coroutine register-value proc)`
+      `(current-coroutine)`
+      `(current-coroutine-register)`
   - Engines and preemptive threads are managed with thread states that coordinate timed interrupts.
   - A thread state has this representation:
     - ```
       (mvector
-        ,resume        ; the control procedure for resuming this thread's control context
+        ,resume        ; the control procedure for resuming this thread's coroutine
         ,child         ; #f if this thread is not currently acting as a scheduler
         ,parent        ; #f if root or detached
         ,next-ancestor ; #f, or the ancestor to be resumed when the timer interrupt fires
@@ -979,7 +990,7 @@ immediately become the return values, as if `values` had been called instead.
         ,signal?       ; #f, stop, or terminate, where terminate overrides stop
         )
       ```
-  - The current thread's state is stored alongside the scope stored in `current-control-context-register`,
+  - The current thread's state is stored alongside the scope stored in `current-coroutine-register`,
     with this structure:
     - ```
       (mvector
@@ -1115,7 +1126,7 @@ immediately become the return values, as if `values` had been called instead.
 - Errors that are not programming mistakes should raise
   - Unlike panic, raise is not a primitive, it can be defined in a library
   - This library should support error handling with restarts and finalization, built on top of
-    control contexts and dynamic parameters
+    coroutines and dynamic parameters
 
 ## Numbers
 
