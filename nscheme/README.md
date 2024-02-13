@@ -901,8 +901,6 @@ immediately become the return values, as if `values` had been called instead.
   - Nonvirtual threads do not involve transfers of control and are not first-class values
 
 - Dynamically-scoped parameters can be implemented by storing a control-context-local scope value:
-  - `(mvector-ref (current-control-context-register) 0)` to retrieve the current scope, and
-    `(mvector-set! (current-control-context-register) 0 new-scope)` to set a new scope.
   - The scope can adhere to this grammar:
     ```
     SCOPE ::= (cons (cons KEY VALUE) SCOPE) ; a binding followed by more bindings
@@ -924,6 +922,8 @@ immediately become the return values, as if `values` had been called instead.
       may change, we can set the child's initial scope value to include a base
       `(mvector ,parent-scope)` cell.  When a parent calls the child context, it should install
       its own scope value in the child's cell.
+  - Instead of an embedded `mvector`, we could traverse the outer parent link that is stored in
+    `current-control-context-register` alongside the dynamic scope value(s).
 
 - Control handlers for `panic` and `interrupt`
   - Unlike a control-context register, these handler settings are OS-thread-local
@@ -931,43 +931,155 @@ immediately become the return values, as if `values` had been called instead.
     - To implement `panic` handling that sticks to a control context, set an initial handler that
       consults `current-control-context-register` to find the context-local handler to dispatch to
       - Don't forget to have the initial handler re-establish itself
-  - When panic is invoked, the panic-handler is reset to `#f` after being retrieved
-    - This prevents infinite looping if we `panic` while running the panic handling procedure itself
+  - When `panic` is invoked, interrupts are disabled (disable-interrupts-count is incremented), and
+    the panic-handler is reset to `#f` after being retrieved.
+    - Setting the panic-handler to `#f` prevents infinite looping in case we `panic` while running
+      the panic handling procedure itself.
     - If a panic-handling procedure is meant to persist across multiple panics, then it is
-      responsible for re-establishing itself
-  - When interrupt is invoked, the interrupt-handler is reset to `#f` after being retrieved
+      responsible for re-establishing itself.
+    - If the panic-handler wishes to resume normal computation, it is responsible for re-enabling
+      interrupts when appropriate.
+    - If a panic-handler intends to recover, it should do so by an explicit control transfer, not
+      by returning normally.  By calling `panic` in the first place, we indicate that we wish to
+      leave a failed computation, so the call's continuation is not safe to resume.  As a safeguard,
+      if a panic-handler returns normally, it will invoke the platform's default panic-handler,
+      which will likely exit the program.
+  - When `interrupt` is invoked, the interrupt-handler is reset to `#f` after being retrieved
+    before calling the interrupt-handler.
     - This prevents a race condition between a synchronous call to `interrupt` and an asynchronous
-      (timer-triggered) call to `interrupt`
-      - If we don't perform this reset, and `interrupt` is called while the timer is still active, the
-        invoked interrupt-handling procedure itself could inadvertently trigger the timer before having
-        a chance to disable it
+      (timer-triggered) call to `interrupt`.
 
-- Nestable pre-emptive and cooperative multitasking via virtual threads
-  - `(make-virtual-thread thunk)` produces a controller procedure with this signature:
-    `(controller budget-ticks-or-#f)`
-    - returns `ticks-remaining` with these interpretations:
-      | circumstance          | ticks-remaining        |
-      |-----------------------|------------------------|
-      | successful return     | positive               |
-      | cooperative interrupt | negative               |
-      | exhausted time budget | 0                      |
-      | panic                 | <list-of-panic-values> |
-      - `<panic-val*>` is the list of arguments passed to `panic`
-    - resuming after a successful return will panic
-    - resuming normally after a panic is futile as it will panic again
-      - to resume successfully, the controller should be adjusted with debugger-like capabilities
-    - the `thunk` passed to `make-virtual-thread` must return `(values)` when finished
-      - any desired communication must occur via side channel, such as an `mvector`
-  - Can be used to express threads, generators, coroutines
-  - Alternative implementation of this interface in terms of lower-level primitives
-    - `(panic-handler) (set-panic-handler! proc)`
-    - `(interrupt-handler) (set-interrupt-handler! proc)`
+- Nestable preemptive multitasking
+  - Related: https://legacy.cs.indiana.edu/~dyb/pubs/engines.pdf
+  - Built on virtual timer interrupts and cooperative control transfers
+    - `(set-interrupt-handler! proc)`
       - called automatically when time budget is exceeded
     - `(set-interrupt-timer new-ticks) ==> previous-remaining-ticks`
       - if `ticks` is zero, the corresponding budget is unbounded
     - `(enable-interrupts) ==> decremented-disable-count`
     - `(disable-interrupts) ==> incremented-disable-count`
-    - `(make-control-context register-value proc) (current-control-context)`
+    - `(make-control-context register-value proc)`
+      `(current-control-context)`
+      `(current-control-context-register)`
+  - Engines and preemptive threads are managed with thread states that coordinate timed interrupts.
+  - A thread state has this representation:
+    - ```
+      (mvector
+        ,resume        ; the control procedure for resuming this thread's control context
+        ,child         ; #f if this thread is not currently acting as a scheduler
+        ,parent        ; #f if root or detached
+        ,next-ancestor ; #f, or the ancestor to be resumed when the interrupt-timer expires
+        ,ticks         ; #f to run until voluntary pause, negative if next-ancestor has more ticks
+        ,status        ; one of these symbols: running, ready, blocked, done
+        ,signal?       ; #f, stop, or terminate, where terminate overrides stop
+        )
+      ```
+  - The current thread's state is stored alongside the scope stored in `current-control-context-register`,
+    with this structure:
+    - ```
+      (mvector
+        ,thread-state  ; #f if detached
+        ,parent        ; #f if root scope, searched for more dynamic bindings, reassignable for generators and engines
+        ;; dynamic bindings for the current scope
+        ,parameters
+        ,condition-handlers
+        ,restarts-and-finalizers
+        ,etc. ...
+        )
+      ```
+  - Thread control signals:
+    - A thread state can be requested to stop (pause evaluation indefinitely) or terminate early by
+      setting the `signal-requested?` field.  When the interrupt-handler is deciding how to resume,
+      it will `raise` a signal condition if `signal?`.
+      - The program's root scheduler is likely listening for operating system signals and
+        translating them into appropriate thread control signals.
+        - e.g., SIGTSTP, SIGTERM on POSIX systems
+      - (thread-terminate t force?)  SIGTERM-like if force? is #f, otherwise SIGKILL-like
+      - (thread-stop      t force?)  SIGTSTP-like if force? is #f, otherwise SIGSTOP-like
+      - if force? = #f, the default handlers for each should re-invoke with force? = #t on
+        the current thread (because the signalled thread is the one running the handler) to
+        complete the signalled action
+        - user-defined handlers should finish their cleanup, then do the same force? = #t for
+          the same reason
+    - To safely stop or terminate a thread it must be possible to asynchronously interrupt it, and
+      give it a chance to clean up or otherwise prepare.
+      - This is similar to Racket's `break`.
+      - A signal will be communicated with `raise` and its condition can be handled in the usual way.
+    - If a signal arrives while a thread is blocked, the condition we `raise` will indicate this in
+      case the handling behavior should differ in this situation.
+  - Schedulers for preemptive threads should respect structured concurrency:
+    - A scheduler should scope the the lifetime of all threads they run.
+      - The scheduler is only finished once all of its threads are finished.
+    - A protective catch-all error handler needs to be installed to gracefully terminate all of a
+      scheduler's threads before propagating the error.
+    - A catch-all signal handler needs to be installed to prevent threads from leaking the signals
+      sent to them.
+  - The installed interrupt-handler is responsible for updating the tick budget for a chain of
+    nested thread states, re-establish itself with `set-interrupt-handler!`, transfer control to the
+    appropriate point in the chain, and either deliver pending signals with `raise`, or just return
+    to resume normally.
+    - When `interrupt` is invoked, we determine how many unused ticks remain using
+      `ticks <- (set-interrupt-timer 0)`.  If `ticks` is zero, then it means `interrupt` was invoked
+      because the timer ran out.  If `(> ticks 0)`, it means the youngest currently-running thread
+      has voluntarily paused, so we resume its parent after `(set-interrupt-timer ticks)` to make
+      those ticks available to the parent.
+    - When the timer runs out, it means one of the currently-executing threads has run out of ticks.
+      We determine which thread expired by following next-ancestor links until we find one with
+      negative ticks, or its next-ancestor is `#f`.
+      - Having negative ticks means that the next-most-constrained thread, which is one of the
+        expired thread's ancestors, has `(- ticks)` more ticks than the expired thread.
+      - We resume the parent of the expired thread after `(set-interrupt-timer (- ticks))` to make
+        those additional ticks available to the parent.
+    - When a thread runs a chain of nested threads for some number of `new-ticks`, we first assign
+      `ticks` in the top thread of the chain to be `new-ticks`, then we compare `new-ticks` with
+      `ticks-remaining <- (set-interrupt-timer 0)` as well as update tick accounting and
+      next-ancestor links.
+      - If `(<= ticks-remaining new-ticks)` then the chain we are starting may be less constrained
+        than one of the currently-running threads, reachable from `next-ancestor`.  We walk the
+        chain downward, decrementing `ticks-remaining` from each thread's `ticks` as long as
+        `(<= ticks-remaining ticks)`, and setting its `next-ancestor` to the current
+        `next-ancestor`.  If we get to the bottom this way, then the entire chain was less
+        constrained.  Otherwise, if we encounter a thread where `(< ticks ticks-remaining)`, then
+        this thread is more constrained.  We set its ticks to be `(- ticks ticks-remaining)`, which
+        is negative, and continue the traversal downward, using this more-constrained thread as the
+        `next-ancestor` below, and using `ticks` as `ticks-remaining`.
+      - If `(< new-ticks ticks-remaining)` then the chain we are starting is immediately more
+        constrained than `next-ancestor`.  We follow the same downward process as above, but we
+        start with the top of our chain as `next-ancestor`, set its `ticks` to
+        `(- new-ticks ticks-remaining)`, which should be negative, and use `new-ticks` as
+        `ticks-remaining` as we traverse.
+      - If `ticks-remaining` is ever updated to `0` it means we came across a thread which is
+        already expired.  We can stop the traversal early, resuming its parent after
+        `(set-interrupt-timer previous-ticks-remaining)`.
+    - Any thread with `#f` `ticks` is considered to be running indefinitely, until voluntarily
+      pausing.  No arithmetic updating needs to be done on their `ticks`.  We just treat these like
+      infinities for the purpose of the processes described above.  For instance, these threads will
+      never be the most-constrained, and so will only be resumed either when they are the youngest
+      in the chain, or when an immediate child pauses, either voluntarily, or because it ran out of
+      ticks.  This implies that a parent with `#f` `ticks` that is running a child, also with `#f`
+      `ticks`, then the parent will never be resumed due to simple tick exhaustion.
+
+- A system signal is a meta-level concept and should not be implicitly dispatched as an asynchronous
+  exception.  Instead, the platform should provide a way to register explicit signal handlers and
+  use cooperative control transfers, if any.
+  - These include hardware-level interrupts, such as those coming from input devices.
+    - These do not include the virtual interrupts for memory management and the interrupt-timer,
+      which must interrupt a user program asynchronously.
+  - If desired, the signal handler can `raise` asynchronous conditions to implement a multitasking
+    system.
+  - An alternative to preemptive multitasking is to provide an input channel/stream that we can
+    choose to synchronously listen to for signals.
+    - e.g., we can have a thread that blocks on this channel, and translates incoming signals
+      to events that can be consumed by other threads, possibly downstream.
+  - Signals are handled top-down, not bottom-up, and their handling mechanism can be virtualized.
+    That is, the host system sees a signal first, and optionally delegates its handling to a
+    subprocess via the same channel-like mechanism as described above, with the subprocess behaving
+    as a host itself.
+  - Consider a main meta-level program (such as an IDE or debugger) that is evaluating an
+    object-level program in time slices using a virtual-thread, and checking for signals after
+    each time slice.  If the user presses ctrl-c or ctrl-z on the keyboard, the corresponding
+    signal will be received by the meta-level program, which might react by either terminating
+    (for ctrl-c) or pausing (for ctrl-z) the object-level program virtual-thread.
 
 - Parallel processing
   - Platform-specific primitives for spawning parallel threads/processes
@@ -975,21 +1087,6 @@ immediately become the return values, as if `values` had been called instead.
   - High-level synchronizable actions interface
     - as in Concurrent ML and Racket synchronizable events
 
-- A system signal is a meta-level concept and should not be dispatched as an exception.
-  - These include hardware-level interrupts, such as those coming from input devices.
-    - These do not include the virtual interrupts for memory management and the interrupt-timer, which
-      must interrupt a user program asynchronously.
-  - Particularly, we should not raise signals asynchronously in user programs.  Instead, provide
-    an input channel/stream that we can choose to synchronously listen to for signals.
-    - e.g., we can have a thread that blocks on this channel, and translates incoming signals
-      to events that can be consumed by other threads, possibly downstream.
-  - Signals are handled top-down, not bottom-up.  The host system sees them first, and
-    optionally delegates their handling to subprocesses via channels as described above.
-    - e.g., consider a main meta-level program (such as an IDE or debugger) that is virtually
-      evaluating an object-level program when a "break" is signaled.  This meta-level program should
-      be designed as an event loop that evaluates the object-level program in time slices as a
-      virtual-thread, while listening for possible signals.  When it receives the break,
-      it responds by pausing its evaluation of the object-level program.
 
 - Programming mistakes should panic, not raise
   - Examples of programming mistakes:
