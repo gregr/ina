@@ -925,7 +925,7 @@ immediately become the return values, as if `values` had been called instead.
   - Instead of an embedded `mvector`, we could traverse the outer parent link that is stored in
     `current-control-context-register` alongside the dynamic scope value(s).
 
-- Control handlers for `panic` and `interrupt`
+- Control handlers for `panic` and timed interruption
   - Unlike a control-context register, these handler settings are OS-thread-local
     - i.e., these settings do not stick to each control context, but do stick to an OS-level thread
     - To implement `panic` handling that sticks to a control context, set an initial handler that
@@ -944,17 +944,22 @@ immediately become the return values, as if `values` had been called instead.
       leave a failed computation, so the call's continuation is not safe to resume.  As a safeguard,
       if a panic-handler returns normally, it will invoke the platform's default panic-handler,
       which will likely exit the program.
-  - When `interrupt` is invoked, the interrupt-handler is reset to `#f` after being retrieved
-    before calling the interrupt-handler.
-    - This prevents a race condition between a synchronous call to `interrupt` and an asynchronous
-      (timer-triggered) call to `interrupt`.
+  - When the interrupt timer expires, the interrupt-handler is not reset, and so does not need to be
+    re-established to persist.
+    - It is dangerous to restart the timer with `set-timer` within the interrupt-handler if making
+      further calls, such as an explicit control transfer before the end of the handler.  Setting
+      the timer here risks making negative progress towards the remaining computation, as the
+      handler's own calls may consume some of the allocated time.  It is safer to call the control
+      recipient with the desired tick count, and make them responsible for calling `set-timer` right
+      before resuming normal computation.
+  - Non-timer interrupts do not invoke the interrupt-handler
 
 - Nestable preemptive multitasking
   - Related: https://legacy.cs.indiana.edu/~dyb/pubs/engines.pdf
   - Built on virtual timer interrupts and cooperative control transfers
-    - `(set-interrupt-handler! proc)`
+    - `(set-timer-interrupt-handler! proc)`
       - called automatically when time budget is exceeded
-    - `(set-interrupt-timer new-ticks) ==> previous-remaining-ticks`
+    - `(set-timer new-ticks) ==> previous-remaining-ticks`
       - if `ticks` is zero, the corresponding budget is unbounded
     - `(enable-interrupts) ==> decremented-disable-count`
     - `(disable-interrupts) ==> incremented-disable-count`
@@ -968,7 +973,7 @@ immediately become the return values, as if `values` had been called instead.
         ,resume        ; the control procedure for resuming this thread's control context
         ,child         ; #f if this thread is not currently acting as a scheduler
         ,parent        ; #f if root or detached
-        ,next-ancestor ; #f, or the ancestor to be resumed when the interrupt-timer expires
+        ,next-ancestor ; #f, or the ancestor to be resumed when the timer interrupt fires
         ,ticks         ; #f to run until voluntary pause, negative if next-ancestor has more ticks
         ,status        ; one of these symbols: running, ready, blocked, done
         ,signal?       ; #f, stop, or terminate, where terminate overrides stop
@@ -1015,25 +1020,24 @@ immediately become the return values, as if `values` had been called instead.
     - A catch-all signal handler needs to be installed to prevent threads from leaking the signals
       sent to them.
   - The installed interrupt-handler is responsible for updating the tick budget for a chain of
-    nested thread states, re-establish itself with `set-interrupt-handler!`, transfer control to the
-    appropriate point in the chain, and either deliver pending signals with `raise`, or just return
-    to resume normally.
+    nested thread states, re-establish itself with `set-timer-interrupt-handler!`, transfer control
+    to the appropriate point in the chain, and either deliver pending signals with `raise`, or just
+    return to resume normally.
     - When `interrupt` is invoked, we determine how many unused ticks remain using
-      `ticks <- (set-interrupt-timer 0)`.  If `ticks` is zero, then it means `interrupt` was invoked
+      `ticks <- (set-timer 0)`.  If `ticks` is zero, then it means `interrupt` was invoked
       because the timer ran out.  If `(> ticks 0)`, it means the youngest currently-running thread
-      has voluntarily paused, so we resume its parent after `(set-interrupt-timer ticks)` to make
-      those ticks available to the parent.
+      has voluntarily paused, so we resume its parent after `(set-timer ticks)` to make those ticks
+      available to the parent.
     - When the timer runs out, it means one of the currently-executing threads has run out of ticks.
       We determine which thread expired by following next-ancestor links until we find one with
       negative ticks, or its next-ancestor is `#f`.
       - Having negative ticks means that the next-most-constrained thread, which is one of the
         expired thread's ancestors, has `(- ticks)` more ticks than the expired thread.
-      - We resume the parent of the expired thread after `(set-interrupt-timer (- ticks))` to make
-        those additional ticks available to the parent.
+      - We resume the parent of the expired thread after `(set-timer (- ticks))` to make those
+        additional ticks available to the parent.
     - When a thread runs a chain of nested threads for some number of `new-ticks`, we first assign
       `ticks` in the top thread of the chain to be `new-ticks`, then we compare `new-ticks` with
-      `ticks-remaining <- (set-interrupt-timer 0)` as well as update tick accounting and
-      next-ancestor links.
+      `ticks-remaining <- (set-timer 0)` as well as update tick accounting and next-ancestor links.
       - If `(<= ticks-remaining new-ticks)` then the chain we are starting may be less constrained
         than one of the currently-running threads, reachable from `next-ancestor`.  We walk the
         chain downward, decrementing `ticks-remaining` from each thread's `ticks` as long as
@@ -1050,7 +1054,7 @@ immediately become the return values, as if `values` had been called instead.
         `ticks-remaining` as we traverse.
       - If `ticks-remaining` is ever updated to `0` it means we came across a thread which is
         already expired.  We can stop the traversal early, resuming its parent after
-        `(set-interrupt-timer previous-ticks-remaining)`.
+        `(set-timer previous-ticks-remaining)`.
     - Any thread with `#f` `ticks` is considered to be running indefinitely, until voluntarily
       pausing.  No arithmetic updating needs to be done on their `ticks`.  We just treat these like
       infinities for the purpose of the processes described above.  For instance, these threads will
