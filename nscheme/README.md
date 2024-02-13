@@ -192,6 +192,44 @@ include
 
 ### bootstrap
 
+- Bootstrap by implementing a sequence of languages, gradually adding features
+  - Each language is used to implement the next.
+  - Each subsequent language is roughly a superset of the previous language.
+    - Example of an exception: adding preemptive signals and timer interrupts changes the semantics
+      significantly in a way that arguably does not create a strict superset of the previous,
+      cooperative-only language.
+  - We will implement some language layers by introducing optional compiler passes that add implicit
+    behavior, such as safety checking and interrupts.
+  - Early version of the compiler will use lower-tech definitions that don't rely on late-stage
+    language features.  We can swap these definitions out as we introduce useful features.  For
+    instance, parsing errors will likely `panic` in early stages, but `raise` in later stages.
+  - Features and sequence will depend on the platform and its capabilities.
+    - Platforms should be responsible for setting up primitive environments and some of the base
+      libraries based on their capabilities, rather than writing generic base libraries that aim at
+      a lowest common denominator across all platforms.
+    - For instance, on a native platform we will implement almost all of the usual primitives
+      using low-level arithmetic and memory manipulation.  But on a high-level platform our
+      primitives might be based on relatively high-level capabilities.
+    - Derived procedures in the base library will sometimes have platform-specific definitions.
+  - Possible sequence for a native platform (though we could reorder some of these):
+    - Start with no safety checks, and no garbage collection.
+      - Not even automatic memory allocation from the OS
+      - Possibly not even automatic call stack allocation?
+        - We eventually need call stack limit checking and reallocation, but may not need these
+          until we introduce coroutine primitives.
+    - Add implicit type and bounds checking.
+      - Compiler pass `explicate-safety-checks` to insert checking and `panic` code
+    - Add general interrupts.
+      - Compiler pass `explicate-interrupts` to insert code for interrupt ticking, expiration
+        checking, and dispatch
+    - Possibly add automatic call stack management.
+      - Compiler pass `explicate-call-stack` to check limits and allocate or resize the call stack
+    - Add automatic memory management.
+    - Add data constructors and arbitrary precision arithmetic.
+    - Add coroutines.
+    - Add timer interrupts.
+  - An optional compiler pass for static type checking or other static analysis
+
 - Split base library code by topic and level of privilege
   - Privileges that may be needed: records, control operators, dynamic parameters
   - Split along two privilege levels only? privileged and unprivileged?
