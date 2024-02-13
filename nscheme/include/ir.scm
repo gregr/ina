@@ -1,4 +1,4 @@
-(define (fresh-address name) (vector name))
+(define (fresh-address name) (vector name (mvector)))
 
 ;; TODO: define IR with record types for capability security
 ;; TODO: support for lower-level language integration:
