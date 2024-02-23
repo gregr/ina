@@ -44,11 +44,11 @@
 ;  (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))
 ;    (cond ((identifier? e.lhs)
 ;           (unless (= (length e*.rhs) 1)
-;             (error "multiple expressions in declaration body" e*.rhs))
-;           (let* ((addr   (env-address env e.lhs))
+;             (raise-parse-error "multiple expressions in declaration body" e*.rhs))
+;           (let* ((addr   (env-address env e.lhs))  ; TODO: this is outdated
 ;                  (vocab  (E-eval (parse-expression env e.vocab)))
 ;                  (parser ((E-eval (parse-expression env (car e*.rhs))) env)))
-;             (unless addr (error "unbound identifier" e.lhs))
+;             (unless addr (raise-unbound-identifier-parse-error vocab "unbound identifier" e.lhs))
 ;             (env-set! env.d vocab addr parser)))
 ;          (else (let ((x (syntax-unwrap e.lhs)))
 ;                  (cond ((pair? x) (loop (car x)
@@ -57,7 +57,7 @@
 ;                                                   ($provenance/syntax
 ;                                                     (cdr x)
 ;                                                     (apply parse-lambda env (cdr x) e*.rhs)))))))
-;                        (else      (error "not a definable form" e.lhs)))))))
+;                        (else      (raise-parse-error "not a definable form" e.lhs)))))))
 ;  ($d:begin))
 
 ;; TODO: do without this (and anything else using E-eval) until late stage bootstrapping
@@ -65,7 +65,7 @@
 ;  (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))
 ;    (cond ((identifier? e.lhs)
 ;           (unless (= (length e*.rhs) 1)
-;             (error "multiple expressions in definition body" e*.rhs))
+;             (raise-parse-error "multiple expressions in definition body" e*.rhs))
 ;           (env-introduce env.d e.lhs)
 ;           (let ((op (E-eval (parse-expression env (car e*.rhs)))))
 ;             (parse-declare-parser
@@ -85,7 +85,7 @@
 ;                                                   ($provenance/syntax
 ;                                                     (cdr x)
 ;                                                     (apply parse-lambda env (cdr x) e*.rhs)))))))
-;                        (else      (error "not a definable form" e.lhs)))))))
+;                        (else      (raise-parse-error "not a definable form" e.lhs)))))))
 ;  ($d:begin))
 
 ;; Would syntax-dismantle be helpful enough to justify implementing it?
@@ -97,7 +97,7 @@
 ;
 ;(define-syntax syntax-dismantle-clauses
 ;  (syntax-rules ()
-;    ((_ x ex skip) (error "no matching clause" x))
+;    ((_ x ex skip) (raise-parse-error "no matching clause" x))
 ;    ((_ x ex skip (pattern body ...) clause ...)
 ;     (let ((skip (lambda () (syntax-dismantle-clauses x ex skip clause ...))))
 ;       (syntax-dismantle-clause x ex skip pattern body ...)))))

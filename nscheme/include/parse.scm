@@ -31,7 +31,7 @@
 
 (define (env-bind! env id . vx*) (env-set! env id (apply vocab-dict-set vocab-dict.empty vx*)))
 (define (env-set^! env id . vx*) (let ((vocab=>v (env-ref env id)))
-                                   (unless vocab=>v (error "unbound identifier" id))
+                                   (unless vocab=>v (error "cannot set unbound identifier" id))
                                    (env-set! env id (apply vocab-dict-set vocab=>v vx*))))
 (define (env-ref^  env id vocab) (let ((vocab=>v (env-ref env id)))
                                    (and vocab=>v (vocab-dict-ref vocab=>v vocab))))
@@ -57,11 +57,11 @@
 ;;; Parsing helpers ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (parse-identifier id) (unless (identifier? id) (error "not an identifier" id)))
+(define (parse-identifier id) (unless (identifier? id) (raise-parse-error "not an identifier" id)))
 
 (define (parse-undefined-identifier env id)
   (parse-identifier id)
-  (when (env-ref env id) (error "name defined multiple times" id)))
+  (when (env-ref env id) (raise-parse-error "name defined multiple times" id)))
 
 (define (parse-param* param*)
   (for-each parse-identifier param*)
@@ -69,13 +69,13 @@
     (unless (null? id*)
       (let ((id.0 (car id*)))
         (when (memp (lambda (id) (bound-identifier=? id id.0)) (cdr id*))
-          (error "duplicate parameter name" id.0 param*))
+          (raise-parse-error "duplicate parameter name" id.0 param*))
         (loop (cdr id*))))))
 
 (define (parse-binding-pair* e.bpairs)
   (define (parse-binding-pair e.bpair)
     (let ((e* (syntax->list e.bpair)))
-      (unless (= (length e*) 2) (error "binding pair without 2 elements" e.bpair))
+      (unless (= (length e*) 2) (raise-parse-error "binding pair without 2 elements" e.bpair))
       (cons (car e*) (cadr e*))))
   (map parse-binding-pair (syntax->list e.bpairs)))
 
@@ -277,7 +277,7 @@
                                                         (D:definition-^rhs D)))
           ((D-tagged? D 'D:expression) (defstate-define dst #f #f (D:expression-^E D)))
           ((D-tagged? D 'D:annotated)  (loop (D:annotated-D D) dst))
-          (else                        (error "invalid definition" D)))))
+          (else                        (error "not a definition" D)))))
 (define (D->E D) (defstate->E (D->defstate D)))
 
 (define ($d:provenance       pv D) (D:annotated pv D))
@@ -290,7 +290,7 @@
          (D     (^def env.d (env-compose env env.d)))
          (dst   (D->defstate D)))
     (unless (defstate-expression dst)
-      (error
+      (raise-parse-error
         (if (null? (defstate-definition* dst)) "no expression" "no expression after definitions")
         (D-provenance D)))
     (let ((E (defstate->E dst)))
@@ -309,6 +309,24 @@
 
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
 
+;; TODO: move all of these
+(define (make-exception kind . arg*) (vector kind arg*))
+(define (make-error     kind . arg*) (apply make-exception (cons 'error kind) arg*))
+(define (raise-continuable x) (error 'raise x))  ; TODO: consult exception handlers
+(define (raise             x) (raise-continuable x) (panic 'unhandled-raise x))
+(define (raise/continue    x) (raise x))  ; TODO: wrap a continue restart around the call to raise
+
+(define (make-parse-error kind . x*) (apply make-error (cons 'parse kind) x*))
+(define (raise-parse-error . x*) (raise (apply make-parse-error '() x*)))
+(define (raise-unbound-identifier-parse-error vocab . x*)
+  (raise (apply make-parse-error (list 'unbound-identifier vocab) x*)))
+
+(define (parse-free-variable-reference msg stx)
+  ;; TODO: wrap everything with use-value (lambda (E) E) to return a user-chosen expression
+  ;; TODO: wrap this raise with continue
+  (raise-unbound-identifier-parse-error vocab.expression msg stx)
+  ($error ($quote msg) ($quote stx)))
+
 (define (parse-expression env stx)
   (let ((x (syntax-unwrap stx)))
     ($provenance/syntax
@@ -317,8 +335,8 @@
         ((identifier? stx)
          (let ((op (env-ref^ env stx vocab.expression)))
            (cond ((procedure? op)   (op env stx))
-                 ((env-ref env stx) (error "non-expression or out-of-phase identifier" stx))
-                 (else              (error "unbound identifier" stx)))))
+                 ((env-ref env stx) (parse-free-variable-reference "not an expression" stx))
+                 (else              (parse-free-variable-reference "unbound identifier" stx)))))
         ((pair?    x) (let* ((e.op (car x))
                              (op   (and (identifier? e.op)
                                         (env-ref^ env e.op vocab.expression-operator))))
@@ -327,13 +345,13 @@
                             (apply $call (parse-expression env e.op)
                                    (parse-expression* env (syntax->list (cdr x)))))))
         ((literal? x) ($quote x))
-        (else         (error "not an expression" stx))))))
+        (else         (raise-parse-error "not an expression" stx))))))
 
-(define ((expression-operator-parser parser argc.min argc.max) env expr)
-  (let* ((e* (syntax->list expr)) (argc (- (length e*) 1)))
-    (unless (<= argc.min argc)           (error "too few operator arguments"  expr))
-    (unless (<= argc (or argc.max argc)) (error "too many operator arguments" expr))
-    (apply parser env (cdr e*))))
+(define ((expression-operator-parser parser argc.min argc.max) env stx)
+  (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
+    (unless (<= argc.min argc)           (raise-parse-error "too few operator arguments"  stx))
+    (unless (<= argc (or argc.max argc)) (raise-parse-error "too many operator arguments" stx))
+    (apply parser env (cdr stx*))))
 
 (define ((parse/constant-expression E) env _) E)
 
@@ -361,6 +379,6 @@
 
 (define ((definition-operator-parser parser argc.min argc.max) env.d env stx)
   (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
-    (unless (<= argc.min argc)           (error "too few operator arguments"  stx))
-    (unless (<= argc (or argc.max argc)) (error "too many operator arguments" stx))
+    (unless (<= argc.min argc)           (raise-parse-error "too few operator arguments"  stx))
+    (unless (<= argc (or argc.max argc)) (raise-parse-error "too many operator arguments" stx))
     (apply parser env.d env (cdr stx*))))
