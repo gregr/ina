@@ -69,7 +69,7 @@
     (unless (null? id*)
       (let ((id.0 (car id*)))
         (when (memp (lambda (id) (bound-identifier=? id id.0)) (cdr id*))
-          (raise-parse-error "duplicate parameter name" id.0 param*))
+          (raise-parse-error "duplicate parameter name" (list id.0 param*)))
         (loop (cdr id*))))))
 
 (define (parse-binding-pair* e.bpairs)
@@ -310,42 +310,50 @@
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
 
 ;; TODO: move all of these
-(define (make-exception kind . arg*) (vector kind arg*))
-(define (make-error     kind . arg*) (apply make-exception (cons 'error kind) arg*))
 (define (raise-continuable x) (error 'raise x))  ; TODO: consult exception handlers
 (define (raise             x) (raise-continuable x) (panic 'unhandled-raise x))
 (define (raise/continue    x) (raise x))  ; TODO: wrap a continue restart around the call to raise
 
-(define (make-parse-error kind . x*) (apply make-error (cons 'parse kind) x*))
-(define (raise-parse-error . x*) (raise (apply make-parse-error '() x*)))
-(define (raise-unbound-identifier-parse-error vocab . x*)
-  (raise (apply make-parse-error (list 'unbound-identifier vocab) x*)))
+(define-values (exception-kind.parse-error parse-error? parse-error-syntax)
+  (make-exception-kind&?&new-field-accessor* exception-kind.error 'parse-error '#(syntax)))
+(define (make-parse-error desc stx) (make-exception exception-kind.parse-error (vector desc stx)))
+(define (raise-parse-error . arg*) (raise (apply make-parse-error arg*)))
 
-(define (parse-free-variable-reference msg stx)
+(define-values (exception-kind.unbound-identifier-parse-error
+                 unbound-identifier-parse-error?
+                 unbound-identifier-parse-error-vocab
+                 unbound-identifier-parse-error-env)
+  (make-exception-kind&?&new-field-accessor*
+    exception-kind.parse-error 'unbound-identifier-parse-error '#(vocab env)))
+(define (make-unbound-identifier-parse-error desc stx vocab env)
+  (make-exception exception-kind.unbound-identifier-parse-error (vector desc stx vocab env)))
+(define (raise-unbound-identifier-parse-error . arg*)
+  (raise (apply make-unbound-identifier-parse-error arg*)))
+
+(define (parse-free-variable-reference env desc stx)
   ;; TODO: wrap everything with use-value (lambda (E) E) to return a user-chosen expression
   ;; TODO: wrap this raise with continue
-  (raise-unbound-identifier-parse-error vocab.expression msg stx)
-  ($error ($quote msg) ($quote stx)))
+  (raise-unbound-identifier-parse-error desc stx vocab.expression env)
+  ($error ($quote 'unbound-identifier-parse-error) ($quote desc) ($quote stx) vocab.expression env))
 
 (define (parse-expression env stx)
   (let ((x (syntax-unwrap stx)))
     ($provenance/syntax
       stx
       (cond
-        ((identifier? stx)
-         (let ((op (env-ref^ env stx vocab.expression)))
-           (cond ((procedure? op)   (op env stx))
-                 ((env-ref env stx) (parse-free-variable-reference "not an expression" stx))
-                 (else              (parse-free-variable-reference "unbound identifier" stx)))))
-        ((pair?    x) (let* ((e.op (car x))
-                             (op   (and (identifier? e.op)
-                                        (env-ref^ env e.op vocab.expression-operator))))
-                        (if (procedure? op)
-                            (op env stx)
-                            (apply $call (parse-expression env e.op)
-                                   (parse-expression* env (syntax->list (cdr x)))))))
-        ((literal? x) ($quote x))
-        (else         (raise-parse-error "not an expression" stx))))))
+        ((identifier? stx) (let ((op (env-ref^ env stx vocab.expression)))
+                             (if (procedure? op)
+                                 (op env stx)
+                                 (parse-free-variable-reference env "not an expression" stx))))
+        ((pair?       x)   (let* ((e.op (car x))
+                                  (op   (and (identifier? e.op)
+                                             (env-ref^ env e.op vocab.expression-operator))))
+                             (if (procedure? op)
+                                 (op env stx)
+                                 (apply $call (parse-expression env e.op)
+                                        (parse-expression* env (syntax->list (cdr x)))))))
+        ((literal?    x)   ($quote x))
+        (else              (raise-parse-error "not an expression" stx))))))
 
 (define ((expression-operator-parser parser argc.min argc.max) env stx)
   (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))

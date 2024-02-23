@@ -21,6 +21,7 @@
 (include "../include/base/mbytevector.scm")
 (include "../include/base/bytevector.scm")
 (include "../include/base/string.scm")
+(include "../include/base/exception.scm")
 
 (include "../include/syntax.scm")
 (include "../include/ir.scm")
@@ -65,7 +66,9 @@
       "../include/base/vector.scm"
       "../include/base/mbytevector.scm"
       "../include/base/bytevector.scm"
-      "../include/base/string.scm")))
+      "../include/base/string.scm"
+      "../include/base/exception.scm"
+      )))
 (define def*.include
   (file-name*->stx*
     '("../include/syntax.scm"

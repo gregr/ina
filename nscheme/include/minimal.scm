@@ -214,7 +214,7 @@
   (parse-undefined-identifier env.d id.lhs)
   (parse-identifier id.rhs)
   (let ((v=>v (env-ref env id.rhs)))
-    (unless v=>v (raise-unbound-identifier-parse-error #f "unbound identifier" id.rhs))
+    (unless v=>v (raise-unbound-identifier-parse-error "unbound identifier" id.rhs #f env))
     (env-set! env.d id.lhs v=>v))
   ($d:begin))
 

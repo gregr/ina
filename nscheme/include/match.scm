@@ -1,6 +1,6 @@
-(define vocab.pattern              'pattern)
-(define vocab.pattern-operator     'pattern-operator)
-(define vocab.pattern-auxiliary    'pattern-auxiliary)
+(define vocab.pattern           'pattern)
+(define vocab.pattern-operator  'pattern-operator)
+(define vocab.pattern-auxiliary 'pattern-auxiliary)
 
 (define pattern-auxiliary? (auxiliary?/vocab vocab.pattern-auxiliary))
 
@@ -377,11 +377,10 @@
         ((pair?    x)      (let ((e.op (car x)))
                              (parse-identifier e.op)
                              (let ((op (env-ref^ env e.op vocab.pattern-operator)))
-                               (cond ((procedure? op)   (op env stx))
-                                     ((env-ref env stx) (raise-unbound-identifier-parse-error
-                                                          "not a pattern operator" e.op))
-                                     (else              (raise-unbound-identifier-parse-error
-                                                          "unbound identifier" e.op))))))
+                               (unless (procedure? op)
+                                 (raise-unbound-identifier-parse-error
+                                   "not a pattern operator" e.op vocab.pattern-operator env))
+                               (op env stx))))
         ((literal? x)      ($p:quote x))
         (else              (raise-parse-error "not a pattern" stx))))
     stx))

@@ -48,7 +48,8 @@
 ;           (let* ((addr   (env-address env e.lhs))  ; TODO: this is outdated
 ;                  (vocab  (E-eval (parse-expression env e.vocab)))
 ;                  (parser ((E-eval (parse-expression env (car e*.rhs))) env)))
-;             (unless addr (raise-unbound-identifier-parse-error vocab "unbound identifier" e.lhs))
+;             (unless addr
+;               (raise-unbound-identifier-parse-error "unbound identifier" e.lhs vocab env))
 ;             (env-set! env.d vocab addr parser)))
 ;          (else (let ((x (syntax-unwrap e.lhs)))
 ;                  (cond ((pair? x) (loop (car x)
