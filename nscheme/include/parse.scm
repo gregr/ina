@@ -309,11 +309,6 @@
 
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
 
-;; TODO: move all of these
-(define (raise-continuable x) (error 'raise x))  ; TODO: consult exception handlers
-(define (raise             x) (raise-continuable x) (panic 'unhandled-raise x))
-(define (raise/continue    x) (raise x))  ; TODO: wrap a continue restart around the call to raise
-
 (define-values (exception-kind.parse-error parse-error? parse-error-syntax)
   (make-exception-kind&?&new-field-accessor* exception-kind.error 'parse-error '#(syntax)))
 (define (make-parse-error desc stx) (make-exception exception-kind.parse-error (vector desc stx)))
@@ -331,10 +326,13 @@
   (raise (apply make-unbound-identifier-parse-error arg*)))
 
 (define (parse-free-variable-reference env desc stx)
-  ;; TODO: wrap everything with use-value (lambda (E) E) to return a user-chosen expression
-  ;; TODO: wrap this raise with continue
-  (raise-unbound-identifier-parse-error desc stx vocab.expression env)
-  ($error ($quote 'unbound-identifier-parse-error) ($quote desc) ($quote stx) vocab.expression env))
+  (with-restart:use-value
+    '(replace unbound-variable-reference)
+    (lambda ()
+      (with-restart:continue
+        '(return unbound-variable-reference)
+        (lambda () (raise-unbound-identifier-parse-error desc stx vocab.expression env)))
+      ($error ($quote 'unbound-variable-reference) ($quote (list desc stx vocab.expression env))))))
 
 (define (parse-expression env stx)
   (let ((x (syntax-unwrap stx)))
