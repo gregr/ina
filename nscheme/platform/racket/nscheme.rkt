@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  apply/values case case1 assert
+  apply/values case case1 let-values assert
   ;; privileged primitives
   current-coroutine make-coroutine current-coroutine-register
   panic set-panic-handler!
@@ -325,6 +325,14 @@
     ((_ x (d rhs ...) clause ...) (if (eqv? x 'd)
                                       (let () rhs ...)
                                       (case1 x clause ...)))))
+
+;; WARNING: this is only complete enough to run our bootstrapping process
+(define-syntax let-values
+  (syntax-rules ()
+    ((_ (((param ...) rhs) ...) body ...)
+     (rkt:let-values (((param ...) rhs) ...) body ...))
+    ((_ ((param rhs)) body ...)
+     (apply/values (lambda param body ...) rhs))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Snapshot saving and loading ;;;
