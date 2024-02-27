@@ -57,7 +57,6 @@
     '("../include/base/misc.scm"  ; convenient for bootstrap, but no privilege needed
       "../include/boot/record.scm"
       "../include/boot/string.scm"
-      "../include/boot/native-thread-local-state.scm"
       "../include/boot/control.scm"
       )))
 (define def*.include/base
@@ -72,7 +71,6 @@
       "../include/base/bytevector.scm"
       "../include/base/string.scm"
       "../include/base/exception.scm"
-      "../include/base/dynamic-binding.scm"
       "../include/base/raise.scm"
       )))
 (define def*.include

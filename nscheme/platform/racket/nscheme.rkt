@@ -2,7 +2,7 @@
 (provide
   apply/values case case1 let-values assert
   ;; privileged primitives
-  native-thread-local-register with-raw-escape-prompt escape-to-prompt
+  native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
   current-coroutine make-coroutine current-coroutine-register
   panic set-panic-handler!
   set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts
@@ -87,7 +87,7 @@
 (define (with-raw-escape-prompt on-escape thunk)
   (call-with-continuation-prompt thunk prompt-tag.raw-escape on-escape))
 
-(define (escape-to-prompt . x*)
+(define (raw-escape-to-prompt . x*)
   (apply abort-current-continuation prompt-tag.raw-escape x*))
 
 (define (current-coroutine-register) (error "TODO: not implemented"))
@@ -291,7 +291,7 @@
 
 (declare-primitives!
   ;; privileged primitives
-  native-thread-local-register with-raw-escape-prompt escape-to-prompt
+  native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
   current-coroutine make-coroutine current-coroutine-register
   panic set-panic-handler!
   set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts

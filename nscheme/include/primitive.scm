@@ -52,11 +52,11 @@
   (define env.primitive.privileged.control
     (name*primitive*->env
       '(
-        native-thread-local-register with-raw-escape-prompt escape-to-prompt
+        native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
         current-coroutine make-coroutine current-coroutine-register
         set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts)
       (list
-        native-thread-local-register with-raw-escape-prompt escape-to-prompt
+        native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
         current-coroutine make-coroutine current-coroutine-register
         set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts)))
   (define env.primitive
