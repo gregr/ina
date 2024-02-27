@@ -246,9 +246,9 @@
     (let* ((def* (defstate-definition* dst))
            (id*  (definition*->id*  def*))
            (env* (definition*->env* def*))
-           (E.^e ($thunk ((or (defstate-expression dst) $values))))
            (dst  (defstate-replace-expression
-                   dst (lambda () (apply $list E.^e (map parse-expression env* id*))))))
+                   dst (lambda () (let ((E.^e ($thunk ((or (defstate-expression dst) $values)))))
+                                    (apply $list E.^e (map parse-expression env* id*)))))))
       (let ((result* (E-eval (defstate->E dst))))
         (for-each env-set-variable! env* id* (map $quote (cdr result*)))
         (call-with-values (car result*) $quote-values)))))
