@@ -309,19 +309,18 @@
 
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
 
-(define-values (exception-kind.parse-error parse-error? parse-error-syntax)
-  (make-exception-kind&?&new-field-accessor* exception-kind.error 'parse-error '#(syntax)))
-(define (make-parse-error desc stx) (make-exception exception-kind.parse-error (vector desc stx)))
+(define-values (parse-error:kind parse-error? parse-error-syntax)
+  (make-exception-kind-etc error:kind 'parse-error '#(syntax)))
+(define (make-parse-error desc stx) (make-exception parse-error:kind (vector desc stx)))
 (define (raise-parse-error . arg*) (raise (apply make-parse-error arg*)))
 
-(define-values (exception-kind.unbound-identifier-parse-error
+(define-values (unbound-identifier-parse-error:kind
                  unbound-identifier-parse-error?
                  unbound-identifier-parse-error-vocab
                  unbound-identifier-parse-error-env)
-  (make-exception-kind&?&new-field-accessor*
-    exception-kind.parse-error 'unbound-identifier-parse-error '#(vocab env)))
+  (make-exception-kind-etc parse-error:kind 'undefined-identifier-parse-error '#(vocab env)))
 (define (make-unbound-identifier-parse-error desc stx vocab env)
-  (make-exception exception-kind.unbound-identifier-parse-error (vector desc stx vocab env)))
+  (make-exception unbound-identifier-parse-error:kind (vector desc stx vocab env)))
 (define (raise-unbound-identifier-parse-error . arg*)
   (raise (apply make-unbound-identifier-parse-error arg*)))
 

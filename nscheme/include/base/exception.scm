@@ -67,11 +67,10 @@
                 (cons (list (vector-ref field-name* i) (vector-ref field* i)) (loop (+ i 1)))
                 '())))))
 
-(define (make-exception-kind&?&new-field-accessor* . arg*)
+(define (make-exception-kind-etc . arg*)
   (let ((kind (apply make-exception-kind arg*)))
     (apply values kind (exception-kind-? kind) (exception-kind-new-field-accessor* kind))))
 
-(define-values (exception-kind.error error? error-description)
-  (make-exception-kind&?&new-field-accessor* #f 'error '#(description)))
-
-(define (make-error desc) (make-exception exception-kind.error (vector desc)))
+(define-values (error:kind error? error-description)
+  (make-exception-kind-etc #f 'error '#(description)))
+(define (make-error desc) (make-exception error:kind (vector desc)))
