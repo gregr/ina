@@ -9,8 +9,7 @@
     (and r* (car r*))))
 (define (invoke-restart name . arg*)
   (let ((r (find-restart name)))
-    (unless r (error "no restart to invoke" name arg*))
-    (apply (restart-effector r) arg*)))
+    (when r (apply (restart-effector r) arg*))))
 
 (define (with-raw-restart name desc effector thunk)
   (with-dynamic-binding
@@ -50,3 +49,9 @@
 (define (with-restart:retry desc thunk) (let loop () (with-restart 'retry loop thunk)))
 (define (with-restart:use-value desc thunk) (with-restart 'use-value desc (lambda (x) x) thunk))
 (define (with-restart:use-values desc thunk) (with-restart 'use-values desc values thunk))
+
+(define (with-restart:continue/choice* desc thunk . thunk*)
+  (let loop ((thunk thunk) (thunk* thunk*))
+    (with-restart 'continue desc
+                  (lambda () (unless (null? thunk*) (loop (car thunk*) (cdr thunk*))))
+                  thunk)))
