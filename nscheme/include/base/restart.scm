@@ -12,13 +12,15 @@
     (when r (apply (restart-effector r) arg*))))
 
 (define (with-raw-restart name desc effector thunk)
-  (with-dynamic-binding
-    current-restart* (cons (make-restart name desc effector) (current-restart*))
-    thunk))
+  (with-temporary-dynamic-env
+    (lambda ()
+      (current-restart* (cons (make-restart name desc effector) (current-restart*)))
+      (thunk))))
 (define (with-raw-restart* nde* thunk)
-  (with-dynamic-binding
-    current-restart* (append (map (lambda (nde) (apply make-restart nde)) nde*) (current-restart*))
-    thunk))
+  (with-temporary-dynamic-env
+    (lambda ()
+      (current-restart* (append (map (lambda (nde) (apply make-restart nde)) nde*) (current-restart*)))
+      (thunk))))
 (define (with-restart name desc effector thunk)
   (let ((tag (make-escape-prompt-tag)))
     (with-escape-prompt

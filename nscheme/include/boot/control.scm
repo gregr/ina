@@ -1,6 +1,5 @@
 (splicing-local
-  ((define (for-each f x*) (let loop ((x* x*)) (unless (null? x*) (f (car x*)) (loop (cdr x*)))))
-   (splicing-let ((offset.dynamic-env          0)
+  ((splicing-let ((offset.dynamic-env          0)
                   (offset.virtual-thread-state 1))
      (define dynamic-env
        (case-lambda
@@ -54,16 +53,8 @@
                         (cdr frame*)))
                   frame*)))))
 
-  (define (with-dynamic-binding key value thunk)
+  (define (with-temporary-dynamic-env thunk)
     (let ((saved-denv (dynamic-env)))
-      (dynamic-env-set! key value)
-      (let-values ((result* (thunk)))
-        (dynamic-env saved-denv)
-        (apply values result*))))
-
-  (define (with-dynamic-binding* kv* thunk)
-    (let ((saved-denv (dynamic-env)))
-      (for-each (lambda (kv) (apply dynamic-env-set! kv)) kv*)
       (let-values ((result* (thunk)))
         (dynamic-env saved-denv)
         (apply values result*))))
@@ -94,10 +85,11 @@
     ((name) (let ((tag (make-mvector 1 0))) (mvector-set! tag 0 name)))))
 
 (define (make-dynamic-parameter default-value)
-  (define param
-    (case-lambda
-      (()  (dynamic-env-ref  param default-value))
-      ((x) (dynamic-env-set! param x))))
-  param)
+  (let ((key (make-mvector 0 0)))
+    (define param
+      (case-lambda
+        (()  (dynamic-env-ref  key default-value))
+        ((x) (dynamic-env-set! key x))))
+    param))
 
 ;; TODO: make-coroutine using make-empty-dynamic-extent (primitive using Racket threads)

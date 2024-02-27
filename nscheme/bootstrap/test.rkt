@@ -1138,12 +1138,13 @@
 (run-evaluation-tests
   env.test.large
 
-  ! dynamic-binding
+  ! dynamic-env
   (let ((list (lambda x* x*)))
     (list (dynamic-env-ref 'example-key 0)
-          (with-dynamic-binding
-            'example-key 'example-value
-            (lambda () (dynamic-env-ref 'example-key 1)))
+          (with-temporary-dynamic-env
+            (lambda ()
+              (dynamic-env-set! 'example-key 'example-value)
+              (dynamic-env-ref 'example-key 1)))
           (dynamic-env-ref 'example-key 2)))
   ==> (0 example-value 2)
 
