@@ -14,10 +14,7 @@
        (let ((dynamic-state.initial (make-mvector 2 0)))
          (mvector-set! dynamic-state.initial offset.dynamic-env '())
          (mvector-set! dynamic-state.initial offset.virtual-thread-state #f)
-         (native-thread-local-register dynamic-state.initial)))
-     ;; This call initializes dynamic-extent state slots for the current native thread.
-     ;; If/when another native thread is started, it should call this initializer before continuing.
-     (initialize-native-thread-local-state!))
+         (native-thread-local-register dynamic-state.initial))))
 
    (define (with-untagged-escape-prompt on-escape thunk)
      (let ((saved-denv (dynamic-env)))
@@ -26,6 +23,10 @@
            (dynamic-env saved-denv)
            (apply on-escape x*))
          thunk))))
+
+  ;; This call initializes dynamic-extent state slots for the current native thread.
+  ;; If/when another native thread is started, it should call this initializer before continuing.
+  (initialize-native-thread-local-state!)
 
   (define (dynamic-env-ref key default-value)
     (let loop ((frame* (dynamic-env)))

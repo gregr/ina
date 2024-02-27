@@ -6,6 +6,7 @@
 (include "../include/base/misc.scm")
 (include "../include/boot/record.scm")
 (include "../include/boot/string.scm")
+(include "../include/boot/control.scm")
 (include "../include/base/pair.scm")
 (include "../include/base/list.scm")
 (include "../include/base/number.scm")
