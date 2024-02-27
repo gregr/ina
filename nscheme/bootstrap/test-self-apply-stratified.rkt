@@ -56,7 +56,10 @@
   (file-name*->stx*
     '("../include/base/misc.scm"  ; convenient for bootstrap, but no privilege needed
       "../include/boot/record.scm"
-      "../include/boot/string.scm")))
+      "../include/boot/string.scm"
+      "../include/boot/native-thread-local-state.scm"
+      "../include/boot/control.scm"
+      )))
 (define def*.include/base
   (file-name*->stx*
     '("../include/base/pair.scm"
@@ -69,6 +72,7 @@
       "../include/base/bytevector.scm"
       "../include/base/string.scm"
       "../include/base/exception.scm"
+      "../include/base/dynamic-binding.scm"
       "../include/base/raise.scm"
       )))
 (define def*.include
@@ -93,7 +97,7 @@
   (env-compose env.primitive.privileged env.primitive.privileged.control))
 (define env.include/boot
   (env-compose* (link-definition*
-                  (env-compose* env.primitive.privileged env.primitive env.minimal)
+                  (env-compose* env.primitive.privileged.all env.primitive env.minimal)
                   def*.include/boot)
                 env.primitive
                 env.minimal))
@@ -135,7 +139,7 @@
 (splicing-local
   ((define env.include/boot
      (env-compose* (eval-definition*
-                     (env-compose* env.primitive.privileged env.primitive env.minimal)
+                     (env-compose* env.primitive.privileged.all env.primitive env.minimal)
                      def*.include/boot)
                    env.primitive
                    env.minimal))
@@ -173,7 +177,7 @@
       (env-compose env.primitive.privileged env.primitive.privileged.control))
     (define env.include/boot
       (env-compose* (link-definition*
-                      (env-compose* env.primitive.privileged env.primitive env.minimal)
+                      (env-compose* env.primitive.privileged.all env.primitive env.minimal)
                       def*.include/boot)
                     env.primitive
                     env.minimal))
