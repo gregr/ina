@@ -23,6 +23,7 @@
 (include "../include/base/bytevector.scm")
 (include "../include/base/string.scm")
 (include "../include/base/exception.scm")
+(include "../include/base/restart.scm")
 (include "../include/base/raise.scm")
 
 (include "../include/syntax.scm")
@@ -72,6 +73,7 @@
       "../include/base/bytevector.scm"
       "../include/base/string.scm"
       "../include/base/exception.scm"
+      "../include/base/restart.scm"
       "../include/base/raise.scm"
       )))
 (define def*.include

@@ -17,6 +17,7 @@
 (include "../include/base/bytevector.scm")
 (include "../include/base/string.scm")
 (include "../include/base/exception.scm")
+(include "../include/base/restart.scm")
 (include "../include/base/raise.scm")
 
 (include "../include/syntax.scm")
