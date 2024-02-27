@@ -54,6 +54,8 @@
 
 (define (with-restart:continue/choice* desc thunk . thunk*)
   (let loop ((thunk thunk) (thunk* thunk*))
-    (with-restart 'continue desc
-                  (lambda () (unless (null? thunk*) (loop (car thunk*) (cdr thunk*))))
-                  thunk)))
+    (if (null? thunk*)
+        (thunk)
+        (with-restart 'continue desc
+                      (lambda () (loop (car thunk*) (cdr thunk*)))
+                      thunk))))
