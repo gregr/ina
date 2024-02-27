@@ -1,5 +1,6 @@
 #lang racket/base
-(require "../platform/racket/nscheme.rkt" racket/include racket/match racket/pretty racket/splicing)
+(require "../platform/racket/nscheme.rkt" "include.rkt"
+         racket/include racket/match racket/pretty racket/splicing)
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 
@@ -36,16 +37,17 @@
 ;; depend on the compiler instead of E-eval:
 (include "../include/extended.scm")
 
-(define verbosity 1)
+(define verbosity 0)
 (define show-compiled-racket? (and #t (< 0 verbosity)))
 
-(define env.test (env-compose.match
-                   (env-compose* env.primitive env.primitive.privileged.control env.minimal)))
+(define env.test.minimal
+  (env-compose.match
+    (env-compose* env.primitive env.primitive.privileged.control env.minimal)))
 
 (struct error:parse (c) #:prefab)
 (struct error:eval  (c) #:prefab)
 
-(define (test-eval stx)
+(define (test-eval env stx)
   (when (< 0 verbosity)
     (displayln "EXPRESSION:")
     (pretty-write stx))
@@ -54,7 +56,7 @@
                                (displayln "PARSE ERROR:")
                                (pretty-write c))
                              (error:parse c))))
-    (let ((E (parse-expression env.test stx)))
+    (let ((E (parse-expression env stx)))
       (when (< 2 verbosity)
         (displayln "PARSED:")
         (pretty-write E))
@@ -86,7 +88,7 @@
 
 (define-syntax run-evaluation-tests-etc
   (syntax-rules (PAUSE! RESUME! STOP! ! ==>)
-    ((_ __ (test-successes test-failures))
+    ((_ env __ (test-successes test-failures))
      (let* ((tests-succeeded (length test-successes))
             (tests-failed    (length test-failures))
             (tests-total     (+ tests-succeeded tests-failed))
@@ -106,12 +108,12 @@
        (display-border)
        (printf "Tests passed: ~a out of ~a\n" tests-passed tests-total)
        (display-border)))
-    ((_ #t (test-successes test-failures) e.expr ==> e.expected tests ...)
+    ((_ env #t (test-successes test-failures) e.expr ==> e.expected tests ...)
      (begin
        (let ((expr 'e.expr) (expected 'e.expected))
          (when (< 0 verbosity) (newline))
          (when (< 2 verbosity) (printf "~s ==> ~s\n" expr expected))
-         (let ((actual (test-eval expr)))
+         (let ((actual (test-eval env expr)))
            (cond ((or (and (eq? expected 'error:parse) (error:parse? actual))
                       (and (eq? expected 'error:eval)  (error:eval?  actual))
                       (equal? expected actual))
@@ -123,42 +125,43 @@
                        (pretty-write expected)
                        (displayln "ACTUAL:")
                        (pretty-write actual)))))
-       (run-evaluation-tests-etc #t (test-successes test-failures) tests ...)))
-    ((_ #t history ! info tests ...)
+       (run-evaluation-tests-etc env #t (test-successes test-failures) tests ...)))
+    ((_ env #t history ! info tests ...)
      (begin (when (< 0 verbosity)
               (newline)
               (display-border)
               (pretty-write 'info)
               (display-border))
-            (run-evaluation-tests-etc #t history tests ...)))
-    ((_ running? history STOP! tests ...)
+            (run-evaluation-tests-etc env #t history tests ...)))
+    ((_ env running? history STOP! tests ...)
      (begin (newline)
             (display-border)
             (displayln "STOPPING EARLY!")
             (display-border)
-            (run-evaluation-tests-etc running? history)))
-    ((_ #t history PAUSE! tests ...)
+            (run-evaluation-tests-etc env running? history)))
+    ((_ env #t history PAUSE! tests ...)
      (begin (newline)
             (display-border)
             (displayln "PAUSING!")
             (display-border)
-            (run-evaluation-tests-etc #f history tests ...)))
-    ((_ #f history RESUME! tests ...)
+            (run-evaluation-tests-etc env #f history tests ...)))
+    ((_ env #f history RESUME! tests ...)
      (begin (newline)
             (display-border)
             (displayln "RESUMING!")
             (display-border)
-            (run-evaluation-tests-etc #t history tests ...)))
-    ((_ #t history RESUME! tests ...) (run-evaluation-tests-etc #t history tests ...))
-    ((_ #f history PAUSE!  tests ...) (run-evaluation-tests-etc #f history tests ...))
-    ((_ #f history a ==> b tests ...) (run-evaluation-tests-etc #f history tests ...))
-    ((_ #f history ! info  tests ...) (run-evaluation-tests-etc #f history tests ...))))
+            (run-evaluation-tests-etc env #t history tests ...)))
+    ((_ env #t history RESUME! tests ...) (run-evaluation-tests-etc env #t history tests ...))
+    ((_ env #f history PAUSE!  tests ...) (run-evaluation-tests-etc env #f history tests ...))
+    ((_ env #f history a ==> b tests ...) (run-evaluation-tests-etc env #f history tests ...))
+    ((_ env #f history ! info  tests ...) (run-evaluation-tests-etc env #f history tests ...))))
 
-(define-syntax-rule (run-evaluation-tests tests ...)
+(define-syntax-rule (run-evaluation-tests env tests ...)
   (let ((test-successes '()) (test-failures '()))
-    (run-evaluation-tests-etc #t (test-successes test-failures) tests ...)))
+    (run-evaluation-tests-etc env #t (test-successes test-failures) tests ...)))
 
 (run-evaluation-tests
+  env.test.minimal
   ! constants
   5         ==> 5
   '5        ==> 5
@@ -1124,4 +1127,66 @@
     (define ind (indirect))
     (list (ind r10) (ind r10)))
   ==> ((3 6 9) (done done done))
+  )
+
+(define env.test.large
+  (let ((env (make-env)))
+    (env-bind! env 'env.test vocab.expression
+               (parse/constant-expression ($quote env.include.extended)))
+    (env-compose env env.include.extended)))
+
+(run-evaluation-tests
+  env.test.large
+
+  ! dynamic-binding
+  (let ((list (lambda x* x*)))
+    (list (dynamic-env-ref 'example-key 0)
+          (with-dynamic-binding
+            'example-key 'example-value
+            (lambda () (dynamic-env-ref 'example-key 1)))
+          (dynamic-env-ref 'example-key 2)))
+  ==> (0 example-value 2)
+
+  ! exception-handling
+  (let ((missing (box '())) (mistake* (box '())) (restart-binding* (box '())))
+    (with-raise-handler
+      (lambda (exn)
+        (set-box! restart-binding* (cons (current-restart*) (unbox restart-binding*)))
+        (cond ((unbound-identifier-parse-error? exn)
+               (set-box! missing (cons (parse-error-syntax exn) (unbox missing))))
+              ((parse-error? exn)
+               (set-box! mistake* (cons (parse-error-syntax exn) (unbox mistake*)))))
+        (invoke-restart 'use-value `(REPLACED: ,(parse-error-syntax exn)))
+        (invoke-restart 'continue))
+      (lambda ()
+        (list
+          (parse-expression env.test '(foo 1 2))
+          (parse-expression env.test '(foo bar baz))
+          (with-restart:continue/choice*
+            '(try the next choice)
+            (lambda () (parse-expression env.test '#(not-ok)))
+            (lambda () (parse-expression env.test '#(also-not-ok)))
+            (lambda () (parse-expression env.test '#(still-not-ok)))
+            (lambda () 'final-choice))
+          (reverse (unbox missing))
+          (reverse (unbox mistake*))
+          (map (lambda (r*) (map (lambda (r) (list (restart-name r) (restart-description r))) r*))
+               (reverse (unbox restart-binding*)))))))
+  ==>
+  (#(E:call (REPLACED: foo) (#(E:quote 1) #(E:quote 2)))
+   #(E:call (REPLACED: foo) ((REPLACED: bar) (REPLACED: baz)))
+   final-choice
+   (foo foo bar baz)
+   (#(not-ok) #(also-not-ok) #(still-not-ok))
+   (((continue (return unbound-variable-reference))
+     (use-value (replace unbound-variable-reference)))
+    ((continue (return unbound-variable-reference))
+     (use-value (replace unbound-variable-reference)))
+    ((continue (return unbound-variable-reference))
+     (use-value (replace unbound-variable-reference)))
+    ((continue (return unbound-variable-reference))
+     (use-value (replace unbound-variable-reference)))
+    ((continue (try the next choice)))
+    ((continue (try the next choice)))
+    ((continue (try the next choice)))))
   )
