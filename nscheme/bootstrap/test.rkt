@@ -1141,7 +1141,7 @@
   ! dynamic-env
   (let ((list (lambda x* x*)))
     (list (dynamic-env-ref 'example-key 0)
-          (with-temporary-dynamic-env
+          (with-dynamic-env-extend
             (lambda ()
               (dynamic-env-set! 'example-key 'example-value)
               (dynamic-env-ref 'example-key 1)))

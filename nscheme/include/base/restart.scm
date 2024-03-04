@@ -12,12 +12,12 @@
     (when r (apply (restart-effector r) arg*))))
 
 (define (with-raw-restart name desc effector thunk)
-  (with-temporary-dynamic-env
+  (with-dynamic-env-extend
     (lambda ()
       (current-restart* (cons (make-restart name desc effector) (current-restart*)))
       (thunk))))
 (define (with-raw-restart* nde* thunk)
-  (with-temporary-dynamic-env
+  (with-dynamic-env-extend
     (lambda ()
       (current-restart* (append (map (lambda (nde) (apply make-restart nde)) nde*) (current-restart*)))
       (thunk))))

@@ -53,7 +53,7 @@
                         (cdr frame*)))
                   frame*)))))
 
-  (define (with-temporary-dynamic-env thunk)
+  (define (with-dynamic-env-extend thunk)
     (let ((saved-denv (dynamic-env)))
       (let-values ((result* (thunk)))
         (dynamic-env saved-denv)
