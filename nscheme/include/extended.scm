@@ -22,8 +22,7 @@
   (let ((env.d (make-env)))
     ((defstate->E/eval E-eval)
      (D->defstate (parse-begin-definition* env.d (env-compose env env.d) stx*.def)))
-    (env-freeze! env.d)
-    env.d))
+    (env-freeze env.d)))
 
 (define (parse-begin-meta-definition env.d env stx)
   (let* ((D       (parse-begin-definition* env.d env (syntax->list stx)))
@@ -137,5 +136,4 @@
                                                      vocab.definition-operator op.def
                                                      vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
-    (env-freeze! env)
-    env))
+    (env-freeze env)))

@@ -42,8 +42,7 @@
                      (for-each (lambda (id E) (env-bind! env.scope id vocab.expression
                                                          (parse/constant-expression E)))
                                param* E*)
-                     (env-freeze! env.scope)
-                     env.scope)))
+                     (env-freeze env.scope))))
 
 (define (env-introduce! env stx.id) (env-introduce*! env (list stx.id)))
 
@@ -105,11 +104,8 @@
   (let* ((m        (fresh-mark))
          (env.d.op (make-env))
          (env.d    (env-compose env.d.use (env-mark env.d.op m)))
-         (env      (env-compose env.use   (env-mark (env-compose env.op env.d.op) m)))
-         (D        (parse-definition env.d env (transcribe env.op op m env stx))))
-    ;; TODO: defer this freeze until after the entire definition body has been processed.
-    ;(env-freeze! env.d.op)
-    D))
+         (env      (env-compose env.use   (env-mark (env-compose env.op env.d.op) m))))
+    (parse-definition env.d env (transcribe env.op op m env stx))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Program construction ;;;
@@ -293,9 +289,7 @@
       (raise-parse-error
         (if (null? (defstate-definition* dst)) "no expression" "no expression after definitions")
         (D-provenance D)))
-    (let ((E (defstate->E dst)))
-      (env-freeze! env.d)
-      E)))
+    (defstate->E dst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
@@ -324,14 +318,16 @@
 (define (raise-unbound-identifier-parse-error . arg*)
   (raise (apply make-unbound-identifier-parse-error arg*)))
 
-(define (parse-free-variable-reference env desc stx)
-  (with-restart:use-value
-    '(replace unbound-variable-reference)
-    (lambda ()
-      (with-restart:continue
-        '(return unbound-variable-reference)
-        (lambda () (raise-unbound-identifier-parse-error desc stx vocab.expression env)))
-      ($error ($quote 'unbound-variable-reference) ($quote (list desc stx vocab.expression env))))))
+(define (parse-free-variable-reference env stx)
+  (let ((desc "not an expression"))
+    (with-restart:use-value
+      '(replace unbound-variable-reference)
+      (lambda ()
+        (with-restart:continue
+          '(return unbound-variable-reference)
+          (lambda () (raise-unbound-identifier-parse-error desc stx vocab.expression env)))
+        ($error ($quote 'unbound-variable-reference)
+                ($quote (list desc stx vocab.expression env)))))))
 
 (define (parse-expression env stx)
   (let ((x (syntax-unwrap stx)))
@@ -341,7 +337,7 @@
         ((identifier? stx) (let ((op (env-ref^ env stx vocab.expression)))
                              (if (procedure? op)
                                  (op env stx)
-                                 (parse-free-variable-reference env "not an expression" stx))))
+                                 (parse-free-variable-reference env stx))))
         ((pair?       x)   (let* ((e.op (car x))
                                   (op   (and (identifier? e.op)
                                              (env-ref^ env e.op vocab.expression-operator))))

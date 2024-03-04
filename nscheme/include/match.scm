@@ -512,5 +512,4 @@
                       (env-set!  env.scope id (vocab-dict-set v=>v vocab.pattern-operator op))
                       (env-bind! env.scope id vocab.pattern-operator op))))
               (map car b*.match-pattern-operator) (map cdr b*.match-pattern-operator))
-    (env-freeze! env.scope)
-    (env-compose env env.scope)))
+    (env-compose env (env-freeze env.scope))))

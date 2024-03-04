@@ -129,18 +129,23 @@
 ;; sub-dictionaries.  But this is only possible if the sub-dictionaries are immutable, which is not
 ;; the case for definition-style environments until they are frozen.
 ;;
-;; We could have env-compose listen for freeze! events coming from its children.  Once both children
-;; are frozen, we would combine their dictionaries, then propagate our own freeze! event to any
-;; further registered extensions.
+;; We could have env-compose recognize frozen children and combine their dictionaries when possible.
+
+(define (env-freeze env)
+  (lambda (method)
+    (case method
+      ((describe) (list 'freeze (env 'describe)))
+      ((ref)      (env 'ref))
+      ((set!)     (lambda (fail id x) (error "invalid frozen environment operation" method id x)))
+      (else       (error "invalid environment operation" method)))))
 
 (define (env-compose env env.first)
   (lambda (method)
-    (case1 method
-      (describe (list 'compose (env.first 'describe) (env 'describe)))
-      (ref      (lambda (fail id)   ((env.first 'ref)  (lambda () ((env 'ref)  fail id))   id)))
-      (set!     (lambda (fail id x) ((env.first 'set!) (lambda () ((env 'set!) fail id x)) id x)))
-      (freeze!  (values))
-      (else     (error "invalid environment operation" method)))))
+    (case method
+      ((describe) (list 'compose (env.first 'describe) (env 'describe)))
+      ((ref)      (lambda (fail id)   ((env.first 'ref)  (lambda () ((env 'ref)  fail id))   id)))
+      ((set!)     (lambda (fail id x) ((env.first 'set!) (lambda () ((env 'set!) fail id x)) id x)))
+      (else       (error "invalid environment operation" method)))))
 
 (define (env-compose* env . env*)
   (let loop ((env env) (env* env*))
@@ -151,12 +156,11 @@
 (define (env-mark env m)
   (define (unmark id) (and (identifier? id) (syntax-remove-mark? id m)))
   (lambda (method)
-    (case1 method
-      (describe (list 'mark m (env 'describe)))
-      (ref      (lambda (fail id)   (let ((i (unmark id))) (if i ((env 'ref)  fail i)   (fail)))))
-      (set!     (lambda (fail id x) (let ((i (unmark id))) (if i ((env 'set!) fail i x) (fail)))))
-      (freeze!  (values))
-      (else     (error "invalid environment operation" method)))))
+    (case method
+      ((describe) (list 'mark m (env 'describe)))
+      ((ref)      (lambda (fail id)   (let ((i (unmark id))) (if i ((env 'ref)  fail i)   (fail)))))
+      ((set!)     (lambda (fail id x) (let ((i (unmark id))) (if i ((env 'set!) fail i x) (fail)))))
+      (else       (error "invalid environment operation" method)))))
 
 (splicing-local
   ;((splicing-local
@@ -223,25 +227,16 @@
        (trie-set id=>x (syntax-mark* id) (syntax-peek id) x))))
 
   (define (make-env)
-    (let ((&id=>x (mvector id-dict.empty)) (mv.frozen? (mvector #f)))
-      (define (frozen?) (mvector-ref mv.frozen? 0))
-      (define (^id=>x) (mvector-ref &id=>x 0))
+    (let ((&id=>x (box id-dict.empty)))
       (lambda (method)
-        (case1 method
-          (describe (let ((frame (list->vector (id-dict-key* (^id=>x)))))
-                      (if (frozen?) frame (cons 'incomplete frame))))
-          (ref      (lambda (fail id) (or (id-dict-ref (^id=>x) id) (fail))))
-          (set!     (lambda (fail id x)
-                      ;; We do not want to invoke the failure continuation since it could lead to
-                      ;; unintended set! behavior in composed environments.
-                      (when (frozen?) (error "invalid immutable environment operation" method id))
-                      (mvector-set! &id=>x 0 (id-dict-set (^id=>x) id x))))
-          (freeze!  (mvector-set! mv.frozen? 0 #t))
-          (else     (error "invalid environment operation" method)))))))
+        (case method
+          ((describe) (list->vector (id-dict-key* (unbox &id=>x))))
+          ((ref)      (lambda (fail id) (or (id-dict-ref (unbox &id=>x) id) (fail))))
+          ((set!)     (lambda (fail id x) (set-box! &id=>x (id-dict-set (unbox &id=>x) id x))))
+          (else       (error "invalid environment operation" method)))))))
 
 (define (env-describe env)      (env 'describe))
-(define (env-freeze!  env)      (env 'freeze!))
 (define (env-set!     env id x) ((env 'set!) (lambda () (error "cannot env-set!" id)) id x))
 (define (env-ref      env id)   ((env 'ref) (lambda () #f) id))
 
-(define env.empty (let ((env (make-env))) (env-freeze! env) env))
+(define env.empty (let ((env (make-env))) (env-freeze env)))

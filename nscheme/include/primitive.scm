@@ -4,8 +4,7 @@
        (for-each (lambda (id p) (env-bind! env.scope id vocab.expression
                                            (parse/constant-expression ($quote p))))
                  name* primitive*)
-       (env-freeze! env.scope)
-       env.scope)))
+       (env-freeze env.scope))))
   ;; TODO: provide low-level, possibly platform-dependent, privileged primitives
   ;; for allocation, mutation, interrupts, control flow, etc.
   ;;
