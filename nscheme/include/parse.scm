@@ -312,7 +312,7 @@
                  unbound-identifier-parse-error?
                  unbound-identifier-parse-error-vocab
                  unbound-identifier-parse-error-env)
-  (make-exception-kind-etc parse-error:kind 'undefined-identifier-parse-error '#(vocab env)))
+  (make-exception-kind-etc parse-error:kind 'unbound-identifier-parse-error '#(vocab env)))
 (define (make-unbound-identifier-parse-error desc stx vocab env)
   (make-exception unbound-identifier-parse-error:kind (vector desc stx vocab env)))
 (define (raise-unbound-identifier-parse-error . arg*)
