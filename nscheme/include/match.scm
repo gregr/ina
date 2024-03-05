@@ -71,8 +71,8 @@
 (define (P:ellipsis-vector-ellipsis      p) (vector-ref p 3))
 (define (P:ellipsis-vector-suffix        p) (vector-ref p 4))
 
-(define ($p:provenance        P pv)  (P-provenance-add P pv))
-(define ($p:provenance/syntax P stx) ($p:provenance P (syntax-provenance stx)))
+(define ($p:provenance        pv P)  (P-provenance-add P pv))
+(define ($p:provenance/syntax stx P) ($p:provenance (syntax-provenance stx) P))
 (define $p:any                       (P:any      #f))
 (define $p:none                      (P:none     #f))
 (define ($p:var             id)      (P:var      #f id))
@@ -113,7 +113,7 @@
     (define (id-set-member? id* id) (memp (lambda (x) (bound-identifier=? id x)) id*))
     (let loop ((P P) (id* id-set.empty))
       (let ((pv (P-provenance P)))
-        (define (wrap P) ($p:provenance P pv))
+        (define (wrap P) ($p:provenance pv P))
         (cond
           ((or (P:any? P) (P:none? P) (P:?? P)) (values P id*))
           ((P:var? P)
@@ -126,10 +126,10 @@
            (values (wrap (let loop ((stx.value (P:quote-value-syntax P)))
                            (let ((q (syntax-unwrap stx.value)))
                              ($p:provenance/syntax
+                               stx.value
                                (cond ((pair?   q) ($$p:cons (loop (car q)) (loop (cdr q))))
                                      ((vector? q) ($$p:vector (map loop (vector->list q))))
-                                     (else        ($$p:quote q)))
-                               stx.value))))
+                                     (else        ($$p:quote q)))))))
                    id*))
           ((P:cons? P)
            (let ((P.a (P:cons-car P)) (P.d (P:cons-cdr P)))
@@ -370,6 +370,7 @@
 
 (define (parse-pattern env stx)
   ($p:provenance/syntax
+    stx
     (let ((x (syntax-unwrap stx)))
       (cond
         ((identifier? stx) (let ((op (env-ref^ env stx vocab.pattern)))
@@ -382,8 +383,7 @@
                                    "not a pattern operator" e.op vocab.pattern-operator env))
                                (op env stx))))
         ((literal? x)      ($p:quote x))
-        (else              (raise-parse-error "not a pattern" stx))))
-    stx))
+        (else              (raise-parse-error "not a pattern" stx))))))
 (define (parse-pattern-quasiquote env stx.qq)
   (define (operand qq) (car (syntax-unwrap (cdr qq))))
   (define (operation? qq tag)

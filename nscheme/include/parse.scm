@@ -330,9 +330,9 @@
                 ($quote (list desc stx vocab.expression env)))))))
 
 (define (parse-expression env stx)
-  (let ((x (syntax-unwrap stx)))
-    ($provenance/syntax
-      stx
+  ($provenance/syntax
+    stx
+    (let ((x (syntax-unwrap stx)))
       (cond
         ((identifier? stx) (let ((op (env-ref^ env stx vocab.expression)))
                              (if (procedure? op)
