@@ -196,11 +196,21 @@
                                         (else (or (apply f x (map1 car x**))
                                                   (loop (car x*) (cdr x*) (map1 cdr x**)))))))))))
 
-  (define foldl
+  (define (foldl f acc x*)
+    (let loop ((x* x*) (acc acc))
+      (cond ((null? x*) acc)
+            (else       (loop (cdr x*) (f (car x*) acc))))))
+
+  (define (foldr f acc x*)
+    (let loop ((x* x*))
+      (cond ((null? x*) acc)
+            (else       (f (car x*) (loop (cdr x*)))))))
+
+  (define fold-left
     (case-lambda
       ((f acc x*) (let loop ((x* x*) (acc acc))
                     (cond ((null? x*) acc)
-                          (else       (loop (cdr x*) (f (car x*) acc))))))
+                          (else       (loop (cdr x*) (f acc (car x*)))))))
       ((f acc y* . y**)
        (let loop ((x* y*) (x** y**) (acc acc))
          (cond ((null? x*) (unless (andmap1 null? x**)
@@ -208,17 +218,18 @@
                                     (cons (length y*) (map1 length y**))))
                            acc)
                (else       (loop (cdr x*) (map1 cdr x**)
-                                 (apply f (car x*) (append (map1 car x**) (list acc))))))))))
-  (define foldr
+                                 (apply f acc (car x*) (map1 car x**)))))))))
+
+  (define fold-right
     (case-lambda
       ((f acc x*) (let loop ((x* x*))
                     (cond ((null? x*) acc)
-                          (else       (f (car x*) (loop (cdr x*)))))))
+                          (else       (f (loop (cdr x*)) (car x*))))))
       ((f acc y* . y**)
        (let loop ((x* y*) (x** y**))
          (cond ((null? x*) (unless (andmap1 null? x**)
                              (error "lists of different length"
                                     (cons (length y*) (map1 length y**))))
                            acc)
-               (else (apply f (car x*) (append (map1 car x**)
-                                               (list (loop (cdr x*) (map1 cdr x**))))))))))))
+               (else (apply f (loop (cdr x*) (map1 cdr x**)) (car x*) (map1 car x**))))))))
+  )

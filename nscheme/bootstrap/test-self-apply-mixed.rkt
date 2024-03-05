@@ -11,14 +11,14 @@
 
 (let ()
   (define stx*.test (list '(list
-                             (+ 1 2)
-                             (foldr + 0 '(1 2 3 4 5))
-                             (foldr cons '(1 2) '(3 4 5))
-                             (foldl cons '(1 2) '(3 4 5))
-                             (foldl (lambda (x y acc) (cons (cons x y) acc))
-                                    '(1 2) '(3 4 5) '(a b c))
-                             (foldr (lambda (x y acc) (cons (cons x y) acc))
-                                    '(1 2) '(3 4 5) '(a b c)))))
+                            (+ 1 2)
+                            (foldr + 0 '(1 2 3 4 5))
+                            (foldr cons '(1 2) '(3 4 5))
+                            (foldl cons '(1 2) '(3 4 5))
+                            (fold-left (lambda (acc x y) (cons (cons x y) acc))
+                                       '(1 2) '(3 4 5) '(a b c))
+                            (fold-right (lambda (acc x y) (cons (cons x y) acc))
+                                        '(1 2) '(3 4 5) '(a b c)))))
 
   ;(pretty-write (env-describe env.include))
   (displayln "parsing test:")
@@ -64,14 +64,14 @@
                    (eval-definition* (env-compose env.primitive.privileged.all env.include.0)
                                      def*.primitive)))
     (define stx*.test (list '(list
-                               (+ 1 2)
-                               (foldr + 0 '(1 2 3 4 5))
-                               (foldr cons '(1 2) '(3 4 5))
-                               (foldl cons '(1 2) '(3 4 5))
-                               (foldl (lambda (x y acc) (cons (cons x y) acc))
-                                      '(1 2) '(3 4 5) '(a b c))
-                               (foldr (lambda (x y acc) (cons (cons x y) acc))
-                                      '(1 2) '(3 4 5) '(a b c)))))
+                              (+ 1 2)
+                              (foldr + 0 '(1 2 3 4 5))
+                              (foldr cons '(1 2) '(3 4 5))
+                              (foldl cons '(1 2) '(3 4 5))
+                              (fold-left (lambda (acc x y) (cons (cons x y) acc))
+                                         '(1 2) '(3 4 5) '(a b c))
+                              (fold-right (lambda (acc x y) (cons (cons x y) acc))
+                                          '(1 2) '(3 4 5) '(a b c)))))
     ;;;;;;;;;;;;;;
     ;; End copy ;;
     ;;;;;;;;;;;;;;

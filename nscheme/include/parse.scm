@@ -22,8 +22,8 @@
           (else        (loop (cddr vx*) (cons (car vx*) vocab*) (cons (cadr vx*) x*))))))
 
 (define (vocab-dict-set* vocab=>x vocab* x*)
-  (foldl (lambda (vocab x vocab=>x) (if x (cons (cons vocab x) vocab=>x) vocab=>x))
-         (vocab-dict-remove* vocab=>x vocab*) vocab* x*))
+  (fold-left (lambda (vocab=>x vocab x) (if x (cons (cons vocab x) vocab=>x) vocab=>x))
+             (vocab-dict-remove* vocab=>x vocab*) vocab* x*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Environment helpers ;;;
