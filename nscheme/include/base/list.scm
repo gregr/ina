@@ -27,24 +27,45 @@
     (and (not (null? x*))
          (cond ((? (car x*)) x*)
                (else         (loop (cdr x*)))))))
+(define ((mem/= =?) y x*) (memp (lambda (x) (=? x y)) x*))
+(define memq   (mem/= eq?))
+(define memv   (mem/= eqv?))
+(define member (mem/= equal?))
 
-(define (mem/= =? y x*) (memp (lambda (x) (=? x y)) x*))
-
-(define (memq   y x*) (mem/= eq?    y x*))
-(define (memv   y x*) (mem/= eqv?   y x*))
-(define (member y x*) (mem/= equal? y x*))
+(define (pmemp ? x*)
+  (let loop ((x* x*))
+    (and (not (null? x*))
+         (cond ((? (car x*)) x*)
+               (else         (loop (cddr x*)))))))
+(define ((pmem/= =?) y x*) (pmemp (lambda (x) (=? x y)) x*))
+(define pmemq   (pmem/= eq?))
+(define pmemv   (pmem/= eqv?))
+(define pmember (pmem/= equal?))
 
 (define (rem1p ? x*)
   (let loop ((x* x*))
     (cond ((null? x*)   '())
           ((? (car x*)) (cdr x*))
           (else         (cons (car x*) (loop (cdr x*)))))))
+(define ((rem/= =?) y x*) (rem1p (lambda (x) (=? x y)) x*))
+(define remq1   (rem/= eq?))
+(define remv1   (rem/= eqv?))
+(define remove1 (rem/= equal?))
 
-(define (rem/= =? y x*) (rem1p (lambda (x) (=? x y)) x*))
+(define (assp ? alist)
+  (let loop ((alist alist))
+    (and (not (null? alist))
+         (let ((kv (car alist)))
+           (cond ((? (car kv)) kv)
+                 (else         (loop (cdr alist))))))))
+(define ((assoc/= =?) key alist) (assp (lambda (k) (=? k key)) alist))
+(define assq  (assoc/= eq?))
+(define assv  (assoc/= eqv?))
+(define assoc (assoc/= equal?))
 
-(define (remq1   y x*) (rem/= eq?    y x*))
-(define (remv1   y x*) (rem/= eqv?   y x*))
-(define (remove1 y x*) (rem/= equal? y x*))
+(define (plist->alist kvs) (cond ((null? kvs) '())
+                                 (else        (cons (cons (car kvs) (cadr kvs))
+                                                    (plist->alist (cddr kvs))))))
 
 (define (iota n)
   (unless (and (integer? n) (<= 0 n)) (error "not a nonnegative integer" n))
@@ -77,23 +98,6 @@
       ((f start end inc) (go f start end inc)))))
 
 (define (range . arg*) (apply range-map (lambda (x) x) arg*))
-
-(define (assp ? alist)
-  (let loop ((alist alist))
-    (and (not (null? alist))
-         (let ((kv (car alist)))
-           (cond ((? (car kv)) kv)
-                 (else         (loop (cdr alist))))))))
-
-(define (assoc/= =? key alist) (assp (lambda (k) (=? k key)) alist))
-
-(define (assq  key alist) (assoc/= eq?    key alist))
-(define (assv  key alist) (assoc/= eqv?   key alist))
-(define (assoc key alist) (assoc/= equal? key alist))
-
-(define (plist->alist kvs) (cond ((null? kvs) '())
-                                 (else        (cons (cons (car kvs) (cadr kvs))
-                                                    (plist->alist (cddr kvs))))))
 
 (define (list? x) (or (null? x) (and (pair? x) (list? (cdr x)))))
 
