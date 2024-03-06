@@ -53,6 +53,13 @@
                         (cdr frame*)))
                   frame*)))))
 
+  (define (with-dynamic-env-clear thunk)
+    (let ((saved-denv (dynamic-env)))
+      (dynamic-env '())
+      (let-values ((result* (thunk)))
+        (dynamic-env saved-denv)
+        (apply values result*))))
+
   (define (with-dynamic-env-extend thunk)
     (let ((saved-denv (dynamic-env)))
       (let-values ((result* (thunk)))
@@ -92,4 +99,21 @@
         ((x) (dynamic-env-set! key x))))
     param))
 
-;; TODO: make-coroutine using make-empty-dynamic-extent (primitive using Racket threads)
+(splicing-local
+  ((define ((raw-coroutine->coroutine rcr) . x*)
+     (with-dynamic-env-extend (lambda () (apply rcr x*)))))
+  (define (current-coroutine) (raw-coroutine->coroutine (current-raw-coroutine)))
+  (define (make-coroutine proc)
+    (raw-coroutine->coroutine
+      (make-raw-coroutine (lambda x* (with-dynamic-env-clear (lambda () (apply proc x*))))))))
+
+;; TODO: make-generator
+;; - asymmetric, hierarchical coroutines
+;; - dynamic-env is cleared, like in make-coroutine
+
+;; TODO: make-thread
+;; - implements structured concurrency
+;;   - life is bound to a scheduler whose dynamic-extent is fixed
+;; - dynamic-env does not need to be cleared
+;;   - unlike with coroutines and generators, this is safe from race-conditions because the
+;;     scheduler is stationary

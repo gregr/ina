@@ -52,11 +52,11 @@
     (name*primitive*->env
       '(
         native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
-        current-coroutine make-coroutine current-coroutine-register
+        current-raw-coroutine make-raw-coroutine
         set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts)
       (list
         native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
-        current-coroutine make-coroutine current-coroutine-register
+        current-raw-coroutine make-raw-coroutine
         set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts)))
   (define env.primitive
     (name*primitive*->env

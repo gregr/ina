@@ -3,7 +3,7 @@
   apply/values case case1 let-values assert
   ;; privileged primitives
   native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
-  current-coroutine make-coroutine current-coroutine-register
+  current-raw-coroutine make-raw-coroutine
   panic set-panic-handler!
   set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts
   ;; procedure-metadata returns a vector with this shape:
@@ -90,15 +90,12 @@
 (define (raw-escape-to-prompt . x*)
   (apply abort-current-continuation prompt-tag.raw-escape x*))
 
-(define (current-coroutine-register) (error "TODO: not implemented"))
-
 (define (thread->coroutine t)
   (lambda arg*
     (thread-send t arg*)
     (apply values (thread-receive))))
-(define (current-coroutine) (thread->coroutine (current-thread)))
-(define (make-coroutine register-value proc)
-  ;; TODO: bind register
+(define (current-raw-coroutine) (thread->coroutine (current-thread)))
+(define (make-raw-coroutine proc)
   (thread->coroutine (thread (lambda () (apply proc (thread-receive))))))
 
 (define-syntax-rule (assert test ...) (begin (unless test (panic 'violation 'assert 'test)) ...))
@@ -292,7 +289,7 @@
 (declare-primitives!
   ;; privileged primitives
   native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
-  current-coroutine make-coroutine current-coroutine-register
+  current-raw-coroutine make-raw-coroutine
   panic set-panic-handler!
   set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts
   procedure-metadata

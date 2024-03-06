@@ -1043,6 +1043,16 @@
     (`#(1 ,,x 3) (cons 'vector-second: (cons x '())))
     (,_          'something-else))
   ==> (vector-second: 2)
+  )
+
+(define env.test.large
+  (let ((env (make-env)))
+    (env-bind! env 'env.test vocab.expression
+               (parse/constant-expression ($quote env.include.extended)))
+    (env-compose env env.include.extended)))
+
+(run-evaluation-tests
+  env.test.large
 
   ! coroutines
   ;; The co-range result looks like a generator, but the next text case
@@ -1052,7 +1062,6 @@
     (define (co-range n)
       (define yield (current-coroutine))
       (make-coroutine
-        #f
         (lambda (inc)
           (let loop ((i inc))
             (when (< i n)
@@ -1072,7 +1081,6 @@
     (define (co-range n)
       (define yield (current-coroutine))
       (make-coroutine
-        #f
         (lambda (inc)
           (let loop ((i inc))
             (when (< i n)
@@ -1083,7 +1091,6 @@
     (define (indirect)
       (define yield (current-coroutine))
       (make-coroutine
-        #f
         (lambda (g)
           (let loop ()
             (yield (list (g 3) (g 3) (g 3)))
@@ -1102,7 +1109,6 @@
     (define (g-range n)
       (define g
         (make-coroutine
-          #f
           (lambda (inc)
             (let loop ((i inc))
               (when (< i n)
@@ -1118,7 +1124,6 @@
     (define (indirect)
       (define yield (current-coroutine))
       (make-coroutine
-        #f
         (lambda (g)
           (let loop ()
             (yield (list (g 3) (g 3) (g 3)))
@@ -1127,16 +1132,6 @@
     (define ind (indirect))
     (list (ind r10) (ind r10)))
   ==> ((3 6 9) (done done done))
-  )
-
-(define env.test.large
-  (let ((env (make-env)))
-    (env-bind! env 'env.test vocab.expression
-               (parse/constant-expression ($quote env.include.extended)))
-    (env-compose env env.include.extended)))
-
-(run-evaluation-tests
-  env.test.large
 
   ! dynamic-env
   (let ((list (lambda x* x*)))
