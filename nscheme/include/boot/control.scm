@@ -101,6 +101,10 @@
       (final-thunk)
       (apply values result*)))
 
+  ;; TODO: coroutines and generators do not interoperate safely with structured threads.  We can
+  ;; safely use one or the other, but not both in the same system.  Move these definitions to an
+  ;; alternate control library.  We can maintain both control-coroutine.scm and control-thread.scm.
+
   (define (current-coroutine) (coroutine-state-controller (current-coroutine-state)))
 
   (define (make-coroutine proc)
@@ -113,6 +117,32 @@
                                  (error "coroutine is already done" proc x*))))))
            (cst (make-coroutine-state rcr)))
       (coroutine-state-controller cst)))
+
+  (define (make-generator yield->proc)
+    (let ((&yield-rcr (box #f)))
+      (define (yield . x*)
+        (let ((cst (current-coroutine-state)) (rcr (unbox &yield-rcr)))
+          (unless rcr (error "not a running generator" yield))
+          (set-box! &yield-rcr #f)
+          (set-coroutine-state-current-raw! cst rcr)
+          (with-dynamic-env-extend (lambda () (apply rcr x*)))))
+      (let* ((proc (yield->proc yield))
+             (rcr  (make-raw-coroutine
+                     (lambda x* (with-dynamic-env-clear
+                                  (lambda ()
+                                    (let-values ((x* (with-untagged-escape-prompt
+                                                       (lambda ignore (void))
+                                                       (lambda () (apply proc x*)))))
+                                      (let loop ()
+                                        (apply yield x*)
+                                        (loop)))))))))
+        (define (invoke . x*)
+          (let ((cst (current-coroutine-state)))
+            (when (unbox &yield-rcr) (error "not a ready generator" invoke))
+            (set-box! &yield-rcr (coroutine-state-current-raw cst))
+            (set-coroutine-state-current-raw! cst rcr)
+            (with-dynamic-env-extend (lambda () (apply rcr x*)))))
+        invoke)))
   )
 
 (define escape-to-prompt raw-escape-to-prompt)
@@ -129,10 +159,6 @@
         (()  (dynamic-env-ref  key default-value))
         ((x) (dynamic-env-set! key x))))
     param))
-
-;; TODO: make-generator
-;; - asymmetric, hierarchical coroutines
-;; - dynamic-env is cleared, like in make-coroutine
 
 ;; TODO: make-thread
 ;; - implements structured concurrency

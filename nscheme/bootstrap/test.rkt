@@ -1072,7 +1072,6 @@
     (define r10 (co-range 10))
     (list (r10 -1) (r10 0) (r10 1) (r10 3) (r10 3) (r10 3) (r10 3) (r10 3)))
   ==> (-1 -1 0 3 6 9 done done)
-
   ;; Using a third context, we see that co-range does not create a generator.
   ;; The problem is that the co-range result always yields to the same context.
   ;; To be a generator, it should yield to the context that transferred control.
@@ -1099,8 +1098,6 @@
     (define r10 (co-range 10))
     (list (ind r10) (ind r10) (ind r10)))
   ==> (3 6 9)
-
-  ! generators
   ;; The result of g-range is a generator because it dynamically adjusts yield
   ;; to transfer control back to the context that most recently invoked the
   ;; generator.
@@ -1128,6 +1125,42 @@
           (let loop ()
             (yield (list (g 3) (g 3) (g 3)))
             (loop)))))
+    (define r10 (g-range 10))
+    (define ind (indirect))
+    (list (ind r10) (ind r10)))
+  ==> ((3 6 9) (done done done))
+
+  ! generators
+  (let ()
+    (define (list . x*) x*)
+    (define (g-range n)
+      (make-generator
+       (lambda (yield)
+         (lambda (inc)
+           (let loop ((i inc))
+             (when (< i n)
+               (loop (+ i (yield i)))))
+           'done))))
+    (define r10 (g-range 10))
+    (list (r10 -1) (r10 0) (r10 1) (r10 3) (r10 3) (r10 3) (r10 3) (r10 3)))
+  ==> (-1 -1 0 3 6 9 done done)
+  (let ()
+    (define (list . x*) x*)
+    (define (g-range n)
+      (make-generator
+       (lambda (yield)
+         (lambda (inc)
+           (let loop ((i inc))
+             (when (< i n)
+               (loop (+ i (yield i)))))
+           'done))))
+    (define (indirect)
+      (make-generator
+       (lambda (yield)
+         (lambda (g)
+           (let loop ()
+             (yield (list (g 3) (g 3) (g 3)))
+             (loop))))))
     (define r10 (g-range 10))
     (define ind (indirect))
     (list (ind r10) (ind r10)))
