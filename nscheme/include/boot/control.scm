@@ -105,7 +105,12 @@
 
   (define (make-coroutine proc)
     (let* ((rcr (make-raw-coroutine
-                  (lambda x* (with-dynamic-env-clear (lambda () (apply proc x*))))))
+                  (lambda x* (with-dynamic-env-clear
+                               (lambda ()
+                                 (with-untagged-escape-prompt
+                                   (lambda ignore (void))
+                                   (lambda () (apply proc x*)))
+                                 (error "coroutine is already done" proc x*))))))
            (cst (make-coroutine-state rcr)))
       (coroutine-state-controller cst)))
   )
