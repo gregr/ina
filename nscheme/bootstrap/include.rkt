@@ -33,6 +33,7 @@
 
 ;; TODO: all remaining compiler definitions should be included here, replacing eval-simple.scm:
 (include "../include/eval-simple.scm")
+(include "../include/compile-rkt-simple.scm")
 
 ;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
 ;; depend on the compiler instead of E-eval:
@@ -89,8 +90,8 @@
   (env-compose env.primitive.privileged env.primitive.privileged.control))
 (define env.include/boot
   (env-compose* (eval-definition*
-                  (env-compose* env.primitive.privileged.all env.primitive env.minimal)
-                  def*.include/boot)
+                 (env-compose* env.primitive.privileged.all env.primitive env.minimal)
+                 def*.include/boot)
                 env.primitive
                 env.minimal))
 (define env.include/base
@@ -105,9 +106,9 @@
   (eval-definition* (env-compose* env.primitive.privileged.all env.include)
                     def*.eval))
 (define env.include.extended
-    (env-compose* (eval-definition* (env-compose* env.eval env.include)
-                                    def*.extended)
-                  env.include))
+  (env-compose* (eval-definition* (env-compose* env.eval env.include)
+                                  def*.extended)
+                env.include))
 
 ;; Old notes:
 

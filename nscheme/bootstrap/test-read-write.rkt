@@ -1,17 +1,18 @@
 #lang racket/base
-(require "../platform/racket/nscheme.rkt" (for-syntax "../platform/racket/nscheme.rkt")
-         profile racket/function racket/include racket/list racket/match
-         racket/pretty racket/string
-         (for-syntax (except-in racket/base case eqv? integer? rational? append string-ref string-length
-                                string-append string->list list->string number->string)
-                     racket/list)
-         (rename-in racket/port
-                    (call-with-input-string  racket:call-with-input-string)
-                    (call-with-output-string racket:call-with-output-string))
-         (rename-in (except-in racket/base case eqv? integer? rational? append string-ref string-length
-                               string-append string->list list->string number->string)
-                    (eof-object? racket:eof-object?)
-                    (read racket:read) (write racket:write)))
+(require
+  "../platform/racket/nscheme.rkt" (for-syntax "../platform/racket/nscheme.rkt")
+  profile racket/function racket/include racket/list racket/match
+  racket/pretty racket/string
+  (for-syntax (except-in racket/base case eqv? integer? rational? append string-ref string-length
+                         string-append string->list list->string number->string let-values)
+              racket/list)
+  (rename-in racket/port
+             (call-with-input-string  racket:call-with-input-string)
+             (call-with-output-string racket:call-with-output-string))
+  (rename-in (except-in racket/base case eqv? integer? rational? append string-ref string-length
+                        string-append string->list list->string number->string let-values)
+             (eof-object? racket:eof-object?)
+             (read racket:read) (write racket:write)))
 (module nscm:base racket
   (provide (all-defined-out))
   (require "../platform/racket/nscheme.rkt" (for-syntax racket/list))

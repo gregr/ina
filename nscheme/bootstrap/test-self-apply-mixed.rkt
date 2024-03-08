@@ -1,6 +1,7 @@
 #lang racket/base
-(require "../platform/racket/nscheme.rkt" "include.rkt"
-         racket/file racket/include racket/pretty racket/runtime-path racket/splicing)
+(require
+  "../platform/racket/nscheme.rkt" "include.rkt"
+  racket/file racket/include racket/pretty racket/runtime-path racket/splicing)
 ;(require profile)
 
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an
