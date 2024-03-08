@@ -6,6 +6,7 @@
   current-raw-coroutine make-raw-coroutine
   panic set-panic-handler!
   set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts
+  interruptible-lambda
   ;; procedure-metadata returns a vector with this shape:
   ;;   #(,primitive ,captured ,code*)
   ;; where:
@@ -55,26 +56,71 @@
 ;;; Control transfer and interrupts ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; TODO:
-;; - Racket platform implementations for coroutine register and budget handlers.
-;;   - Should we emulate nScheme dynamic environments, or use Racket
-;;     parameters directly?  If we use Racket parameters, how do we make them
-;;     compatible with system snapshots?
-;; - implement timer interrupts by manually ticking in generated code.  Do not get fancy with
-;;   Racket's alarm events or breaks.
-
 (define (eqv? a b)
   (or (rkt:eqv? a b)
       (if (string? a)
           (and (string? b) (string=? a b))
           (and (bytevector? a) (bytevector? b) (bytes=? a b)))))
 
-(define (panic . args) (raise (vector 'panic args)))
-(define (set-panic-handler!           . args) (error "TODO: not implemented"))
-(define (set-timer-interrupt-handler! . args) (error "TODO: not implemented"))
-(define (set-timer                    . args) (error "TODO: not implemented"))
-(define (enable-interrupts            . args) (error "TODO: not implemented"))
-(define (disable-interrupts           . args) (error "TODO: not implemented"))
+(define panic-handler #f)
+
+(define (set-panic-handler! handler) (set! panic-handler handler))
+(define (panic . x*)
+  (when panic-handler
+    (let ((handler panic-handler))
+      (set-panic-handler! #f)
+      (disable-interrupts)
+      (handler x*)
+      (enable-interrupts)))
+  (raise (vector 'panic x*)))
+
+(define disable-interrupts-count 0)
+(define poll-ticks-max           1000)
+(define poll-ticks-remaining     poll-ticks-max)
+(define poll-ticks-for-timer     0)
+(define timer-ticks-remaining    0)
+(define timer-interrupt-handler  #f)
+
+(define (tick-interrupts ticks)
+  (let ((ticks (- poll-ticks-remaining ticks)))
+    (cond
+      ((< 0 ticks)                    (set! poll-ticks-remaining ticks))
+      ((< 0 disable-interrupts-count) (set! poll-ticks-remaining 0))
+      (else (set! poll-ticks-remaining poll-ticks-max)
+            ;; TODO: handle pending signals (like keyboard interrupt) before handling timer
+            (when (< 0 timer-ticks-remaining)
+              (set! timer-ticks-remaining
+                (- timer-ticks-remaining (min timer-ticks-remaining poll-ticks-for-timer)))
+              (if (= timer-ticks-remaining 0)
+                  ;; NOTE: the user can arrange for the timer-interrupt-handler to return a value,
+                  ;; such as a tick count to be passed to set-timer.
+                  (timer-interrupt-handler)
+                  (let ((ticks (min timer-ticks-remaining poll-ticks-remaining)))
+                    (set! poll-ticks-for-timer ticks)
+                    (set! poll-ticks-remaining ticks))))))))
+
+(define (enable-interrupts)
+  (when (< 0 disable-interrupts-count)
+    (set! disable-interrupts-count (- disable-interrupts-count 1)))
+  disable-interrupts-count)
+
+(define (disable-interrupts)
+  (set! disable-interrupts-count (+ disable-interrupts-count 1))
+  disable-interrupts-count)
+
+(define (set-timer-interrupt-handler! handler) (set! timer-interrupt-handler handler))
+(define (set-timer ticks)
+  (let ((prev (max (- timer-ticks-remaining (- poll-ticks-for-timer poll-ticks-remaining)) 0)))
+    (if (< 0 ticks)
+        (begin
+          (set! poll-ticks-remaining  (min poll-ticks-remaining ticks))
+          (set! poll-ticks-for-timer  poll-ticks-remaining)
+          (set! timer-ticks-remaining ticks))
+        (set! timer-ticks-remaining 0))
+    prev))
+
+(define-syntax-rule (interruptible-lambda param . body)
+  (lambda param (tick-interrupts 1) . body))
 
 (define native-thread-local-register
   (let ((value #f))

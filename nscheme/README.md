@@ -993,15 +993,15 @@ immediately become the return values, as if `values` had been called instead.
       leave a failed computation, so the call's continuation is not safe to resume.  As a safeguard,
       if a panic-handler returns normally, it will invoke the platform's default panic-handler,
       which will likely exit the program.
-  - When the interrupt timer expires, the interrupt-handler is not reset, and so does not need to be
-    re-established to persist.
-    - It is dangerous to restart the timer with `set-timer` within the interrupt-handler if making
-      further calls, such as an explicit control transfer before the end of the handler.  Setting
-      the timer here risks making negative progress towards the remaining computation, as the
-      handler's own calls may consume some of the allocated time.  It is safer to call the control
-      recipient with the desired tick count, and make them responsible for calling `set-timer` right
-      before resuming normal computation.
-  - Non-timer interrupts do not invoke the interrupt-handler
+  - When the interrupt timer expires, the timer-interrupt-handler is not reset, and so does not need
+    to be re-established to persist.
+    - It is dangerous to restart the timer with `set-timer` within the timer-interrupt-handler if
+      making further calls, such as an explicit control transfer before the end of the handler.
+      Setting the timer here risks making negative progress towards the remaining computation, as
+      the handler's own calls may consume some of the allocated time.  It is safer to call the
+      control recipient with the desired tick count, and make them responsible for calling
+      `set-timer` right before resuming normal computation.
+  - Non-timer interrupts do not invoke the timer-interrupt-handler
 
 - Nestable preemptive multitasking
   - Related: https://legacy.cs.indiana.edu/~dyb/pubs/engines.pdf
@@ -1043,8 +1043,8 @@ immediately become the return values, as if `values` had been called instead.
       ```
   - Thread control signals:
     - A thread state can be requested to stop (pause evaluation indefinitely) or terminate early by
-      setting the `signal-requested?` field.  When the interrupt-handler is deciding how to resume,
-      it will `raise` a signal condition if `signal?`.
+      setting the `signal-requested?` field.  When the timer-interrupt-handler is deciding how to
+      resume, it will `raise` a signal condition if `signal?`.
       - The program's root scheduler is likely listening for operating system signals and
         translating them into appropriate thread control signals.
         - e.g., SIGTSTP, SIGTERM on POSIX systems
@@ -1068,7 +1068,7 @@ immediately become the return values, as if `values` had been called instead.
       scheduler's threads before propagating the error.
     - A catch-all signal handler needs to be installed to prevent threads from leaking the signals
       sent to them.
-  - The installed interrupt-handler is responsible for updating the tick budget for a chain of
+  - The installed timer-interrupt-handler is responsible for updating the tick budget for a chain of
     nested thread states, re-establish itself with `set-timer-interrupt-handler!`, transfer control
     to the appropriate point in the chain, and either deliver pending signals with `raise`, or just
     return to resume normally.
@@ -1139,7 +1139,6 @@ immediately become the return values, as if `values` had been called instead.
   - `(mvector-cas! mv i expected new) ==> boolean`
   - High-level synchronizable actions interface
     - as in Concurrent ML and Racket synchronizable events
-
 
 - Programming mistakes should panic, not raise
   - Examples of programming mistakes:

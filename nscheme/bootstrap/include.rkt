@@ -1,7 +1,10 @@
 #lang racket/base
 (provide (all-defined-out))
-(require "../platform/racket/nscheme.rkt"
-         racket/file racket/include racket/pretty racket/runtime-path racket/splicing)
+(require
+  ;; Toggle commenting on these two to turn on interrupt-aware lambdas.
+  "../platform/racket/nscheme.rkt"
+  ;(rename-in "../platform/racket/nscheme.rkt" (interruptible-lambda lambda))
+  racket/file racket/include racket/pretty racket/runtime-path racket/splicing)
 
 (include "../include/base/misc.scm")
 (include "../include/boot/record.scm")
