@@ -37,13 +37,13 @@
   (define env.primitive.privileged
     (name*primitive*->env
       '(
-        set-panic-handler!
+        panic-handler
         procedure-metadata
         record? record record-type-descriptor record-ref
         ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
         string->bytevector bytevector->string)
       (list
-        set-panic-handler!
+        panic-handler
         procedure-metadata
         record? record record-type-descriptor record-ref
         ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
@@ -51,13 +51,13 @@
   (define env.primitive.privileged.control
     (name*primitive*->env
       '(
-        native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
+        native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
         current-raw-coroutine make-raw-coroutine
-        set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts)
+        timer-interrupt-handler set-timer enable-interrupts disable-interrupts)
       (list
-        native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
+        native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
         current-raw-coroutine make-raw-coroutine
-        set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts)))
+        timer-interrupt-handler set-timer enable-interrupts disable-interrupts)))
   (define env.primitive
     (name*primitive*->env
       '(

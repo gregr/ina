@@ -2,10 +2,9 @@
 (provide
   apply/values case case1 let-values assert
   ;; privileged primitives
-  native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
+  native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
-  panic set-panic-handler!
-  set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts
+  panic panic-handler timer-interrupt-handler set-timer enable-interrupts disable-interrupts
   interruptible-lambda
   ;; procedure-metadata returns a vector with this shape:
   ;;   #(,primitive ,captured ,code*)
@@ -62,13 +61,18 @@
           (and (string? b) (string=? a b))
           (and (bytevector? a) (bytevector? b) (bytes=? a b)))))
 
-(define panic-handler #f)
+(define-syntax-rule (define-global-parameter name default)
+  (define name
+    (let ((value #f))
+      (case-lambda
+        (() value)
+        ((x) (set! value x))))))
 
-(define (set-panic-handler! handler) (set! panic-handler handler))
+(define-global-parameter panic-handler #f)
 (define (panic . x*)
-  (when panic-handler
-    (let ((handler panic-handler))
-      (set-panic-handler! #f)
+  (let ((handler (panic-handler)))
+    (when handler
+      (panic-handler #f)
       (disable-interrupts)
       (handler x*)
       (enable-interrupts)))
@@ -79,7 +83,7 @@
 (define poll-ticks-remaining     poll-ticks-max)
 (define poll-ticks-for-timer     0)
 (define timer-ticks-remaining    0)
-(define timer-interrupt-handler  #f)
+(define-global-parameter timer-interrupt-handler #f)
 
 (define (tick-interrupts ticks)
   (let ((ticks (- poll-ticks-remaining ticks)))
@@ -94,7 +98,7 @@
               (if (= timer-ticks-remaining 0)
                   ;; NOTE: the user can arrange for the timer-interrupt-handler to return a value,
                   ;; such as a tick count to be passed to set-timer.
-                  (timer-interrupt-handler)
+                  ((timer-interrupt-handler))
                   (let ((ticks (min timer-ticks-remaining poll-ticks-remaining)))
                     (set! poll-ticks-for-timer ticks)
                     (set! poll-ticks-remaining ticks))))))))
@@ -108,7 +112,6 @@
   (set! disable-interrupts-count (+ disable-interrupts-count 1))
   disable-interrupts-count)
 
-(define (set-timer-interrupt-handler! handler) (set! timer-interrupt-handler handler))
 (define (set-timer ticks)
   (let ((prev (max (- timer-ticks-remaining (- poll-ticks-for-timer poll-ticks-remaining)) 0)))
     (if (< 0 ticks)
@@ -122,11 +125,7 @@
 (define-syntax-rule (interruptible-lambda param . body)
   (lambda param (tick-interrupts 1) . body))
 
-(define native-thread-local-register
-  (let ((value #f))
-    (case-lambda
-      (()  value)
-      ((x) (set! value x)))))
+(define-global-parameter native-thread-local-value #f)
 
 (define prompt-tag.raw-escape (make-continuation-prompt-tag 'raw-escape))
 
@@ -334,10 +333,9 @@
 
 (declare-primitives!
   ;; privileged primitives
-  native-thread-local-register with-raw-escape-prompt raw-escape-to-prompt
+  native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
-  panic set-panic-handler!
-  set-timer-interrupt-handler! set-timer enable-interrupts disable-interrupts
+  panic panic-handler timer-interrupt-handler set-timer enable-interrupts disable-interrupts
   procedure-metadata
   record? record record-type-descriptor record-ref
   string->bytevector bytevector->string

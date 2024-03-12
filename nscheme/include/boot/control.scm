@@ -5,12 +5,12 @@
                   (offset.cst.current-raw 1))
      (define dynamic-env
        (case-lambda
-         (()  (mvector-ref  (native-thread-local-register) offset.ntst.dynamic-env))
-         ((x) (mvector-set! (native-thread-local-register) offset.ntst.dynamic-env x))))
+         (()  (mvector-ref  (native-thread-local-value) offset.ntst.dynamic-env))
+         ((x) (mvector-set! (native-thread-local-value) offset.ntst.dynamic-env x))))
      (define current-coroutine-state
        (case-lambda
-         (()  (mvector-ref  (native-thread-local-register) offset.ntst.coroutine-state))
-         ((x) (mvector-set! (native-thread-local-register) offset.ntst.coroutine-state x))))
+         (()  (mvector-ref  (native-thread-local-value) offset.ntst.coroutine-state))
+         ((x) (mvector-set! (native-thread-local-value) offset.ntst.coroutine-state x))))
 
      (define (make-coroutine-state rcr)
        (let* ((cst        (make-mvector 2 0))
@@ -25,12 +25,12 @@
      (define (coroutine-state-controller  st) (mvector-ref st offset.cst.controller))
      (define (coroutine-state-current-raw st) (mvector-ref st offset.cst.current-raw))
 
-     (define (initialize-native-thread-state!)
+     (define (initialize-control-state!)
        (let ((native-thread-state.initial (make-mvector 2 0))
              (cst                         (make-coroutine-state (current-raw-coroutine))))
          (mvector-set! native-thread-state.initial offset.ntst.dynamic-env '())
          (mvector-set! native-thread-state.initial offset.ntst.coroutine-state cst)
-         (native-thread-local-register native-thread-state.initial))))
+         (native-thread-local-value native-thread-state.initial))))
 
    (define (with-untagged-escape-prompt on-escape thunk)
      (let ((saved-denv (dynamic-env)))
@@ -42,7 +42,7 @@
 
   ;; This call initializes dynamic-extent state slots for the current native thread.
   ;; If/when another native thread is started, it should call this initializer before continuing.
-  (initialize-native-thread-state!)
+  (initialize-control-state!)
 
   (define (dynamic-env-ref key default-value)
     (let loop ((frame* (dynamic-env)))
