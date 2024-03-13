@@ -85,23 +85,21 @@
 (define timer-ticks-remaining    0)
 (define-global-parameter timer-interrupt-handler #f)
 
-(define (tick-interrupts ticks)
-  (let ((ticks (- poll-ticks-remaining ticks)))
-    (cond
-      ((< 0 ticks)                    (set! poll-ticks-remaining ticks))
-      ((< 0 disable-interrupts-count) (set! poll-ticks-remaining 0))
-      (else (set! poll-ticks-remaining poll-ticks-max)
-            ;; TODO: handle pending signals (like keyboard interrupt) before handling timer
-            (when (< 0 timer-ticks-remaining)
-              (set! timer-ticks-remaining
-                (- timer-ticks-remaining (min timer-ticks-remaining poll-ticks-for-timer)))
-              (if (= timer-ticks-remaining 0)
-                  ;; NOTE: the user can arrange for the timer-interrupt-handler to return a value,
-                  ;; such as a tick count to be passed to set-timer.
-                  ((timer-interrupt-handler))
-                  (let ((ticks (min timer-ticks-remaining poll-ticks-remaining)))
-                    (set! poll-ticks-for-timer ticks)
-                    (set! poll-ticks-remaining ticks))))))))
+(define (tick-interrupts)
+  (set! poll-ticks-remaining (- poll-ticks-remaining 1))
+  (when (and (= 0 poll-ticks-remaining) (= 0 disable-interrupts-count))
+    (set! poll-ticks-remaining poll-ticks-max)
+    ;; TODO: handle pending signals (like keyboard interrupt) before handling timer
+    (when (< 0 timer-ticks-remaining)
+      (set! timer-ticks-remaining
+        (- timer-ticks-remaining (min timer-ticks-remaining poll-ticks-for-timer)))
+      (if (= timer-ticks-remaining 0)
+          ;; NOTE: the user can arrange for the timer-interrupt-handler to return a value,
+          ;; such as a tick count to be passed to set-timer.
+          ((timer-interrupt-handler))
+          (let ((ticks (min timer-ticks-remaining poll-ticks-remaining)))
+            (set! poll-ticks-for-timer ticks)
+            (set! poll-ticks-remaining ticks))))))
 
 (define (enable-interrupts)
   (when (< 0 disable-interrupts-count)
@@ -123,7 +121,7 @@
     prev))
 
 (define-syntax-rule (interruptible-lambda param . body)
-  (lambda param (tick-interrupts 1) . body))
+  (lambda param (tick-interrupts) . body))
 
 (define-global-parameter native-thread-local-value #f)
 
