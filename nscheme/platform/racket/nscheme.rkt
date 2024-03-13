@@ -4,7 +4,8 @@
   ;; privileged primitives
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
-  panic panic-handler timer-interrupt-handler set-timer enable-interrupts disable-interrupts
+  panic panic-handler native-signal-handler
+  timer-interrupt-handler set-timer enable-interrupts disable-interrupts
   interruptible-lambda
   ;; procedure-metadata returns a vector with this shape:
   ;;   #(,primitive ,captured ,code*)
@@ -78,6 +79,10 @@
       (enable-interrupts)))
   (raise (vector 'panic x*)))
 
+;; TODO: translate Racket breaks into signals
+(define-global-parameter native-signal-handler #f)
+(define pending-native-signal* '())
+
 (define-global-parameter timer-interrupt-handler #f)
 (define timer-ticks.remaining #f)
 
@@ -91,22 +96,27 @@
   (when (eq? 0 poll-ticks.remaining) (poll-interrupts!)))
 
 (define (poll-interrupts!)
-  (define (reset-polling!)
-    (if timer-ticks.remaining
-        (let ((poll-ticks.next (min poll-ticks.max timer-ticks.remaining)))
-          (set! timer-ticks.remaining (- timer-ticks.remaining poll-ticks.next))
-          (set! poll-ticks.remaining poll-ticks.next)
-          (set! interrupt-pending? #t))
-        (set! poll-ticks.remaining poll-ticks.max)))
+  (define (poll-native-signal*!)
+    (unless (null? pending-native-signal*)
+      (let ((signal* (reverse pending-native-signal*)))
+        (set! pending-native-signal* '())
+        (for-each (or (native-signal-handler) panic) signal*))))
   (when (and (eq? 0 disable-interrupts-count) interrupt-pending?)
     (set! interrupt-pending? #f)
-    (if (eq? timer-ticks.remaining 0)
-        (let ((handle (or (timer-interrupt-handler) panic)))
-          (set! timer-ticks.remaining #f)
-          (reset-polling!)
-          ;; TODO: handle pending signals (like keyboard interrupt) before handling timer
-          (handle))
-        (reset-polling!))))
+    (cond
+      ((eq? timer-ticks.remaining 0)
+       (set! timer-ticks.remaining #f)
+       (set! poll-ticks.remaining poll-ticks.max)
+       (poll-native-signal*!)
+       ((or (timer-interrupt-handler) panic)))
+      (timer-ticks.remaining
+       (let ((poll-ticks.next (min poll-ticks.max timer-ticks.remaining)))
+         (set! timer-ticks.remaining (- timer-ticks.remaining poll-ticks.next))
+         (set! poll-ticks.remaining poll-ticks.next)
+         (set! interrupt-pending? #t))
+       (poll-native-signal*!))
+      (else (set! poll-ticks.remaining poll-ticks.max)
+            (poll-native-signal*!)))))
 
 (define (enable-interrupts)
   (if (eq? disable-interrupts-count 1)
@@ -353,7 +363,8 @@
   ;; privileged primitives
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
-  panic panic-handler timer-interrupt-handler set-timer enable-interrupts disable-interrupts
+  panic panic-handler native-signal-handler
+  timer-interrupt-handler set-timer enable-interrupts disable-interrupts
   procedure-metadata
   record? record record-type-descriptor record-ref
   string->bytevector bytevector->string
