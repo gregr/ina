@@ -78,47 +78,67 @@
       (enable-interrupts)))
   (raise (vector 'panic x*)))
 
-(define disable-interrupts-count 0)
-(define poll-ticks-max           1000)
-(define poll-ticks-remaining     poll-ticks-max)
-(define poll-ticks-for-timer     0)
-(define timer-ticks-remaining    0)
 (define-global-parameter timer-interrupt-handler #f)
+(define timer-ticks.remaining #f)
+
+(define interrupt-pending?       #f)
+(define disable-interrupts-count 0)
+(define poll-ticks.max           1000)
+(define poll-ticks.remaining     poll-ticks.max)
 
 (define (tick-interrupts)
-  (set! poll-ticks-remaining (- poll-ticks-remaining 1))
-  (when (and (= 0 poll-ticks-remaining) (= 0 disable-interrupts-count))
-    (set! poll-ticks-remaining poll-ticks-max)
-    ;; TODO: handle pending signals (like keyboard interrupt) before handling timer
-    (when (< 0 timer-ticks-remaining)
-      (set! timer-ticks-remaining
-        (- timer-ticks-remaining (min timer-ticks-remaining poll-ticks-for-timer)))
-      (if (= timer-ticks-remaining 0)
-          ;; NOTE: the user can arrange for the timer-interrupt-handler to return a value,
-          ;; such as a tick count to be passed to set-timer.
-          ((timer-interrupt-handler))
-          (let ((ticks (min timer-ticks-remaining poll-ticks-remaining)))
-            (set! poll-ticks-for-timer ticks)
-            (set! poll-ticks-remaining ticks))))))
+  (set! poll-ticks.remaining (- poll-ticks.remaining 1))
+  (when (eq? 0 poll-ticks.remaining) (poll-interrupts!)))
+
+(define (poll-interrupts!)
+  (define (reset-polling!)
+    (if timer-ticks.remaining
+        (let ((poll-ticks.next (min poll-ticks.max timer-ticks.remaining)))
+          (set! timer-ticks.remaining (- timer-ticks.remaining poll-ticks.next))
+          (set! poll-ticks.remaining poll-ticks.next)
+          (set! interrupt-pending? #t))
+        (set! poll-ticks.remaining poll-ticks.max)))
+  (when (and (eq? 0 disable-interrupts-count) interrupt-pending?)
+    (set! interrupt-pending? #f)
+    (if (eq? timer-ticks.remaining 0)
+        (let ((handle (or (timer-interrupt-handler) panic)))
+          (set! timer-ticks.remaining #f)
+          (reset-polling!)
+          ;; TODO: handle pending signals (like keyboard interrupt) before handling timer
+          (handle))
+        (reset-polling!))))
 
 (define (enable-interrupts)
-  (when (< 0 disable-interrupts-count)
-    (set! disable-interrupts-count (- disable-interrupts-count 1)))
-  disable-interrupts-count)
+  (if (eq? disable-interrupts-count 1)
+      (begin
+        (set! disable-interrupts-count 0)
+        (poll-interrupts!)
+        0)
+      (begin
+        (unless (eq? disable-interrupts-count 0)
+          (set! disable-interrupts-count (- disable-interrupts-count 1)))
+        disable-interrupts-count)))
 
 (define (disable-interrupts)
+  (when (and (eq? disable-interrupts-count 0) timer-ticks.remaining)
+    (set! timer-ticks.remaining (+ timer-ticks.remaining poll-ticks.remaining)))
+  (set! poll-ticks.remaining -1)
   (set! disable-interrupts-count (+ disable-interrupts-count 1))
   disable-interrupts-count)
 
 (define (set-timer ticks)
-  (let ((prev (max (- timer-ticks-remaining (- poll-ticks-for-timer poll-ticks-remaining)) 0)))
+  (let ((timer-ticks.prev
+         (if timer-ticks.remaining
+             (+ (if (eq? disable-interrupts-count 0) poll-ticks.remaining 0)
+                timer-ticks.remaining)
+             0)))
     (if (< 0 ticks)
         (begin
-          (set! poll-ticks-remaining  (min poll-ticks-remaining ticks))
-          (set! poll-ticks-for-timer  poll-ticks-remaining)
-          (set! timer-ticks-remaining ticks))
-        (set! timer-ticks-remaining 0))
-    prev))
+          (set! timer-ticks.remaining ticks)
+          (set! interrupt-pending? #t))
+        (set! timer-ticks.remaining #f))
+    (poll-interrupts!)
+    timer-ticks.prev))
 
 (define-syntax-rule (interruptible-lambda param . body)
   (lambda param (tick-interrupts) . body))
