@@ -1,7 +1,8 @@
 #lang racket/base
 (require
   "../platform/racket/nscheme.rkt" "include.rkt"
-  racket/include racket/match racket/pretty racket/splicing)
+  racket/include racket/match racket/pretty racket/splicing
+  (prefix-in rkt: racket/base))
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 
@@ -16,6 +17,16 @@
 (struct error:eval  (c) #:prefab)
 
 (define (test-eval env stx)
+  (define (work-safely ^work)
+    (let ((handler.old (panic-handler)))
+      (panic-handler (lambda x* (raw-escape-to-prompt #f x*)))
+      (let-values ((result* (with-raw-escape-prompt
+                             (lambda (tag x*)
+                               (panic-handler handler.old)
+                               (rkt:raise (apply vector 'panic x*)))
+                             ^work)))
+        (panic-handler handler.old)
+        (apply values result*))))
   (when (< 0 verbosity)
     (displayln "EXPRESSION:")
     (pretty-write stx))
@@ -24,7 +35,7 @@
                                (displayln "PARSE ERROR:")
                                (pretty-write c))
                              (error:parse c))))
-    (let ((E (parse-expression env stx)))
+    (let ((E (work-safely (lambda () (parse-expression env stx)))))
       (when (< 2 verbosity)
         (displayln "PARSED:")
         (pretty-write E))
@@ -40,7 +51,7 @@
                                    (pretty-write c))
                                  (error:eval c))))
         (call-with-values
-          (lambda () (E-eval E))
+          (lambda () (work-safely (lambda () (E-eval E))))
           (case-lambda
             ((result) (when (< 0 verbosity)
                         (displayln "VALUE:")
@@ -80,14 +91,14 @@
      (begin
        (let ((expr 'e.expr) (expected 'e.expected))
          (when (< 0 verbosity) (newline))
-         (when (< 2 verbosity) (printf "~s ==> ~s\n" expr expected))
+         (when (< 2 verbosity) (pretty-write (list expr '==> expected)))
          (let ((actual (test-eval env expr)))
            (cond ((or (and (eq? expected 'error:parse) (error:parse? actual))
                       (and (eq? expected 'error:eval)  (error:eval?  actual))
                       (equal? expected actual))
                   (set! test-successes (cons `(,expr ==> ,actual) test-successes)))
                  (else (set! test-failures (cons `(,actual ,expr ==> ,expected) test-failures))
-                       (unless (< 0 verbosity) (printf "\n~s ==> ~s\n" expr expected))
+                       (unless (< 0 verbosity) (newline) (pretty-write (list expr '==> expected)))
                        (displayln "FAILED:")
                        (displayln "EXPECTED:")
                        (pretty-write expected)

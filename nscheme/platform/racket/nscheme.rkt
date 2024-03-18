@@ -39,6 +39,7 @@
   f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
   f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
   f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/
+  with-pretty-panic
 
   stdio filesystem tcp udp tty
   console string:port:input string:port:output null:port:output
@@ -49,8 +50,10 @@
   port-buffer-mode port-buffer-mode-set!
   method-lambda method-choose method-unknown method-except method-only
   racket:eval)
-(require racket/control racket/file racket/flonum racket/list racket/match racket/port racket/string
-         racket/struct racket/system racket/tcp racket/udp racket/vector (prefix-in rkt: racket/base))
+(require
+  racket/control racket/file racket/flonum racket/list racket/match racket/port racket/pretty
+  racket/string racket/struct racket/system racket/tcp racket/udp racket/vector
+  (prefix-in rkt: racket/base))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Control transfer and interrupts ;;;
@@ -69,13 +72,22 @@
         (() value)
         ((x) (set! value x))))))
 
+(define-syntax-rule (with-pretty-panic body ...)
+  (with-handlers ((vector? (lambda (c)
+                             (displayln 'unhandled-panic:)
+                             (pretty-write c)
+                             (newline)
+                             (raise c))))
+    body ...))
+
 (define-global-parameter panic-handler #f)
 (define (panic . x*)
   (let ((handler (panic-handler)))
     (when handler
-      (panic-handler #f)
       (disable-interrupts)
+      (panic-handler #f)
       (handler x*)
+      (panic-handler handler)
       (enable-interrupts)))
   (raise (vector 'panic x*)))
 
@@ -160,8 +172,7 @@
 (define (with-raw-escape-prompt on-escape thunk)
   (call-with-continuation-prompt thunk prompt-tag.raw-escape on-escape))
 
-(define (raw-escape-to-prompt . x*)
-  (apply abort-current-continuation prompt-tag.raw-escape x*))
+(define (raw-escape-to-prompt . x*) (apply abort-current-continuation prompt-tag.raw-escape x*))
 
 (define (thread->coroutine t)
   (lambda arg*
