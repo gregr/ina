@@ -86,6 +86,8 @@
 (displayln "evaluating self-apply1 to parse self-apply2:")
 ;; ~4550ms
 (define E.self-apply2 (time (E-eval E.self-apply1)))
+;; Use this variant to catch Racket breaks when using interrupt-aware lambdas.
+;(define E.self-apply2 (parameterize-break #f (time (E-eval E.self-apply1))))
 ;(define E.self-apply2 (profile (E-eval E.self-apply1)))
 ;(pretty-write (E-pretty E.self-apply2))
 (displayln "evaluating self-apply2:")
