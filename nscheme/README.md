@@ -1006,7 +1006,7 @@ immediately become the return values, as if `values` had been called instead.
 - Nestable preemptive multitasking
   - Related: https://legacy.cs.indiana.edu/~dyb/pubs/engines.pdf
   - Built on virtual timer interrupts and cooperative control transfers
-    - `(set-timer-interrupt-handler! proc)`
+    - `timer-interrupt-handler`
       - called automatically when time budget is exceeded
     - `(set-timer new-ticks) ==> previous-remaining-ticks`
       - if `ticks` is zero, the corresponding budget is unbounded
@@ -1069,9 +1069,8 @@ immediately become the return values, as if `values` had been called instead.
     - A catch-all signal handler needs to be installed to prevent threads from leaking the signals
       sent to them.
   - The installed timer-interrupt-handler is responsible for updating the tick budget for a chain of
-    nested thread states, re-establish itself with `set-timer-interrupt-handler!`, transfer control
-    to the appropriate point in the chain, and either deliver pending signals with `raise`, or just
-    return to resume normally.
+    nested thread states, transfer control to the appropriate point in the chain, and either deliver
+    pending signals with `raise`, or just return to resume normally.
     - When `interrupt` is invoked, we determine how many unused ticks remain using
       `ticks <- (set-timer 0)`.  If `ticks` is zero, then it means `interrupt` was invoked
       because the timer ran out.  If `(> ticks 0)`, it means the youngest currently-running thread

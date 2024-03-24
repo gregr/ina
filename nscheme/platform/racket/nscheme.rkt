@@ -103,7 +103,7 @@
 (define poll-ticks.max           1000)
 (define poll-ticks.remaining     poll-ticks.max)
 
-(define (tick-interrupts)
+(define (tick-interrupts!)
   (set! poll-ticks.remaining (- poll-ticks.remaining 1))
   (when (eq? 0 poll-ticks.remaining) (poll-interrupts!)))
 
@@ -113,22 +113,24 @@
       (let ((signal* (reverse pending-native-signal*)))
         (set! pending-native-signal* '())
         (for-each (or (native-signal-handler) panic) signal*))))
-  (when (and (eq? 0 disable-interrupts-count) interrupt-pending?)
-    (set! interrupt-pending? #f)
-    (cond
-      ((eq? timer-ticks.remaining 0)
-       (set! timer-ticks.remaining #f)
-       (set! poll-ticks.remaining poll-ticks.max)
-       (poll-native-signal*!)
-       ((or (timer-interrupt-handler) panic)))
-      (timer-ticks.remaining
-       (let ((poll-ticks.next (min poll-ticks.max timer-ticks.remaining)))
-         (set! timer-ticks.remaining (- timer-ticks.remaining poll-ticks.next))
-         (set! poll-ticks.remaining poll-ticks.next)
-         (set! interrupt-pending? #t))
-       (poll-native-signal*!))
-      (else (set! poll-ticks.remaining poll-ticks.max)
-            (poll-native-signal*!)))))
+  (cond
+    ((and (eq? 0 disable-interrupts-count) interrupt-pending?)
+     (set! interrupt-pending? #f)
+     (cond
+       ((eq? timer-ticks.remaining 0)
+        (set! timer-ticks.remaining #f)
+        (set! poll-ticks.remaining poll-ticks.max)
+        (poll-native-signal*!)
+        ((or (timer-interrupt-handler) panic)))
+       (timer-ticks.remaining
+        (let ((poll-ticks.next (min poll-ticks.max timer-ticks.remaining)))
+          (set! timer-ticks.remaining (- timer-ticks.remaining poll-ticks.next))
+          (set! poll-ticks.remaining poll-ticks.next)
+          (set! interrupt-pending? #t))
+        (poll-native-signal*!))
+       (else (set! poll-ticks.remaining poll-ticks.max)
+             (poll-native-signal*!))))
+    (else (set! poll-ticks.remaining poll-ticks.max))))
 
 (define (enable-interrupts)
   (if (eq? disable-interrupts-count 1)
@@ -163,7 +165,7 @@
     timer-ticks.prev))
 
 (define-syntax-rule (interruptible-lambda param . body)
-  (lambda param (tick-interrupts) . body))
+  (lambda param (tick-interrupts!) . body))
 
 (define-global-parameter native-thread-local-value #f)
 
