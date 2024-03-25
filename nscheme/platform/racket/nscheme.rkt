@@ -112,43 +112,33 @@
       (when signal
         (set! pending-native-signal #f)
         ((or (native-signal-handler) panic) signal))))
-  ;; NOTE: an interruptible-lambda should be applied in a context where breaks are disabled, or this
-  ;; break detection will not work reliably.
-  ;; - We can disable breaks with either (break-enabled #f) or (parameterize-break #f _)
-  (with-handlers ((exn:break? (lambda (x)
-                                (let* ((current pending-native-signal)
-                                       (next    (cond
-                                                  ((exn:break:hang-up?   x) 'hang-up)
-                                                  ((exn:break:terminate? x) 'terminate)
-                                                  (else                     'interrupt)))
-                                       ;; Keep whichever signal is stronger.
-                                       (next    (cond
-                                                  ((not current)            next)
-                                                  ((eq? next    'terminate) next)
-                                                  ((eq? current 'terminate) current)
-                                                  ((eq? next    'hang-up)   next)
-                                                  (else                     current))))
-                                  (set! pending-native-signal next)
-                                  (set! interrupt-pending? #t)))))
-    (parameterize-break #t (void)))
-  (cond
-    ((and (eq? 0 disable-interrupts-count) interrupt-pending?)
-     (set! interrupt-pending? #f)
-     (cond
-       ((eq? timer-ticks.remaining 0)
-        (set! timer-ticks.remaining #f)
-        (set! poll-ticks.remaining poll-ticks.max)
-        (poll-native-signal!)
-        ((or (timer-interrupt-handler) panic)))
-       (timer-ticks.remaining
-        (let ((poll-ticks.next (min poll-ticks.max timer-ticks.remaining)))
-          (set! timer-ticks.remaining (- timer-ticks.remaining poll-ticks.next))
-          (set! poll-ticks.remaining poll-ticks.next)
-          (set! interrupt-pending? #t))
-        (poll-native-signal!))
-       (else (set! poll-ticks.remaining poll-ticks.max)
-             (poll-native-signal!))))
-    (else (set! poll-ticks.remaining poll-ticks.max))))
+  (set! poll-ticks.remaining poll-ticks.max)
+  (when (eq? 0 disable-interrupts-count)
+    ;; NOTE: an interruptible-lambda should be applied in a context where breaks are disabled, or
+    ;; this break detection will not work reliably.
+    ;; - We can disable breaks with either (break-enabled #f) or (parameterize-break #f _)
+    (with-handlers ((exn:break? (lambda (x)
+                                  (set! pending-native-signal
+                                    (cond
+                                      ((exn:break:hang-up?   x) 'hang-up)
+                                      ((exn:break:terminate? x) 'terminate)
+                                      (else                     'interrupt)))
+                                  (set! interrupt-pending? #t))))
+      (parameterize-break #t (void)))
+    (when interrupt-pending?
+      (set! interrupt-pending? #f)
+      (cond
+        ((eq? timer-ticks.remaining 0)
+         (set! timer-ticks.remaining #f)
+         (poll-native-signal!)
+         ((or (timer-interrupt-handler) panic)))
+        (timer-ticks.remaining
+         (let ((poll-ticks.next (min poll-ticks.max timer-ticks.remaining)))
+           (set! timer-ticks.remaining (- timer-ticks.remaining poll-ticks.next))
+           (set! poll-ticks.remaining poll-ticks.next)
+           (set! interrupt-pending? #t))
+         (poll-native-signal!))
+        (else (poll-native-signal!))))))
 
 (define (enable-interrupts)
   (if (eq? disable-interrupts-count 1)
