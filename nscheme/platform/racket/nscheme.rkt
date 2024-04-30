@@ -117,11 +117,9 @@
                                                ((exn:break:terminate? x) 'terminate)
                                                (else                     'interrupt)))
                                             (loop))))
-                (parameterize-break
-                 #t
-                 (sync (choice-evt
-                        (handle-evt ch.result* (lambda (result*) (apply values result*)))
-                        (handle-evt ch.failure raise)))))))))
+                (sync/enable-break
+                 (handle-evt ch.result* (lambda (result*) (apply values result*)))
+                 (handle-evt ch.failure raise)))))))
       (lambda () (custodian-shutdown-all cust))))))
 
 (define-global-parameter timer-interrupt-handler #f)
