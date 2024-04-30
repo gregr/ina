@@ -39,7 +39,8 @@
   f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
   f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
   f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/
-  with-pretty-panic
+
+  with-pretty-panic with-native-signal-handling
 
   stdio filesystem tcp udp tty
   console string:port:input string:port:output null:port:output
@@ -92,7 +93,36 @@
   (raise (vector 'panic x*)))
 
 (define-global-parameter native-signal-handler #f)
-(define pending-native-signal #f)
+(define (with-native-signal-handling thunk)
+  (parameterize-break
+   #f
+   (let ((cust (make-custodian)))
+     (dynamic-wind
+      (lambda () (void))
+      (lambda ()
+        (parameterize ((current-custodian cust))
+          (let ((self (current-thread)))
+            (thread (lambda () (thread-wait self) (custodian-shutdown-all cust))))
+          (let* ((ch.result* (make-channel))
+                 (ch.failure (make-channel))
+                 (main       (thread (lambda ()
+                                       (with-handlers (((lambda _ #t)
+                                                        (lambda (x) (channel-put ch.failure x))))
+                                         (channel-put ch.result* (apply/values list (thunk))))))))
+            (let loop ()
+              (with-handlers ((exn:break? (lambda (x)
+                                            ((or (native-signal-handler) panic)
+                                             (cond
+                                               ((exn:break:hang-up?   x) 'hang-up)
+                                               ((exn:break:terminate? x) 'terminate)
+                                               (else                     'interrupt)))
+                                            (loop))))
+                (parameterize-break
+                 #t
+                 (sync (choice-evt
+                        (handle-evt ch.result* (lambda (result*) (apply values result*)))
+                        (handle-evt ch.failure raise)))))))))
+      (lambda () (custodian-shutdown-all cust))))))
 
 (define-global-parameter timer-interrupt-handler #f)
 (define timer-ticks.remaining #f)
@@ -107,38 +137,23 @@
   (when (eq? 0 poll-ticks.remaining) (poll-interrupts!)))
 
 (define (poll-interrupts!)
-  (define (poll-native-signal!)
-    (let ((signal pending-native-signal))
-      (when signal
-        (set! pending-native-signal #f)
-        ((or (native-signal-handler) panic) signal))))
+  (define (poll-etc!) (void))  ; We may add more polling here later.
   (set! poll-ticks.remaining poll-ticks.max)
   (when (eq? 0 disable-interrupts-count)
-    ;; NOTE: an interruptible-lambda should be applied in a context where breaks are disabled, or
-    ;; this break detection will not work reliably.
-    ;; - We can disable breaks with either (break-enabled #f) or (parameterize-break #f _)
-    (with-handlers ((exn:break? (lambda (x)
-                                  (set! pending-native-signal
-                                    (cond
-                                      ((exn:break:hang-up?   x) 'hang-up)
-                                      ((exn:break:terminate? x) 'terminate)
-                                      (else                     'interrupt)))
-                                  (set! interrupt-pending? #t))))
-      (parameterize-break #t (void)))
     (when interrupt-pending?
       (set! interrupt-pending? #f)
       (cond
         ((eq? timer-ticks.remaining 0)
          (set! timer-ticks.remaining #f)
-         (poll-native-signal!)
+         (poll-etc!)
          ((or (timer-interrupt-handler) panic)))
         (timer-ticks.remaining
          (let ((poll-ticks.next (min poll-ticks.max timer-ticks.remaining)))
            (set! timer-ticks.remaining (- timer-ticks.remaining poll-ticks.next))
            (set! poll-ticks.remaining poll-ticks.next)
            (set! interrupt-pending? #t))
-         (poll-native-signal!))
-        (else (poll-native-signal!))))))
+         (poll-etc!))
+        (else (poll-etc!))))))
 
 (define (enable-interrupts)
   (if (eq? disable-interrupts-count 1)

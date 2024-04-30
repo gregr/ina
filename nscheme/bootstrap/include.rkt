@@ -110,6 +110,9 @@
                                   def*.extended)
                 env.include))
 
+(define (ns-eval E) (with-native-signal-handling (lambda () (E-eval E))))
+
+
 ;; Old notes:
 
 ;; TODO: compile interact.scm and all of its dependencies (almost everything listed above).

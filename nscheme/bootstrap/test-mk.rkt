@@ -199,7 +199,7 @@
 
 (define (test-mk* body)
   (let ((E (time (parse-body env.mk body))))
-    (pretty-write (time (E-eval E)))))
+    (pretty-write (time (ns-eval E)))))
 
 (define (test-mk expr)
   (newline)
