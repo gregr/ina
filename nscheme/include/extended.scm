@@ -18,6 +18,24 @@
 ;(define vocab.formula 'formula)
 ;(define vocab.term    'term)
 
+(define (make-program)
+  (let ((&D (box ($d:begin))))
+    (lambda (method)
+      (case method
+        ((add!)    (lambda (D) (set-box! &D ($d:begin (unbox &D) D))))
+        ((current) (unbox &D))))))
+
+(define (program->D p) (p 'current))
+(define (program->E p) (D->E (program->D p)))
+
+(define (program-link-definition*/env.d p env.d env stx*.def)
+  ((p 'add!) (parse-begin-definition* env.d (env-compose env env.d) stx*.def)))
+
+(define (program-link-definition* p env stx*.def)
+  (let ((env.d (make-env)))
+    (program-link-definition*/env.d p env.d env stx*.def)
+    (env-freeze env.d)))
+
 (define (eval-definition* env stx*.def)
   (let ((env.d (make-env)))
     ((defstate->E/eval E-eval)

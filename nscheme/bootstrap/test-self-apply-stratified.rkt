@@ -10,14 +10,9 @@
 ;;; This variant of bootstrapping stratifies evaluation so that values computed at different phases
 ;;; do not mix.  That means compilation does not need to support cross-stage persistence.
 
-(define &D.program (box ($d:begin)))
-(define (link-definition* env def*)
-  (let ((env.d (make-env)))
-    (set-box! &D.program ($d:begin (unbox &D.program)
-                                   (parse-begin-definition* env.d (env-compose env env.d) def*)))
-    env.d))
-
 (let ()
+  (define program (make-program))
+  (define (link-definition* env def*) (program-link-definition* program env def*))
   (define env.primitive.privileged.all
     (env-compose env.primitive.privileged env.primitive.privileged.control))
 
@@ -48,7 +43,7 @@
   (void (link-definition* env.include stx*.test))
   (displayln "parsing test:")
   ;; ~0ms
-  (define E.test (time (D->E (unbox &D.program))))
+  (define E.test (time (program->E program)))
   (displayln "evaluating test:")
   ;; ~0ms
   (pretty-write (time (ns-eval E.test)))
@@ -69,12 +64,8 @@
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; Begin copy of earlier definitions ;;
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    (define &D.program (box ($d:begin)))
-    (define (link-definition* env def*)
-      (let ((env.d (make-env)))
-        (set-box! &D.program ($d:begin (unbox &D.program)
-                                       (parse-begin-definition* env.d (env-compose env env.d) def*)))
-        env.d))
+    (define program (make-program))
+    (define (link-definition* env def*) (program-link-definition* program env def*))
     (define env.primitive.privileged.all
       (env-compose env.primitive.privileged env.primitive.privileged.control))
     (define env.include/boot
@@ -104,7 +95,7 @@
     ;;;;;;;;;;;;;;
     ;; End copy ;;
     ;;;;;;;;;;;;;;
-    (D->E (unbox &D.program))))
+    (program->E program)))
 (displayln "parsing self-apply1:")
 ;; ~1ms
 (define E.self-apply1 (time (parse-body env.include.extended stx*.self-apply1)))
