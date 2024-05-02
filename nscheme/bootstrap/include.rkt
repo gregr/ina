@@ -10,7 +10,6 @@
 (include "../include/boot/record.scm")
 (include "../include/boot/string.scm")
 (include "../include/boot/control.scm")
-(include "../include/base/compare.scm")
 (include "../include/base/pair.scm")
 (include "../include/base/list.scm")
 (include "../include/base/number.scm")
@@ -61,8 +60,7 @@
       )))
 (define def*.include/base
   (file-name*->stx*
-    '("../include/base/compare.scm"
-      "../include/base/pair.scm"
+    '("../include/base/pair.scm"
       "../include/base/list.scm"
       "../include/base/number.scm"
       "../include/base/mvector.scm"

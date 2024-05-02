@@ -2,7 +2,7 @@
 ;;; Syntax with lazy mark propagation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (fresh-mark) (vector #t))
+(define (fresh-mark) (mvector))
 (define antimark #f)
 (define mark=?   eq?)
 (define (mark*=? a* b*)

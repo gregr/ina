@@ -63,38 +63,32 @@ way by manipulating programs and live processes as data.
     types for implementing some variant of inheritance.  It could also be used to list field names
     for dynamic field lookup.
 - Equality and identity:
-  - Structurally equal `()`, `#t`, `#f`, symbols, and an unspecified range of small numbers, are
-    always `eq?`.  This is because they are considered unique objects that are either not allocated
-    at all, or are uniquely allocated.
-  - All values are `eq?` to themselves.  i.e., `(let ((x _)) (eq? x x))` always evaluates to `#t`
-    when `_` evaluates to a value.
-  - Structurally equal values of other immutable types may be uniquely allocated, but are not
-    required to be.  A constructor for such a type is allowed to reuse an existing,
-    structurally-equal allocation.
-  - Values of mutable types are always uniquely allocated.  This includes zero-length mvectors and
-    mbytevectors.  These values can be reliably used to produce unique identities that will be
-    distinguished by `eq?`.
-  - Procedures that have indistinguishable application behavior may share the same allocation, even
-    if they appear to close over mutable values.  (An optimizer may recognize that a closed-over
-    mutable value does not impact the procedure's behavior.)
-  - All values produced by evaluating a particular `quote` expression are always `eq?`.  The reason
-    is that a `quote` expression evaluates to the same object that has been embedded in the `quote`
-    expression structure itself.
-    - Every `quote` expression is itself a value that must be allocated and constructed
-      programmatically, with some value embedded inside, before it is evaluated.  That embedded
-      value must also either be a non-allocated value, or is allocated, before the `quote`
-      expression is evaluated.  For instance, `read` will build such `quote` expressions,
-      performing any allocations necessary to do so.  And so the values returned by evaluating any
-      particular `quote` expression will always be the exact same object.
-    - So each evaluation of the same `(quote #(123))` expression returns the same vector object.
-      - Different `(quote #(123))` expressions may return different vector objects.  It depends
-        on whether or not the embedded vector is the same allocated object.
+  - All values are `eq?` to themselves.
+  - Newly-constructed mvectors and mbytevectors, even empty ones, are guaranteed to have unique
+    identities according to `eq?`.
+  - Structurally equal `()`, `#t`, `#f`, and symbols, are always `eq?`.
   - `eqv?` returns `#t` for structurally equal numbers, strings, and bytevectors, and in every case
     that `eq?` returns `#t`.
-    - `eqv?` returning `#f` implies that `eq?` returns `#f`, but not vice versa.
   - `equal?` returns `#t` for all structurally equal values of all s-expression types.  That is,
     structurally equal, immutable, non-procedure, non-record values.  For all procedures, records,
-    mbytevectors, and mvectors, even zero-length ones, `equal?` returns the same result as `eq?`.
+    mbytevectors, and mvectors, even empty ones, `equal?` returns the same result as `eq?`.
+  - Any structurally equal, immutable values are allowed to share the same (immediate or allocated)
+    object, even if they were constructed at different times.  This means that newly-constructed
+    pairs and vectors are not guaranteed to have unique identities according to `eq?`.
+  - Procedures that have indistinguishable application behavior may share the same object, even
+    if they appear to close over mutable values.  (An optimizer may recognize that a closed-over
+    mutable value does not impact the procedure's behavior.)
+  - Note that evaluating a `quote` expression does not construct a new object.  A `quote` expression
+    evaluates to the object that is contained in the expression itself.
+    - Every `quote` expression is itself a value that must be allocated and constructed
+      programmatically, containing another value, before it is evaluated.  That contained value must
+      also either be an immediate object, or have been allocated before the `quote` expression is
+      evaluated.  For instance, `read` will build such `quote` expressions, performing any
+      allocations necessary to do so.  And so the values returned by evaluating any particular
+      `quote` expression will always be the exact same object.
+    - So each evaluation of the same `(quote #(123))` expression returns the same vector object.
+      - Different `(quote #(123))` expressions may return different vector objects.  It depends
+        on whether or not the contained vector is the same allocated object.
 - No primitive character type: a string is indivisible until it is decoded as a bytevector
   - e.g., `string->utf8` and `utf8->string`
   - no `string-ref`, since basis of decomposition depends on context
