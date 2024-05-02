@@ -30,7 +30,7 @@
          (E       ((defstate->E/eval E-eval) dst.new)))
     (if (defstate-expression dst.new)
         ($d:expression (lambda () E))
-        ($d:define '_ (make-env) (lambda () E)))))
+        ($d:define (make-env) '_ (lambda () E)))))
 
 (define (parse-begin-meta-expression env stx)
   (apply/values $quote-values

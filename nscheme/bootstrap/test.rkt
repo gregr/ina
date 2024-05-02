@@ -458,6 +458,19 @@
     ((lambda x* x*) c b a))
   ==> (3 2 1)
 
+  ;; Ignoring a binding by using #f instead of an identifier is currently not supported.
+  ;! ignored-bindings
+  ;((lambda (x y . #f) y) 10 11 12)   ==> 11
+  ;((lambda (x #f y) x) 10 11 12)     ==> 10
+  ;(let    ((x 15) (#f 2) (y 16)) y)  ==> 16
+  ;(letrec ((x 14) (#f 2) (y 15)) x)  ==> 14
+  ;(let ()
+  ;  (define x  20)
+  ;  (define #f 21)
+  ;  (define y  22)
+  ;  x)
+  ;==> 20
+
   ! forced-expression
   (let ((x (expression 5)))
     x)
