@@ -8,6 +8,8 @@
 (define vocab.expression-operator  'expression-operator)
 (define vocab.expression-auxiliary 'expression-auxiliary)
 (define vocab.quasiquote           'quasiquote)
+(define vocab.set!                 'set!)
+(define vocab.set!-operator        'set!-operator)
 
 (define vocab-dict.empty '())
 (define (vocab-dict-ref    vocab=>x vocab)    (let ((vx (assq vocab vocab=>x))) (and vx (cdr vx))))
@@ -51,6 +53,14 @@
               (parse-undefined-identifier env stx.id)
               (env-bind! env stx.id))
             stx*.id))
+
+(define (env-introduce-boxed! env id ^E.box)
+  (env-introduce! env id)
+  (env-set^! env id
+             vocab.expression
+             (lambda (env _) ($unbox (^E.box)))
+             vocab.set!
+             (lambda (env stx.lhs E.rhs) ($set-box! ($provenance/syntax stx.lhs (^E.box)) E.rhs))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing helpers ;;;
@@ -386,3 +396,22 @@
     (unless (<= argc.min argc)           (raise-parse-error "too few operator arguments"  stx))
     (unless (<= argc (or argc.max argc)) (raise-parse-error "too many operator arguments" stx))
     (apply parser env.d env (cdr stx*))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Parsing assignments ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (parse-set! env stx.lhs stx.rhs)
+  (define (fail) (raise-parse-error "not assignable" stx.lhs))
+  (define (^rhs) (parse-expression env stx.rhs))
+  (let ((x.lhs (syntax-unwrap stx.lhs)))
+    (cond
+      ((identifier? stx.lhs) (let ((op (env-ref^ env stx.lhs vocab.set!)))
+                               (unless (procedure? op) (fail))
+                               (op env stx.lhs (^rhs))))
+      ((pair? x.lhs)         (let* ((stx.op (car x.lhs))
+                                    (op     (and (identifier? stx.op)
+                                                 (env-ref^ env stx.op vocab.set!-operator))))
+                               (unless (procedure? op) (fail))
+                               (op env stx.lhs (^rhs))))
+      (else                  (fail)))))

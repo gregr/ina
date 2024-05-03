@@ -328,7 +328,8 @@
             (cons 'let-values     (nonsplicing-expression-operator-parser $splicing-let-values))
             (cons 'let*-values    (nonsplicing-expression-operator-parser $splicing-let*-values))
             (cons 'letrec*-values (nonsplicing-expression-operator-parser $splicing-letrec*-values))
-            (cons 'let            (expression-operator-parser parse-let          2 #f))))
+            (cons 'let            (expression-operator-parser parse-let  2 #f))
+            (cons 'set!           (expression-operator-parser parse-set! 2 2))))
         (b*.qq '(unquote unquote-splicing))
         (b*.qq-and-expr (list (cons 'quasiquote (expression-operator-parser parse-quasiquote 1 1))))
         (b*.def-and-expr
