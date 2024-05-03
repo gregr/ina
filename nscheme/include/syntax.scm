@@ -227,12 +227,12 @@
        (trie-set id=>x (syntax-mark* id) (syntax-peek id) x))))
 
   (define (make-env)
-    (let ((&id=>x (box id-dict.empty)))
+    (mlet ((id=>x id-dict.empty))
       (lambda (method)
         (case method
-          ((describe) (list->vector (id-dict-key* (unbox &id=>x))))
-          ((ref)      (lambda (fail id) (or (id-dict-ref (unbox &id=>x) id) (fail))))
-          ((set!)     (lambda (fail id x) (set-box! &id=>x (id-dict-set (unbox &id=>x) id x))))
+          ((describe) (list->vector (id-dict-key* id=>x)))
+          ((ref)      (lambda (fail id)   (or (id-dict-ref id=>x id) (fail))))
+          ((set!)     (lambda (fail id x) (set! id=>x (id-dict-set id=>x id x))))
           (else       (error "invalid environment operation" method)))))))
 
 (define (env-describe env)      (env 'describe))

@@ -19,11 +19,11 @@
 ;(define vocab.term    'term)
 
 (define (make-program)
-  (let ((&D (box ($d:begin))))
+  (mlet ((D.current ($d:begin)))
     (lambda (method)
       (case method
-        ((add!)    (lambda (D) (set-box! &D ($d:begin (unbox &D) D))))
-        ((current) (unbox &D))))))
+        ((add!)    (lambda (D.new) (set! D.current ($d:begin D.current D.new))))
+        ((current) D.current)))))
 
 (define (program->D p) (p 'current))
 (define (program->E p) (D->E (program->D p)))
