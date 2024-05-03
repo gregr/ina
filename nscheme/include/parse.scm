@@ -166,6 +166,9 @@
 (define ($list             . x*) (let loop ((x* x*))
                                    (cond ((null? x*) ($quote '()))
                                          (else       ($cons (car x*) (loop (cdr x*)))))))
+(define ($box      x)   ($pcall make-mvector ($quote 1) x))
+(define ($unbox    b)   ($pcall mvector-ref  b ($quote 0)))
+(define ($set-box! b x) ($pcall mvector-set! b ($quote 0) x))
 
 (define $improper-length.value
   ($lambda '(x*) (lambda ($x*)
