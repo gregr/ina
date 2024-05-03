@@ -633,6 +633,24 @@
                   (even? '(s s)) (odd? '(s s))))))))
   ==> (#t #f #f #t #t #f)
 
+  ! set!
+  (let ()
+    (mdefine x 100)
+    x)
+  ==> 100
+  (let ()
+    (mdefine x 100)
+    (set! x (+ x 1))
+    x)
+  ==> 101
+  (mlet ((x 200))
+    x)
+  ==> 200
+  (mlet ((x 200))
+    (set! x (+ x 1))
+    x)
+  ==> 201
+
   ! quasiquote
   `11                                 ==> 11
   `(1 2 3)                            ==> (1 2 3)

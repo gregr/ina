@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  apply/values case case1 let-values assert
+  apply/values case case1 let-values assert mlet mdefine
   ;; privileged primitives
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
@@ -454,6 +454,9 @@
      (rkt:let-values (((param ...) rhs) ...) body ...))
     ((_ ((param rhs)) body ...)
      (apply/values (lambda param body ...) rhs))))
+
+(define-syntax-rule (mlet . body) (let . body))
+(define-syntax-rule (mdefine . body) (define . body))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Snapshot saving and loading ;;;
