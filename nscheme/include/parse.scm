@@ -40,11 +40,12 @@
 
 (define (env-extend env param* E*)
   (parse-param* param*)
-  (env-compose env (let ((env.scope (make-env)))
-                     (for-each (lambda (id E) (env-bind! env.scope id vocab.expression
-                                                         (parse/constant-expression E)))
-                               param* E*)
-                     (env-freeze env.scope))))
+  (env-conjoin (let ((env.scope (make-env)))
+                 (for-each (lambda (id E) (env-bind! env.scope id vocab.expression
+                                                     (parse/constant-expression E)))
+                           param* E*)
+                 (env-freeze env.scope))
+               env))
 
 (define (env-introduce! env stx.id) (env-introduce*! env (list stx.id)))
 
@@ -107,14 +108,14 @@
 
 (define (transcribe-and-parse-expression env.use env.op op stx)
   (let* ((m   (fresh-mark))
-         (env (env-compose env.use (env-mark env.op m))))
+         (env (env-disjoin env.op m env.use)))
     (parse-expression env (transcribe env.op op m env stx))))
 
 (define (transcribe-and-parse-definition env.d.use env.use env.op op stx)
   (let* ((m        (fresh-mark))
          (env.d.op (make-env))
-         (env.d    (env-compose env.d.use (env-mark env.d.op m)))
-         (env      (env-compose env.use   (env-mark (env-compose env.op env.d.op) m))))
+         (env.d    (env-disjoin env.d.op m env.d.use))
+         (env      (env-disjoin (env-conjoin env.d.op env.op) m env.use)))
     (parse-definition env.d env (transcribe env.op op m env stx))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -300,7 +301,7 @@
 
 (define ($body env ^def)
   (let* ((env.d (make-env))
-         (D     (^def env.d (env-compose env env.d)))
+         (D     (^def env.d (env-conjoin env.d env)))
          (dst   (D->defstate D)))
     (unless (defstate-expression dst)
       (raise-parse-error

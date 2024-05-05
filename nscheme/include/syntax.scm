@@ -125,67 +125,13 @@
 ;; NOTE: lookup is currently O(n^2), but may not be a problem in practice.  Consider more efficient
 ;; dictionary data structures If we need to harden this.
 ;;
-;; In order for a better dictionary structure to help, env-compose would have to combine
+;; In order for a better dictionary structure to help, env-conjoin would have to combine
 ;; sub-dictionaries.  But this is only possible if the sub-dictionaries are immutable, which is not
 ;; the case for definition-style environments until they are frozen.
 ;;
-;; We could have env-compose recognize frozen children and combine their dictionaries when possible.
-
-(define (env-freeze env)
-  (lambda (method)
-    (case method
-      ((describe) (list 'freeze (env 'describe)))
-      ((ref)      (env 'ref))
-      ((set!)     (lambda (fail id x) (error "invalid frozen environment operation" method id x)))
-      (else       (error "invalid environment operation" method)))))
-
-(define (env-compose env env.first)
-  (lambda (method)
-    (case method
-      ((describe) (list 'compose (env.first 'describe) (env 'describe)))
-      ((ref)      (lambda (fail id)   ((env.first 'ref)  (lambda () ((env 'ref)  fail id))   id)))
-      ((set!)     (lambda (fail id x) ((env.first 'set!) (lambda () ((env 'set!) fail id x)) id x)))
-      (else       (error "invalid environment operation" method)))))
-
-(define (env-compose* env . env*)
-  (let loop ((env env) (env* env*))
-    (if (null? env*)
-        env
-        (env-compose env (loop (car env*) (cdr env*))))))
-
-(define (env-mark env m)
-  (define (unmark id) (and (identifier? id) (syntax-remove-mark? id m)))
-  (lambda (method)
-    (case method
-      ((describe) (list 'mark m (env 'describe)))
-      ((ref)      (lambda (fail id)   (let ((i (unmark id))) (if i ((env 'ref)  fail i)   (fail)))))
-      ((set!)     (lambda (fail id x) (let ((i (unmark id))) (if i ((env 'set!) fail i x) (fail)))))
-      (else       (error "invalid environment operation" method)))))
+;; We could have env-conjoin recognize frozen children and combine their dictionaries when possible.
 
 (splicing-local
-  ;((splicing-local
-  ;   ((define (id-dict-top-symbol id=>x) (vector-ref id=>x 0))
-  ;    (define (id-dict-top-mark*  id=>x) (vector-ref id=>x 1))
-  ;    (define (id-dict-top-value  id=>x) (vector-ref id=>x 2))
-  ;    (define (id-dict-pop        id=>x) (vector-ref id=>x 3)))
-  ;   (define id-dict.empty '())
-  ;   (define (id-dict-empty? id=>x) (null? id=>x))
-  ;   (define (id-dict-keys id=>x)
-  ;     (let loop ((id=>x id=>x))
-  ;       (cond ((id-dict-empty? id=>x) '())
-  ;             (else (cons (syntax-wrap (id-dict-top-symbol id=>x) (id-dict-top-mark* id=>x))
-  ;                         (loop (id-dict-pop id=>x)))))))
-  ;   (define (id-dict-set id=>x id x) (vector (syntax-peek id) (syntax-mark* id) x id=>x))
-  ;   (define (id-dict-ref id=>x id)
-  ;     (identifier?! id)
-  ;     (let ((sym (syntax-peek id)) (m* (syntax-mark* id)))
-  ;       (let loop ((id=>x id=>x))
-  ;         (and (not (id-dict-empty? id=>x))
-  ;              (cond ((and (eq? (id-dict-top-symbol id=>x) sym)
-  ;                          (mark*=? (id-dict-top-mark* id=>x) m*))
-  ;                     (id-dict-top-value id=>x))
-  ;                    (else (loop (id-dict-pop id=>x))))))))))
-
   ((splicing-local
      ((define (alist-ref    kv* k)   (let ((kv (assq k kv*))) (and kv (cdr kv))))
       (define (alist-set    kv* k v) (cons (cons k v) (alist-remove kv* k)))
@@ -196,7 +142,7 @@
                 (cond ((eq? (car kv*) kv) (cdr kv*))
                       (else               (cons (car kv*) (loop (cdr kv*))))))
               kv*)))
-      (define trie.empty '(()))
+      (define trie.empty '(() . ()))  ; trie : `(,sym=>x . ,mark=>trie)
       (define (trie-ref t m* sym)
         (let loop ((t t) (m* m*))
           (if (null? m*)
@@ -225,18 +171,52 @@
      (define (id-dict-set id=>x id x)
        (identifier?! id)
        (trie-set id=>x (syntax-mark* id) (syntax-peek id) x))))
-
   (define (make-env)
     (mlet ((id=>x id-dict.empty))
       (lambda (method)
         (case method
           ((describe) (list->vector (id-dict-key* id=>x)))
-          ((ref)      (lambda (fail id)   (or (id-dict-ref id=>x id) (fail))))
-          ((set!)     (lambda (fail id x) (set! id=>x (id-dict-set id=>x id x))))
+          ((ref)      (lambda (fail id) (or (id-dict-ref id=>x id) (fail))))
+          ((set!)     (lambda (id x)    (set! id=>x (id-dict-set id=>x id x))))
           (else       (error "invalid environment operation" method)))))))
 
+(define (env-freeze env)
+  (lambda (method)
+    (case method
+      ((describe) (list 'freeze (env 'describe)))
+      ((ref)      (env 'ref))
+      ((set!)     (lambda (id x) (error "set! with frozen environment" id x)))
+      (else       (error "invalid environment operation" method)))))
+
+(define (env-disjoin env.mark m env.no-mark)
+  (define (unmark id) (and (identifier? id) (syntax-remove-mark? id m)))
+  (lambda (method)
+    (case method
+      ((describe) (list 'disjoin (env.mark 'describe) m (env.no-mark 'describe)))
+      ((ref)      (lambda (fail id)
+                    (let ((i (unmark id)))
+                      (if i ((env.mark 'ref) fail i) ((env.no-mark 'ref) fail id)))))
+      ((set!)     (lambda (id x)
+                    (let ((i (unmark id)))
+                      (if i ((env.mark 'set!) i x) ((env.no-mark 'set!) id x)))))
+      (else       (error "invalid environment operation" method)))))
+
+(define (env-conjoin env.first env.second)
+  (lambda (method)
+    (case method
+      ((describe) (list 'conjoin (env.first 'describe) (env.second 'describe)))
+      ((ref)      (lambda (fail id) ((env.first 'ref)  (lambda () ((env.second 'ref) fail id)) id)))
+      ((set!)     (lambda (id x)    ((env.first 'set!) id x)))
+      (else       (error "invalid environment operation" method)))))
+
+(define (env-conjoin* env.first . env*.rest)
+  (let loop ((env env.first) (env* env*.rest))
+    (if (null? env*)
+        env
+        (env-conjoin env (loop (car env*) (cdr env*))))))
+
 (define (env-describe env)      (env 'describe))
-(define (env-set!     env id x) ((env 'set!) (lambda () (error "cannot env-set!" id)) id x))
+(define (env-set!     env id x) ((env 'set!) id x))
 (define (env-ref      env id)   ((env 'ref) (lambda () #f) id))
 
 (define env.empty (let ((env (make-env))) (env-freeze env)))

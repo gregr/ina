@@ -124,7 +124,7 @@
                               (let ((E.boxed (parse-expression env.unboxed id)))
                                 (env-introduce-boxed! env.boxed id (lambda () E.boxed))))
                             param*)
-                  (parse-body (env-compose env.unboxed (env-freeze env.boxed)) stx*.body))))))
+                  (parse-body (env-conjoin (env-freeze env.boxed) env.unboxed) stx*.body))))))
 
 (define (parse-begin-expression env e . e*)
   (let loop ((e e) (e* e*))
@@ -265,12 +265,12 @@
 
 (define ($splicing-rec env.d env ^def ^body)
   (let* ((env.d.inner (make-env))
-         (env         (env-compose env env.d.inner)))
+         (env         (env-conjoin env.d.inner env)))
     ($d:begin (^def env.d.inner env) (^body env.d env))))
 
 (define ($splicing-nonrec env.d env ^def ^body)
   (let ((env.d.inner (make-env)))
-    ($d:begin (^def env.d.inner env) (^body env.d (env-compose env env.d.inner)))))
+    ($d:begin (^def env.d.inner env) (^body env.d (env-conjoin env.d.inner env)))))
 
 (define ($splicing-local env.d env stx.def* ^body)
   (let ((def* (syntax->list stx.def*)))

@@ -33,7 +33,7 @@
 (define (program-eval  p) (program-eval! p) (E-eval (program->E p)))
 
 (define (program-link-definition*/env.d p env.d env stx*.def)
-  ((p 'add!) (parse-begin-definition* env.d (env-compose env env.d) stx*.def)))
+  ((p 'add!) (parse-begin-definition* env.d (env-conjoin env.d env) stx*.def)))
 
 (define (program-link-definition* p env stx*.def)
   (let ((env.d (make-env)))

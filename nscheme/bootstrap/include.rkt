@@ -85,28 +85,25 @@
 (define def*.extended  (file-name->stx* "../include/extended.scm"))
 
 (define env.primitive.privileged.all
-  (env-compose env.primitive.privileged env.primitive.privileged.control))
+  (env-conjoin env.primitive.privileged.control env.primitive.privileged))
 (define env.include/boot
-  (env-compose* (eval-definition*
-                 (env-compose* env.primitive.privileged.all env.primitive env.minimal)
-                 def*.include/boot)
-                env.primitive
-                env.minimal))
+  (env-conjoin* env.minimal env.primitive
+                (eval-definition*
+                 (env-conjoin* env.minimal env.primitive env.primitive.privileged.all)
+                 def*.include/boot)))
 (define env.include/base
-  (env-compose env.include/boot (eval-definition* env.include/boot def*.include/base)))
+  (env-conjoin (eval-definition* env.include/boot def*.include/base) env.include/boot))
 (define env.include.0
-  (env-compose env.include/base (eval-definition* env.include/base def*.include)))
+  (env-conjoin (eval-definition* env.include/base def*.include) env.include/base))
 (define env.include
-  (env-compose env.include.0
-               (eval-definition* (env-compose env.primitive.privileged.all env.include.0)
-                                 def*.primitive)))
+  (env-conjoin (eval-definition* (env-conjoin env.include.0 env.primitive.privileged.all)
+                                 def*.primitive)
+               env.include.0))
 (define env.eval
-  (eval-definition* (env-compose* env.primitive.privileged.all env.include)
-                    def*.eval))
+  (eval-definition* (env-conjoin env.include env.primitive.privileged.all) def*.eval))
 (define env.include.extended
-  (env-compose* (eval-definition* (env-compose* env.eval env.include)
-                                  def*.extended)
-                env.include))
+  (env-conjoin env.include (eval-definition* (env-conjoin env.include env.eval)
+                                             def*.extended)))
 
 (define (ns-eval E)
   (with-pretty-panic (with-native-signal-handling (lambda () (E-eval E)))))

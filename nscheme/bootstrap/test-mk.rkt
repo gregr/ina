@@ -5,7 +5,7 @@
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 
-(define env.base (env-compose.match (env-compose env.primitive env.minimal)))
+(define env.base (env-conjoin/match (env-conjoin env.minimal env.primitive)))
 
 (define def*.microkanren
   '(;;;;;;;;;;;;;;;;;
@@ -182,7 +182,7 @@
 (define (parse-fresh env param* . fm*)
   ($fresh env param* (lambda (env) ($conj* (parse-expression* env fm*)))))
 
-(define (env-compose.minikanren env)
+(define (env-conjoin/minikanren env)
   (let ((env.scope (make-env))
         (b*.expr-op
           (list
@@ -193,9 +193,9 @@
     (for-each (lambda (id op) (env-bind! env.scope id vocab.expression-operator op))
               (map car b*.expr-op) (map cdr b*.expr-op))
     (env-bind! env.scope '== vocab.expression (parse/constant-expression $==))
-    (env-compose env (env-freeze env.scope))))
+    (env-conjoin (env-freeze env.scope) env)))
 
-(define env.mk (env-compose.minikanren env.base))
+(define env.mk (env-conjoin/minikanren env.base))
 
 (define (test-mk* body)
   (let ((E (time (parse-body env.mk body))))

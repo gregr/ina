@@ -14,22 +14,20 @@
   (define program (make-program))
   (define (link-definition* env def*) (program-link-definition* program env def*))
   (define env.primitive.privileged.all
-    (env-compose env.primitive.privileged env.primitive.privileged.control))
-
+    (env-conjoin env.primitive.privileged.control env.primitive.privileged))
   (define env.include/boot
-    (env-compose* (link-definition*
-                    (env-compose* env.primitive.privileged.all env.primitive env.minimal)
-                    def*.include/boot)
-                  env.primitive
-                  env.minimal))
+    (env-conjoin* env.minimal env.primitive
+                  (link-definition*
+                   (env-conjoin* env.minimal env.primitive env.primitive.privileged.all)
+                   def*.include/boot)))
   (define env.include/base
-    (env-compose env.include/boot (link-definition* env.include/boot def*.include/base)))
+    (env-conjoin (link-definition* env.include/boot def*.include/base) env.include/boot))
   (define env.include.0
-    (env-compose env.include/base (link-definition* env.include/base def*.include)))
+    (env-conjoin (link-definition* env.include/base def*.include) env.include/base))
   (define env.include
-    (env-compose env.include.0
-                 (link-definition* (env-compose env.primitive.privileged.all env.include.0)
-                                   def*.primitive)))
+    (env-conjoin (link-definition* (env-conjoin env.include.0 env.primitive.privileged.all)
+                                   def*.primitive)
+                 env.include.0))
   (define stx*.test (list '(list
                             (+ 1 2)
                             (foldr + 0 '(1 2 3 4 5))
@@ -39,7 +37,6 @@
                                        '(1 2) '(3 4 5) '(a b c))
                             (fold-right (lambda (acc x y) (cons (cons x y) acc))
                                         '(1 2) '(3 4 5) '(a b c)))))
-  ;(pretty-write (env-describe env.include))
   (void (link-definition* env.include stx*.test))
   (displayln "parsing test:")
   ;; ~0ms
@@ -67,21 +64,20 @@
     (define program (make-program))
     (define (link-definition* env def*) (program-link-definition* program env def*))
     (define env.primitive.privileged.all
-      (env-compose env.primitive.privileged env.primitive.privileged.control))
+      (env-conjoin env.primitive.privileged.control env.primitive.privileged))
     (define env.include/boot
-      (env-compose* (link-definition*
-                      (env-compose* env.primitive.privileged.all env.primitive env.minimal)
-                      def*.include/boot)
-                    env.primitive
-                    env.minimal))
+      (env-conjoin* env.minimal env.primitive
+                    (link-definition*
+                     (env-conjoin* env.minimal env.primitive env.primitive.privileged.all)
+                     def*.include/boot)))
     (define env.include/base
-      (env-compose env.include/boot (link-definition* env.include/boot def*.include/base)))
+      (env-conjoin (link-definition* env.include/boot def*.include/base) env.include/boot))
     (define env.include.0
-      (env-compose env.include/base (link-definition* env.include/base def*.include)))
+      (env-conjoin (link-definition* env.include/base def*.include) env.include/base))
     (define env.include
-      (env-compose env.include.0
-                   (link-definition* (env-compose env.primitive.privileged.all env.include.0)
-                                     def*.primitive)))
+      (env-conjoin (link-definition* (env-conjoin env.include.0 env.primitive.privileged.all)
+                                     def*.primitive)
+                   env.include.0))
     (define stx*.test (list '(list
                               (+ 1 2)
                               (foldr + 0 '(1 2 3 4 5))
