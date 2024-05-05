@@ -263,11 +263,14 @@
   (define (defstate-expression  dst) (cdr dst))
   (define (defstate-definition* dst) (reverse (defstate-rdefinition* dst)))
   (define (defstate->E dst)
-    (let* ((def* (defstate-definition* dst))
-           (id*  (definition*->id* def*)))
-      ($letrec id* (lambda E*
-                     (for-each env-set-variable! (definition*->env* def*) id* E*)
-                     (values (definition*->rhs* def*) ((or (defstate-expression dst) $values)))))))
+    (let ((def* (defstate-definition* dst)))
+      (if (null? def*)
+          ((or (defstate-expression dst) $values))
+          (let ((id* (definition*->id* def*)))
+            ($letrec id* (lambda E*
+                           (for-each env-set-variable! (definition*->env* def*) id* E*)
+                           (values (definition*->rhs* def*)
+                                   ((or (defstate-expression dst) $values)))))))))
   (define ((defstate->E/eval E-eval) dst)
     (let* ((def* (defstate-definition* dst))
            (id*  (definition*->id*  def*))
@@ -287,7 +290,8 @@
             ((D-tagged? D 'D:annotated)  (loop (D:annotated-D D) dst))
             (else                        (error "not a definition" D))))))
 
-(define (D->E D) (defstate->E (D->defstate D)))
+(define (D->E               D) (defstate->E (D->defstate D)))
+(define ((D->E/eval E-eval) D) ((defstate->E/eval E-eval) (D->defstate D)))
 
 (define ($d:provenance       pv D) (D:annotated pv D))
 (define ($d:begin            . D*) (D:begin D*))

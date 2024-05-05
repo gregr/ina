@@ -23,10 +23,14 @@
     (lambda (method)
       (case method
         ((add!)    (lambda (D.new) (set! D.current ($d:begin D.current D.new))))
+        ((eval!)   (let ((E ((D->E/eval E-eval) D.current)))
+                     (set! D.current ($d:expression (lambda () E)))))
         ((current) D.current)))))
 
-(define (program->D p) (p 'current))
-(define (program->E p) (D->E (program->D p)))
+(define (program->D    p) (p 'current))
+(define (program->E    p) (D->E (program->D p)))
+(define (program-eval! p) (p 'eval!))
+(define (program-eval  p) (program-eval! p) (E-eval (program->E p)))
 
 (define (program-link-definition*/env.d p env.d env stx*.def)
   ((p 'add!) (parse-begin-definition* env.d (env-compose env env.d) stx*.def)))
@@ -37,10 +41,10 @@
     (env-freeze env.d)))
 
 (define (eval-definition* env stx*.def)
-  (let ((env.d (make-env)))
-    ((defstate->E/eval E-eval)
-     (D->defstate (parse-begin-definition* env.d (env-compose env env.d) stx*.def)))
-    (env-freeze env.d)))
+  (let* ((p     (make-program))
+         (env.d (program-link-definition* p env stx*.def)))
+    (program-eval! p)
+    env.d))
 
 (define (parse-begin-meta-definition env.d env stx)
   (let* ((D       (parse-begin-definition* env.d env (syntax->list stx)))
