@@ -301,7 +301,7 @@
 
 (define ($body env ^def)
   (let* ((env.d (make-env))
-         (D     (^def env.d (env-conjoin env.d env)))
+         (D     (^def env.d (env-conjoin (env-freeze env.d) env)))
          (dst   (D->defstate D)))
     (unless (defstate-expression dst)
       (raise-parse-error
