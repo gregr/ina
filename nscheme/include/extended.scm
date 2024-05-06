@@ -9,9 +9,6 @@
 ;(define vocab.syntax-template 'syntax-template) ; e.g., bound template variables
 ;; TODO: unsyntax and unsyntax-splicing as quasisyntax-template auxiliaries?
 
-;(define vocab.match          'match)  ; e.g., the wildcard _
-;(define vocab.match-operator 'match-operator)
-
 ;; Other vocabulary ideas
 ;(define vocab.module  'module)
 ;(define vocab.grammar 'grammar)
@@ -58,57 +55,29 @@
   (apply/values $quote-values
                 (E-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx))))
 
-;; The right-hand-side expression of declare-parser must evaluate to a procedure which takes the
-;; current environment, and produces a parser.  This gives the parser access to its definition
-;; environment.
-;(define (parse-declare-parser env.d env e.vocab e.lhs . e*.rhs)
-;  (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))
-;    (cond ((identifier? e.lhs)
-;           (unless (= (length e*.rhs) 1)
-;             (raise-parse-error "multiple expressions in declaration body" e*.rhs))
-;           (let* ((addr   (env-address env e.lhs))  ; TODO: this is outdated
-;                  (vocab  (E-eval (parse-expression env e.vocab)))
-;                  (parser ((E-eval (parse-expression env (car e*.rhs))) env)))
-;             (unless addr
-;               (raise-unbound-identifier-parse-error "unbound identifier" e.lhs vocab env))
-;             (env-set! env.d vocab addr parser)))
-;          (else (let ((x (syntax-unwrap e.lhs)))
-;                  (cond ((pair? x) (loop (car x)
-;                                         (list (expression-parser
-;                                                 (lambda (env _)
-;                                                   ($provenance/syntax
-;                                                     (cdr x)
-;                                                     (apply parse-lambda env (cdr x) e*.rhs)))))))
-;                        (else      (raise-parse-error "not a definable form" e.lhs)))))))
-;  ($d:begin))
+(define (parse-current-environment env) ($quote env))
 
-;; TODO: do without this (and anything else using E-eval) until late stage bootstrapping
-;(define (parse-define-syntax env.d env e.lhs . e*.rhs)
-;  (let loop ((e.lhs e.lhs) (e*.rhs e*.rhs))
-;    (cond ((identifier? e.lhs)
-;           (unless (= (length e*.rhs) 1)
-;             (raise-parse-error "multiple expressions in definition body" e*.rhs))
-;           (env-introduce env.d e.lhs)
-;           (let ((op (E-eval (parse-expression env (car e*.rhs)))))
-;             (parse-declare-parser
-;               (parse-quote env vocab.expression)
-;               e.lhs (lambda (env.op)
-;                       (lambda (env.use stx)
-;                         (transcribe-and-parse-expression env.use env.op op stx))))
-;             (parse-declare-parser
-;               (parse-quote env vocab.definition)
-;               e.lhs (lambda (env.op)
-;                       (lambda (env.d env.use stx)
-;                         (transcribe-and-parse-definition env.d env.use env.op op stx))))))
-;          (else (let ((x (syntax-unwrap e.lhs)))
-;                  (cond ((pair? x) (loop (car x)
-;                                         (list (expression-parser
-;                                                 (lambda (env _)
-;                                                   ($provenance/syntax
-;                                                     (cdr x)
-;                                                     (apply parse-lambda env (cdr x) e*.rhs)))))))
-;                        (else      (raise-parse-error "not a definable form" e.lhs)))))))
-;  ($d:begin))
+(define (parse-declare-vocabulary-value env.d env id.lhs stx.vocab stx.rhs)
+  (parse-identifier id.lhs)
+  (let ((vocab    (E-eval (parse-expression env stx.vocab)))
+        (rhs      (E-eval (parse-expression env stx.rhs)))
+        (vocab=>v (or (env-ref env id.lhs) vocab-dict.empty)))
+    (env-set! env.d id.lhs (vocab-dict-set vocab=>v vocab rhs)))
+  ($d:begin))
+
+(define (parse-define-syntax env.d env.op stx.lhs . stx*.rhs)
+  (define (finish id.lhs ^rhs)
+    (env-introduce! env.d id.lhs)
+    (let ((op (E-eval (^rhs env.op))))
+      (env-set^! env.d id.lhs
+                 vocab.expression-operator
+                 (lambda (env.use stx)
+                   (transcribe-and-parse-expression env.use env.op op stx))
+                 vocab.definition-operator
+                 (lambda (env.d.use env.use stx)
+                   (transcribe-and-parse-definition env.d.use env.use env.op op stx))))
+    ($d:begin))
+  (parse-operator-binding finish stx.lhs stx*.rhs))
 
 ;; Would syntax-dismantle be helpful enough to justify implementing it?
 ;(define-syntax syntax-dismantle
@@ -142,15 +111,17 @@
 ;                                              (begin body ...)
 ;                                              (skip)))))
 
-;; TODO:
-;(define initial.definition
-  ;(list
-    ;;'declare-parser (definition-operator-parser parse-declare-parser 3 #f)
-    ;;'define-syntax  (definition-operator-parser parse-define-syntax  2 #f)
-    ;))
-
 (define env.extended
   (let ((env (make-env))
+        (b*.def
+          (list
+            (cons 'declare-vocabulary-value
+                  (definition-operator-parser parse-declare-vocabulary-value 3 3))
+            (cons 'define-syntax (definition-operator-parser parse-define-syntax 2 #f))))
+        (b*.expr
+          (list
+            (cons 'current-environment
+                  (expression-operator-parser parse-current-environment 0 0))))
         (b*.def-and-expr
           (list
             (list 'begin-meta parse-begin-meta-definition parse-begin-meta-expression))))
@@ -158,4 +129,8 @@
                                                      vocab.definition-operator op.def
                                                      vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
+    (for-each (lambda (id op) (env-bind! env id vocab.definition-operator op))
+              (map car b*.def) (map cdr b*.def))
+    (for-each (lambda (id op) (env-bind! env id vocab.expression-operator op))
+              (map car b*.expr) (map cdr b*.expr))
     (env-freeze env)))
