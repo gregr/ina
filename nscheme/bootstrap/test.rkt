@@ -10,8 +10,7 @@
 (define show-compiled-racket? (and #t (< 0 verbosity)))
 
 (define env.test.minimal
-  (env-conjoin/match
-    (env-conjoin* env.minimal env.primitive.privileged.control env.primitive)))
+  (env-conjoin/match (env-conjoin* env.minimal env.primitive)))
 
 (struct error:parse (c) #:prefab)
 (struct error:eval  (c) #:prefab)
@@ -1058,8 +1057,8 @@
 (define env.test.large
   (let ((env (make-env)))
     (env-bind! env 'env.test vocab.expression
-               (parse/constant-expression ($quote env.include.extended)))
-    (env-conjoin env.include.extended env)))
+               (parse/constant-expression ($quote env.large)))
+    (env-conjoin env.large env)))
 
 (run-evaluation-tests
   env.test.large

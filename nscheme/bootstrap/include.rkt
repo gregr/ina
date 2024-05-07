@@ -51,12 +51,16 @@
 
 (define (file-name*->stx* fname*) (apply append (map file-name->stx* fname*)))
 
+(define def*.include/base/early
+  (file-name*->stx*
+   '("../include/base/misc.scm"
+     "../include/boot/record.scm"   ; TODO: this should be in base
+     "../include/boot/string.scm"   ; TODO: this should be in base
+     "../include/boot/control.scm"  ; TODO: this should be split into a base and boot portion
+     )))
 (define def*.include/boot
   (file-name*->stx*
-    '("../include/base/misc.scm"  ; convenient for bootstrap, but no privilege needed
-      "../include/boot/record.scm"
-      "../include/boot/string.scm"
-      "../include/boot/control.scm"
+    '(  ; TODO: this should include one of the split control.scm files
       )))
 (define def*.include/base
   (file-name*->stx*
@@ -80,30 +84,60 @@
       "../include/parse.scm"
       "../include/minimal.scm"
       "../include/match.scm")))
-(define def*.primitive (file-name->stx* "../include/primitive.scm"))
-(define def*.eval      (file-name->stx* "../include/eval-simple.scm"))
-(define def*.extended  (file-name->stx* "../include/extended.scm"))
+(define def*.eval
+  (file-name*->stx*
+   '("../include/eval-simple.scm"
+     "../include/extended.scm")))
+(define def*.primitive-environments
+  (file-name->stx* "../include/primitive.scm"))
 
-(define env.primitive.privileged.all
+(define env.primitive.privileged.all.0
   (env-conjoin env.primitive.privileged.control env.primitive.privileged))
+(define env.privileged.0
+  (env-conjoin* env.minimal env.primitive env.primitive.privileged.all.0))
+(define env.unprivileged.0
+  (env-conjoin env.minimal env.primitive))
+(define env.include/base/early
+  (eval-definition* env.privileged.0 def*.include/base/early))
+(define env.include/base/early.0
+  (env-conjoin env.privileged.0 env.include/base/early))
 (define env.include/boot
-  (env-conjoin* env.minimal env.primitive
-                (eval-definition*
-                 (env-conjoin* env.minimal env.primitive env.primitive.privileged.all)
-                 def*.include/boot)))
+  (eval-definition* env.include/base/early.0 def*.include/boot))
+(define env.include/boot.0
+  (env-conjoin env.include/base/early.0 env.include/boot))
 (define env.include/base
-  (env-conjoin (eval-definition* env.include/boot def*.include/base) env.include/boot))
-(define env.include.0
-  (env-conjoin (eval-definition* env.include/base def*.include) env.include/base))
+  (env-conjoin env.include/base/early (eval-definition* env.include/boot.0 def*.include/base)))
+(define env.include/base.0
+  (env-conjoin env.unprivileged.0 env.include/base))
 (define env.include
-  (env-conjoin (eval-definition* (env-conjoin env.include.0 env.primitive.privileged.all)
-                                 def*.primitive)
-               env.include.0))
+  (env-conjoin env.include/base (eval-definition* env.include/base.0 def*.include)))
+(define env.include.0
+  (env-conjoin env.unprivileged.0 env.include))
 (define env.eval
-  (eval-definition* (env-conjoin env.include env.primitive.privileged.all) def*.eval))
-(define env.include.extended
-  (env-conjoin env.include (eval-definition* (env-conjoin env.include env.eval)
-                                             def*.extended)))
+  (eval-definition* env.include.0 def*.eval))
+(define env.primitive-environments
+  (eval-definition* (env-conjoin env.include.0 env.primitive.privileged.all.0)
+                    def*.primitive-environments))
+(define env.minimal.1
+  (E-eval (parse-expression env.include 'env.minimal)))
+(define env.primitive.1
+  (E-eval (parse-expression env.primitive-environments 'env.primitive)))
+(define env.primitive.privileged.1
+  (E-eval (parse-expression env.primitive-environments 'env.primitive.privileged)))
+(define env.primitive.privileged.control.1
+  (E-eval (parse-expression env.primitive-environments 'env.primitive.privileged.control)))
+(define env.primitive.privileged.all.1
+  (env-conjoin env.primitive.privileged.control.1 env.primitive.privileged.1))
+(define env.unprivileged.1
+  (env-conjoin env.minimal.1 env.primitive.1))
+(define env.include/base.1
+  (env-conjoin env.unprivileged.1 env.include/base))
+(define env.include.1
+  (env-conjoin env.unprivileged.1 env.include))
+(define env.extended.1
+  (E-eval (parse-expression env.eval 'env.extended)))
+(define env.large
+  (env-conjoin* env.extended.1 env.eval env.include.1 env.primitive-environments))
 
 (define (ns-eval E)
   (with-pretty-panic (with-native-signal-handling (lambda () (E-eval E)))))
@@ -157,73 +191,3 @@
 ;;       - platform-specific (e.g., Racket, Chez, JS, Python, C, WASM, x86 ...), compiled code
 ;;       - portable, compiled code
 ;;       - portable, not-yet-compiled nScheme code
-
-;; TODO: do we need quote-syntax and quasiquote-syntax for bootstrapping?
-;(define-syntax (quote-syntax stx)
-;  (syntax-case stx ()
-;    ((_ stx)
-;     (let loop ((stx #'stx))
-;       (define (remap x)
-;         (cond ((pair?   x) #`(cons #,(loop (car x)) #,(loop (cdr x))))
-;               ((vector? x) #`(vector . #,(map loop (vector->list x))))
-;               (else        #`'#,x)))
-;       (if (syntax? stx)
-;           #`(syntax-provenance-set #,(remap (syntax-e stx))
-;                                    '#,(list (cons 'source   (syntax-source   stx))
-;                                             (cons 'position (syntax-position stx))
-;                                             (cons 'span     (syntax-span     stx))
-;                                             (cons 'line     (syntax-line     stx))
-;                                             (cons 'column   (syntax-column   stx))))
-;           (remap stx))))))
-;
-;(define-syntax (quasiquote-syntax stx)
-;  (syntax-case stx ()
-;    ((_ qq.0)
-;     (let loop ((qq #'qq.0) (level 0))
-;       (define (stx->pv stx)
-;         (list (cons 'source   (syntax-source   stx))
-;               (cons 'position (syntax-position stx))
-;               (cons 'span     (syntax-span     stx))
-;               (cons 'line     (syntax-line     stx))
-;               (cons 'column   (syntax-column   stx))))
-;       (syntax-case qq (quasiquote-syntax unsyntax unsyntax-splicing)
-;         ((quasiquote-syntax q)        #`(syntax-provenance-set
-;                                           (list (quote-syntax #,#'quasiquote-syntax)
-;                                                 #,(loop #'q (+ level 1)))
-;                                           '#,(stx->pv qq)))
-;         ((unsyntax e)                 (if (= level 0)
-;                                           #'e
-;                                           #`(syntax-provenance-set
-;                                               (list (quote-syntax #,#'unsyntax)
-;                                                     #,(loop #'e (- level 1)))
-;                                               '#,(stx->pv qq))))
-;         (((unsyntax-splicing e) . qd) (if (= level 0)
-;                                           #`(append (syntax->list e) #,(loop #'qd level))
-;                                           #`(syntax-provenance-set
-;                                               (cons (list (quote-syntax #,#'unsyntax-splicing)
-;                                                           #,(loop #'e (- level 1)))
-;                                                     #,(loop #'qd level))
-;                                               '#,(stx->pv qq))))
-;         ((quasiquote-syntax . _)      (error "invalid use of keyword" qq))
-;         ((unsyntax          . _)      (error "invalid use of keyword" qq))
-;         ((unsyntax-splicing . _)      (error "invalid use of keyword" qq))
-;         ((qq.a . qq.d)                #`(syntax-provenance-set
-;                                           (cons #,(loop #'qq.a level) #,(loop #'qq.d level))
-;                                           '#,(stx->pv qq)))
-;         (quasiquote-syntax            (error "invalid use of keyword" qq))
-;         (unsyntax                     (error "invalid use of keyword" qq))
-;         (unsyntax-splicing            (error "invalid use of keyword" qq))
-;         (_                            (if (vector? (syntax-e qq))
-;                                           #`(syntax-provenance-set
-;                                               (vector . #,(map (lambda (qq) (loop qq level))
-;                                                                (vector->list (syntax-e qq))))
-;                                               '#,(stx->pv qq))
-;                                           #`(quote-syntax #,qq))))))))
-;
-;(require racket/pretty)
-;(pretty-write (quote-syntax (foo . bar)))
-;(pretty-write (quasiquote-syntax (a b c)))
-;(pretty-write (quasiquote-syntax (a #,'b c)))
-;(pretty-write (quasiquote-syntax (a #,'(1 2 3) c)))
-;(pretty-write (quasiquote-syntax (a #,@(quote-syntax (1 2 3)) c)))
-;(pretty-write (quasiquote-syntax (a (quasiquote-syntax (1 #,2 3)) c)))
