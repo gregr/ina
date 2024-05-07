@@ -286,9 +286,9 @@
   (let ((q (rkt:floor (/ dividend divisor))))
     (values q (- dividend (* q divisor)))))
 
-(struct mbytevector (bv) #:name mbytevector-struct #:constructor-name mbytevector:new)
-(struct mvector     (v)  #:name mvector-struct     #:constructor-name mvector:new)
-(struct record (type-descriptor field*) #:name record-struct #:constructor-name record:new)
+(struct mbytevector (bv) #:name mbytevector-struct #:constructor-name mbytevector:new #:prefab)
+(struct mvector (v) #:name mvector-struct #:constructor-name mvector:new #:prefab)
+(struct record (type-descriptor field*) #:name record-struct #:constructor-name record:new #:prefab)
 
 (define (record rtd . x*)
   (unless (and (vector? rtd) (< 0 (vector-length rtd)))
