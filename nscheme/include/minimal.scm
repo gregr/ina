@@ -148,8 +148,9 @@
       $splicing (lambda (stx*) (lambda (env.d env)
                                  ($d:expression (lambda () (apply parse-begin-expression env stx*))))))))
 
-(define (parse-quasiquote env stx.qq)
-  (define (finish quote? x) (if quote? (parse-quote env x) x))
+(define ((parse-quasiquote-X vocab tag.unescape tag.escape tag.escape-splicing parse-X)
+         env stx.qq)
+  (define (finish quote? x) (if quote? (parse-X env x) x))
   (define (operand qq) (car (syntax-unwrap (cdr qq))))
   (define (operation? qq tag)
     (and (pair? qq)
@@ -158,7 +159,7 @@
                 (let ((qq.dd (syntax-unwrap (cdr qq.d))))
                   (and (null? qq.dd)
                        (identifier? (car qq))
-                       (eq? (env-ref^ env (car qq) vocab.quasiquote) tag)))))))
+                       (eq? (env-ref^ env (car qq) vocab) tag)))))))
   (define (tag tag-value P) ($list ($quote tag-value) P))
   (let-values
     (((quote? e)
@@ -166,31 +167,31 @@
         (let ((qq (syntax-unwrap stx.qq)))
           (cond ((and (= level 0) (pair? qq)
                       (let ((qq.a (syntax-unwrap (car qq))))
-                        (operation? qq.a 'unquote-splicing)))
+                        (operation? qq.a tag.escape-splicing)))
                  (let ((rand (operand (syntax-unwrap (car qq)))))
                    (let-values (((quote? rest) (loop (cdr qq) level)))
                      (let ((rest (finish quote? rest)))
                        (values #f ($append (parse-expression env rand) rest))))))
-                ((and (< 0 level) (operation? qq 'unquote-splicing))
+                ((and (< 0 level) (operation? qq tag.escape-splicing))
                  (let ((rand (operand qq)))
                    (let-values (((quote? e) (loop rand (- level 1))))
                      (if quote?
                          (values #t stx.qq)
-                         (values #f (tag 'unquote-splicing e))))))
-                ((operation? qq 'unquote)
+                         (values #f (tag tag.escape-splicing e))))))
+                ((operation? qq tag.escape)
                  (let ((rand (operand qq)))
                    (if (= level 0)
                        (values #f (parse-expression env rand))
                        (let-values (((quote? e) (loop rand (- level 1))))
                          (if quote?
                              (values #t stx.qq)
-                             (values #f (tag 'unquote e)))))))
-                ((operation? qq 'quasiquote)
+                             (values #f (tag tag.escape e)))))))
+                ((operation? qq tag.unescape)
                  (let ((rand (operand qq)))
                    (let-values (((quote? e) (loop rand (+ level 1))))
                      (if quote?
                          (values #t stx.qq)
-                         (values #f (tag 'quasiquote e))))))
+                         (values #f (tag tag.unescape e))))))
                 ((pair? qq)
                  (let-values (((quote.a? a) (loop (car qq) level))
                               ((quote.b? b) (loop (cdr qq) level)))
@@ -202,10 +203,16 @@
                    (if quote?
                        (values #t stx.qq)
                        (values #f ($pcall apply ($quote vector) e)))))
-                (else (when (and (identifier? stx.qq) (env-ref^ env stx.qq vocab.quasiquote))
-                        (raise-parse-error "misplaced quasiquote operator" stx.qq))
+                (else (when (and (identifier? stx.qq) (env-ref^ env stx.qq vocab))
+                        (raise-parse-error "misplaced operator" stx.qq))
                       (values #t stx.qq)))))))
     (finish quote? e)))
+
+(define parse-quasiquote
+  (parse-quasiquote-X vocab.quasiquote 'quasiquote 'unquote 'unquote-splicing parse-quote))
+(define parse-quasiquote-syntax
+  (parse-quasiquote-X vocab.quasiquote-syntax 'quasiquote-syntax 'unsyntax 'unsyntax-splicing
+                      parse-quote-syntax))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;
@@ -356,6 +363,9 @@
             (cons 'set!           (expression-operator-parser parse-set! 2 2))))
         (b*.qq '(unquote unquote-splicing))
         (b*.qq-and-expr (list (cons 'quasiquote (expression-operator-parser parse-quasiquote 1 1))))
+        (b*.qqs '(unsyntax unsyntax-splicing))
+        (b*.qqs-and-expr
+          (list (cons 'quasiquote-syntax (expression-operator-parser parse-quasiquote-syntax 1 1))))
         (b*.def-and-expr
           (list
             (list 'expression
@@ -399,6 +409,12 @@
                                          vocab.expression-operator op
                                          vocab.quasiquote          (syntax-peek id)))
               (map car b*.qq-and-expr) (map cdr b*.qq-and-expr))
+    (for-each (lambda (id) (env-bind! env id vocab.quasiquote-syntax (syntax-peek id)))
+              b*.qqs)
+    (for-each (lambda (id op) (env-bind! env id
+                                         vocab.expression-operator op
+                                         vocab.quasiquote-syntax   (syntax-peek id)))
+              (map car b*.qqs-and-expr) (map cdr b*.qqs-and-expr))
     (for-each (lambda (id op) (env-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
     (env-freeze env)))

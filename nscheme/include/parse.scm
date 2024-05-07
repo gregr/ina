@@ -8,6 +8,7 @@
 (define vocab.expression-operator  'expression-operator)
 (define vocab.expression-auxiliary 'expression-auxiliary)
 (define vocab.quasiquote           'quasiquote)
+(define vocab.quasiquote-syntax    'quasiquote-syntax)
 (define vocab.set!                 'set!)
 (define vocab.set!-operator        'set!-operator)
 
