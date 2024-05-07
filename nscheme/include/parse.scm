@@ -68,6 +68,11 @@
 ;;; Parsing helpers ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (syntax->list s)
+  (let ((x*~ (syntax->improper-list s)))
+    (unless (list? x*~) (raise-parse-error "not a syntax list" s))
+    x*~))
+
 (define (parse-identifier id) (unless (identifier? id) (raise-parse-error "not an identifier" id)))
 
 (define (parse-undefined-identifier env id)

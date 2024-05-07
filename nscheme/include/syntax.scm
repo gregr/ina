@@ -108,16 +108,6 @@
         (cons (car x) (syntax->improper-list (cdr x)))
         x)))
 
-(define (syntax->list? s)
-  (let loop ((s s) (parts '()))
-    (let ((x (syntax-unwrap s)))
-      (if (null? x)
-          (reverse parts)
-          (and (pair? x)
-               (loop (cdr x) (cons (car x) parts)))))))
-
-(define (syntax->list s) (or (syntax->list? s) (error "not a list" s)))
-
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Environments ;;;
 ;;;;;;;;;;;;;;;;;;;;
