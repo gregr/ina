@@ -160,9 +160,7 @@
 (define ($not                 x) ($if x ($quote #f) ($quote #t)))
 (define ($when   c body . body*) ($if c (apply $begin body body*) ($values)))
 (define ($unless c body . body*) (apply $when ($not c) body body*))
-
 (define ($pcall     prim . args) (apply $call ($quote prim) args))
-(define $void                    ($pcall values))
 (define ($eq?               a b) ($pcall eq?     a b))
 (define ($eqv?              a b) ($pcall eqv?    a b))
 (define ($null?             x)   ($pcall null?   x))

@@ -33,7 +33,7 @@
 
 (define (parse-cond env clause . clause*)
   (let loop ((c* (cons clause clause*)))
-    (cond ((null? c*) $void)
+    (cond ((null? c*) ($pcall values))
           (else (let* ((c (car c*)) (c* (cdr c*)) (e* (syntax->list c)))
                   (when (null? e*) (raise-parse-error "empty clause" c))
                   (let ((e.test (car e*)) (e* (cdr e*)))
@@ -62,7 +62,7 @@
     (lambda ($x)
       (let loop ((c* (cons clause clause*)))
         (cond
-          ((null? c*) $void)
+          ((null? c*) ($pcall values))
           (else (let* ((c (car c*)) (c* (cdr c*)) (e* (syntax->list c)))
                   (when (null? e*) (raise-parse-error "empty clause" c))
                   (let ((e.data (car e*)) (e* (cdr e*)))
