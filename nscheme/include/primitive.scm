@@ -41,20 +41,16 @@
         procedure-metadata
         record? record record-type-descriptor record-ref
         ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
-        string->bytevector bytevector->string)
+        string->bytevector bytevector->string
+        native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
+        current-raw-coroutine make-raw-coroutine
+        timer-interrupt-handler set-timer enable-interrupts disable-interrupts)
       (list
         panic-handler native-signal-handler
         procedure-metadata
         record? record record-type-descriptor record-ref
         ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
-        string->bytevector bytevector->string)))
-  (define env.primitive.privileged.control
-    (name*primitive*->env
-      '(
-        native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
-        current-raw-coroutine make-raw-coroutine
-        timer-interrupt-handler set-timer enable-interrupts disable-interrupts)
-      (list
+        string->bytevector bytevector->string
         native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
         current-raw-coroutine make-raw-coroutine
         timer-interrupt-handler set-timer enable-interrupts disable-interrupts)))

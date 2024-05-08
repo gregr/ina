@@ -1,12 +1,8 @@
 #lang racket/base
 (provide
-  apply/values case case1 let-values assert mlet mdefine
+  apply/values case case1 let-values assert mlet mdefine interruptible-lambda
   ;; privileged primitives
-  native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
-  current-raw-coroutine make-raw-coroutine
-  panic panic-handler native-signal-handler
-  timer-interrupt-handler set-timer enable-interrupts disable-interrupts
-  interruptible-lambda
+  panic-handler native-signal-handler
   ;; procedure-metadata returns a vector with this shape:
   ;;   #(,primitive ,captured ,code*)
   ;; where:
@@ -18,15 +14,17 @@
   procedure-metadata
   record? record record-type-descriptor record-ref
   string->bytevector bytevector->string
+  native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
+  current-raw-coroutine make-raw-coroutine
+  timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  apply values
+  panic apply values
   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
   pair? vector? mvector? bytevector? mbytevector?
   string->symbol symbol->string
   cons car cdr
   vector vector-length vector-ref
   make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-
   bytevector bytevector-length
   bytevector-u8-ref bytevector-u16-ref bytevector-u32-ref bytevector-u64-ref
   make-mbytevector mbytevector->bytevector mbytevector-length
@@ -395,15 +393,15 @@
 
 (declare-primitives!
   ;; privileged primitives
-  native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
-  current-raw-coroutine make-raw-coroutine
-  panic panic-handler native-signal-handler
-  timer-interrupt-handler set-timer enable-interrupts disable-interrupts
+  panic-handler native-signal-handler
   procedure-metadata
   record? record record-type-descriptor record-ref
   string->bytevector bytevector->string
+  native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
+  current-raw-coroutine make-raw-coroutine
+  timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  apply values
+  panic apply values
   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
   pair? vector? mvector? bytevector? mbytevector?
   string->symbol symbol->string

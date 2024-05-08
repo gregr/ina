@@ -1,9 +1,7 @@
 (define program (make-program))
 (define (link-definition* env def*) (program-link-definition* program env def*))
-(define env.primitive.privileged.all.0
-  (env-conjoin env.primitive.privileged.control env.primitive.privileged))
 (define env.privileged.0
-  (env-conjoin* env.minimal env.primitive env.primitive.privileged.all.0))
+  (env-conjoin* env.minimal env.primitive env.primitive.privileged))
 (define env.unprivileged.0
   (env-conjoin env.minimal env.primitive))
 (define env.include/base/early
