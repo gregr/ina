@@ -229,7 +229,7 @@
 
 (define (parse-introduce env.d env . stx*) (env-introduce*! env.d stx*) ($d:begin))
 
-(define (parse-introduce-alias env.d env id.lhs id.rhs)
+(define (parse-define-alias env.d env id.lhs id.rhs)
   (parse-undefined-identifier env.d id.lhs)
   (parse-identifier id.rhs)
   (let ((v=>v (env-ref env id.rhs)))
@@ -330,11 +330,11 @@
   (let ((env (make-env))
         (b*.expr-aux '(=> else))
         (b*.def
-          (list (cons 'define          (definition-operator-parser parse-define          2 #f))
-                (cons 'mdefine         (definition-operator-parser parse-mdefine         2 2))
-                (cons 'define-values   (definition-operator-parser parse-define-values   2 #f))
-                (cons 'introduce       (definition-operator-parser parse-introduce       0 #f))
-                (cons 'introduce-alias (definition-operator-parser parse-introduce-alias 2 #f))))
+          (list (cons 'define        (definition-operator-parser parse-define        2 #f))
+                (cons 'mdefine       (definition-operator-parser parse-mdefine       2 2))
+                (cons 'define-values (definition-operator-parser parse-define-values 2 #f))
+                (cons 'define-alias  (definition-operator-parser parse-define-alias  2 2))
+                (cons 'introduce     (definition-operator-parser parse-introduce     0 #f))))
         (b*.expr
           (list
             (cons 'quote          (expression-operator-parser parse-quote        1 1))

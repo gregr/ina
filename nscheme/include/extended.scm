@@ -3,7 +3,7 @@
 ;;   - match-define match-lambda match-lambda* match-lambda** match-let match-let*
 ;;     match-letrec match-letrec*?
 ;;   - Maybe: syntax-match and/or syntax-rewrite
-;; - Maybe: declare-parser define-syntax syntax quasisyntax syntax-dismantle syntax-case
+;; - Maybe: syntax quasisyntax syntax-dismantle syntax-case
 
 ;(define vocab.syntax-pattern  'syntax-pattern)  ; e.g., literals and the wildcard _
 ;(define vocab.syntax-template 'syntax-template) ; e.g., bound template variables
@@ -57,13 +57,18 @@
 
 (define (parse-current-environment env) ($quote env))
 
-(define (parse-declare-vocabulary-value env.d env id.lhs stx.vocab stx.rhs)
+(define (parse-set-vocabulary-value env.d env id.lhs . stx*.vocab&rhs)
   (parse-identifier id.lhs)
-  (let ((vocab    (E-eval (parse-expression env stx.vocab)))
-        (rhs      (E-eval (parse-expression env stx.rhs)))
-        (vocab=>v (or (env-ref env id.lhs) vocab-dict.empty)))
-    (env-set! env.d id.lhs (vocab-dict-set vocab=>v vocab rhs)))
+  (let ((vocab=>v (env-ref env.d id.lhs)))
+    (unless vocab=>v (raise-parse-error "cannot set unbound identifier" id.lhs))
+    (unless (even? (length stx*.vocab&rhs))
+      (raise-parse-error "not a list of alternating vocabularies and values" stx*.vocab&rhs))
+    (apply env-set^! env.d id.lhs (map E-eval (parse-expression* env stx*.vocab&rhs))))
   ($d:begin))
+
+(define (parse-define-vocabulary-value env.d env id.lhs . stx*.vocab&rhs)
+  (env-introduce! env.d id.lhs)
+  (apply parse-set-vocabulary-value env.d env id.lhs stx*.vocab&rhs))
 
 (define (parse-define-syntax env.d env.op stx.lhs . stx*.rhs)
   (define (finish id.lhs ^rhs)
@@ -115,8 +120,10 @@
   (let ((env (make-env))
         (b*.def
           (list
-            (cons 'declare-vocabulary-value
-                  (definition-operator-parser parse-declare-vocabulary-value 3 3))
+            (cons 'set-vocabulary-value
+                  (definition-operator-parser parse-set-vocabulary-value 3 #f))
+            (cons 'define-vocabulary-value
+                  (definition-operator-parser parse-define-vocabulary-value 3 #f))
             (cons 'define-syntax (definition-operator-parser parse-define-syntax 2 #f))))
         (b*.expr
           (list

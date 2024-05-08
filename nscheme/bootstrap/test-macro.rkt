@@ -30,13 +30,13 @@
 ;; Examples for other metaprogramming facilities
 ;(test '(current-environment))
 ;(test '(let ()
-;         (declare-vocabulary-value
+;         (define-vocabulary-value
 ;          thing 'expression
 ;          (lambda (env stx)
 ;            ($quote (vector 'thing-syntax: stx))))
 ;         (vector 'thing: thing)))
 ;(test '(let ()
-;         (declare-vocabulary-value
+;         (define-vocabulary-value
 ;          thing 'expression-operator
 ;          (lambda (env stx)
 ;            ($quote (vector 'thing-syntax: stx))))
@@ -44,7 +44,7 @@
 
 ;; Example of unhygienic expansion leading to an incorrect result.
 ;(test '(let ()
-;         (declare-vocabulary-value
+;         (define-vocabulary-value
 ;          example-or
 ;          'expression-operator
 ;          (lambda (env stx)

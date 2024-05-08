@@ -320,7 +320,7 @@
 (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
 
 (define ((auxiliary?/vocab vocab) a env stx.id)
-  (and (identifier? stx.id) (equal? (env-ref^ env stx.id vocab) a)))
+  (and (identifier? stx.id) (eq? (env-ref^ env stx.id vocab) a)))
 (define expression-auxiliary? (auxiliary?/vocab vocab.expression-auxiliary))
 
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
