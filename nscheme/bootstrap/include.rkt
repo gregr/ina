@@ -7,9 +7,7 @@
   racket/file racket/include racket/pretty racket/runtime-path racket/splicing)
 
 (include "../include/base/misc.scm")
-(include "../include/boot/record.scm")
-(include "../include/boot/string.scm")
-(include "../include/boot/control.scm")
+(include "../include/base/control.scm")
 (include "../include/base/pair.scm")
 (include "../include/base/list.scm")
 (include "../include/base/number.scm")
@@ -18,6 +16,7 @@
 (include "../include/base/mbytevector.scm")
 (include "../include/base/bytevector.scm")
 (include "../include/base/string.scm")
+(include "../include/base/record.scm")
 (include "../include/base/exception.scm")
 (include "../include/base/restart.scm")
 (include "../include/base/raise.scm")
@@ -54,13 +53,11 @@
 (define def*.include/base/early
   (file-name*->stx*
    '("../include/base/misc.scm"
-     "../include/boot/record.scm"   ; TODO: this should be in base
-     "../include/boot/string.scm"   ; TODO: this should be in base
-     "../include/boot/control.scm"  ; TODO: this should be split into a base and boot portion
+     "../include/base/control.scm"
      )))
 (define def*.include/boot
   (file-name*->stx*
-    '(  ; TODO: this should include one of the split control.scm files
+    '(  ; TODO: will we need anything here?
       )))
 (define def*.include/base
   (file-name*->stx*
@@ -72,6 +69,7 @@
       "../include/base/mbytevector.scm"
       "../include/base/bytevector.scm"
       "../include/base/string.scm"
+      "../include/base/record.scm"
       "../include/base/exception.scm"
       "../include/base/restart.scm"
       "../include/base/raise.scm"
