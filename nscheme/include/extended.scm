@@ -77,10 +77,10 @@
       (env-set^! env.d id.lhs
                  vocab.expression-operator
                  (lambda (env.use stx)
-                   (transcribe-and-parse-expression env.use env.op op stx))
+                   (transcribe-and-parse-expression op env.op env.use stx))
                  vocab.definition-operator
                  (lambda (env.d.use env.use stx)
-                   (transcribe-and-parse-definition env.d.use env.use env.op op stx))))
+                   (transcribe-and-parse-definition op env.op env.d.use env.use stx))))
     ($d:begin))
   (parse-operator-binding finish stx.lhs stx*.rhs))
 

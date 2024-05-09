@@ -99,12 +99,12 @@
 ;;; Syntax transformation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (transcribe env.op op m env stx)
+(define (transcribe op m env stx)
   (let ((result (op (syntax-add-mark stx antimark))))
     (syntax-add-mark
       (syntax-provenance-add
         (if (procedure? result)
-            (let* ((lookup    (lambda (vocab id) (env-ref^ env (syntax-add-mark id m) vocab)))
+            (let* ((lookup    (lambda (id)  (env-ref env (syntax-add-mark id m))))
                    (free-id=? (lambda (a b) (free-identifier=?/env
                                               env (syntax-add-mark a m) (syntax-add-mark b m)))))
               (result lookup free-id=?))
@@ -112,17 +112,17 @@
         (syntax-provenance stx))
       m)))
 
-(define (transcribe-and-parse-expression env.use env.op op stx)
+(define (transcribe-and-parse-expression op env.op env.use stx)
   (let* ((m   (fresh-mark))
          (env (env-disjoin env.op m env.use)))
-    (parse-expression env (transcribe env.op op m env stx))))
+    (parse-expression env (transcribe op m env stx))))
 
-(define (transcribe-and-parse-definition env.d.use env.use env.op op stx)
+(define (transcribe-and-parse-definition op env.op env.d.use env.use stx)
   (let* ((m        (fresh-mark))
          (env.d.op (make-env))
          (env.d    (env-disjoin env.d.op m env.d.use))
          (env      (env-disjoin (env-conjoin env.d.op env.op) m env.use)))
-    (parse-definition env.d env (transcribe env.op op m env stx))))
+    (parse-definition env.d env (transcribe op m env stx))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Program construction ;;;
