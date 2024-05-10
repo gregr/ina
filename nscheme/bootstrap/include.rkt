@@ -4,7 +4,7 @@
   ;; Toggle commenting on these two to turn on interrupt-aware lambdas.
   "../platform/racket/nscheme.rkt"
   ;(rename-in "../platform/racket/nscheme.rkt" (interruptible-lambda lambda))
-  racket/file racket/include racket/pretty racket/runtime-path racket/splicing)
+  racket/file racket/include racket/local racket/pretty racket/runtime-path racket/splicing)
 
 (include "../include/base/misc.scm")
 (include "../include/base/control.scm")
