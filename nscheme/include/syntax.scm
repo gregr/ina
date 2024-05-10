@@ -102,11 +102,18 @@
             ((vector? d0) (vector-map loop d0))
             (else         d0)))))
 
-(define (syntax->improper-list s)
-  (let ((x (syntax-unwrap s)))
-    (if (pair? x)
-        (cons (car x) (syntax->improper-list (cdr x)))
-        x)))
+(define (transcribe op m env stx)
+  (let ((result (op (syntax-add-mark stx antimark))))
+    (syntax-add-mark
+      (syntax-provenance-add
+        (if (procedure? result)
+            (let* ((lookup    (lambda (id)  (env-ref env (syntax-add-mark id m))))
+                   (free-id=? (lambda (a b) (free-identifier=?/env
+                                              env (syntax-add-mark a m) (syntax-add-mark b m)))))
+              (result lookup free-id=?))
+            result)
+        (syntax-provenance stx))
+      m)))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Environments ;;;

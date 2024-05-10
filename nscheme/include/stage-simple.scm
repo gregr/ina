@@ -1,4 +1,4 @@
-(define (identifier->fresh-address p) (fresh-address (syntax-peek p)))
+(define (identifier->fresh-address p) (fresh-address (syntax->datum p)))
 
 (define ($provenance   pv E)          (E-provenance-add E pv))
 (define ($quote        value)         (E:quote          value))

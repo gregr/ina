@@ -395,7 +395,7 @@
             (list 'splicing-letrec*-values
                   (definition-operator-parser parse-splicing-letrec*-values 2 #f)
                   (splicing-expression-operator-parser $splicing-letrec*-values)))))
-    (for-each (lambda (id) (env-bind! env id vocab.expression-auxiliary (syntax-peek id)))
+    (for-each (lambda (id) (env-bind! env id vocab.expression-auxiliary (syntax->datum id)))
               b*.expr-aux)
     (for-each (lambda (id op) (env-bind! env id vocab.definition-operator op))
               (map car b*.def) (map cdr b*.def))
@@ -403,17 +403,17 @@
                                                      vocab.definition-operator op.def
                                                      vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
-    (for-each (lambda (id) (env-bind! env id vocab.quasiquote (syntax-peek id)))
+    (for-each (lambda (id) (env-bind! env id vocab.quasiquote (syntax->datum id)))
               b*.qq)
     (for-each (lambda (id op) (env-bind! env id
                                          vocab.expression-operator op
-                                         vocab.quasiquote          (syntax-peek id)))
+                                         vocab.quasiquote          (syntax->datum id)))
               (map car b*.qq-and-expr) (map cdr b*.qq-and-expr))
-    (for-each (lambda (id) (env-bind! env id vocab.quasiquote-syntax (syntax-peek id)))
+    (for-each (lambda (id) (env-bind! env id vocab.quasiquote-syntax (syntax->datum id)))
               b*.qqs)
     (for-each (lambda (id op) (env-bind! env id
                                          vocab.expression-operator op
-                                         vocab.quasiquote-syntax   (syntax-peek id)))
+                                         vocab.quasiquote-syntax   (syntax->datum id)))
               (map car b*.qqs-and-expr) (map cdr b*.qqs-and-expr))
     (for-each (lambda (id op) (env-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
