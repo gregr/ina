@@ -6,26 +6,22 @@
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 
-(define env.test
-  (let ((env-conjoin/match (E-eval (parse-expression env.large 'env-conjoin/match))))
-    (env-conjoin/match env.large)))
+(define env.test (env-conjoin/match env.large))
 
-(define test
-  (let ((parse-expression (E-eval (parse-expression env.test 'parse-expression))))
-    (lambda (stx)
-      (newline)
-      (displayln "INPUT:")
-      (pretty-write stx)
-      (with-pretty-panic
-       (let ((E (parse-expression env.test stx)))
-         (displayln "PARSED:")
-         (pretty-write E)
-         (displayln "PRETTY PARSED:")
-         (pretty-write (E-pretty E))
-         (displayln "EQUIVALENT RACKET CODE:")
-         (pretty-write (E-compile-rkt E))
-         (displayln "VALUE:")
-         (pretty-write (E-eval E)))))))
+(define (test stx)
+  (newline)
+  (displayln "INPUT:")
+  (pretty-write stx)
+  (with-pretty-panic
+   (let ((E (parse-expression env.test stx)))
+     (displayln "PARSED:")
+     (pretty-write E)
+     (displayln "PRETTY PARSED:")
+     (pretty-write (E-pretty E))
+     (displayln "EQUIVALENT RACKET CODE:")
+     (pretty-write (E-compile-rkt E))
+     (displayln "VALUE:")
+     (pretty-write (E-eval E)))))
 
 ;; Examples for other metaprogramming facilities
 ;(test '(current-environment))

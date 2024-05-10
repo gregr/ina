@@ -1,41 +1,20 @@
-(define env.privileged.0
-  (env-conjoin* env.minimal env.primitive env.primitive.privileged))
-(define env.unprivileged.0
-  (env-conjoin env.minimal env.primitive))
-(define env.include/base/early
-  (eval-definition* env.privileged.0 def*.include/base/early))
-(define env.include/base/early.0
-  (env-conjoin env.privileged.0 env.include/base/early))
+(define env.primitive.privileged (package->env package.primitive.privileged))
+(define env.primitive            (package->env package.primitive))
+(define env.syntax               (package->env package.syntax))
+(define env.privileged           (env-conjoin* env.minimal env.primitive env.primitive.privileged))
+(define env.unprivileged         (env-conjoin env.minimal env.primitive))
+(define env.include/base/early   (eval-definition* env.privileged def*.include/base/early))
+(define env.include/base/early.privileged
+  (env-conjoin env.privileged env.include/base/early))
 (define env.include/boot
-  (eval-definition* env.include/base/early.0 def*.include/boot))
-(define env.include/boot.0
-  (env-conjoin env.include/base/early.0 env.include/boot))
+  (env-conjoin env.include/base/early.privileged
+               (eval-definition* env.include/base/early.privileged def*.include/boot)))
 (define env.include/base
-  (env-conjoin env.include/base/early (eval-definition* env.include/boot.0 def*.include/base)))
-(define env.include/base.0
-  (env-conjoin env.unprivileged.0 env.include/base))
+  (env-conjoin* env.unprivileged env.include/base/early
+                (eval-definition* env.include/boot def*.include/base)))
 (define env.include
-  (env-conjoin env.include/base (eval-definition* env.include/base.0 def*.include)))
-(define env.include.0
-  (env-conjoin env.unprivileged.0 env.include))
-(define env.eval
-  (eval-definition* env.include.0 def*.eval))
-(define env.primitive-environments
-  (eval-definition* (env-conjoin env.include.0 env.primitive.privileged)
-                    def*.primitive-environments))
-(define env.minimal.1
-  (E-eval (parse-expression env.include 'env.minimal)))
-(define env.primitive.1
-  (E-eval (parse-expression env.primitive-environments 'env.primitive)))
-(define env.primitive.privileged.1
-  (E-eval (parse-expression env.primitive-environments 'env.primitive.privileged)))
-(define env.unprivileged.1
-  (env-conjoin env.minimal.1 env.primitive.1))
-(define env.include/base.1
-  (env-conjoin env.unprivileged.1 env.include/base))
-(define env.include.1
-  (env-conjoin env.unprivileged.1 env.include))
-(define env.extended.1
-  (E-eval (parse-expression env.eval 'env.extended)))
-(define env.large
-  (env-conjoin* env.extended.1 env.eval env.include.1 env.primitive-environments))
+  (env-conjoin* env.include/base env.syntax
+                (eval-definition* (env-conjoin env.include/base env.syntax) def*.include)))
+(define env.eval             (eval-definition* env.include def*.eval))
+(define env.large            (env-conjoin* env.include env.eval env.extended))
+(define env.large.privileged (env-conjoin env.large env.primitive.privileged))

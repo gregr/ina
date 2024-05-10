@@ -1,6 +1,5 @@
 (define (fresh-address name) (vector name (mvector)))
 
-;; TODO: define IR with record types for capability security
 ;; TODO: support for lower-level language integration:
 ;; - E:unchecked-call, E:let with type info, E:case-lambda with type info, etc.
 (define (E:annotated    pv E)           (vector 'E:annotated    pv E))

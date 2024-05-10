@@ -74,10 +74,12 @@
       "../include/base/restart.scm"
       "../include/base/raise.scm"
       )))
+(define def*.syntax
+  (file-name*->stx*
+   '("../include/syntax.scm")))
 (define def*.include
   (file-name*->stx*
-    '("../include/syntax.scm"
-      "../include/ir.scm"
+    '("../include/ir.scm"
       "../include/stage-simple.scm"
       "../include/parse.scm"
       "../include/minimal.scm"
@@ -86,7 +88,7 @@
   (file-name*->stx*
    '("../include/eval-simple.scm"
      "../include/extended.scm")))
-(define def*.primitive-environments
+(define def*.primitive-packages
   (file-name->stx* "../include/primitive.scm"))
 
 (include "../include/bootstrap.scm")
