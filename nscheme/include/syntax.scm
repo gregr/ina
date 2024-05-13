@@ -53,11 +53,12 @@
          (marked (marks-append m* (syntax-mark* s)) (marked-form s))
          (marked m* s)))
    (define (syntax-add-mark s m) (syntax-wrap s (list m)))
-   (define (syntax-remove-mark? s m)
-     (let ((m* (syntax-mark* s)))
+   (define (identifier-remove-mark id m)
+     (identifier?! id)
+     (let ((m* (syntax-mark* id)))
        (and (pair? m*)
             (mark=? (car m*) m)
-            (marked (cdr m*) (marked-form s))))))
+            (marked (cdr m*) (marked-form id))))))
 
   (define (syntax-provenance s) (maybe-annotated-provenance (if (marked? s) (marked-form s) s)))
   (define (syntax-provenance-set s pv)
@@ -104,12 +105,7 @@
     (let ((result (op (syntax-add-mark stx antimark))))
       (syntax-add-mark
         (syntax-provenance-add
-          (if (procedure? result)
-              (let* ((lookup    (lambda (id)  (env-ref env (syntax-add-mark id m))))
-                     (free-id=? (lambda (a b) (free-identifier=?/env
-                                                env (syntax-add-mark a m) (syntax-add-mark b m)))))
-                (result lookup free-id=?))
-              result)
+          (if (procedure? result) (result (env-unmark env m)) result)
           (syntax-provenance stx))
         m)))
 
@@ -171,7 +167,7 @@
             (case method
               ((describe) (list->vector (id-dict-key* id=>x)))
               ((ref)      (lambda (fail id) (or (id-dict-ref id=>x id) (fail))))
-              ((set!)     (lambda (id x)    (set! id=>x (id-dict-set id=>x id x))))
+              ((set!)     (lambda (id x) (set! id=>x (id-dict-set id=>x id x))))
               (else       (error "invalid environment operation" method))))))))
 
   (define (env-freeze env)
@@ -182,16 +178,23 @@
         ((set!)     (lambda (id x) (error "set! with frozen environment" id x)))
         (else       (error "invalid environment operation" method)))))
 
+  (define (env-unmark env.m m)
+    (lambda (method)
+      (case method
+        ((describe) (list 'unmark m (env.m 'describe)))
+        ((ref)      (lambda (fail id) ((env.m 'ref) fail (syntax-add-mark id m))))
+        ((set!)     (lambda (id x) ((env.m 'set!) (syntax-add-mark id m) x)))
+        (else       (error "invalid environment operation" method)))))
+
   (define (env-disjoin env.mark m env.no-mark)
-    (define (unmark id) (and (identifier? id) (syntax-remove-mark? id m)))
     (lambda (method)
       (case method
         ((describe) (list 'disjoin (env.mark 'describe) m (env.no-mark 'describe)))
         ((ref)      (lambda (fail id)
-                      (let ((i (unmark id)))
+                      (let ((i (identifier-remove-mark id m)))
                         (if i ((env.mark 'ref) fail i) ((env.no-mark 'ref) fail id)))))
         ((set!)     (lambda (id x)
-                      (let ((i (unmark id)))
+                      (let ((i (identifier-remove-mark id m)))
                         (if i ((env.mark 'set!) i x) ((env.no-mark 'set!) id x)))))
         (else       (error "invalid environment operation" method)))))
 
@@ -199,8 +202,9 @@
     (lambda (method)
       (case method
         ((describe) (list 'conjoin (env.first 'describe) (env.second 'describe)))
-        ((ref)      (lambda (fail id) ((env.first 'ref)  (lambda () ((env.second 'ref) fail id)) id)))
-        ((set!)     (lambda (id x)    ((env.first 'set!) id x)))
+        ((ref)      (lambda (fail id)
+                      ((env.first 'ref) (lambda () ((env.second 'ref) fail id)) id)))
+        ((set!)     (lambda (id x) ((env.first 'set!) id x)))
         (else       (error "invalid environment operation" method)))))
 
   (define (env-conjoin* env.first . env*.rest)

@@ -65,8 +65,8 @@
              (lambda (env stx.lhs E.rhs) ($set-box! ($provenance/syntax stx.lhs (^E.box)) E.rhs))))
 
 (define (env-add-package! env pkg)
-  (for-each (lambda (id p) (env-bind! env id vocab.expression
-                                      (parse/constant-expression ($quote p))))
+  (for-each (lambda (id p)
+              (env-bind! env id vocab.expression (parse/constant-expression ($quote p))))
             (car pkg) (cdr pkg)))
 
 (define (package->env pkg)
