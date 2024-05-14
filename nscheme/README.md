@@ -1,23 +1,25 @@
 # nScheme
 
-This is a low-tech, nonstandard Scheme for programming portable, performant,
-image-based systems that can run forever.
+nScheme is a low-tech, nonstandard Scheme implementation designed for
+programming portable, flexible systems.
 
-Compared with standard Scheme, the language semantics and data model have been
-simplified.  This simplification supports more aggressive compiler optimization
-while also simplifying the implementation itself.  A simpler implementation
-is easier to port and adapt to new purposes.
+Compared with standard Scheme, the language has been simplified in many ways.
+This simplification makes it easier to reason about control and data flow, and
+also facilitates a simpler, more compact implementation that can be
+straightforwardly ported to new platforms.
 
-Rather than piling feature on top of feature, nScheme provides a small set of
-virtualization primitives that let the programmer decide how their system works
-at any level.  These primitives allow programs to exert low-level control over
-computing resources, making it feasible to build any kind of application.
-These primitives also provide reflection and introspection capabilities without
-interpretive overhead.  Unlike standard Scheme, nScheme does not prescribe any
-particular form of program organization or approach to metaprogramming.
-Transformations and features that would typically be built into a complex,
-ahead-of-time compilation model can instead be achieved at runtime in a simpler
-way by manipulating programs and live processes as data.
+Unlike standard Scheme, nScheme does not prescribe any particular form of
+program organization or approach to metaprogramming.  Where standard Scheme
+implementations often assume the use of a complex library or module system and
+ahead-of-time compilation model, nScheme instead encourages constructing,
+combining, and evaluating programs at any time.
+
+Beyond basic language support, an nScheme implementation will also inherit
+primitive capabilities specific to its platform.  The primitives provided by
+some platforms will include support for low level resource control and
+virtualization, allowing a programmer to decide how a system works at every
+level.  Some platforms will provide reflection primitives that enable saving
+and resuming snapshots of a running system.
 
 ## Deviations from Scheme
 
