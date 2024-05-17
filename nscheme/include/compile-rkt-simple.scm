@@ -2,8 +2,7 @@
   (define address->fresh-id
     (mlet ((count -1))
       (lambda (a)
-        (let ((name (let ((name? (and (vector? a) (<= 1 (vector-length a)) (vector-ref a 0))))
-                      (if (identifier? name?) (syntax-unwrap name?) 'X))))
+        (let ((name (let ((name (syntax-unwrap (address-name a)))) (if (symbol? name) name 'X))))
           (set! count (+ count 1))
           (string->symbol (string-append (symbol->string name) "." (number->string count)))))))
   (define ($rkt:quote                     x) (list 'quote x))

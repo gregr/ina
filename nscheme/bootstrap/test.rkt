@@ -1194,7 +1194,7 @@
               (set! missing (cons (parse-error-syntax exn) missing)))
          ((parse-error? exn)
           (set! mistake* (cons (parse-error-syntax exn) mistake*))))
-       (invoke-restart 'use-value `(REPLACED: ,(parse-error-syntax exn)))
+       (invoke-restart 'use-value ($quote `(REPLACED: ,(parse-error-syntax exn))))
        (invoke-restart 'continue))
      (lambda ()
        (list
@@ -1211,8 +1211,8 @@
         (map (lambda (r*) (map (lambda (r) (list (restart-name r) (restart-description r))) r*))
              (reverse restart-binding*))))))
   ==>
-  (#(E:call (REPLACED: foo) (#(E:quote 1) #(E:quote 2)))
-   #(E:call (REPLACED: foo) ((REPLACED: bar) (REPLACED: baz)))
+  (#(E:call #(E:quote (REPLACED: foo)) (#(E:quote 1) #(E:quote 2)))
+   #(E:call #(E:quote (REPLACED: foo)) (#(E:quote (REPLACED: bar)) #(E:quote (REPLACED: baz))))
    final-choice
    (foo foo bar baz)
    (#(not-ok) #(also-not-ok) #(still-not-ok))

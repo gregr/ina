@@ -62,7 +62,7 @@
              vocab.expression
              (lambda (env _) ($unbox (^E.box)))
              vocab.set!
-             (lambda (env stx.lhs E.rhs) ($set-box! ($provenance/syntax stx.lhs (^E.box)) E.rhs))))
+             (lambda (env stx.lhs E.rhs) ($set-box! ($provenance (^E.box) stx.lhs) E.rhs))))
 
 (define (env-add-package! env pkg)
   (for-each (lambda (id p)
@@ -131,7 +131,7 @@
 ;;; Program construction ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define ($provenance/syntax stx E) ($provenance (syntax-provenance stx) E))
+(define ($provenance E stx) ($annotated E (syntax-provenance stx)))
 (define ($case-lambda/env env param* env->body*)
   (define (convert param env->body)
     (lambda arg* (env->body (env-extend env (improper-list->list param) arg*))))
@@ -227,22 +227,22 @@
 ;;; Definition contexts ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (D:annotated         pv D) (vector 'D:annotated  pv D))
+(define (D:annotated        D stx) (vector 'D:annotated  D stx))
 (define (D:begin               D*) (vector 'D:begin      D*))
 (define (D:definition id env ^rhs) (vector 'D:definition id env ^rhs))
 (define (D:expression          ^E) (vector 'D:expression ^E))
 
-(define (D-tag             D) (vector-ref D 0))
-(define (D:annotated-pv    D) (vector-ref D 1))
-(define (D:annotated-D     D) (vector-ref D 2))
-(define (D:begin-D*        D) (vector-ref D 1))
-(define (D:definition-id   D) (vector-ref D 1))
-(define (D:definition-env  D) (vector-ref D 2))
-(define (D:definition-^rhs D) (vector-ref D 3))
-(define (D:expression-^E   D) (vector-ref D 1))
+(define (D-tag              D) (vector-ref D 0))
+(define (D:annotated-D      D) (vector-ref D 1))
+(define (D:annotated-syntax D) (vector-ref D 2))
+(define (D:begin-D*         D) (vector-ref D 1))
+(define (D:definition-id    D) (vector-ref D 1))
+(define (D:definition-env   D) (vector-ref D 2))
+(define (D:definition-^rhs  D) (vector-ref D 3))
+(define (D:expression-^E    D) (vector-ref D 1))
 
 (define (D-tagged? D tag) (eq? (D-tag D) tag))
-(define (D-provenance D) (and (D-tagged? D 'D:annotated) (D:annotated-pv D)))
+(define (D-syntax D) (and (D-tagged? D 'D:annotated) (D:annotated-syntax D)))
 
 (splicing-local
   ((define (env-set-variable! env id E)
@@ -301,7 +301,7 @@
 (define (D->E               D) (defstate->E (D->defstate D)))
 (define ((D->E/eval E-eval) D) ((defstate->E/eval E-eval) (D->defstate D)))
 
-(define ($d:provenance       pv D) (D:annotated pv D))
+(define ($d:provenance      D stx) (D:annotated D stx))
 (define ($d:begin            . D*) (D:begin D*))
 (define ($d:expression         ^E) (D:expression ^E))
 (define ($d:define env.d lhs ^rhs) (env-introduce! env.d lhs) (D:definition lhs env.d ^rhs))
@@ -313,7 +313,7 @@
     (unless (defstate-expression dst)
       (raise-parse-error
         (if (null? (defstate-definition* dst)) "no expression" "no expression after definitions")
-        (D-provenance D)))
+        (D-syntax D)))
     (defstate->E dst)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -355,8 +355,7 @@
                 ($quote (list desc stx vocab.expression env)))))))
 
 (define (parse-expression env stx)
-  ($provenance/syntax
-    stx
+  ($provenance
     (let ((x (syntax-unwrap stx)))
       (cond
         ((identifier? stx) (let ((op (env-ref^ env stx vocab.expression)))
@@ -371,7 +370,8 @@
                                  (apply $call (parse-expression env e.op)
                                         (parse-expression* env (syntax->list (cdr x)))))))
         ((literal?    x)   ($quote x))
-        (else              (raise-parse-error "not an expression" stx))))))
+        (else              (raise-parse-error "not an expression" stx))))
+    stx))
 
 (define ((expression-operator-parser parser argc.min argc.max) env stx)
   (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))

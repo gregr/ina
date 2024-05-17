@@ -1,8 +1,10 @@
 (define (fresh-address name) (vector name (mvector)))
+(define (address-name  addr) (vector-ref addr 0))
 
 ;; TODO: support for lower-level language integration:
 ;; - E:unchecked-call, E:let with type info, E:case-lambda with type info, etc.
-(define (E:annotated    pv E)           (vector 'E:annotated    pv E))
+;; TODO: we may want to return to the embedded annotation model for simpler pattern matching.
+(define (E:annotated    E ann)          (vector 'E:annotated    E ann))
 (define (E:quote        v)              (vector 'E:quote        v))
 (define (E:ref          address)        (vector 'E:ref          address))
 (define (E:if           c t f)          (vector 'E:if           c t f))
@@ -21,8 +23,8 @@
 (define (E:apply/values?         E)     (E-tagged? E 'E:apply/values))
 (define (E:case-lambda?          E)     (E-tagged? E 'E:case-lambda))
 (define (E:letrec?               E)     (E-tagged? E 'E:letrec))
-(define (E:annotated-provenance  E)     (vector-ref E 1))
-(define (E:annotated-E           E)     (vector-ref E 2))
+(define (E:annotated-E           E)     (vector-ref E 1))
+(define (E:annotated-annotation  E)     (vector-ref E 2))
 (define (E:quote-value           E)     (vector-ref E 1))
 (define (E:ref-address           E)     (vector-ref E 1))
 (define (E:if-condition          E)     (vector-ref E 1))
@@ -38,9 +40,30 @@
 (define (E:letrec-binding-right* E)     (vector-ref E 2))
 (define (E:letrec-body           E)     (vector-ref E 3))
 
-(define (E-provenance     E) (and (E:annotated? E) (E:annotated-provenance E)))
-(define (E-provenance-add E pv)
-  (if pv
-      (E:annotated (let ((pv2 (E-provenance E))) (if (eq? pv pv2) pv (cons pv pv2)))
-                   (if (E:annotated? E) (E:annotated-E E) E))
+(define (E-annotation E) (and (E:annotated? E) (E:annotated-annotation E)))
+(define (E-annotation-add E ann)
+  (if ann
+      (let ((ann2 (E-annotation E)))
+        (if ann2
+            (if (eq? ann ann2) E (E:annotated (E:annotated-E E) (cons ann ann2)))
+            (E:annotated E ann)))
       E))
+
+(define (E-pretty E)
+  (let loop ((E E))
+    (cond
+      ((E:annotated?    E) (loop (E:annotated-E E)))
+      ((E:quote?        E) (list 'quote (E:quote-value E)))
+      ((E:ref?          E) (list 'ref   (syntax->datum (E:ref-address E))))
+      ((E:if?           E) (list 'if (loop (E:if-condition E))
+                                 (loop (E:if-consequent E))
+                                 (loop (E:if-alternative E))))
+      ((E:call?         E) (cons* 'call (loop (E:call-operator E)) (map loop (E:call-operand* E))))
+      ((E:apply/values? E) (list 'apply/values (loop (E:apply/values-operator E))
+                                 (loop (E:apply/values-operand E))))
+      ((E:case-lambda?  E) (cons 'case-lambda (map list (syntax->datum (E:case-lambda-param* E))
+                                                   (map loop (E:case-lambda-body* E)))))
+      ((E:letrec?       E) (list 'letrec (map list (syntax->datum (E:letrec-binding-left* E))
+                                              (map loop (E:letrec-binding-right* E)))
+                                 (loop (E:letrec-body E))))
+      (else                (error "not an expression" E)))))
