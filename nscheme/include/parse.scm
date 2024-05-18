@@ -132,10 +132,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define ($provenance E stx) ($annotated E (syntax-provenance stx)))
-(define ($case-lambda/env env param* env->body*)
+(define ($case-lambda/env env param*~* env->body*)
   (define (convert param env->body)
     (lambda arg* (env->body (env-extend env (improper-list->list param) arg*))))
-  ($case-lambda param* (map convert param* env->body*)))
+  ($case-lambda param*~* (map convert param*~* env->body*)))
 (define ($lambda         param*~     ^body) ($case-lambda (list param*~) (list ^body)))
 (define ($lambda/env env param*~     ^body) ($case-lambda/env env (list param*~) (list ^body)))
 (define ($let            param* rhs* ^body) (apply $call ($lambda param* ^body) rhs*))
@@ -190,7 +190,7 @@
 
 (define $improper-length.value
   ($lambda '(x*) (lambda ($x*)
-                   ($call ($loop '(self)
+                   ($call ($loop 'self
                                  (lambda ($self)
                                    ($lambda '(x* acc)
                                             (lambda ($x* $acc)
@@ -201,7 +201,7 @@
 (define ($improper-length x*) ($call $improper-length.value x*))
 (define $length.value
   ($lambda '(x*) (lambda ($x*)
-                   ($call ($loop '(self)
+                   ($call ($loop 'self
                                  (lambda ($self)
                                    ($lambda '(x* acc)
                                             (lambda ($x* $acc)
@@ -213,7 +213,7 @@
 (define $append.value
   ($lambda '(x* y)
            (lambda ($x* $y)
-             ($call ($loop '(self)
+             ($call ($loop 'self
                            (lambda ($self)
                              ($lambda '(x*) (lambda ($x*)
                                               ($if ($null? $x*)

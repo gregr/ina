@@ -1,10 +1,5 @@
 (define (E-compile-rkt E)
-  (define address->fresh-id
-    (mlet ((count -1))
-      (lambda (a)
-        (let ((name (let ((name (syntax-unwrap (address-name a)))) (if (symbol? name) name 'X))))
-          (set! count (+ count 1))
-          (string->symbol (string-append (symbol->string name) "." (number->string count)))))))
+  (define address->fresh-id (address->local-gensym/default '_))
   (define ($rkt:quote                     x) (list 'quote x))
   (define ($rkt:if                    c t f) (list 'if c t f))
   (define ($rkt:call            rator rand*) (cons rator rand*))
@@ -31,7 +26,7 @@
       ((E:call?         E) ($rkt:call (loop (E:call-operator E)) (map loop (E:call-operand* E))))
       ((E:apply/values? E) ($rkt:apply/values (loop (E:apply/values-operator E))
                                               (loop (E:apply/values-operand E))))
-      ((E:case-lambda?  E) (let* ((param* (E:case-lambda-param* E))
+      ((E:case-lambda?  E) (let* ((param* (E:case-lambda-param*~* E))
                                   (^body* (map (lambda (addr* body)
                                                  (lambda id*
                                                    (loop/env body (cenv-extend env addr* id*))))

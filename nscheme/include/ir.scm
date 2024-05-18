@@ -1,5 +1,11 @@
-(define (fresh-address name) (vector name (mvector)))
-(define (address-name  addr) (vector-ref addr 0))
+(define (make-address name annotation) (vector (mvector) name annotation))
+(define (address-name            addr) (vector-ref addr 1))
+(define (address-annotation      addr) (vector-ref addr 2))
+(define (address->local-gensym/default name.default)
+  (let ((gensym (make-local-gensym)))
+    (lambda (addr)
+      (let ((name (address-name addr)))
+        (gensym (symbol->string (if name name name.default)))))))
 
 ;; TODO: support for lower-level language integration:
 ;; - E:unchecked-call, E:let with type info, E:case-lambda with type info, etc.
@@ -10,7 +16,7 @@
 (define (E:if           c t f)          (vector 'E:if           c t f))
 (define (E:call         rator rand*)    (vector 'E:call         rator rand*))
 (define (E:apply/values rator vrand)    (vector 'E:apply/values rator vrand))
-(define (E:case-lambda  param* body*)   (vector 'E:case-lambda  param* body*))
+(define (E:case-lambda  param*~* body*) (vector 'E:case-lambda  param*~* body*))
 (define (E:letrec       lhs* rhs* body) (vector 'E:letrec       lhs* rhs* body))
 
 (define (E-tag                   E)     (vector-ref E 0))
@@ -34,7 +40,7 @@
 (define (E:call-operand*         E)     (vector-ref E 2))
 (define (E:apply/values-operator E)     (vector-ref E 1))
 (define (E:apply/values-operand  E)     (vector-ref E 2))
-(define (E:case-lambda-param*    E)     (vector-ref E 1))
+(define (E:case-lambda-param*~*  E)     (vector-ref E 1))
 (define (E:case-lambda-body*     E)     (vector-ref E 2))
 (define (E:letrec-binding-left*  E)     (vector-ref E 1))
 (define (E:letrec-binding-right* E)     (vector-ref E 2))
@@ -50,20 +56,24 @@
       E))
 
 (define (E-pretty E)
+  (define address-pretty address-name)
   (let loop ((E E))
     (cond
       ((E:annotated?    E) (loop (E:annotated-E E)))
       ((E:quote?        E) (list 'quote (E:quote-value E)))
-      ((E:ref?          E) (list 'ref   (syntax->datum (E:ref-address E))))
+      ((E:ref?          E) (list 'ref   (address-pretty (E:ref-address E))))
       ((E:if?           E) (list 'if (loop (E:if-condition E))
                                  (loop (E:if-consequent E))
                                  (loop (E:if-alternative E))))
       ((E:call?         E) (cons* 'call (loop (E:call-operator E)) (map loop (E:call-operand* E))))
       ((E:apply/values? E) (list 'apply/values (loop (E:apply/values-operator E))
                                  (loop (E:apply/values-operand E))))
-      ((E:case-lambda?  E) (cons 'case-lambda (map list (syntax->datum (E:case-lambda-param* E))
-                                                   (map loop (E:case-lambda-body* E)))))
-      ((E:letrec?       E) (list 'letrec (map list (syntax->datum (E:letrec-binding-left* E))
+      ((E:case-lambda?  E) (cons 'case-lambda
+                                 (map list
+                                      (map (lambda (p*~) (improper-list-map address-pretty p*~))
+                                           (E:case-lambda-param*~* E))
+                                      (map loop (E:case-lambda-body* E)))))
+      ((E:letrec?       E) (list 'letrec (map list (map address-pretty (E:letrec-binding-left* E))
                                               (map loop (E:letrec-binding-right* E)))
                                  (loop (E:letrec-body E))))
       (else                (error "not an expression" E)))))

@@ -91,6 +91,9 @@
   (P:ellipsis-vector P*.prefix P.ellipsis P*.suffix))
 
 (define (linear-pattern-compile P)
+  (define (id*->id.acc* id*)
+    (map (lambda (i) (string->symbol (string-append "acc." (number->string i))))
+         (iota (length id*))))
   (define ($$p:and        . p*)  (if (null? p*)
                                      $p:any
                                      (let loop ((p (car p*)) (p* (cdr p*)))
@@ -255,7 +258,7 @@
                                                             $call
                                                             ($loop 'loop.ellipsis
                                                                    (lambda ($loop.ellipsis)
-                                                                     ($lambda (cons 'rx* (iota (length id*.a)))
+                                                                     ($lambda (cons 'rx* (id*->id.acc* id*.a))
                                                                               (lambda ($rx* . $acc*)
                                                                                 ($if ($null? $rx*)
                                                                                      (apply $call $k.a* $acc*)
@@ -299,7 +302,7 @@
                                                               $call
                                                               ($loop 'loop.ell
                                                                      (lambda ($loop.ell)
-                                                                       ($lambda (cons 'i.ell (iota (length id*.ell)))
+                                                                       ($lambda (cons 'i.ell (id*->id.acc* id*.ell))
                                                                                 (lambda ($i.ell . $acc*)
                                                                                   (let ((succeed.ell
                                                                                           (lambda (env)

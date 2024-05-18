@@ -20,5 +20,11 @@
         ((<   n 0) (u8*->bytevector (cons char.- (nat->digit* (- n)))))
         (else      (u8*->bytevector (nat->digit* n)))))
 
+(define (make-local-gensym)
+  (mlet ((count -1))
+    (lambda (str)
+      (set! count (+ count 1))
+      (string->symbol (string-append str "." (number->string count))))))
+
 ;; TODO:
 ;string->number
