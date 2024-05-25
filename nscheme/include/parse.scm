@@ -231,15 +231,17 @@
 (define (D:begin               D*) (vector 'D:begin      D*))
 (define (D:definition id env ^rhs) (vector 'D:definition id env ^rhs))
 (define (D:expression          ^E) (vector 'D:expression ^E))
+(define (D:end-with-expression  D) (vector 'D:end-with-expression D))
 
-(define (D-tag              D) (vector-ref D 0))
-(define (D:annotated-D      D) (vector-ref D 1))
-(define (D:annotated-syntax D) (vector-ref D 2))
-(define (D:begin-D*         D) (vector-ref D 1))
-(define (D:definition-id    D) (vector-ref D 1))
-(define (D:definition-env   D) (vector-ref D 2))
-(define (D:definition-^rhs  D) (vector-ref D 3))
-(define (D:expression-^E    D) (vector-ref D 1))
+(define (D-tag                   D) (vector-ref D 0))
+(define (D:annotated-D           D) (vector-ref D 1))
+(define (D:annotated-syntax      D) (vector-ref D 2))
+(define (D:begin-D*              D) (vector-ref D 1))
+(define (D:definition-id         D) (vector-ref D 1))
+(define (D:definition-env        D) (vector-ref D 2))
+(define (D:definition-^rhs       D) (vector-ref D 3))
+(define (D:expression-^E         D) (vector-ref D 1))
+(define (D:end-with-expression-D D) (vector-ref D 1))
 
 (define (D-tagged? D tag) (eq? (D-tag D) tag))
 (define (D-syntax D) (and (D-tagged? D 'D:annotated) (D:annotated-syntax D)))
@@ -296,7 +298,16 @@
                                                           (D:definition-^rhs D)))
             ((D-tagged? D 'D:expression) (defstate-add-expression dst (D:expression-^E D)))
             ((D-tagged? D 'D:annotated)  (loop (D:annotated-D D) dst))
-            (else                        (error "not a definition" D))))))
+            ((D-tagged? D 'D:end-with-expression)
+             (let ((dst (loop (D:end-with-expression-D D) dst)))
+               (unless (defstate-expression dst)
+                 (raise-parse-error
+                   (if (null? (defstate-definition* dst))
+                       "no expression"
+                       "no expression after definitions")
+                   (D-syntax D)))
+               dst))
+            (else (error "not a definition" D))))))
 
 (define (D->E               D) (defstate->E (D->defstate D)))
 (define ((D->E/eval E-eval) D) ((defstate->E/eval E-eval) (D->defstate D)))
@@ -305,16 +316,11 @@
 (define ($d:begin            . D*) (D:begin D*))
 (define ($d:expression         ^E) (D:expression ^E))
 (define ($d:define env.d lhs ^rhs) (env-introduce! env.d lhs) (D:definition lhs env.d ^rhs))
+(define ($d:end-with-expression D) (D:end-with-expression D))
 
 (define ($body env ^def)
-  (let* ((env.d (make-env))
-         (D     (^def env.d (env-conjoin (env-freeze env.d) env)))
-         (dst   (D->defstate D)))
-    (unless (defstate-expression dst)
-      (raise-parse-error
-        (if (null? (defstate-definition* dst)) "no expression" "no expression after definitions")
-        (D-syntax D)))
-    (defstate->E dst)))
+  (let ((env.d (make-env)))
+    (D->E ($d:end-with-expression (^def env.d (env-conjoin (env-freeze env.d) env))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
