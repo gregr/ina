@@ -44,12 +44,8 @@
     env.d))
 
 (define (parse-begin-meta-definition env.d env stx)
-  (let* ((D       (parse-begin-definition* env.d env (syntax->list stx)))
-         (dst.new (D->defstate D))
-         (E       ((defstate->E/eval E-eval) dst.new)))
-    (if (defstate-expression dst.new)
-        ($d:expression (lambda () E))
-        ($d:define (make-env) '_ (lambda () E)))))
+  (let ((E ((D->E/eval E-eval) (parse-begin-definition* env.d env (syntax->list stx)))))
+    ($d:expression (lambda () E))))
 
 (define (parse-begin-meta-expression env stx)
   (apply/values $quote-values
