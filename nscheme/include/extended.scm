@@ -16,18 +16,18 @@
 ;(define vocab.term    'term)
 
 (define (make-program)
-  (mlet ((D.current ($d:begin)))
+  (mlet ((D ($d:begin)))
+    (define (valid?!) (unless D (error "cannot use already-evaluated program")))
     (lambda (method)
       (case method
-        ((add!)    (lambda (D.new) (set! D.current ($d:begin D.current D.new))))
-        ((eval!)   (let ((E (D->E/E-eval D.current E-eval)))
-                     (set! D.current ($d:expression (lambda () E)))))
-        ((current) D.current)))))
+        ((add!)        (lambda (D.new) (valid?!) (set! D ($d:begin D D.new))))
+        ((E)           (valid?!) (let ((E (D->E D))) (set! D #f) E))
+        ((evaluated-E) (valid?!) (let ((E (D->E/E-eval D E-eval))) (set! D #f) E))))))
 
-(define (program->D    p) (p 'current))
-(define (program->E    p) (D->E (program->D p)))
-(define (program-eval! p) (p 'eval!))
-(define (program-eval  p) (program-eval! p) (E-eval (program->E p)))
+(define (program->E           p) (p 'E))
+(define (program->evaluated-E p) (p 'evaluated-E))
+(define (program-eval!        p) (program->evaluated-E p) (void))
+(define (program-eval         p) (E-eval (program->evaluated-E p)))
 
 (define (program-link-definition*/env.d p env.d env stx*.def)
   ((p 'add!) (parse-begin-definition* env.d (env-conjoin env.d env) stx*.def)))
