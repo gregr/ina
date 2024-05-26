@@ -234,3 +234,46 @@
 ;   (letrec ((x.0 (quote bad)) (y.1 (quote outer)))
 ;     ((case-lambda
 ;       (() (letrec ((y.2 (quote inner)) (x.3 (quote good))) x.3))))))))
+
+;(block
+; (define x 5)
+; (block
+;  (define-syntax m
+;    (syntax-rules ()
+;      ((_ def) (begin
+;                 (define x 7)
+;                 def))))
+;  (m (define y (lambda () x)))
+;  (define x 6)
+;  (y)))
+(test '(let ()
+         (define x 5)
+         (let ()
+           (define-syntax (m stx)
+             (match (syntax->list stx)
+               ((list _ def)
+                (quasiquote-syntax
+                 (begin
+                   (define x 7)
+                   #,def)))))
+           (m (define y (lambda () x)))
+           (define x 6)
+           (y))))
+
+;(block
+; (define x 4)
+; (define-syntax intro-ref
+;   (syntax-rules ()
+;     ((_ v) (define v x))))
+; (block
+;  (define x 5)
+;  (intro-ref y)))
+(test '(let ()
+         (define x 4)
+         (define-syntax (intro-ref stx)
+           (match (syntax->list stx)
+             ((list _ v) (quasiquote-syntax (define #,v x)))))
+         (let ()
+           (define x 5)
+           (intro-ref y)
+           y)))
