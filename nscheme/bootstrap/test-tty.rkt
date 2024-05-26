@@ -12,27 +12,27 @@
   (let ((settings (tty 'stty-ref)))
     (dynamic-wind
       (lambda ()
-        (display (string-append ec:cursor-save
-                                ec:display-save
-                                (ec:cursor-move-to 0 0)
-                                ec:display-clear-full))
+        (display (string-append csi:cursor-save
+                                csi:display-save
+                                (csi:cursor-move-to 0 0)
+                                csi:display-clear-full))
         (flush-output))
       (lambda () body ...)
       (lambda ()
-        (display (string-append ec:display-restore
-                                ec:cursor-restore))
+        (display (string-append csi:display-restore
+                                csi:cursor-restore))
         (flush-output)
         (tty 'stty-set settings)))))
 (define-syntax-rule (with-tty-cursor-hidden body ...)
   (dynamic-wind
-    (lambda () (display ec:cursor-hide))
+    (lambda () (display csi:cursor-hide))
     (lambda () body ...)
-    (lambda () (display ec:cursor-show))))
+    (lambda () (display csi:cursor-show))))
 
 (define (display/style style s)
-  (display (sgr->ec style))
+  (display (sgr->csi style))
   (display s)
-  (display (sgr->ec (append sgr:reset))))
+  (display (sgr->csi (append sgr:reset))))
 
 (define (displayln/style style s)
   (display/style style s)
