@@ -20,7 +20,7 @@
     (lambda (method)
       (case method
         ((add!)    (lambda (D.new) (set! D.current ($d:begin D.current D.new))))
-        ((eval!)   (let ((E ((D->E/eval E-eval) D.current)))
+        ((eval!)   (let ((E (D->E/E-eval D.current E-eval)))
                      (set! D.current ($d:expression (lambda () E)))))
         ((current) D.current)))))
 
@@ -44,7 +44,7 @@
     env.d))
 
 (define (parse-begin-meta-definition env.d env stx)
-  (let ((E ((D->E/eval E-eval) (parse-begin-definition* env.d env (syntax->list stx)))))
+  (let ((E (D->E/E-eval (parse-begin-definition* env.d env (syntax->list stx)) E-eval)))
     ($d:expression (lambda () E))))
 
 (define (parse-begin-meta-expression env stx)
