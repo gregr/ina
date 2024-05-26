@@ -4,7 +4,7 @@
   (provide (all-defined-out))
   (require "../platform/racket/nscheme.rkt" (for-syntax racket/list)))
 (require 'nscm:base (for-syntax 'nscm:base))
-(include "../include/tty.scm")
+(include "../include/text/terminal-control.scm")
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 

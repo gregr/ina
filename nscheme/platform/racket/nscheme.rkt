@@ -1035,7 +1035,7 @@
 ;; TTY manipulation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; NOTE: see tty.scm for escape codes
+;; NOTE: see text/terminal-control.scm for escape codes
 
 (define tty
   (let ()

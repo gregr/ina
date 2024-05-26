@@ -102,7 +102,7 @@
 ;; Old notes:
 
 ;; TODO: compile interact.scm and all of its dependencies (almost everything listed above).
-;; - Other dependencies: read.scm write.scm tty.scm and/or other UI definitions, etc.
+;; - Other dependencies: read.scm write.scm terminal-control.scm and/or other UI definitions, etc.
 ;; - Perform this comilation for all desired target platforms.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
