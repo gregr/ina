@@ -36,6 +36,7 @@
 ;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
 ;; depend on the compiler instead of E-eval:
 (include "../include/extended.scm")
+(include "../include/program.scm")
 
 (define-runtime-path path.here ".")
 
@@ -87,6 +88,7 @@
 (define def*.eval
   (file-name*->stx*
    '("../include/eval-simple.scm"
+     "../include/program.scm"
      "../include/extended.scm")))
 (define def*.primitive-packages
   (file-name->stx* "../include/primitive.scm"))
