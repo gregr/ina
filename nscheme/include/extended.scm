@@ -84,7 +84,7 @@
 ;                                              (begin body ...)
 ;                                              (skip)))))
 
-(define env.extended
+(define env.meta
   (let ((env (make-env))
         (b*.def
           (list

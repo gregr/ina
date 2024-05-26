@@ -16,5 +16,5 @@
   (env-conjoin* env.include/base env.syntax
                 (eval-definition* (env-conjoin env.include/base env.syntax) def*.include)))
 (define env.eval             (eval-definition* env.include def*.eval))
-(define env.large            (env-conjoin* env.include env.eval env.extended))
+(define env.large            (env-conjoin* env.include env.eval env.meta))
 (define env.large.privileged (env-conjoin env.large env.primitive.privileged))
