@@ -26,7 +26,7 @@
 (include "../include/compiler/high-level-ir.scm")
 (include "../include/compiler/backend/rkt.scm")
 
-(include "../include/nscheme/stage-simple.scm")
+(include "../include/nscheme/stage.scm")
 (include "../include/nscheme/parse.scm")
 (include "../include/nscheme/minimal.scm")
 (include "../include/nscheme/match.scm")
@@ -79,7 +79,7 @@
      )))
 (define def*.nscheme
   (file-name*->stx*
-   '("../include/nscheme/stage-simple.scm"
+   '("../include/nscheme/stage.scm"
      "../include/nscheme/parse.scm"
      "../include/nscheme/minimal.scm"
      "../include/nscheme/match.scm"

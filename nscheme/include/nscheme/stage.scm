@@ -16,7 +16,6 @@
                            (apply ^body (map $ref (improper-list->list addr*~))))
                          addr*~* ^body*)))
       (E:case-lambda addr*~* body*)))
-
   (define ($letrec param* ^rhs*&body)
     (let ((addr* (map param->address param*)))
       (let-values (((rhs* body) (apply ^rhs*&body (map $ref addr*))))
