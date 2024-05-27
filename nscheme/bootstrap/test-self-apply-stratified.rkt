@@ -11,7 +11,7 @@
 ;;; do not mix.  That means compilation does not need to support cross-stage persistence.
 
 (let ()
-  (include "../include/bootstrap-stratified.scm")
+  (include "../include/platform/bootstrap-stratified.scm")
   (define stx*.test (list '(list
                             (+ 1 2)
                             (foldr + 0 '(1 2 3 4 5))
@@ -39,14 +39,12 @@
 
 (define stx*.self-apply1
   (append
-   `((define def*.include/base/early ',def*.include/base/early)
-     (define def*.include/boot       ',def*.include/boot)
-     (define def*.include/base       ',def*.include/base)
-     (define def*.include            ',def*.include)
-     (define def*.eval               ',def*.eval))
-   def*.primitive-packages
+   `((define def*.base     ',def*.base)
+     (define def*.compiler ',def*.compiler)
+     (define def*.nscheme  ',def*.nscheme))
+   def*.primitive
    def*.syntax
-   (file-name->stx* "../include/bootstrap-stratified.scm")
+   (file-name->stx* "../include/platform/bootstrap-stratified.scm")
    '((define stx*.test (list '(list
                                (+ 1 2)
                                (foldr + 0 '(1 2 3 4 5))

@@ -1,3 +1,83 @@
+(define (make-address name annotation) (vector (mvector) name annotation))
+(define (address-name            addr) (vector-ref addr 1))
+(define (address-annotation      addr) (vector-ref addr 2))
+(define (address->local-gensym/default name.default)
+  (let ((gensym (make-local-gensym)))
+    (lambda (addr)
+      (let ((name (address-name addr)))
+        (gensym (symbol->string (if name name name.default)))))))
+
+;; TODO: support for lower-level language integration:
+;; - E:unchecked-call, E:let with type info, E:case-lambda with type info, etc.
+;; TODO: we may want to return to the embedded annotation model for simpler pattern matching.
+(define (E:annotated    E ann)          (vector 'E:annotated    E ann))
+(define (E:quote        v)              (vector 'E:quote        v))
+(define (E:ref          address)        (vector 'E:ref          address))
+(define (E:if           c t f)          (vector 'E:if           c t f))
+(define (E:call         rator rand*)    (vector 'E:call         rator rand*))
+(define (E:apply/values rator vrand)    (vector 'E:apply/values rator vrand))
+(define (E:case-lambda  param*~* body*) (vector 'E:case-lambda  param*~* body*))
+(define (E:letrec       lhs* rhs* body) (vector 'E:letrec       lhs* rhs* body))
+
+(define (E-tag                   E)     (vector-ref E 0))
+(define (E-tagged?               E tag) (eq? (E-tag E) tag))
+(define (E:annotated?            E)     (E-tagged? E 'E:annotated))
+(define (E:quote?                E)     (E-tagged? E 'E:quote))
+(define (E:ref?                  E)     (E-tagged? E 'E:ref))
+(define (E:if?                   E)     (E-tagged? E 'E:if))
+(define (E:call?                 E)     (E-tagged? E 'E:call))
+(define (E:apply/values?         E)     (E-tagged? E 'E:apply/values))
+(define (E:case-lambda?          E)     (E-tagged? E 'E:case-lambda))
+(define (E:letrec?               E)     (E-tagged? E 'E:letrec))
+(define (E:annotated-E           E)     (vector-ref E 1))
+(define (E:annotated-annotation  E)     (vector-ref E 2))
+(define (E:quote-value           E)     (vector-ref E 1))
+(define (E:ref-address           E)     (vector-ref E 1))
+(define (E:if-condition          E)     (vector-ref E 1))
+(define (E:if-consequent         E)     (vector-ref E 2))
+(define (E:if-alternative        E)     (vector-ref E 3))
+(define (E:call-operator         E)     (vector-ref E 1))
+(define (E:call-operand*         E)     (vector-ref E 2))
+(define (E:apply/values-operator E)     (vector-ref E 1))
+(define (E:apply/values-operand  E)     (vector-ref E 2))
+(define (E:case-lambda-param*~*  E)     (vector-ref E 1))
+(define (E:case-lambda-body*     E)     (vector-ref E 2))
+(define (E:letrec-binding-left*  E)     (vector-ref E 1))
+(define (E:letrec-binding-right* E)     (vector-ref E 2))
+(define (E:letrec-body           E)     (vector-ref E 3))
+
+(define (E-annotation E) (and (E:annotated? E) (E:annotated-annotation E)))
+(define (E-annotation-add E ann)
+  (if ann
+      (let ((ann2 (E-annotation E)))
+        (if ann2
+            (if (eq? ann ann2) E (E:annotated (E:annotated-E E) (cons ann ann2)))
+            (E:annotated E ann)))
+      E))
+
+(define (E-pretty E)
+  (define address-pretty address-name)
+  (let loop ((E E))
+    (cond
+      ((E:annotated?    E) (loop (E:annotated-E E)))
+      ((E:quote?        E) (list 'quote (E:quote-value E)))
+      ((E:ref?          E) (list 'ref   (address-pretty (E:ref-address E))))
+      ((E:if?           E) (list 'if (loop (E:if-condition E))
+                                 (loop (E:if-consequent E))
+                                 (loop (E:if-alternative E))))
+      ((E:call?         E) (cons* 'call (loop (E:call-operator E)) (map loop (E:call-operand* E))))
+      ((E:apply/values? E) (list 'apply/values (loop (E:apply/values-operator E))
+                                 (loop (E:apply/values-operand E))))
+      ((E:case-lambda?  E) (cons 'case-lambda
+                                 (map list
+                                      (map (lambda (p*~) (improper-list-map address-pretty p*~))
+                                           (E:case-lambda-param*~* E))
+                                      (map loop (E:case-lambda-body* E)))))
+      ((E:letrec?       E) (list 'letrec (map list (map address-pretty (E:letrec-binding-left* E))
+                                              (map loop (E:letrec-binding-right* E)))
+                                 (loop (E:letrec-body E))))
+      (else                (error "not an expression" E)))))
+
 ;;; NOTE: this evaluator is only intended for testing until the compiler is finished.
 (splicing-local
   ((define cenv.empty '())

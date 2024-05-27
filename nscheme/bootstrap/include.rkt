@@ -22,21 +22,22 @@
 (include "../include/base/raise.scm")
 
 (include "../include/syntax.scm")
-(include "../include/ir.scm")
-(include "../include/stage-simple.scm")
-(include "../include/parse.scm")
-(include "../include/primitive.scm")
-(include "../include/minimal.scm")
-(include "../include/match.scm")
 
-;; TODO: all remaining compiler definitions should be included here, replacing eval-simple.scm:
-(include "../include/eval-simple.scm")
-(include "../include/compile-rkt-simple.scm")
+(include "../include/compiler/high-level-ir.scm")
+(include "../include/compiler/backend/rkt.scm")
 
-;; TODO: the parsers defined here perform compile-time evaluation.  They should be adjusted to
+(include "../include/nscheme/stage-simple.scm")
+(include "../include/nscheme/parse.scm")
+(include "../include/nscheme/minimal.scm")
+(include "../include/nscheme/match.scm")
+;; TODO: these definitions perform compile-time evaluation.  They should be adjusted to
 ;; depend on the compiler instead of E-eval:
-(include "../include/program.scm")
-(include "../include/meta.scm")
+(include "../include/nscheme/program.scm")
+(include "../include/nscheme/meta.scm")
+
+(include "../include/platform/primitive.scm")
+(include "../include/platform/primitive-privileged.scm")
+(include "../include/platform/primitive-control-low-level-privileged.scm")
 
 (define-runtime-path path.here ".")
 
@@ -51,49 +52,48 @@
 
 (define (file-name*->stx* fname*) (apply append (map file-name->stx* fname*)))
 
-(define def*.include/base/early
+(define def*.base
   (file-name*->stx*
    '("../include/base/misc.scm"
      "../include/base/control.scm"
+     "../include/base/pair.scm"
+     "../include/base/list.scm"
+     "../include/base/number.scm"
+     "../include/base/mvector.scm"
+     "../include/base/vector.scm"
+     "../include/base/mbytevector.scm"
+     "../include/base/bytevector.scm"
+     "../include/base/string.scm"
+     "../include/base/record.scm"
+     "../include/base/exception.scm"
+     "../include/base/restart.scm"
+     "../include/base/raise.scm"
      )))
-(define def*.include/boot
-  (file-name*->stx*
-    '(  ; TODO: will we need anything here?
-      )))
-(define def*.include/base
-  (file-name*->stx*
-    '("../include/base/pair.scm"
-      "../include/base/list.scm"
-      "../include/base/number.scm"
-      "../include/base/mvector.scm"
-      "../include/base/vector.scm"
-      "../include/base/mbytevector.scm"
-      "../include/base/bytevector.scm"
-      "../include/base/string.scm"
-      "../include/base/record.scm"
-      "../include/base/exception.scm"
-      "../include/base/restart.scm"
-      "../include/base/raise.scm"
-      )))
 (define def*.syntax
   (file-name*->stx*
    '("../include/syntax.scm")))
-(define def*.include
+(define def*.compiler
   (file-name*->stx*
-    '("../include/ir.scm"
-      "../include/stage-simple.scm"
-      "../include/parse.scm"
-      "../include/minimal.scm"
-      "../include/match.scm")))
-(define def*.eval
+   '("../include/compiler/high-level-ir.scm"
+     "../include/compiler/backend/rkt.scm"
+     )))
+(define def*.nscheme
   (file-name*->stx*
-   '("../include/eval-simple.scm"
-     "../include/program.scm"
-     "../include/meta.scm")))
-(define def*.primitive-packages
-  (file-name->stx* "../include/primitive.scm"))
+   '("../include/nscheme/stage-simple.scm"
+     "../include/nscheme/parse.scm"
+     "../include/nscheme/minimal.scm"
+     "../include/nscheme/match.scm"
+     "../include/nscheme/program.scm"
+     "../include/nscheme/meta.scm"
+     )))
+(define def*.primitive
+  (file-name*->stx*
+   '("../include/platform/primitive.scm"
+     "../include/platform/primitive-privileged.scm"
+     "../include/platform/primitive-control-low-level-privileged.scm"
+     )))
 
-(include "../include/bootstrap.scm")
+(include "../include/platform/bootstrap.scm")
 
 (define (ns-eval E)
   (with-pretty-panic (with-native-signal-handling (lambda () (E-eval E)))))
