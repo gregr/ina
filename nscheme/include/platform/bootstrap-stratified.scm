@@ -1,5 +1,5 @@
 (define program (make-program))
-(define (link-definition* env def*) (program-link-definition* program env def*))
+(define (link-definition* env def*) (program-parse-definition* program env def*))
 (define env.primitive            (package->env package.primitive))
 (define env.primitive.privileged (env-conjoin*
                                    (package->env package.primitive.privileged)

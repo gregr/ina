@@ -16,7 +16,8 @@
 ;(define vocab.term    'term)
 
 (define (parse-begin-meta-definition env.d env stx)
-  (let ((E (D->E/E-eval (parse-begin-definition* env.d env (syntax->list stx)) E-eval)))
+  (let* ((D (parse-begin-definition* env.d env (syntax->list stx)))
+         (E (apply/values $quote-values (E-eval (D->E/publish D)))))
     ($d:expression (lambda () E))))
 
 (define (parse-begin-meta-expression env stx)
