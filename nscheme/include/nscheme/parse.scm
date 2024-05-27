@@ -140,6 +140,8 @@
 (define ($lambda/env env param*~     ^body) ($case-lambda/env env (list param*~) (list ^body)))
 (define ($let            param* rhs* ^body) (apply $call ($lambda param* ^body) rhs*))
 (define ($let/env    env param* rhs* ^body) (apply $call ($lambda/env env param* ^body) rhs*))
+(define ($let1           param  rhs  ^body) ($let         (list param) (list rhs) ^body))
+(define ($let1/env   env param  rhs  ^body) ($let/env env (list param) (list rhs) ^body))
 (define ($letrec/env env param* ^rhs*&body)
   ($letrec param* (lambda arg* (^rhs*&body (env-extend env param* arg*)))))
 (define ($loop name ^rhs) ($letrec (list name) (lambda ($self) (values (list (^rhs $self)) $self))))
