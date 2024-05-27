@@ -21,3 +21,9 @@
     (let ((addr* (map param->address param*)))
       (let-values (((rhs* body) (apply ^rhs*&body (map $ref addr*))))
         (E:letrec addr* rhs* body)))))
+
+(define ($lambda param*~     ^body) ($case-lambda (list param*~) (list ^body)))
+(define ($let    param* rhs* ^body) (apply $call ($lambda param* ^body) rhs*))
+(define ($begin e . e*)
+  (let loop ((e e) (e* e*))
+    (if (null? e*) e ($apply/values ($lambda #f (lambda (_) (loop (car e*) (cdr e*)))) e))))

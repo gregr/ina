@@ -127,26 +127,25 @@
          (env      (env-disjoin (env-conjoin env.d.op env.op) m env.use)))
     (parse-definition env.d env (transcribe op m env stx))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Program construction ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Expression construction ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define ($provenance E stx) ($annotated E (syntax-provenance stx)))
-(define ($case-lambda/env env param*~* env->body*)
-  (define (convert param env->body)
-    (lambda arg* (env->body (env-extend env (improper-list->list param) arg*))))
-  ($case-lambda param*~* (map convert param*~* env->body*)))
-(define ($lambda         param*~     ^body) ($case-lambda (list param*~) (list ^body)))
-(define ($lambda/env env param*~     ^body) ($case-lambda/env env (list param*~) (list ^body)))
-(define ($let            param* rhs* ^body) (apply $call ($lambda param* ^body) rhs*))
-(define ($let/env    env param* rhs* ^body) (apply $call ($lambda/env env param* ^body) rhs*))
-(define ($let1           param  rhs  ^body) ($let         (list param) (list rhs) ^body))
-(define ($let1/env   env param  rhs  ^body) ($let/env env (list param) (list rhs) ^body))
+(splicing-local
+  ((define (convert-body env param*~ env->body)
+     (lambda arg* (env->body (env-extend env (improper-list->list param*~) arg*)))))
+  (define ($case-lambda/env env param*~* env->body*)
+    ($case-lambda param*~* (map (lambda (p*~ env->b) (convert-body env p*~ env->b))
+                                param*~* env->body*)))
+  (define ($lambda/env env param*~     ^body) ($lambda param*~ (convert-body env param*~ ^body)))
+  (define ($let/env    env param* rhs* ^body) ($let param* rhs* (convert-body env param* ^body))))
+(define ($let1         param rhs ^body) ($let         (list param) (list rhs) ^body))
+(define ($let1/env env param rhs ^body) ($let/env env (list param) (list rhs) ^body))
 (define ($letrec/env env param* ^rhs*&body)
   ($letrec param* (lambda arg* (^rhs*&body (env-extend env param* arg*)))))
 (define ($loop name ^rhs) ($letrec (list name) (lambda ($self) (values (list (^rhs $self)) $self))))
-(define ($thunk  body) ($lambda '() (lambda ()  body)))
-(define ($thunk* body) ($lambda #f  (lambda (_) body)))
+(define ($thunk body) ($lambda '() (lambda () body)))
 (define $and
   (case-lambda
     (()       ($quote #t))
@@ -161,7 +160,6 @@
                       (else ($let '(t ^rest)
                                   (list a ($thunk (loop (car a*) (cdr a*))))
                                   (lambda ($t $^rest) ($if $t $t ($call $^rest))))))))))
-(define ($begin a . a*) (foldl (lambda (a1 a0) ($apply/values ($thunk* a1) a0)) a a*))
 (define ($not                 x) ($if x ($quote #f) ($quote #t)))
 (define ($when   c body . body*) ($if c (apply $begin body body*) ($values)))
 (define ($unless c body . body*) (apply $when ($not c) body body*))
