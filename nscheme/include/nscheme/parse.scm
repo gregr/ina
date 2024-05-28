@@ -221,7 +221,6 @@
                                                    ($cons ($car $x*) ($call $self ($cdr $x*))))))))
                     $x*))))
 (define ($append x* y) ($call $append.value x* y))
-;; TODO: $vector->list.value and $vector->list
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Definition contexts ;;;
