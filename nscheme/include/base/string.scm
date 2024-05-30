@@ -96,7 +96,8 @@
 (define (integer->string . x*) (utf8->string (apply integer->utf8 x*)))
 (define (string->number  . x*) (utf8->number (apply string->utf8  x*)))
 
-(define (string-append . x*) (utf8->string (apply bytevector-append (map string->utf8 x*))))
+(define (string-append* x*) (bytevector->string (bytevector-append* (map string->bytevector x*))))
+(define (string-append . x*) (string-append* x*))
 
 (define (make-local-gensym)
   (mlet ((count -1))
