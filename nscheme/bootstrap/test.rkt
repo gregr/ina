@@ -1063,6 +1063,62 @@
 (run-evaluation-tests
   env.test.large
 
+  ! string-writing
+  (number->string 0)
+  ==> "0"
+  (number->string 9)
+  ==> "9"
+  (number->string 10)
+  ==> "10"
+  (number->string 11)
+  ==> "11"
+  (number->string 19)
+  ==> "19"
+  (number->string 100)
+  ==> "100"
+  (number->string 123)
+  ==> "123"
+  (number->string -1)
+  ==> "-1"
+  (number->string -123)
+  ==> "-123"
+  (number->string 123/456)
+  ==> "41/152"
+  (number->string -123/456)
+  ==> "-41/152"
+
+  ! string-reading
+  (string->number "0")
+  ==> 0
+  (string->number "9")
+  ==> 9
+  (string->number "10")
+  ==> 10
+  (string->number "11")
+  ==> 11
+  (string->number "19")
+  ==> 19
+  (string->number "100")
+  ==> 100
+  (string->number "123")
+  ==> 123
+  (string->number "-1")
+  ==> -1
+  (string->number "-123")
+  ==> -123
+  (string->number "123/456")
+  ==> 123/456
+  (string->number "-123/456")
+  ==> -123/456
+  (string->number "")
+  ==> #f
+  (string->number "123/")
+  ==> #f
+  (string->number "/456")
+  ==> #f
+  (string->number "-123/456.")
+  ==> #f
+
   ! coroutines
   ;; The co-range result looks like a generator, but the next text case
   ;; demonstrates that it is not a generator.
