@@ -1064,8 +1064,8 @@
   env.test.large
 
   ! string-writing
-  (number->string 0)
-  ==> "0"
+  (number->string -1)
+  ==> "-1"
   (number->string 9)
   ==> "9"
   (number->string 10)
@@ -1118,6 +1118,72 @@
   ==> #f
   (string->number "-123/456.")
   ==> #f
+  (string->number "1")
+  ==> 1
+  (string->number "1.")
+  ==> 1
+  (string->number ".1")
+  ==> 1/10
+  (string->number "1e2")
+  ==> 100
+  (string->number "3e-2")
+  ==> 3/100
+  (string->number "1.e3")
+  ==> 1000
+  (string->number ".1e5")
+  ==> 10000
+  (string->number "0.123")
+  ==> 123/1000
+  (string->number "10.123")
+  ==> 10123/1000
+  (string->number "-1")
+  ==> -1
+  (string->number "-1.")
+  ==> -1
+  (string->number "-.1")
+  ==> -1/10
+  (string->number "-1e2")
+  ==> -100
+  (string->number "-3e-2")
+  ==> -3/100
+  (string->number "-1.e3")
+  ==> -1000
+  (string->number "-.1e5")
+  ==> -10000
+  (string->number "-0.123")
+  ==> -123/1000
+  (string->number "-10.123")
+  ==> -10123/1000
+  (string->number "#b0")
+  ==> 0
+  (string->number "#b9")
+  ==> #f
+  (string->number "#b10")
+  ==> 2
+  (string->number "#b11")
+  ==> 3
+  (string->number "#b19")
+  ==> #f
+  (string->number "#b100")
+  ==> 4
+  (string->number "#b123")
+  ==> #f
+  (string->number "#x0")
+  ==> 0
+  (string->number "#x9")
+  ==> 9
+  (string->number "#x10")
+  ==> 16
+  (string->number "#x11")
+  ==> 17
+  (string->number "#x1f")
+  ==> 31
+  (string->number "#x100")
+  ==> 256
+  (string->number "1e#b10")
+  ==> 4
+  (string->number "3e#b-10")
+  ==> 3/4
 
   ! coroutines
   ;; The co-range result looks like a generator, but the next text case
