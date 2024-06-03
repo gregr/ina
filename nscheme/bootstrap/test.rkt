@@ -1184,6 +1184,20 @@
   ==> 4
   (string->number "3e#b-10")
   ==> 3/4
+  (string->number "0.~3")
+  ==> 1/3
+  (string->number "0.~3333")
+  ==> 1/3
+  (string->number "0.~9")
+  ==> 1
+  (string->number "0.0~9")
+  ==> 1/10
+  (string->number "1.~9")
+  ==> 2
+  (string->number "1.~3")
+  ==> 4/3
+  (string->number "0.1~3")
+  ==> 4/30
 
   ! coroutines
   ;; The co-range result looks like a generator, but the next text case
