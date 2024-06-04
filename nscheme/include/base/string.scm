@@ -69,6 +69,7 @@
            (loop (- i 1) q)))))
    (define (style-ref style key) (and style (let ((kv (assq style key))) (and kv (cdr kv)))))
    (define (integer->utf8 n radix use-exponent-above)
+     (radix?! radix)
      ;; TODO: respect use-exponent-above if present
      (cond ((< n 0) (let* ((len (+ (floor-log (- n) radix) 2))
                            (mbv (make-mbytevector len 0)))
@@ -81,13 +82,14 @@
                       (mbytevector->bytevector mbv)))
            (else #"0")))
    (define (fraction->utf8 n radix)
+     (radix?! radix)
      (bytevector-append (integer->utf8 (numerator n) radix #f) #"/"
                         (integer->utf8 (denominator n) radix #f)))
    (define (decimal->utf8 n radix radix.exponent use-exponent-below use-exponent-above)
+     (radix?! radix) (radix?! radix.exponent)
      (error "TODO: decimal->utf8" n radix radix.exponent use-exponent-below use-exponent-above)))
   (define number->utf8
     (let ((go (lambda (n radix style)
-                (radix?! radix)
                 (cond ((integer? n) (integer->utf8 n radix (style-ref style 'use-exponent-above)))
                       ((or (not style) (eq? style 'fraction)) (fraction->utf8 n radix))
                       (else (decimal->utf8 n radix (or (style-ref style 'exponent-radix) radix)
