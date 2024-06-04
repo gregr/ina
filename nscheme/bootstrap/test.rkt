@@ -1087,6 +1087,23 @@
   (number->string -123/456)
   ==> "-41/152"
 
+  (number->string 12 10 '((use-exponent-above . 100)))
+  ==>
+  "12"
+  (number->string 12345 10 '((use-exponent-above . 100)))
+  ==>
+  "1.2345e4"
+  (number->string 123456789123456789 10 '((use-exponent-above . 10000000000000)
+                                          (use-exponent-below . 1/10000)))
+  ==>
+  "1.23456789123456789e17"
+  (number->string 100/3 10 '((use-exponent-above . 10)))
+  ==>
+  "3.~3e1"
+  (number->string 100/7 10 '((use-exponent-above . 10)))
+  ==>
+  "1.~428571e1"
+
   ! string-reading
   (string->number "0")
   ==> 0
