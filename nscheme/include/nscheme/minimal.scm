@@ -59,6 +59,14 @@
 (define (parse-case env e clause . clause*)
   ($let1 'x (parse-expression env e)
          (lambda ($x)
+           (define ($literal-equal-$x? d)
+             (let loop ((d d))
+               (cond
+                 ((pair?   d) ($and ($pair? $x) (loop (car d)) (loop (cdr d))))
+                 ((vector? d) (apply $and ($vector? $x)
+                                     ($= ($vector-length $x) ($quote (vector-length d)))
+                                     (map loop (vector->list d))))
+                 (else        ($eqv? $x ($quote d))))))
            (let loop ((c* (cons clause clause*)))
              (cond
                ((null? c*) ($pcall values))
@@ -76,8 +84,7 @@
                               (raise-parse-error "=> is not followed by one procedure" c))
                             (unless (null? c*) (raise-parse-error "=> clause is not last" c))
                             ($call (parse-expression env (car e*)) $x))
-                           (else ($if (apply $or (map (lambda (d) ($eqv? $x ($quote d)))
-                                                      (syntax->list e.data)))
+                           (else ($if (apply $or (map $literal-equal-$x? (syntax->list e.data)))
                                       (parse-body env e*)
                                       (loop c*))))))))))))
 

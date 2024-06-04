@@ -169,6 +169,7 @@
 (define ($null?             x)   ($pcall null?   x))
 (define ($pair?             x)   ($pcall pair?   x))
 (define ($vector?           x)   ($pcall vector? x))
+(define ($=                 a b) ($pcall =       a b))
 (define ($<                 a b) ($pcall <       a b))
 (define ($+                 a b) ($pcall +       a b))
 (define ($-                 a b) ($pcall -       a b))
