@@ -61,6 +61,8 @@
                    (else    1)))))
     (if (< p 0) (/ 1 n) n)))
 
+(define (floor n) (integer-floor-div (numerator n) (denominator n)))
+
 (define (floor-log n b)
   (when (<= n 0) (error "not a positive number" n))
   (unless (and (integer? b) (< 1 b)) (error "not an integer greater than 1" b))
