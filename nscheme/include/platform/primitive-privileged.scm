@@ -21,7 +21,6 @@
       panic-handler native-signal-handler
       procedure-metadata
       record? record record-type-descriptor record-ref
-      ;; TODO: use these to implement string->utf8 utf8->string via a utf8? check
       string->bytevector bytevector->string)
     (list
       panic-handler native-signal-handler
