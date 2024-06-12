@@ -1,10 +1,10 @@
-(define (u8*->bytevector x*) (apply bytevector x*))
+(define (list->bytevector x*) (apply bytevector x*))
 
-(define (bytevector->u8* x)
+(define (bytevector->list x)
   (let ((len (bytevector-length x)))
     (let loop ((i 0))
       (cond ((= i len) '())
-            (else      (cons (bytevector-u8-ref x i) (loop (+ i 1))))))))
+            (else      (cons (bytevector-ref x i) (loop (+ i 1))))))))
 
 (define (bytevector-append* x*)
   (let ((mbv (make-mbytevector
@@ -19,7 +19,7 @@
           (let* ((bv (car x*)) (len (bytevector-length bv)))
             (let copy ((j 0))
               (if (< j len)
-                  (begin (mbytevector-u8-set! mbv (+ i j) (bytevector-u8-ref bv j))
+                  (begin (mbytevector-set! mbv (+ i j) (bytevector-ref bv j))
                          (copy (+ j 1)))
                   (loop (cdr x*) (+ i j)))))))))
 

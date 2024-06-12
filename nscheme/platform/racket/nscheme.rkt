@@ -25,11 +25,8 @@
   cons car cdr
   vector vector-length vector-ref
   make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-  bytevector bytevector-length
-  bytevector-u8-ref bytevector-u16-ref bytevector-u32-ref bytevector-u64-ref
-  make-mbytevector mbytevector->bytevector mbytevector-length
-  mbytevector-u8-ref mbytevector-u16-ref mbytevector-u32-ref mbytevector-u64-ref
-  mbytevector-u8-set! mbytevector-u16-set! mbytevector-u32-set! mbytevector-u64-set!
+  bytevector bytevector-length bytevector-ref
+  make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
   bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
   bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
   numerator denominator = <= >= < > + - * /
@@ -312,23 +309,13 @@
 (define (bytevector        . x*) (apply bytes x*))
 (define (bytevector?       x)    (bytes?       x))
 (define (bytevector-length bv)   (bytes-length bv))
-
-(define (bytevector-u8-ref  bv i) (bytes-ref              bv                         i))
-(define (bytevector-u16-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 2)))
-(define (bytevector-u32-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 4)))
-(define (bytevector-u64-ref bv i) (integer-bytes->integer bv #f (system-big-endian?) i (+ i 8)))
+(define (bytevector-ref    bv i) (bytes-ref bv i))
 
 (define (make-mbytevector        len n)   (mbytevector:new (make-bytes len n)))
-(define (mbytevector->bytevector mbv)     (bytes-copy         (mbytevector-bv mbv)))
-(define (mbytevector-length      mbv i)   (bytevector-length  (mbytevector-bv mbv)))
-(define (mbytevector-u8-ref      mbv i)   (bytevector-u8-ref  (mbytevector-bv mbv) i))
-(define (mbytevector-u16-ref     mbv i)   (bytevector-u16-ref (mbytevector-bv mbv) i))
-(define (mbytevector-u32-ref     mbv i)   (bytevector-u32-ref (mbytevector-bv mbv) i))
-(define (mbytevector-u64-ref     mbv i)   (bytevector-u64-ref (mbytevector-bv mbv) i))
-(define (mbytevector-u8-set!     mbv i n) (bytes-set!         (mbytevector-bv mbv) i n))
-(define (mbytevector-u16-set!    mbv i n) (integer->integer-bytes n 2 #f (system-big-endian?) (mbytevector-bv mbv) i))
-(define (mbytevector-u32-set!    mbv i n) (integer->integer-bytes n 4 #f (system-big-endian?) (mbytevector-bv mbv) i))
-(define (mbytevector-u64-set!    mbv i n) (integer->integer-bytes n 8 #f (system-big-endian?) (mbytevector-bv mbv) i))
+(define (mbytevector->bytevector mbv)     (bytes-copy        (mbytevector-bv mbv)))
+(define (mbytevector-length      mbv)     (bytevector-length (mbytevector-bv mbv)))
+(define (mbytevector-ref         mbv i)   (bytevector-ref    (mbytevector-bv mbv) i))
+(define (mbytevector-set!        mbv i n) (bytes-set!        (mbytevector-bv mbv) i n))
 
 (define (make-case-clause param body) (vector param body))
 (define (case-clause-param cc)        (vector-ref cc 0))
@@ -408,11 +395,8 @@
   cons car cdr
   vector vector-length vector-ref
   make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-  bytevector bytevector-length
-  bytevector-u8-ref bytevector-u16-ref bytevector-u32-ref bytevector-u64-ref
-  make-mbytevector mbytevector->bytevector mbytevector-length
-  mbytevector-u8-ref mbytevector-u16-ref mbytevector-u32-ref mbytevector-u64-ref
-  mbytevector-u8-set! mbytevector-u16-set! mbytevector-u32-set! mbytevector-u64-set!
+  bytevector bytevector-length bytevector-ref
+  make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
   bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
   bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
   numerator denominator = <= >= < > + - * /
@@ -613,9 +597,9 @@
                                                           (map loop (vector->list value))))
                                    ((? mbytevector?)
                                     (set! initialization**
-                                      (cons (map (lambda (i) (ast:call (loop mbytevector-u8-set!)
+                                      (cons (map (lambda (i) (ast:call (loop mbytevector-set!)
                                                                        (ast:ref name) (loop i)
-                                                                       (loop (mbytevector-u8-ref value i))))
+                                                                       (loop (mbytevector-ref value i))))
                                                  (range (mbytevector-length value)))
                                             initialization**))
                                     (ast:call (loop make-mbytevector)

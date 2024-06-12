@@ -235,7 +235,7 @@
             |a b|
             |p q|\ r\|s|tu|
             ,(string-append "1 2\t3\n4"
-                            (utf8->string (u8*->bytevector (append '(5) (unicode->utf8 150)))))
+                            (utf8->string (list->bytevector (append '(5) (unicode->utf8 150)))))
             0
             0.0
             -0.0

@@ -111,7 +111,7 @@
                       (cond ((eqv? c (char "|")) (when bad? (pr "|"))
                                                  (pr "\\|")
                                                  (when bad? (pr "|")))
-                            (else (pr (utf8->string (u8*->bytevector (unicode->utf8 c)))))))
+                            (else (pr (utf8->string (list->bytevector (unicode->utf8 c)))))))
                     cs)
                   (when bad? (pr "|")))))))
 

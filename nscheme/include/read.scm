@@ -9,7 +9,7 @@
   (let ((name (lambda params body ...))) expr))
 
 (define (mvector->string mv)
-  (utf8->string (u8*->bytevector (vector->list (mvector->vector mv)))))
+  (utf8->string (list->bytevector (vector->list (mvector->vector mv)))))
 
 (define (read-error? d) (and (procedure? d) (not (read-eof? d))))
 (define (read-eof? d)   (and (procedure? d) (eq? 'eof (d))))
@@ -157,7 +157,7 @@
                   (define (store* cs pos)
                     (loop pos (+ i (mvector-copy!/list mv i cs))))
                   ;; TODO: do not use string-ref
-                  (define (string-ref s i) (bytevector-u8-ref (string->utf8 s) i))
+                  (define (string-ref s i) (bytevector-ref (string->utf8 s) i))
                   (define (estore s) (store (string-ref s 0) (+ pos 2)))
                   (if (eqv? pos last-pos)
                     (k 'datum (mvector->string mv) start (+ last-pos 1))
