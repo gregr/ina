@@ -30,7 +30,7 @@
 
 (define (record-field-position-accessor rtd i)
   (let ((count.field* (vector-length (rtd-field* rtd))))
-    (unless (and (integer? i) (<= 0 i) (< i count.field*)) (error "not a field position" rtd i))
+    (unless (and (nonnegative-integer? i) (< i count.field*)) (error "not a field position" rtd i))
     (let ((? (record-predicate rtd))
           (i (+ (- (rtd-record-length rtd) count.field*) i)))
       (lambda (r)

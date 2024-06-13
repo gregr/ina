@@ -68,7 +68,7 @@
                                                     (plist->alist (cddr kvs))))))
 
 (define (iota n)
-  (unless (and (integer? n) (<= 0 n)) (error "not a nonnegative integer" n))
+  (nonnegative-integer?! n)
   (let loop ((i 0))
     (cond ((= i n) '())
           (else    (cons i (loop (+ i 1)))))))
@@ -109,7 +109,7 @@
           (else (loop (cdr x*) (+ l 1))))))
 
 (define (list-tail x* i)
-  (unless (<= 0 i) (error "not a nonnegative integer" i))
+  (nonnegative-integer?! i)
   (let loop ((x* x*) (i i))
     (cond ((= i 0) x*)
           (else    (loop (cdr x*) (- i 1))))))

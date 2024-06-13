@@ -9,11 +9,14 @@
   (range-for-each (lambda (i) (mbytevector-set! mbv i v)) (mbytevector-length mbv)))
 
 (define (mbytevector-copy! src start.src dst start.dst count)
-  (unless (and (<= 0 start.dst) (<= (+ start.dst count) (mbytevector-length dst)))
+  (nonnegative-integer?! start.src)
+  (nonnegative-integer?! start.dst)
+  (nonnegative-integer?! count)
+  (unless (<= (+ start.dst count) (mbytevector-length dst))
     (error "mbytevector-copy! destination range is out of bounds" start.dst count
            (mbytevector-length dst)))
   (define (go ref len.src)
-    (unless (and (<= 0 start.src) (<= (+ start.src count) len.src))
+    (unless (<= (+ start.src count) len.src)
       (error "mbytevector-copy! source range is out of bounds" start.src count len.src))
     (if (and (eq? src dst) (< start.src start.dst))
         (range-for-each (lambda (i) (mbytevector-set! dst (+ start.dst i) (ref src (+ start.src i))))

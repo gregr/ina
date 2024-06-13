@@ -5,6 +5,10 @@
 (define (positive? x) (> x 0))
 (define (negative? x) (< x 0))
 
+(define (nonnegative-integer?  x) (and (integer? x) (<= 0 x)))
+(define (nonnegative-integer?! x) (unless (nonnegative-integer? x)
+                                    (error "not a nonnegative integer" x)))
+
 (define (integer-floor-div a b) (let-values (((d m) (integer-floor-divmod a b))) d))
 (define (integer-floor-mod a b) (let-values (((d m) (integer-floor-divmod a b))) m))
 
