@@ -69,6 +69,10 @@
      "../include/base/restart.scm"
      "../include/base/raise.scm"
      )))
+(define def*.text
+  (file-name*->stx*
+   '("../include/text/terminal-control.scm"
+     )))
 (define def*.syntax
   (file-name*->stx*
    '("../include/syntax.scm")))

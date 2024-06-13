@@ -13,5 +13,6 @@
 (define env.nscheme              (let ((env.deps (env-conjoin* env.base env.syntax env.compiler)))
                                    (env-conjoin* env.deps env.meta
                                                  (link-definition* env.deps def*.nscheme))))
-(define env.large                env.nscheme)
+(define env.text                 (link-definition* env.base def*.text))
+(define env.large                (env-conjoin* env.nscheme env.text))
 (define env.large.privileged     (env-conjoin* env.large env.primitive.privileged))
