@@ -298,6 +298,10 @@
 
 (define (string-append* x*) (bytevector->string (bytevector-append* (map string->bytevector x*))))
 (define (string-append . x*) (string-append* x*))
+(define (string-join* separator x*)
+  (bytevector->string
+    (bytevector-join* (string->bytevector separator) (map string->bytevector x*))))
+(define (string-join separator . x*) (string-join* separator x*))
 
 (define (make-local-gensym)
   (mlet ((count -1))

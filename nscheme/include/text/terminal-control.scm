@@ -1,7 +1,7 @@
 ;;; Control Sequence Introducer (CSI) codes
 
 ;; Title control (title position 0, 1, or 2); some terminals use \e\\ instead of \a ?
-(define (csi:title-set title (position 0))
+(define (csi:title-set title position)
   (string-append "\e]" (number->string position) ";" title "\a"))
 
 ;; Display control
@@ -159,5 +159,4 @@
 (define (sgr:invert    ?) (if ? sgr:invert+    sgr:invert-))
 
 (define (sgr->csi sgr)
-  (if (null? sgr) ""
-      (string-append "\e[" (string-join (map number->string sgr) ";") "m")))
+  (if (null? sgr) "" (string-append "\e[" (string-join* ";" (map number->string sgr)) "m")))
