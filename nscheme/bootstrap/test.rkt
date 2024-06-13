@@ -1063,6 +1063,32 @@
 (run-evaluation-tests
   env.test.large
 
+  ! bytevector-ports
+  (call-with-output-bytevector
+   (lambda (out)
+     (port-set-size! out 2)
+     (call-with-input-bytevector
+      #"testing 1 2 3"
+      (lambda (in)
+        (let ((buf (make-mbytevector 18 0)))
+          (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
+          (port-read* in #t buf 5 11)
+          (port-write* out #t buf 0 (mbytevector-length buf)))))))
+  ==>
+  #"ABCDEtesting 1 2QR"
+  (call-with-output-bytevector
+   (lambda (out)
+     (port-set-size! out 2)
+     (call-with-input-bytevector
+      #"testing"
+      (lambda (in)
+        (let ((buf (make-mbytevector 20 0)))
+          (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
+          (port-read* in #t buf 3 (- (mbytevector-length buf) 3))
+          (port-write* out #t buf 0 (mbytevector-length buf)))))))
+  ==>
+  #"ABCtestingKLMNOPQRST"
+
   ! string-writing
   (number->string -1)
   ==> "-1"

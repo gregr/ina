@@ -37,14 +37,7 @@
 
   with-pretty-panic with-native-signal-handling
 
-  stdio filesystem tcp udp tty
-  console string:port:input string:port:output null:port:output
-  call-with-input-string call-with-output-string
-  port-close port-flush port-put port-put*
-  port-forget port-get port-peek port-get*! port-peek*!
-  port-truncate port-position port-position-set!
-  port-buffer-mode port-buffer-mode-set!
-  method-lambda method-choose method-unknown method-except method-only
+  stdio filesystem tcp udp tty console
   racket:eval)
 (require
   racket/control racket/file racket/flonum racket/list racket/match racket/port racket/pretty
