@@ -5,8 +5,18 @@
             (else         (mbytevector-set! x i (car args))
                           (loop (+ i 1) (cdr args)))))))
 
-(define (mbytevector-fill! mbv v)
-  (range-for-each (lambda (i) (mbytevector-set! mbv i v)) (mbytevector-length mbv)))
+(define mbytevector-fill!
+  (let ((go (lambda (mbv v start count)
+              (nonnegative-integer? start)
+              (nonnegative-integer? count)
+              (unless (< (+ start count) (mbytevector-length mbv))
+                (error "mbytevector-fill! range out of bounds" start count
+                       (mbytevector-length mbv)))
+              (range-for-each (lambda (i) (mbytevector-set! mbv i v)) start count))))
+  (case-lambda
+    ((mbv v)             (go mbv v 0     (mbytevector-length mbv)))
+    ((mbv v start)       (go mbv v start (- (mbytevector-length mbv) start)))
+    ((mbv v start count) (go mbv v start count)))))
 
 (define (mbytevector-copy! src start.src dst start.dst count)
   (nonnegative-integer?! start.src)

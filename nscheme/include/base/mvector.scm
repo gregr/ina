@@ -5,8 +5,17 @@
             (else         (mvector-set! x i (car args))
                           (loop (+ i 1) (cdr args)))))))
 
-(define (mvector-fill! mv v)
-  (range-for-each (lambda (i) (mvector-set! mv i v)) (mvector-length mv)))
+(define mvector-fill!
+  (let ((go (lambda (mv v start count)
+              (nonnegative-integer? start)
+              (nonnegative-integer? count)
+              (unless (< (+ start count) (mvector-length mv))
+                (error "mvector-fill! range out of bounds" start count (mvector-length mv)))
+              (range-for-each (lambda (i) (mvector-set! mv i v)) start count))))
+  (case-lambda
+    ((mv v)             (go mv v 0     (mvector-length mv)))
+    ((mv v start)       (go mv v start (- (mvector-length mv) start)))
+    ((mv v start count) (go mv v start count)))))
 
 (define (mvector-copy! src start.src dst start.dst count)
   (nonnegative-integer?! start.src)
