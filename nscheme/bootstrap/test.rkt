@@ -1072,8 +1072,10 @@
       (lambda (in)
         (let ((buf (make-mbytevector 18 0)))
           (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
-          (port-read* in #t buf 5 11)
-          (port-write* out #t buf 0 (mbytevector-length buf)))))))
+          (port-read in #t buf 5 6)
+          (port-read in #t buf 11 5)
+          (port-write out #t buf 0 3)
+          (port-write out #t buf 3 (- (mbytevector-length buf) 3)))))))
   ==>
   #"ABCDEtesting 1 2QR"
   (call-with-output-bytevector
@@ -1084,8 +1086,10 @@
       (lambda (in)
         (let ((buf (make-mbytevector 20 0)))
           (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
-          (port-read* in #t buf 3 (- (mbytevector-length buf) 3))
-          (port-write* out #t buf 0 (mbytevector-length buf)))))))
+          (port-read in #t buf 3 2)
+          (port-read in #t buf 5 (- (mbytevector-length buf) 5))
+          (port-write out #t buf 0 3)
+          (port-write out #t buf 3 (- (mbytevector-length buf) 3)))))))
   ==>
   #"ABCtestingKLMNOPQRST"
 

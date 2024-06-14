@@ -18,21 +18,25 @@
 (define (port-set-position! p pos) (p 'set-position! pos))
 
 ;;; Input ports
-(define (port-drop  p count)                      (p 'drop count))
+(define (port-drop p count)                      (p 'drop count))
 ;; wait?: #f | partial | full
 ;; returns (values) on EOF
-(define (port-peek* p skip wait? dst start count) (p 'peek* skip wait? dst start count))
+(define (port-peek p skip wait? dst start count) (p 'peek skip wait? dst start count))
 ;; wait?: #f | partial | full
 ;; returns (values) on EOF
-(define (port-read* p      wait? dst start count) (p 'read* wait? dst start count))
+(define (port-read p      wait? dst start count) (p 'read wait? dst start count))
+
+;;; Input ports with a position
+(define (port-pread p pos dst start count) (p 'pread pos dst start count))
 
 ;;; Output ports
-(define (port-flush  p)                       (p 'flush))
+(define (port-flush p)                       (p 'flush))
 ;; wait?: #f | partial | full | full/flush
-(define (port-write* p wait? src start count) (p 'write* wait? src start count))
+(define (port-write p wait? src start count) (p 'write wait? src start count))
 
 ;;; Output ports with a position
-(define (port-set-size! p size) (p 'set-size! size))
+(define (port-pwrite    p pos src start count) (p 'pwrite pos src start count))
+(define (port-set-size! p size)                (p 'set-size! size))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Bytevector ports ;;;
@@ -43,7 +47,7 @@
     (lambda (method . arg*)
       (apply
         (case method
-          ((peek*) (lambda (skip wait? dst start count)
+          ((peek)  (lambda (skip wait? dst start count)
                      (buffer-range?! dst start count)
                      (if (< 0 count)
                          (let* ((i     (+ pos skip))
@@ -54,7 +58,7 @@
                                       count)
                                (values)))
                          0)))
-          ((read*) (lambda (wait? dst start count)
+          ((read)  (lambda (wait? dst start count)
                      (buffer-range?! dst start count)
                      (if (< 0 count)
                          (let* ((i     pos)
@@ -66,19 +70,29 @@
                                       count)
                                (values)))
                          0)))
+          ((pread) (lambda (pos dst start count)
+                     (buffer-range?! dst start count)
+                     (if (< 0 count)
+                         (let* ((i     pos)
+                                (end   (min (+ i count) (bytevector-length bv)))
+                                (count (- end i)))
+                           (if (< 0 count)
+                               (begin (mbytevector-copy! bv i dst start count) count)
+                               (values)))
+                         0)))
           ((drop)          (lambda (count)
                              (nonnegative-integer?! count)
                              (set! pos (min (bytevector-length bv) (+ pos count)))))
           ((position)      (lambda ()    pos))
-          ((set-position!) (lambda (new) (let ((size (bytevector-length bv)))
-                                           (if new
-                                               (begin (nonnegative-integer?! new)
-                                                      (set! pos (min size new)))
-                                               (set! pos size)))))
+          ((set-position!) (lambda (new) (if new
+                                             (begin (nonnegative-integer?! new)
+                                                    (set! pos (min (bytevector-length bv) new)))
+                                             (set! pos (bytevector-length bv)))))
           ((close)         (lambda ()    (values)))
           (else            (error "not an input-bytevector method" method)))
         arg*))))
 
+;; TODO: make this minimally thread safe once we have synchronization primitives
 (define (open-output-bytevector)
   (mlet ((pos 0) (size 0) (buf (make-mbytevector 16 0)))
     (define (grow! size.min)
@@ -90,13 +104,22 @@
     (lambda (method . arg*)
       (apply
         (case method
-          ((write*)        (lambda (wait? src start count)
+          ((write)         (lambda (wait? src start count)
                              (buffer-range?! src start count)
-                             (let ((size.min (+ pos count)))
+                             (let* ((pos.current pos) (size.min (+ pos.current count)))
                                (when (< size size.min)
                                  (grow! size.min)
                                  (set! size size.min))
-                               (mbytevector-copy! src start buf pos count))
+                               (mbytevector-copy! src start buf pos.current count)
+                               (set! pos size.min))
+                             count))
+          ((pwrite)        (lambda (pos src start count)
+                             (buffer-range?! src start count)
+                             (let* ((pos.current pos) (size.min (+ pos.current count)))
+                               (when (< size size.min)
+                                 (grow! size.min)
+                                 (set! size size.min))
+                               (mbytevector-copy! src start buf pos.current count))
                              count))
           ((flush)         (lambda ()    (values)))
           ((set-size!)     (lambda (new)
@@ -129,7 +152,10 @@
 (define null-output-port
   (lambda (method . arg*)
     (apply (case method
-             ((write*)        (lambda (wait? src start count)
+             ((write)         (lambda (wait? src start count)
+                                (buffer-range?! src start count)
+                                count))
+             ((pwrite)        (lambda (pos src start count)
                                 (buffer-range?! src start count)
                                 count))
              ((flush)         (lambda ()    (values)))
@@ -144,10 +170,13 @@
   (lambda (method . arg*)
     (apply
       (case method
-        ((peek*)         (lambda (skip wait? dst start count)
+        ((peek)          (lambda (skip wait? dst start count)
                            (buffer-range?! dst start count)
                            (if (< 0 count) (values) 0)))
-        ((read*)         (lambda (wait? dst start count)
+        ((read)          (lambda (wait? dst start count)
+                           (buffer-range?! dst start count)
+                           (if (< 0 count) (values) 0)))
+        ((pread)         (lambda (pos dst start count)
                            (buffer-range?! dst start count)
                            (if (< 0 count) (values) 0)))
         ((drop)          (lambda (count) (values)))
@@ -161,12 +190,17 @@
   (lambda (method . arg*)
     (apply
       (case method
-        ((peek*) (lambda (skip wait? dst start count)
+        ((peek)  (lambda (skip wait? dst start count)
                    (buffer-range?! dst start count)
                    (if (< 0 count)
                        (begin (mbytevector-fill! dst byte start count) count)
                        0)))
-        ((read*) (lambda (wait? dst start count)
+        ((read)  (lambda (wait? dst start count)
+                   (buffer-range?! dst start count)
+                   (if (< 0 count)
+                       (begin (mbytevector-fill! dst byte start count) count)
+                       0)))
+        ((pread) (lambda (pos dst start count)
                    (buffer-range?! dst start count)
                    (if (< 0 count)
                        (begin (mbytevector-fill! dst byte start count) count)
