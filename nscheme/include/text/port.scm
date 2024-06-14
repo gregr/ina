@@ -145,6 +145,25 @@
              (else            (error "not a null-output-port method" method)))
            arg*)))
 
+(define empty-input-port
+  (lambda (method . arg*)
+    (apply
+      (case method
+        ((peek*)         (lambda (skip full? dst start count)
+                           (buffer-range?! dst start count)
+                           (if (< 0 count) (values) 0)))
+        ((read*)         (lambda (full? dst start count)
+                           (buffer-range?! dst start count)
+                           (if (< 0 count) (values) 0)))
+        ((drop)          (lambda (count) (values)))
+        ((position)      (lambda ()      0))
+        ((set-position!) (lambda (new)   (values)))
+        ((buffer?)       (lambda ()      #t))
+        ((set-buffer?!)  (lambda (b?)    (values)))
+        ((close)         (lambda ()      (values)))
+        (else            (error "not an empty-input-port method" method)))
+      arg*)))
+
 (define (open-constant-input-port byte)
   (lambda (method . arg*)
     (apply
