@@ -9,11 +9,9 @@
 ;;;;;;;;;;;;;
 
 ;;; All ports
-(define (port-close        p)         (p 'close))
-(define (port-buffer?      p)         (p 'buffer?))
-(define (port-set-buffer?! p buffer?) (p 'set-buffer?! buffer?))
+(define (port-close    p) (p 'close))
 ;; returns #f if port has no position
-(define (port-position     p)         (p 'position))
+(define (port-position p) (p 'position))
 
 ;;; All ports with a position
 ;; when pos is #f, set position to EOF
@@ -21,14 +19,17 @@
 
 ;;; Input ports
 (define (port-drop  p count)                      (p 'drop count))
+;; wait?: #f | partial | full
 ;; returns (values) on EOF
-(define (port-peek* p skip full? dst start count) (p 'peek* skip full? dst start count))
+(define (port-peek* p skip wait? dst start count) (p 'peek* skip wait? dst start count))
+;; wait?: #f | partial | full
 ;; returns (values) on EOF
-(define (port-read* p      full? dst start count) (p 'read* full? dst start count))
+(define (port-read* p      wait? dst start count) (p 'read* wait? dst start count))
 
 ;;; Output ports
 (define (port-flush  p)                       (p 'flush))
-(define (port-write* p full? src start count) (p 'write* full? src start count))
+;; wait?: #f | partial | full | full/flush
+(define (port-write* p wait? src start count) (p 'write* wait? src start count))
 
 ;;; Output ports with a position
 (define (port-set-size! p size) (p 'set-size! size))
@@ -42,7 +43,7 @@
     (lambda (method . arg*)
       (apply
         (case method
-          ((peek*) (lambda (skip full? dst start count)
+          ((peek*) (lambda (skip wait? dst start count)
                      (buffer-range?! dst start count)
                      (if (< 0 count)
                          (let* ((i     (+ pos skip))
@@ -53,7 +54,7 @@
                                       count)
                                (values)))
                          0)))
-          ((read*) (lambda (full? dst start count)
+          ((read*) (lambda (wait? dst start count)
                      (buffer-range?! dst start count)
                      (if (< 0 count)
                          (let* ((i     pos)
@@ -74,8 +75,6 @@
                                                (begin (nonnegative-integer?! new)
                                                       (set! pos (min size new)))
                                                (set! pos size)))))
-          ((buffer?)       (lambda ()    #t))
-          ((set-buffer?!)  (lambda (b?)  (values)))
           ((close)         (lambda ()    (values)))
           (else            (error "not an input-bytevector method" method)))
         arg*))))
@@ -91,7 +90,7 @@
     (lambda (method . arg*)
       (apply
         (case method
-          ((write*)        (lambda (full? src start count)
+          ((write*)        (lambda (wait? src start count)
                              (buffer-range?! src start count)
                              (let ((size.min (+ pos count)))
                                (when (< size size.min)
@@ -109,8 +108,6 @@
                                              (begin (nonnegative-integer?! new)
                                                     (set! pos (min size new)))
                                              (set! pos size))))
-          ((buffer?)       (lambda ()    #t))
-          ((set-buffer?!)  (lambda (b?)  (values)))
           ((close)         (lambda ()    (values)))
           ((current)       (lambda ()    (let ((current (make-mbytevector size 0)))
                                            (mbytevector-copy! buf 0 current 0 size)
@@ -132,15 +129,13 @@
 (define null-output-port
   (lambda (method . arg*)
     (apply (case method
-             ((write*)        (lambda (full? src start count)
+             ((write*)        (lambda (wait? src start count)
                                 (buffer-range?! src start count)
                                 count))
              ((flush)         (lambda ()    (values)))
              ((set-size!)     (lambda (new) (values)))
              ((position)      (lambda ()    0))
              ((set-position!) (lambda (new) (values)))
-             ((buffer?)       (lambda ()    #t))
-             ((set-buffer?!)  (lambda (b?)  (values)))
              ((close)         (lambda ()    (values)))
              (else            (error "not a null-output-port method" method)))
            arg*)))
@@ -149,17 +144,15 @@
   (lambda (method . arg*)
     (apply
       (case method
-        ((peek*)         (lambda (skip full? dst start count)
+        ((peek*)         (lambda (skip wait? dst start count)
                            (buffer-range?! dst start count)
                            (if (< 0 count) (values) 0)))
-        ((read*)         (lambda (full? dst start count)
+        ((read*)         (lambda (wait? dst start count)
                            (buffer-range?! dst start count)
                            (if (< 0 count) (values) 0)))
         ((drop)          (lambda (count) (values)))
         ((position)      (lambda ()      0))
         ((set-position!) (lambda (new)   (values)))
-        ((buffer?)       (lambda ()      #t))
-        ((set-buffer?!)  (lambda (b?)    (values)))
         ((close)         (lambda ()      (values)))
         (else            (error "not an empty-input-port method" method)))
       arg*)))
@@ -168,12 +161,12 @@
   (lambda (method . arg*)
     (apply
       (case method
-        ((peek*) (lambda (skip full? dst start count)
+        ((peek*) (lambda (skip wait? dst start count)
                    (buffer-range?! dst start count)
                    (if (< 0 count)
                        (begin (mbytevector-fill! dst byte start count) count)
                        0)))
-        ((read*) (lambda (full? dst start count)
+        ((read*) (lambda (wait? dst start count)
                    (buffer-range?! dst start count)
                    (if (< 0 count)
                        (begin (mbytevector-fill! dst byte start count) count)
@@ -181,8 +174,6 @@
         ((drop)          (lambda (count) (values)))
         ((position)      (lambda ()      0))
         ((set-position!) (lambda (new)   (values)))
-        ((buffer?)       (lambda ()      #t))
-        ((set-buffer?!)  (lambda (b?)    (values)))
         ((close)         (lambda ()      (values)))
         (else            (error "not a constant-input-port method" method)))
       arg*)))
