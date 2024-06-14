@@ -1,8 +1,9 @@
 (define (buffer-range?! buf start count)
   (nonnegative-integer?! start)
   (nonnegative-integer?! count)
-  (unless (<= (+ start count) (mbytevector-length buf))
-    (error "buffer range out of bounds" start count (mbytevector-length buf))))
+  (let ((len (if (mbytevector? buf) (mbytevector-length buf) (bytevector-length buf))))
+    (unless (<= (+ start count) len)
+      (error "buffer range out of bounds" start count len))))
 
 ;;;;;;;;;;;;;
 ;;; Ports ;;;
@@ -92,6 +93,35 @@
           (else            (error "not an input-bytevector method" method)))
         arg*))))
 
+(define (open-output-mbytevector buf)
+  (mlet ((pos 0))
+    (lambda (method . arg*)
+      (apply
+        (case method
+          ((write)         (lambda (wait? src start count)
+                             (buffer-range?! src start count)
+                             (let* ((pos.current pos)
+                                    (count (min (- (mbytevector-length buf) pos.current) count)))
+                               (mbytevector-copy! src start buf pos.current count)
+                               (set! pos (+ pos.current count))
+                               count)))
+          ((pwrite)        (lambda (pos src start count)
+                             (buffer-range?! src start count)
+                             (let* ((pos.current pos)
+                                    (count (min (- (mbytevector-length buf) pos.current) count)))
+                               (mbytevector-copy! src start buf pos.current count)
+                               count)))
+          ((flush)         (lambda ()    (values)))
+          ((set-size!)     (lambda (new) (values)))
+          ((position)      (lambda ()    pos))
+          ((set-position!) (lambda (new) (if new
+                                             (begin (nonnegative-integer?! new)
+                                                    (set! pos (min (mbytevector-length buf) new)))
+                                             (set! pos (mbytevector-length buf)))))
+          ((close)         (lambda ()    (values)))
+          (else            (error "not an output-mbytevector method" method)))
+        arg*))))
+
 ;; TODO: make this minimally thread safe once we have synchronization primitives
 (define (open-output-bytevector)
   (mlet ((pos 0) (size 0) (buf (make-mbytevector 16 0)))
@@ -140,10 +170,11 @@
 
 (define (output-bytevector-current p) (p 'current))
 
-(define (call-with-input-bytevector bv k) (k (open-input-bytevector bv)))
-(define (call-with-output-bytevector   k) (let ((out (open-output-bytevector)))
-                                            (k out)
-                                            (output-bytevector-current out)))
+(define (call-with-input-bytevector   bv  k) (k (open-input-bytevector bv)))
+(define (call-with-output-mbytevector mbv k) (k (open-output-mbytevector mbv)))
+(define (call-with-output-bytevector      k) (let ((out (open-output-bytevector)))
+                                               (k out)
+                                               (output-bytevector-current out)))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Other ports ;;;

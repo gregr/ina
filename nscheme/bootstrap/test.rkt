@@ -1092,6 +1092,16 @@
           (port-write out #t buf 3 (- (mbytevector-length buf) 3)))))))
   ==>
   #"ABCtestingKLMNOPQRST"
+  (let ((buf (make-mbytevector 20 0)))
+    (call-with-output-mbytevector
+     buf
+     (lambda (out)
+       (let ((src #"testing 4 5 6 7 8 9 10 11"))
+         (port-write out #t src 0 8)
+         (port-write out #t src 10 (- (bytevector-length src) 10))
+         (mbytevector->bytevector buf)))))
+  ==>
+  #"testing 5 6 7 8 9 10"
 
   ! string-writing
   (number->string -1)
