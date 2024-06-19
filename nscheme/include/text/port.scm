@@ -178,11 +178,8 @@
                                  (unless (= (state-pos st) new)
                                    (set! state (make-state new size (state-buf st))))))))
           ((close)         (lambda () (values)))
-          ((current)       (lambda () (let* ((st      state)
-                                             (size    (state-size st))
-                                             (current (make-mbytevector size 0)))
-                                        (mbytevector-copy! (state-buf st) 0 current 0 size)
-                                        (mbytevector->bytevector current))))
+          ((current)       (lambda () (let ((st state)) (mbytevector->bytevector (state-buf st) 0
+                                                                                 (state-size st)))))
           (else            (error "not an output-bytevector method" method)))
         arg*))))
 

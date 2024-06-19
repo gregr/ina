@@ -24,9 +24,10 @@
   string->symbol symbol->string
   cons car cdr
   vector vector-length vector-ref
-  make-mvector mvector->vector mvector-length mvector-ref mvector-set!
+  make-mvector mvector->vector mvector-slice mvector-length mvector-ref mvector-set!
   bytevector bytevector-length bytevector-ref
-  make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
+  make-mbytevector mbytevector->bytevector mbytevector-slice
+  mbytevector-length mbytevector-ref mbytevector-set!
   bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
   bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
   numerator denominator = <= >= < > + - * /
@@ -294,7 +295,12 @@
 (define (mvector-length  mv)     (vector-length (mvector-v mv)))
 (define (mvector-ref     mv i)   (vector-ref    (mvector-v mv) i))
 (define (mvector-set!    mv i x) (vector-set!   (mvector-v mv) i x))
-(define (mvector->vector mv)     (vector-copy   (mvector-v mv)))
+(define (mvector-slice mv start count)
+  (mvector:new (vector-copy (mvector-v mv) start (+ start count))))
+(define mvector->vector
+  (case-lambda
+    ((mv)             (vector-copy (mvector-v mv)))
+    ((mv start count) (vector-copy (mvector-v mv) start (+ start count)))))
 
 (define (bytevector->string bv) (bytes->string/utf-8 bv))
 (define (string->bytevector bv) (string->bytes/utf-8 bv))
@@ -305,10 +311,15 @@
 (define (bytevector-ref    bv i) (bytes-ref bv i))
 
 (define (make-mbytevector        len n)   (mbytevector:new (make-bytes len n)))
-(define (mbytevector->bytevector mbv)     (bytes-copy        (mbytevector-bv mbv)))
 (define (mbytevector-length      mbv)     (bytevector-length (mbytevector-bv mbv)))
 (define (mbytevector-ref         mbv i)   (bytevector-ref    (mbytevector-bv mbv) i))
 (define (mbytevector-set!        mbv i n) (bytes-set!        (mbytevector-bv mbv) i n))
+(define (mbytevector-slice mbv start count)
+  (mbytevector:new (subbytes (mbytevector-bv mbv) start (+ start count))))
+(define mbytevector->bytevector
+  (case-lambda
+    ((mbv)             (bytes-copy (mbytevector-bv mbv)))
+    ((mbv start count) (subbytes   (mbytevector-bv mbv) start (+ start count)))))
 
 (define (make-case-clause param body) (vector param body))
 (define (case-clause-param cc)        (vector-ref cc 0))
@@ -387,9 +398,10 @@
   string->symbol symbol->string
   cons car cdr
   vector vector-length vector-ref
-  make-mvector mvector->vector mvector-length mvector-ref mvector-set!
+  make-mvector mvector->vector mvector-slice mvector-length mvector-ref mvector-set!
   bytevector bytevector-length bytevector-ref
-  make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
+  make-mbytevector mbytevector->bytevector mbytevector-slice
+  mbytevector-length mbytevector-ref mbytevector-set!
   bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
   bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
   numerator denominator = <= >= < > + - * /
