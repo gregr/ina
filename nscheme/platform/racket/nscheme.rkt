@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  apply/values case case1 let-values assert mlet mdefine interruptible-lambda
+  apply/values case-values case case1 let-values assert mlet mdefine interruptible-lambda
   ;; privileged primitives
   panic-handler native-signal-handler
   ;; procedure-metadata returns a vector with this shape:
@@ -415,6 +415,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-syntax-rule (apply/values rator vrand) (call-with-values (lambda () vrand) rator))
+(define-syntax-rule (case-values e.values case-clauses ...)
+  (apply/values (case-lambda case-clauses ...) e.values))
 
 (define-syntax case
   (syntax-rules (else =>)
