@@ -21,6 +21,7 @@
 (include "../include/base/restart.scm")
 (include "../include/base/raise.scm")
 
+(include "../include/text/stream.scm")
 (include "../include/text/port.scm")
 (include "../include/text/terminal-control.scm")
 
@@ -74,7 +75,8 @@
      )))
 (define def*.text
   (file-name*->stx*
-   '("../include/text/port.scm"
+   '("../include/text/stream.scm"
+     "../include/text/port.scm"
      "../include/text/terminal-control.scm"
      )))
 (define def*.syntax

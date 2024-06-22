@@ -1066,30 +1066,30 @@
   ! bytevector-ports
   (call-with-output-bytevector
    (lambda (out)
-     (port-set-size! out 2)
+     (oport-set-size! out 2)
      (call-with-input-bytevector
       #"testing 1 2 3"
       (lambda (in)
         (let ((buf (make-mbytevector 18 0)))
           (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
-          (port-read in #t buf 5 6)
-          (port-read in #t buf 11 5)
-          (port-write out #t buf 0 3)
-          (port-write out #t buf 3 (- (mbytevector-length buf) 3)))))))
+          (iport-read in buf 5 6)
+          (iport-read in buf 11 5)
+          (oport-write out buf 0 3)
+          (oport-write out buf 3 (- (mbytevector-length buf) 3)))))))
   ==>
   #"ABCDEtesting 1 2QR"
   (call-with-output-bytevector
    (lambda (out)
-     (port-set-size! out 2)
+     (oport-set-size! out 2)
      (call-with-input-bytevector
       #"testing"
       (lambda (in)
         (let ((buf (make-mbytevector 20 0)))
           (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
-          (port-read in #t buf 3 2)
-          (port-read in #t buf 5 (- (mbytevector-length buf) 5))
-          (port-write out #t buf 0 3)
-          (port-write out #t buf 3 (- (mbytevector-length buf) 3)))))))
+          (iport-read in buf 3 2)
+          (iport-read in buf 5 (- (mbytevector-length buf) 5))
+          (oport-write out buf 0 3)
+          (oport-write out buf 3 (- (mbytevector-length buf) 3)))))))
   ==>
   #"ABCtestingKLMNOPQRST"
   (let ((buf (make-mbytevector 20 0)))
@@ -1097,8 +1097,9 @@
      buf
      (lambda (out)
        (let ((src #"testing 4 5 6 7 8 9 10 11"))
-         (port-write out #t src 0 8)
-         (port-write out #t src 10 (- (bytevector-length src) 10))
+         (oport-write out src 0 8)
+         (oport-write out src 10 (- (bytevector-length src) 10))
+         (oport-flush out)
          (mbytevector->bytevector buf)))))
   ==>
   #"testing 5 6 7 8 9 10"
