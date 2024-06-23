@@ -6,20 +6,17 @@
     (unless (<= (+ start min-count) (+ start desired-count) len)
       (error "buffer range out of bounds" start min-count desired-count len))))
 
+;;; Improper use of a stream operation will panic.
+;;; Proper use of a stream operation may still fail by raising an IO exception.
+
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Input streams ;;;
 ;;;;;;;;;;;;;;;;;;;;;
 
 ;;; All input streams
 
-;; Returns one of the following:
-;; - #f
-;; - eof
-;; - closed
-;; - (error . ,description)
-(define (istream-status    s)                           (s 'status))
 (define (istream-close     s)                           (s 'close))
-;; These both return (values) on EOF or amount read.  Check status if less is read than expected.
+;; These both return (values) on EOF or amount read.
 (define (istream-read-byte s)                           (s 'read-byte))
 (define (istream-read      s dst start min-count count) (s 'read dst start min-count count))
 ;; returns #f if stream does not have a position
@@ -29,7 +26,7 @@
 
 ;; When pos is #f, set position to EOF
 (define (istream-set-position! s pos)                 (s 'set-position! pos))
-;; Returns (values) on EOF or amount read.  Check status if less is read than expected.
+;; Returns (values) on EOF or amount read.
 (define (istream-pread         s pos dst start count) (s 'pread pos dst start count))
 
 ;;;;;;;;;;;;;;;;;;;;;;
@@ -38,15 +35,9 @@
 
 ;;; All output streams
 
-;; Returns one of the following:
-;; - #f
-;; - full
-;; - closed
-;; - (error . ,description)
-(define (ostream-status     s)                           (s 'status))
 (define (ostream-close      s)                           (s 'close))
-;; These both return the amount written.  Check status if less is written than expected.
 (define (ostream-write-byte s byte)                      (s 'write-byte byte))
+;; Returns the "amount" written, where: (<= min-count amount count)
 (define (ostream-write      s src start min-count count) (s 'write src start min-count count))
 ;; Returns #f if stream does not have a position
 (define (ostream-position   s)                           (s 'position))
@@ -56,7 +47,6 @@
 ;; When pos is #f, set position to EOF
 (define (ostream-set-position! s pos)                 (s 'set-position! pos))
 (define (ostream-set-size!     s size)                (s 'set-size! size))
-;; Returns the amount written.  Check status if less is written than expected.
 (define (ostream-pwrite        s pos src start count) (s 'pwrite pos src start count))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -109,7 +99,6 @@
                                                       (set! pos (min len new)))
                                                (set! pos len))))
             ((close)         (lambda ()    (values)))
-            ((status)        (lambda ()    (and (= pos len) 'eof)))
             (else            (error "not a bytevector-istream method" method)))
           arg*)))))
 
@@ -145,7 +134,6 @@
                                                     (set! pos (min (mbytevector-length buf) new)))
                                              (set! pos (mbytevector-length buf)))))
           ((close)         (lambda ()    (values)))
-          ((status)        (lambda ()    (and (= pos (mbytevector-length buf)) 'full)))
           (else            (error "not an mbytevector-ostream method" method)))
         arg*))))
 
@@ -207,7 +195,6 @@
                                                                  (min end.st new))
                                                           end.st))))
           ((close)         (lambda ()    (values)))
-          ((status)        (lambda ()    #f))
           ((current)       (lambda ()    (mbytevector->bytevector buf.st 0 end.st)))
           (else            (error "not a bytevector-ostream method" method)))
         arg*))))
@@ -232,7 +219,6 @@
              ((set-size!)     (lambda (new) (values)))
              ((position)      (lambda ()    0))
              ((close)         (lambda ()    (values)))
-             ((status)        (lambda ()    #f))
              (else            (error "not a null-ostream method" method)))
            arg*)))
 
@@ -246,7 +232,6 @@
              ((set-size!)     (lambda (new) (values)))
              ((position)      (lambda ()    0))
              ((close)         (lambda ()    (values)))
-             ((status)        (lambda ()    'full))
              (else            (error "not a full-ostream method" method)))
            arg*)))
 
@@ -264,7 +249,6 @@
         ((set-position!) (lambda (new) (values)))
         ((position)      (lambda ()    0))
         ((close)         (lambda ()    (values)))
-        ((status)        (lambda ()    'eof))
         (else            (error "not an empty-istream method" method)))
       arg*)))
 
@@ -286,6 +270,5 @@
         ((set-position!) (lambda (new) (values)))
         ((position)      (lambda ()    0))
         ((close)         (lambda ()    (values)))
-        ((status)        (lambda ()    #f))
         (else            (error "not a constant-istream method" method)))
       arg*)))

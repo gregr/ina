@@ -1,3 +1,6 @@
+;;; Improper use of a port operation will panic.
+;;; Proper use of a port operation may still fail by raising an IO exception.
+
 ;;;;;;;;;;;;;;;;;;;
 ;;; Input ports ;;;
 ;;;;;;;;;;;;;;;;;;;
@@ -25,8 +28,6 @@
              buf)
            buf))))
 
-  ;;; All input ports
-
   (define (iport-stream p) (mvector-ref p 0))
 
   (define istream->iport
@@ -52,12 +53,6 @@
       (case-lambda
         ((p)      (go p default-iport-buffer-size))
         ((p size) (positive-integer?! size) (go p size)))))
-
-  (define (iport-status p)
-    (cond ((< (iport-pos p) (iport-end p)) #f)
-          ((iport-eof? p)                  'eof)
-          ((iport-stream p) => (lambda (s) (istream-status s)))
-          (else                            'closed)))
 
   (define (iport-close p)
     (let ((s (iport-stream p)))
@@ -120,7 +115,7 @@
                       (fill-and-peek new len))
                     (fill-and-peek buf len)))))))
 
-  ;; Returns (values) on EOF or amount read.  Check status if less is read than expected.
+  ;; Returns (values) on EOF or amount read.
   (define (iport-read-byte p)
     (let ((buf (iport-buffer p)) (pos (iport-pos p)) (end (iport-end p)))
       (cond
@@ -133,7 +128,7 @@
                             (iport-set-end! p amount)
                             (mbytevector-ref buf 0))))))))
 
-  ;; Returns (values) on EOF or amount read.  Check status if less is read than expected.
+  ;; Returns (values) on EOF or amount read.
   (define iport-read
     (let ((go (lambda (p dst start min-count count)
                 (buffer-range?! dst start min-count count)
@@ -192,7 +187,7 @@
     (iport-set-pos! p 0)
     (iport-set-end! p 0))
 
-  ;; returns (values) on EOF or error (check status)
+  ;; returns (values) on EOF or amount read.
   (define (iport-pread p pos dst start count)
     (istream-pread (iport-stream p) pos dst start count)))
 
@@ -208,8 +203,6 @@
    (define (oport-set-stream! p x) (mvector-set! p 0 x))
    (define (oport-set-buffer! p x) (mvector-set! p 1 x))
    (define (oport-set-pos!    p x) (mvector-set! p 2 x)))
-
-  ;;; All output ports
 
   (define (oport-stream p) (mvector-ref p 0))
 
@@ -231,10 +224,6 @@
         ((p)      (go p default-oport-buffer-size))
         ((p size) (nonnegative-integer?! size) (go p size)))))
 
-  (define (oport-status p)
-    (cond ((oport-stream p) => (lambda (s) (ostream-status s)))
-          (else 'closed)))
-
   (define (oport-close p)
     (let ((s (oport-stream p)))
       (when s
@@ -243,16 +232,10 @@
         (oport-set-buffer! p #f)
         (ostream-close s))))
 
-  ;; returns #f if the flush is incomplete (check status)
   (define (oport-flush p)
     (let ((pos (oport-pos p)))
-      (let ((amount (ostream-write (oport-stream p) (oport-buffer p) 0 pos pos)))
-        (if (< amount pos)
-            (let ((buf (oport-buffer p)))
-              (mbytevector-copy! buf amount buf 0 (- pos amount))
-              (oport-set-pos! p 0)
-              #f)
-            (begin (oport-set-pos! p 0) #t)))))
+      (ostream-write (oport-stream p) (oport-buffer p) 0 pos pos)
+      (oport-set-pos! p 0)))
 
   (define (oport-write-byte p byte)
     (let* ((buf       (oport-buffer p))
@@ -273,6 +256,7 @@
                          (oport-set-pos! p (+ pos 1))
                          1))))
 
+  ;; Returns the "amount" written, where: (<= min-count amount count)
   (define oport-write
     (let ((go (lambda (p src start min-count count)
                 (buffer-range?! src start min-count count)
