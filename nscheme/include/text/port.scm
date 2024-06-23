@@ -301,7 +301,7 @@
 (define (open-input-mbytevector  src) (istream->iport (open-mbytevector-istream src)))
 (define (open-input-bytevector   src) (istream->iport (open-bytevector-istream  src)))
 (define (open-output-mbytevector dst) (ostream->oport (open-mbytevector-ostream dst)))
-(define (open-output-bytevector)      (ostream->oport (open-bytevector-ostream)))
+(define (open-output-bytevector . x*) (ostream->oport (apply open-bytevector-ostream x*)))
 (define (output-bytevector-current p) (oport-flush p) (bytevector-ostream-current (oport-stream p)))
 
 (define (call-with-input-bytevector   bv  k) (k (open-input-bytevector bv)))
