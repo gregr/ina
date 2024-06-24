@@ -1,5 +1,5 @@
 ;;; Improper use of a port operation will panic.
-;;; Proper use of a port operation may still fail by raising an IO exception.
+;;; Proper use of a port operation may still fail by raising an io-error.
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Input ports ;;;

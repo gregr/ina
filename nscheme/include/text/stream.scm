@@ -7,7 +7,13 @@
       (error "buffer range out of bounds" start min-count desired-count len))))
 
 ;;; Improper use of a stream operation will panic.
-;;; Proper use of a stream operation may still fail by raising an IO exception.
+;;; Proper use of a stream operation may still fail by raising an io-error.
+
+(define-values (io-error:kind io-error? io-error-operation)
+  (make-exception-kind-etc error:kind 'io-error '#(operation)))
+(define (make-io-error desc op) (make-exception io-error:kind (vector desc op)))
+(define (raise-io-error . x*) (raise (apply make-io-error x*)))
+(define (raise-full-ostream-io-error op) (raise-io-error "not enough space in ostream" op))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Input streams ;;;
@@ -103,34 +109,42 @@
           arg*)))))
 
 (define (open-mbytevector-ostream buf)
-  (mlet ((pos 0))
+  (mlet ((pos.st 0))
+    (define (full-error pos.current . x*)
+      (raise-full-ostream-io-error
+        (list (list 'mbytevector-ostream pos.current (mbytevector-length buf)) x*)))
     (lambda (method . arg*)
       (apply
         (case method
           ((write)         (lambda (src start min-count count)
                              (buffer-range?! src start min-count count)
-                             (let* ((pos.current pos)
-                                    (count (min (- (mbytevector-length buf) pos.current) count)))
-                               (mbytevector-copy! src start buf pos.current count)
-                               (set! pos (+ pos.current count))
-                               (max count min-count))))
+                             (let* ((pos.current pos.st)
+                                    (amount (min (- (mbytevector-length buf) pos.current) count)))
+                               (mbytevector-copy! src start buf pos.current amount)
+                               (set! pos.st (+ pos.current amount))
+                               (when (< amount min-count)
+                                 (full-error pos.current 'write start min-count count))
+                               count)))
           ((pwrite)        (lambda (pos src start count)
                              (buffer-range?! src start count count)
                              (let* ((pos.current pos)
-                                    (count (min (- (mbytevector-length buf) pos.current) count)))
-                               (mbytevector-copy! src start buf pos.current count))))
-          ((write-byte)    (lambda (byte)
-                             (let ((i pos))
-                               (when (< i (mbytevector-length buf))
-                                 (mbytevector-set! buf i byte)
-                                 (set! pos (+ i 1))))))
-          ((set-size!)     (lambda (new) (values)))
-          ((position)      (lambda ()    pos))
-          ((set-position!) (lambda (new) (if new
-                                             (begin (nonnegative-integer?! new)
-                                                    (set! pos (min (mbytevector-length buf) new)))
-                                             (set! pos (mbytevector-length buf)))))
-          ((close)         (lambda ()    (values)))
+                                    (amount (min (- (mbytevector-length buf) pos.current) count)))
+                               (mbytevector-copy! src start buf pos.current amount)
+                               (when (< amount count)
+                                 (full-error pos.st 'pwrite pos start count)))))
+          ((write-byte)    (lambda (byte) (let ((i pos.st))
+                                            (unless (< i (mbytevector-length buf))
+                                              (full-error i 'write-write byte))
+                                            (mbytevector-set! buf i byte)
+                                            (set! pos.st (+ i 1)))))
+          ((set-size!)     (lambda (new)  (values)))
+          ((position)      (lambda ()     pos.st))
+          ((set-position!) (lambda (new)  (if new
+                                              (begin
+                                                (nonnegative-integer?! new)
+                                                (set! pos.st (min (mbytevector-length buf) new)))
+                                              (set! pos.st (mbytevector-length buf)))))
+          ((close)         (lambda ()     (values)))
           (else            (error "not an mbytevector-ostream method" method)))
         arg*))))
 
@@ -224,14 +238,21 @@
 
 (define full-ostream
   (lambda (method . arg*)
+    (define (full-error . x*) (raise-full-ostream-io-error (list 'full-ostream x*)))
     (apply (case method
-             ((write)         (lambda (src start min-count count) min-count))
-             ((pwrite)        (lambda (pos src start count)       (values)))
-             ((write-byte)    (lambda (b)                         (values)))
-             ((set-position!) (lambda (new)                       (values)))
-             ((set-size!)     (lambda (new)                       (values)))
-             ((position)      (lambda ()                          0))
-             ((close)         (lambda ()                          (values)))
+             ((write)         (lambda (src start min-count count)
+                                (buffer-range?! src start min-count count)
+                                (when (< 0 min-count) (full-error 'write start min-count count))
+                                0))
+             ((pwrite)        (lambda (pos src start count)
+                                (buffer-range?! src start count count)
+                                (when (< 0 count) (full-error 'pwrite pos start count))
+                                (values)))
+             ((write-byte)    (lambda (b)   (full-error 'write-byte b)))
+             ((set-size!)     (lambda (new) (values)))
+             ((set-position!) (lambda (new) (values)))
+             ((position)      (lambda ()    0))
+             ((close)         (lambda ()    (values)))
              (else            (error "not a full-ostream method" method)))
            arg*)))
 

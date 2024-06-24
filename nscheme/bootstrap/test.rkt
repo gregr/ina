@@ -1102,6 +1102,24 @@
          (oport-flush out)
          (mbytevector->bytevector buf)))))
   ==>
+  error:eval
+  ;#(panic
+  ;  (raise
+  ;   (#(error #(description) io-error #(operation))
+  ;    .
+  ;    #("not enough space in ostream"
+  ;      ((mbytevector-ostream 0 20) (write 0 23 23))))))
+  (let ((buf (make-mbytevector 20 0)))
+    (call-with-output-mbytevector
+     buf
+     (lambda (out)
+       (let* ((src    #"testing 4 5 6 7 8 9 10 11")
+              (amount (oport-write out src 0 8)))
+         (oport-write out src 10 (min (- (bytevector-length src) 10)
+                                      (- (mbytevector-length buf) amount)))
+         (oport-flush out)
+         (mbytevector->bytevector buf)))))
+  ==>
   #"testing 5 6 7 8 9 10"
 
   ! string-writing
