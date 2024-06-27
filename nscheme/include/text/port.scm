@@ -309,11 +309,11 @@
                                                (let-values ((x* (k p)))
                                                  (oport-close p)
                                                  (apply values x*))))
-(define (call-with-output-bytevector      k) (let ((out (open-output-bytevector)))
+(define (call-with-output-bytevector      k) (let* ((out (open-output-bytevector))
+                                                    (s   (oport-stream out)))
                                                (k out)
-                                               (let ((result (output-bytevector-current out)))
-                                                 (oport-close out)
-                                                 result)))
+                                               (oport-close out)
+                                               (bytevector-ostream-current s)))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Other ports ;;;
