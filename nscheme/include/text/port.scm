@@ -307,12 +307,12 @@
 (define (call-with-input-bytevector   bv  k) (k (open-input-bytevector bv)))
 (define (call-with-output-mbytevector mbv k) (let ((p (open-output-mbytevector mbv)))
                                                (let-values ((x* (k p)))
-                                                 (oport-close p)
+                                                 (oport-flush p)
                                                  (apply values x*))))
 (define (call-with-output-bytevector      k) (let* ((out (open-output-bytevector))
                                                     (s   (oport-stream out)))
                                                (k out)
-                                               (oport-close out)
+                                               (oport-flush out)
                                                (bytevector-ostream-current s)))
 
 ;;;;;;;;;;;;;;;;;;;
