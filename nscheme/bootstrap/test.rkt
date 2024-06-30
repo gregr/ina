@@ -43,7 +43,7 @@
         (pretty-write (E-pretty E)))
       (when show-compiled-racket?
         (displayln "EQUIVALENT RACKET CODE:")
-        (pretty-write (E-compile-rkt E)))
+        (pretty-write (E-compile-rkt E '())))
       (with-handlers ((vector? (lambda (c)
                                  (when (< 0 verbosity)
                                    (displayln "EVALUATION ERROR:")

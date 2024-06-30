@@ -19,7 +19,7 @@
      (displayln "PRETTY PARSED:")
      (pretty-write (E-pretty E))
      (displayln "EQUIVALENT RACKET CODE:")
-     (pretty-write (E-compile-rkt E))
+     (pretty-write (E-compile-rkt E '()))
      (displayln "VALUE:")
      (pretty-write (E-eval E)))))
 
