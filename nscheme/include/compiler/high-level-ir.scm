@@ -11,7 +11,6 @@
 ;; - E:unchecked-call, E:let with type info, E:case-lambda with type info, etc.
 ;; TODO: we may want to return to the embedded annotation model for simpler pattern matching.
 (define (E:annotated    E ann)          (vector 'E:annotated    E ann))
-(define (E:prim         name)           (vector 'E:prim         name))
 (define (E:quote        v)              (vector 'E:quote        v))
 (define (E:ref          address)        (vector 'E:ref          address))
 (define (E:if           c t f)          (vector 'E:if           c t f))
@@ -23,7 +22,6 @@
 (define (E-tag                   E)     (vector-ref E 0))
 (define (E-tagged?               E tag) (eq? (E-tag E) tag))
 (define (E:annotated?            E)     (E-tagged? E 'E:annotated))
-(define (E:prim?                 E)     (E-tagged? E 'E:prim))
 (define (E:quote?                E)     (E-tagged? E 'E:quote))
 (define (E:ref?                  E)     (E-tagged? E 'E:ref))
 (define (E:if?                   E)     (E-tagged? E 'E:if))
@@ -33,7 +31,6 @@
 (define (E:letrec?               E)     (E-tagged? E 'E:letrec))
 (define (E:annotated-E           E)     (vector-ref E 1))
 (define (E:annotated-annotation  E)     (vector-ref E 2))
-(define (E:prim-name             E)     (vector-ref E 1))
 (define (E:quote-value           E)     (vector-ref E 1))
 (define (E:ref-address           E)     (vector-ref E 1))
 (define (E:if-condition          E)     (vector-ref E 1))
@@ -63,7 +60,6 @@
   (let loop ((E E))
     (cond
       ((E:annotated?    E) (loop (E:annotated-E E)))
-      ((E:prim?         E) (list 'prim  (E:prim-name E)))
       ((E:quote?        E) (list 'quote (E:quote-value E)))
       ((E:ref?          E) (list 'ref   (address-pretty (E:ref-address E))))
       ((E:if?           E) (list 'if (loop (E:if-condition E))
@@ -168,6 +164,5 @@
                              (let ((renv (renv-extend renv loc*)))
                                (for-each (lambda (loc arg) (set-box! loc (arg renv))) loc* arg*))
                              (body (renv-extend renv (map unbox loc*)))))))
-         ((E:prim? E) (error "cannot evaluate abstract primitive" (E:prim-name E)))
          (else (error "not an expression" E))))))
   (define (E-eval E) ((E-stage E cenv.empty) renv.empty)))
