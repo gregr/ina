@@ -4,12 +4,13 @@
   ((define (append2 x* y)
      (cond ((null? x*) y)
            (else       (cons (car x*) (append2 (cdr x*) y))))))
-  (define append
-    (case-lambda
-      (()          '())
-      ((x* . rest) (let loop ((x* x*) (rest rest))
-                     (cond ((null? rest) x*)
-                           (else         (append2 x* (loop (car rest) (cdr rest))))))))))
+  (define (append* x**)
+    (if (null? x**)
+        '()
+        (let loop ((x* (car x**)) (x** (cdr x**)))
+          (cond ((null? x**) x*)
+                (else        (append2 x* (loop (car x**) (cdr x**))))))))
+  (define (append . x**) (append* x**)))
 
 (define (improper-list->list x*)
   (cond ((null? x*) '())

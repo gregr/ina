@@ -6,7 +6,7 @@
       (cond ((= i len) '())
             (else      (cons (vector-ref x i) (loop (+ i 1))))))))
 
-(define (vector-append . x*) (list->vector (apply append (map vector->list x*))))
+(define (vector-append . x*) (list->vector (append* (map vector->list x*))))
 
 (define (vector-for-each f x . x*) (apply for-each f (vector->list x) (map vector->list x*)))
 (define (vector-map      f x . x*) (list->vector
