@@ -65,14 +65,20 @@
              (lambda (env stx.lhs E.rhs) ($set-box! ($provenance (^E.box) stx.lhs) E.rhs))))
 
 (define (env-add-package! env pkg)
-  (for-each (lambda (id p)
-              (env-bind! env id vocab.expression (parse/constant-expression ($quote p))))
+  (for-each (lambda (id E) (env-bind! env id vocab.expression (parse/constant-expression E)))
             (car pkg) (cdr pkg)))
 
 (define (package->env pkg)
   (let ((env (make-env)))
     (env-add-package! env pkg)
     (env-freeze env)))
+
+(define (package-append* pkg*)   (cons (append* (map car pkg*)) (append* (map cdr pkg*))))
+(define (package-append  . pkg*) (package-append* pkg*))
+(define (package-map     pkg f)  (cons (car pkg) (map f (cdr pkg))))
+
+(define (value-package->env pkg) (package->env (package-map pkg $quote)))
+(define (addr-package->env  pkg) (package->env (package-map pkg $ref)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing helpers ;;;

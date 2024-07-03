@@ -1,8 +1,8 @@
-(define env.primitive            (package->env package.primitive))
+(define env.primitive            (value-package->env package.primitive))
 (define env.primitive.privileged (env-conjoin*
-                                   (package->env package.primitive.privileged)
-                                   (package->env package.primitive.control.low-level.privileged)))
-(define env.syntax               (package->env package.syntax))
+                                   (value-package->env package.primitive.privileged)
+                                   (value-package->env package.primitive.control.low-level.privileged)))
+(define env.syntax               (value-package->env package.syntax))
 (define env.privileged           (env-conjoin* env.minimal env.primitive env.primitive.privileged))
 (define env.unprivileged         (env-conjoin* env.minimal env.primitive))
 (define env.base                 (env-conjoin* env.unprivileged
