@@ -19,12 +19,12 @@
 (define (vocab-dict-remove* vocab=>x vocab*)
   (filter-not (lambda (vx) (memq (car vx) vocab*)) vocab=>x))
 
-(define (vocab-dict-set vocab=>x . vx*)
+(define (vocab-dict-set vocab=>x . vx*) (vocab-dict-set* vocab=>x vx*))
+(define (vocab-dict-set* vocab=>x vx*)
   (let loop ((vx* vx*) (vocab* '()) (x* '()))
-    (cond ((null? vx*) (vocab-dict-set* vocab=>x vocab* x*))
+    (cond ((null? vx*) (vocab-dict-set** vocab=>x vocab* x*))
           (else        (loop (cddr vx*) (cons (car vx*) vocab*) (cons (cadr vx*) x*))))))
-
-(define (vocab-dict-set* vocab=>x vocab* x*)
+(define (vocab-dict-set** vocab=>x vocab* x*)
   (fold-left (lambda (vocab=>x vocab x) (if x (cons (cons vocab x) vocab=>x) vocab=>x))
              (vocab-dict-remove* vocab=>x vocab*) vocab* x*))
 
@@ -32,10 +32,10 @@
 ;;; Environment helpers ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (env-bind! env id . vx*) (env-set! env id (apply vocab-dict-set vocab-dict.empty vx*)))
+(define (env-bind! env id . vx*) (env-set! env id (vocab-dict-set* vocab-dict.empty vx*)))
 (define (env-set^! env id . vx*) (let ((vocab=>v (env-ref env id)))
                                    (unless vocab=>v (error "cannot set unbound identifier" id))
-                                   (env-set! env id (apply vocab-dict-set vocab=>v vx*))))
+                                   (env-set! env id (vocab-dict-set* vocab=>v vx*))))
 (define (env-ref^  env id vocab) (let ((vocab=>v (env-ref env id)))
                                    (and vocab=>v (vocab-dict-ref vocab=>v vocab))))
 
@@ -163,7 +163,7 @@
 (define ($not                 x) ($if x ($quote #f) ($quote #t)))
 (define ($when   c body . body*) ($if c (apply $begin body body*) ($values)))
 (define ($unless c body . body*) (apply $when ($not c) body body*))
-(define ($pcall     prim . args) (apply $call ($quote prim) args))
+(define ($pcall     prim . args) ($call* ($quote prim) args))
 (define ($eq?               a b) ($pcall eq?     a b))
 (define ($eqv?              a b) ($pcall eqv?    a b))
 (define ($null?             x)   ($pcall null?   x))
@@ -360,8 +360,8 @@
                                              (env-ref^ env e.op vocab.expression-operator))))
                              (if (procedure? op)
                                  (op env stx)
-                                 (apply $call (parse-expression env e.op)
-                                        (parse-expression* env (syntax->list (cdr x)))))))
+                                 ($call* (parse-expression env e.op)
+                                         (parse-expression* env (syntax->list (cdr x)))))))
         ((literal?    x)   ($quote x))
         (else              (raise-parse-error "not an expression" stx))))
     stx))

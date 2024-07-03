@@ -1,9 +1,10 @@
 (define ($annotated    E ann)         (E-annotation-add E ann))
 (define ($quote        value)         (E:quote          value))
 (define ($ref          addr)          (E:ref            addr))
-(define ($call         rator . rand*) (E:call           rator rand*))
-(define ($apply/values rator vrand)   (E:apply/values   rator vrand))
 (define ($if           c t f)         (E:if             c t f))
+(define ($apply/values rator vrand)   (E:apply/values   rator vrand))
+(define ($call*        rator rand*)   (E:call           rator rand*))
+(define ($call         rator . rand*) ($call* rator rand*))
 
 (splicing-local
   ((define (param->address stx)
@@ -22,7 +23,7 @@
         (E:letrec addr* rhs* body)))))
 
 (define ($lambda param*~     ^body) ($case-lambda (list param*~) (list ^body)))
-(define ($let    param* rhs* ^body) (apply $call ($lambda param* ^body) rhs*))
-(define ($begin e . e*)
+(define ($let    param* rhs* ^body) ($call* ($lambda param* ^body) rhs*))
+(define ($begin  e . e*)
   (let loop ((e e) (e* e*))
     (if (null? e*) e ($apply/values ($lambda #f (lambda (_) (loop (car e*) (cdr e*)))) e))))
