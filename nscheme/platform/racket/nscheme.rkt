@@ -424,8 +424,8 @@
     ((_ x (else rhs ...))               (let () rhs ...))
     ((_ x (=> proc))                    (proc x))
     ((_ x ((d ...) rhs ...) clause ...) (if (memv x '(d ...))
-                                                (let () rhs ...)
-                                                (case x clause ...)))))
+                                            (let () rhs ...)
+                                            (case x clause ...)))))
 
 (define-syntax case1
   (syntax-rules (else =>)
