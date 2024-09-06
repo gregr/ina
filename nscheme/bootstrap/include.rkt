@@ -39,9 +39,9 @@
 (include "../include/nscheme/program.scm")
 (include "../include/nscheme/meta.scm")
 
-(include "../include/platform/primitive.scm")
-(include "../include/platform/primitive-privileged.scm")
-(include "../include/platform/primitive-control-low-level-privileged.scm")
+(include "../include/platform/common.scm")
+(include "../include/platform/privileged.scm")
+(include "../include/platform/low-level/control.scm")
 
 (define-runtime-path path.here ".")
 
@@ -98,9 +98,9 @@
      )))
 (define def*.primitive
   (file-name*->stx*
-   '("../include/platform/primitive.scm"
-     "../include/platform/primitive-privileged.scm"
-     "../include/platform/primitive-control-low-level-privileged.scm"
+   '("../include/platform/common.scm"
+     "../include/platform/privileged.scm"
+     "../include/platform/low-level/control.scm"
      )))
 
 (include "../include/platform/bootstrap.scm")

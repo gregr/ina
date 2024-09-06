@@ -5,7 +5,7 @@
 (print-as-expression #f)
 (pretty-print-abbreviate-read-macros #f)
 
-(define env.base (env-conjoin/match (env-conjoin env.minimal env.primitive)))
+(define env.base (env-conjoin/match (env-conjoin env.minimal env.common)))
 
 (define def*.microkanren
   '(;;;;;;;;;;;;;;;;;

@@ -15,7 +15,7 @@
 ;  vectorized ops
 ;  )
 
-(define package.primitive.privileged
+(define package.privileged
   (cons
     '(
       panic-handler native-signal-handler

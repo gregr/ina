@@ -9,8 +9,7 @@
 (define verbosity 0)
 (define show-compiled-racket? (and #t (< 0 verbosity)))
 
-(define env.test.minimal
-  (env-conjoin/match (env-conjoin* env.minimal env.primitive)))
+(define env.test.tiny (env-conjoin/match (env-conjoin* env.minimal env.common)))
 
 (struct error:parse (c) #:prefab)
 (struct error:eval  (c) #:prefab)
@@ -139,7 +138,7 @@
     (run-evaluation-tests-etc env #t (test-successes test-failures) tests ...)))
 
 (run-evaluation-tests
-  env.test.minimal
+  env.test.tiny
   ! constants
   5         ==> 5
   '5        ==> 5

@@ -1,6 +1,6 @@
 ;; These primitives will be used to define high level control facilities on platforms that do not
 ;; provide such facilities directly.
-(define package.primitive.control.low-level.privileged
+(define package.control
   (cons
     '(
       native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt

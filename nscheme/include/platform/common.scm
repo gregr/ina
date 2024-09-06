@@ -1,4 +1,4 @@
-(define package.primitive
+(define package.common
   (cons
     '(
       panic apply values
