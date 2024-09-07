@@ -3,7 +3,7 @@
 (define (restart-description r) (vector-ref r 1))
 (define (restart-effector    r) (vector-ref r 2))
 
-(define current-restart* (make-dynamic-parameter '()))
+(define current-restart* (make-parameter '()))
 (define (find-restart name)
   (let ((r* (memp (lambda (r) (equal? (restart-name r) name)) (current-restart*))))
     (and r* (car r*))))
@@ -12,15 +12,10 @@
     (when r (apply (restart-effector r) arg*))))
 
 (define (with-raw-restart name desc effector thunk)
-  (with-dynamic-env-extend
-    (lambda ()
-      (current-restart* (cons (make-restart name desc effector) (current-restart*)))
-      (thunk))))
+  (current-restart* (cons (make-restart name desc effector) (current-restart*)) thunk))
 (define (with-raw-restart* nde* thunk)
-  (with-dynamic-env-extend
-    (lambda ()
-      (current-restart* (append (map (lambda (nde) (apply make-restart nde)) nde*) (current-restart*)))
-      (thunk))))
+  (current-restart* (append (map (lambda (nde) (apply make-restart nde)) nde*) (current-restart*))
+                    thunk))
 (define (with-restart name desc effector thunk)
   (let ((tag (make-escape-prompt-tag)))
     (with-escape-prompt

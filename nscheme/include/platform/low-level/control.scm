@@ -9,5 +9,4 @@
     (list
       native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
       current-raw-coroutine make-raw-coroutine
-      timer-interrupt-handler set-timer enable-interrupts disable-interrupts
-      )))
+      timer-interrupt-handler set-timer enable-interrupts disable-interrupts)))

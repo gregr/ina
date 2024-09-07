@@ -200,6 +200,12 @@ we can also support nscheme syntax object annotations, converting to srcloc?
       ((mbv)             (bytes-copy (mbytevector-bv mbv)))
       ((mbv start count) (subbytes   (mbytevector-bv mbv) start (+ start count)))))
 
+  (define (make-parameter default)
+    (let ((rkt-param (rkt:make-parameter default)))
+      (case-lambda
+        (()                (rkt-param))
+        ((new-value thunk) (parameterize ((rkt-param new-value)) (thunk))))))
+
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;; Not shared with bootstrap ;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

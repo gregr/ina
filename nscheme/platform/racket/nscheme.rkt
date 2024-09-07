@@ -18,6 +18,8 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
+  make-parameter
+
   panic apply values
   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
   pair? vector? mvector? bytevector? mbytevector?
@@ -320,6 +322,12 @@
   (case-lambda
     ((mbv)             (bytes-copy (mbytevector-bv mbv)))
     ((mbv start count) (subbytes   (mbytevector-bv mbv) start (+ start count)))))
+
+(define (make-parameter default)
+  (let ((rkt-param (rkt:make-parameter default)))
+    (case-lambda
+      (()                (rkt-param))
+      ((new-value thunk) (parameterize ((rkt-param new-value)) (thunk))))))
 
 (define (make-case-clause param body) (vector param body))
 (define (case-clause-param cc)        (vector-ref cc 0))

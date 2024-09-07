@@ -1403,15 +1403,14 @@
     (list (ind r10) (ind r10)))
   ==> ((3 6 9) (done done done))
 
-  ! dynamic-env
-  (let ((list (lambda x* x*)))
-    (list (dynamic-env-ref 'example-key 0)
-          (with-dynamic-env-extend
-            (lambda ()
-              (dynamic-env-set! 'example-key 'example-value)
-              (dynamic-env-ref 'example-key 1)))
-          (dynamic-env-ref 'example-key 2)))
-  ==> (0 example-value 2)
+  ! dynamic-parameters
+  (let ((list    (lambda x* x*))
+        (example (make-parameter 0)))
+    (let* ((a (example))
+           (b (example 'example-value example))
+           (c (example)))
+      (list a b c)))
+  ==> (0 example-value 0)
 
   ! exception-handling
   (mlet ((missing '()) (mistake* '()) (restart-binding* '()))
