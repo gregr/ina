@@ -18,14 +18,14 @@
                     thunk))
 
 (define (with-restart name desc effector thunk)
-  (with-escape-prompt
+  (with-escape
     (lambda (effector) (effector))
     (lambda (escape) (with-raw-restart
                        name desc
                        (lambda x* (escape (lambda () (apply effector x*))))
                        thunk))))
 (define (with-restart* nde* thunk)
-  (with-escape-prompt
+  (with-escape
     (lambda (effector) (effector))
     (lambda (escape)
       (with-raw-restart*

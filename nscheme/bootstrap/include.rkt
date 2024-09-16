@@ -17,7 +17,7 @@
 (include "../include/base/string.scm")
 (include "../include/base/record.scm")
 (include "../include/base/exception.scm")
-(include "../include/base/escape.scm")
+(include "../include/base/prompt.scm")
 (include "../include/base/restart.scm")
 (include "../include/base/raise.scm")
 
@@ -70,7 +70,7 @@
      "../include/base/string.scm"
      "../include/base/record.scm"
      "../include/base/exception.scm"
-     "../include/base/escape.scm"
+     "../include/base/prompt.scm"
      "../include/base/restart.scm"
      "../include/base/raise.scm"
      )))

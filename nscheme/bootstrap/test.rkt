@@ -17,7 +17,7 @@
 (define (test-eval env stx)
   (define (work-safely ^work)
     (let ((handler.old (panic-handler)))
-      (with-escape-prompt
+      (with-escape
        (lambda (x*)
          (panic-handler handler.old)
          (rkt:raise (apply vector 'panic x*)))

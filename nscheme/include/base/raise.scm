@@ -16,14 +16,14 @@
   (current-raise-handler* (append handle* (current-raise-handler*))) thunk)
 
 (define (with-raise-handler:catch catch? handle thunk)
-  (with-escape-prompt
+  (with-escape
     handle
     (lambda (escape)
       (with-raise-handler
         (lambda (exn) (when (catch? exn) (escape exn)))
         thunk))))
 (define (with-raise-handler:catch* catch?handle* thunk)
-  (with-escape-prompt
+  (with-escape
     (lambda (handle-exn) (handle-exn))
     (lambda (escape)
       (with-raise-handler*
