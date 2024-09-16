@@ -18,7 +18,11 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  make-parameter
+  make-parameter current-custodian make-custodian custodian-shutdown-all
+  current-thread thread thread/suspend-to-kill call-in-nested-thread
+  thread-suspend thread-resume thread-kill thread-wait
+  sleep
+  make-channel channel-get channel-put
 
   panic apply values
   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
@@ -91,7 +95,7 @@
      (dynamic-wind
       (lambda () (void))
       (lambda ()
-        (parameterize ((current-custodian cust))
+        (parameterize ((rkt:current-custodian cust))
           (let ((self (current-thread)))
             (thread (lambda () (thread-wait self) (custodian-shutdown-all cust))))
           (let* ((ch.result* (make-channel))
@@ -328,6 +332,13 @@
     (case-lambda
       (()                (rkt-param))
       ((new-value thunk) (parameterize ((rkt-param new-value)) (thunk))))))
+
+(define current-custodian
+  (case-lambda
+    (()                (rkt:current-custodian))
+    ((new-value thunk) (parameterize ((rkt:current-custodian new-value)) (thunk)))))
+
+(define (thread-kill t) (kill-thread t))
 
 (define (make-case-clause param body) (vector param body))
 (define (case-clause-param cc)        (vector-ref cc 0))
