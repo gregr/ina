@@ -16,23 +16,20 @@
   (current-raise-handler* (append handle* (current-raise-handler*))) thunk)
 
 (define (with-raise-handler:catch catch? handle thunk)
-  (let ((tag (make-escape-prompt-tag)))
-    (with-escape-prompt
-      tag
-      handle
+  (with-escape-prompt
+    handle
+    (lambda (escape)
       (with-raise-handler
-        (lambda (exn) (when (catch? exn) (escape-to-prompt tag exn)))
+        (lambda (exn) (when (catch? exn) (escape exn)))
         thunk))))
 (define (with-raise-handler:catch* catch?handle* thunk)
-  (let ((tag (make-escape-prompt-tag)))
-    (with-escape-prompt
-      tag
-      (lambda (handle-exn) (handle-exn))
+  (with-escape-prompt
+    (lambda (handle-exn) (handle-exn))
+    (lambda (escape)
       (with-raise-handler*
         (map (lambda (catch?handle)
                (apply (lambda (catch? handle)
-                        (lambda (exn) (when (catch? exn)
-                                        (escape-to-prompt tag (lambda () (handle exn))))))
+                        (lambda (exn) (when (catch? exn) (escape (lambda () (handle exn))))))
                       catch?handle))
              catch?handle*)
         thunk))))

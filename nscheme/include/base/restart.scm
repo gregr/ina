@@ -16,29 +16,26 @@
 (define (with-raw-restart* nde* thunk)
   (current-restart* (append (map (lambda (nde) (apply make-restart nde)) nde*) (current-restart*))
                     thunk))
+
 (define (with-restart name desc effector thunk)
-  (let ((tag (make-escape-prompt-tag)))
-    (with-escape-prompt
-      tag
-      (lambda (effector) (effector))
-      (lambda () (with-raw-restart
-                   name desc
-                   (lambda x* (escape-to-prompt tag (lambda () (apply effector x*))))
-                   thunk)))))
+  (with-escape-prompt
+    (lambda (effector) (effector))
+    (lambda (escape) (with-raw-restart
+                       name desc
+                       (lambda x* (escape (lambda () (apply effector x*))))
+                       thunk))))
 (define (with-restart* nde* thunk)
-  (let ((tag (make-escape-prompt-tag)))
-    (with-escape-prompt
-      tag
-      (lambda (effector) (effector))
-      (lambda ()
-        (with-raw-restart*
-          (map (lambda (nde)
-                 (apply (lambda (name desc effector)
-                          (list name desc
-                                (lambda x* (escape-to-prompt tag (lambda () (apply effector x*))))))
-                        nde))
-               nde*)
-          thunk)))))
+  (with-escape-prompt
+    (lambda (effector) (effector))
+    (lambda (escape)
+      (with-raw-restart*
+        (map (lambda (nde)
+               (apply (lambda (name desc effector)
+                        (list name desc
+                              (lambda x* (escape (lambda () (apply effector x*))))))
+                      nde))
+             nde*)
+        thunk))))
 (define (with-simple-restart name desc thunk) (with-restart name desc (lambda () (values)) thunk))
 
 (define (with-restart:abort desc thunk) (with-simple-restart 'abort desc thunk))

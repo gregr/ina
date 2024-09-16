@@ -7,7 +7,6 @@
   racket/file racket/include racket/local racket/pretty racket/runtime-path racket/splicing)
 
 (include "../include/base/misc.scm")
-(include "../include/base/control.scm")
 (include "../include/base/pair.scm")
 (include "../include/base/list.scm")
 (include "../include/base/number.scm")
@@ -18,6 +17,7 @@
 (include "../include/base/string.scm")
 (include "../include/base/record.scm")
 (include "../include/base/exception.scm")
+(include "../include/base/escape.scm")
 (include "../include/base/restart.scm")
 (include "../include/base/raise.scm")
 
@@ -60,7 +60,6 @@
 (define def*.base
   (file-name*->stx*
    '("../include/base/misc.scm"
-     "../include/base/control.scm"
      "../include/base/pair.scm"
      "../include/base/list.scm"
      "../include/base/number.scm"
@@ -71,6 +70,7 @@
      "../include/base/string.scm"
      "../include/base/record.scm"
      "../include/base/exception.scm"
+     "../include/base/escape.scm"
      "../include/base/restart.scm"
      "../include/base/raise.scm"
      )))
