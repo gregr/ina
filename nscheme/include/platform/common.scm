@@ -1,9 +1,6 @@
 (define package.common
   (cons
     '(
-      ;; TODO: temporary for testing
-      make-parameter
-
       panic apply values
       eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
       pair? vector? mvector? bytevector? mbytevector?
@@ -18,9 +15,6 @@
       bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
       numerator denominator = <= >= < > + - * /)
     (list
-      ;; TODO: temporary for testing
-      make-parameter
-
       panic apply values
       eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
       pair? vector? mvector? bytevector? mbytevector?

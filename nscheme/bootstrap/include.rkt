@@ -40,6 +40,7 @@
 (include "../include/nscheme/meta.scm")
 
 (include "../include/platform/common.scm")
+(include "../include/platform/control.scm")
 (include "../include/platform/privileged.scm")
 (include "../include/platform/low-level/control.scm")
 
@@ -99,6 +100,7 @@
 (define def*.primitive
   (file-name*->stx*
    '("../include/platform/common.scm"
+     "../include/platform/control.scm"
      "../include/platform/privileged.scm"
      "../include/platform/low-level/control.scm"
      )))
