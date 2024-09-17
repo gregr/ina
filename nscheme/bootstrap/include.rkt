@@ -20,6 +20,8 @@
 (include "../include/base/prompt.scm")
 (include "../include/base/restart.scm")
 (include "../include/base/raise.scm")
+(include "../include/base/coroutine.scm")
+(include "../include/base/generator.scm")
 
 (include "../include/text/stream.scm")
 (include "../include/text/port.scm")
@@ -73,6 +75,8 @@
      "../include/base/prompt.scm"
      "../include/base/restart.scm"
      "../include/base/raise.scm"
+     "../include/base/coroutine.scm"
+     "../include/base/generator.scm"
      )))
 (define def*.text
   (file-name*->stx*
