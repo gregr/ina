@@ -30,27 +30,21 @@
 (define (restart-description r) (vector-ref r 1))
 (define (restart-effector    r) (vector-ref r 2))
 
-(define current-restart* (make-parameter '()))
-(define (find-restart name)
-  (let ((r* (memp (lambda (r) (equal? (restart-name r) name)) (current-restart*))))
-    (and r* (car r*))))
-(define (invoke-restart name . arg*)
-  (let ((r (find-restart name)))
-    (when r (apply (restart-effector r) arg*))))
-
-(define (with-raw-restart name desc effector thunk)
-  (current-restart* (cons (make-restart name desc effector) (current-restart*)) thunk))
-(define (with-raw-restart* nde* thunk)
-  (current-restart* (append (map (lambda (nde) (apply make-restart nde)) nde*) (current-restart*))
-                    thunk))
+(splicing-local
+  ((define raw-current-restart* (make-parameter '())))
+  (define (current-restart*) (raw-current-restart*))
+  (define (with-raw-restart name desc effector thunk)
+    (raw-current-restart* (cons (make-restart name desc effector) (raw-current-restart*)) thunk))
+  (define (with-raw-restart* nde* thunk)
+    (raw-current-restart* (append (map (lambda (nde) (apply make-restart nde)) nde*)
+                                  (raw-current-restart*))
+                          thunk)))
 
 (define (with-restart name desc effector thunk)
   (with-escape
     (lambda (effector) (effector))
-    (lambda (escape) (with-raw-restart
-                       name desc
-                       (lambda x* (escape (lambda () (apply effector x*))))
-                       thunk))))
+    (lambda (escape)
+      (with-raw-restart name desc (lambda x* (escape (lambda () (apply effector x*)))) thunk))))
 (define (with-restart* nde* thunk)
   (with-escape
     (lambda (effector) (effector))
@@ -58,8 +52,7 @@
       (with-raw-restart*
         (map (lambda (nde)
                (apply (lambda (name desc effector)
-                        (list name desc
-                              (lambda x* (escape (lambda () (apply effector x*))))))
+                        (list name desc (lambda x* (escape (lambda () (apply effector x*))))))
                       nde))
              nde*)
         thunk))))
@@ -78,6 +71,13 @@
         (with-restart 'continue desc
                       (lambda () (loop (car thunk*) (cdr thunk*)))
                       thunk))))
+
+(define (find-restart name)
+  (let ((r* (memp (lambda (r) (equal? (restart-name r) name)) (current-restart*))))
+    (and r* (car r*))))
+(define (invoke-restart name . arg*)
+  (let ((r (find-restart name)))
+    (when r (apply (restart-effector r) arg*))))
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; Raise handlers ;;;
