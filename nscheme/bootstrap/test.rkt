@@ -1388,8 +1388,9 @@
     (with-raise-handler
      (lambda (exn)
        (set! restart-binding* (cons (current-restart*) restart-binding*))
-       (cond ((unbound-identifier-parse-error? exn)
-              (set! missing (cons (parse-error-syntax exn) missing)))
+       (cond
+         ((unbound-identifier-parse-error? exn)
+          (set! missing (cons (parse-error-syntax exn) missing)))
          ((parse-error? exn)
           (set! mistake* (cons (parse-error-syntax exn) mistake*))))
        (invoke-restart 'use-value ($quote `(REPLACED: ,(parse-error-syntax exn))))
