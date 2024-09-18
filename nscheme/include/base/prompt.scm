@@ -11,8 +11,8 @@
 
 (define (with-escape on-escape proc)
   (let* ((ch.return (make-channel))
-         (escape    (lambda (x)
-                      (channel-put ch.return (lambda () (on-escape x)))
+         (escape    (lambda x*
+                      (channel-put ch.return (lambda () (apply on-escape x*)))
                       (thread-wait (current-thread))))
          (^return   (with-local-custodian
                       (lambda ()
@@ -41,10 +41,7 @@
                           thunk)))
 
 (define (with-restart name desc effector thunk)
-  (with-escape
-    (lambda (effector) (effector))
-    (lambda (escape)
-      (with-raw-restart name desc (lambda x* (escape (lambda () (apply effector x*)))) thunk))))
+  (with-escape effector (lambda (escape) (with-raw-restart name desc escape thunk))))
 (define (with-restart* nde* thunk)
   (with-escape
     (lambda (effector) (effector))
