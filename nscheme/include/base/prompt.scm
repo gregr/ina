@@ -22,6 +22,14 @@
                         (channel-get ch.return)))))
     (^return)))
 
+(define (with-isolation on-panic thunk)
+  (with-escape
+    on-panic
+    (lambda (escape)
+      (panic-handler
+        escape
+        (lambda () (without-restarts (lambda () (without-raise-handlers thunk))))))))
+
 ;;;;;;;;;;;;;;;;
 ;;; Restarts ;;;
 ;;;;;;;;;;;;;;;;
@@ -33,6 +41,7 @@
 (splicing-local
   ((define raw-current-restart* (make-parameter '())))
   (define (current-restart*) (raw-current-restart*))
+  (define (without-restarts thunk) (raw-current-restart* '() thunk))
   (define (with-raw-restart name desc effector thunk)
     (raw-current-restart* (cons (make-restart name desc effector) (raw-current-restart*)) thunk))
   (define (with-raw-restart* nde* thunk)
@@ -85,9 +94,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; Raise handlers ;;;
 ;;;;;;;;;;;;;;;;;;;;;;
-
 (splicing-local
   ((define current-raise-handler* (make-parameter '())))
+  (define (without-raise-handlers thunk) (current-raise-handler* '() thunk))
   (define (with-raise-handler handle thunk)
     (current-raise-handler* (cons handle (current-raise-handler*)) thunk))
   (define (with-raise-handler* handle* thunk)
