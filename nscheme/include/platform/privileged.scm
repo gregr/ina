@@ -18,12 +18,12 @@
 (define package.privileged
   (cons
     '(
-      panic-handler native-signal-handler
+      native-signal-handler
       procedure-metadata
       record? record record-type-descriptor record-ref
       string->bytevector bytevector->string)
     (list
-      panic-handler native-signal-handler
+      native-signal-handler
       procedure-metadata
       record? record record-type-descriptor record-ref
       string->bytevector bytevector->string

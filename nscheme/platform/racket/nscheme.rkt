@@ -61,6 +61,19 @@
           (and (string? b) (string=? a b))
           (and (bytevector? a) (bytevector? b) (bytes=? a b)))))
 
+(define (make-parameter default)
+  (let ((rkt-param (rkt:make-parameter default)))
+    (case-lambda
+      (()                (rkt-param))
+      ((new-value thunk) (parameterize ((rkt-param new-value)) (thunk))))))
+
+(define current-custodian
+  (case-lambda
+    (()                (rkt:current-custodian))
+    ((new-value thunk) (parameterize ((rkt:current-custodian new-value)) (thunk)))))
+
+(define (thread-kill t) (kill-thread t))
+
 (define-syntax-rule (define-global-parameter name default)
   (define name
     (let ((value #f))
@@ -76,15 +89,9 @@
                              (raise c))))
     body ...))
 
-(define-global-parameter panic-handler #f)
+(define panic-handler (make-parameter #f))
 (define (panic . x*)
-  (let ((handler (panic-handler)))
-    (when handler
-      (disable-interrupts)
-      (panic-handler #f)
-      (handler x*)
-      (panic-handler handler)
-      (enable-interrupts)))
+  (let ((handle (panic-handler))) (when handle (apply handle x*)))
   (raise (vector 'panic x*)))
 
 (define-global-parameter native-signal-handler #f)
@@ -327,19 +334,6 @@
   (case-lambda
     ((mbv)             (bytes-copy (mbytevector-bv mbv)))
     ((mbv start count) (subbytes   (mbytevector-bv mbv) start (+ start count)))))
-
-(define (make-parameter default)
-  (let ((rkt-param (rkt:make-parameter default)))
-    (case-lambda
-      (()                (rkt-param))
-      ((new-value thunk) (parameterize ((rkt-param new-value)) (thunk))))))
-
-(define current-custodian
-  (case-lambda
-    (()                (rkt:current-custodian))
-    ((new-value thunk) (parameterize ((rkt:current-custodian new-value)) (thunk)))))
-
-(define (thread-kill t) (kill-thread t))
 
 (define (make-case-clause param body) (vector param body))
 (define (case-clause-param cc)        (vector-ref cc 0))

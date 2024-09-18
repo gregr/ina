@@ -15,17 +15,10 @@
 (struct error:eval  (c) #:prefab)
 
 (define (test-eval env stx)
-  (define (work-safely ^work)
-    (let ((handler.old (panic-handler)))
-      (with-escape
-       (lambda (x*)
-         (panic-handler handler.old)
-         (rkt:raise (apply vector 'panic x*)))
-       (lambda (escape)
-         (panic-handler (lambda x* (escape x*)))
-         (let-values ((result* (^work)))
-           (panic-handler handler.old)
-           (apply values result*))))))
+  (define (work-safely work)
+    (with-escape
+     (lambda x* (rkt:raise (apply vector 'panic x*)))
+     (lambda (escape) (panic-handler escape work))))
   (when (< 0 verbosity)
     (displayln "EXPRESSION:")
     (pretty-write stx))
