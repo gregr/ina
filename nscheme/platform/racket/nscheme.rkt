@@ -2,7 +2,7 @@
 (provide
   apply/values case-values case case1 let-values assert mlet mdefine interruptible-lambda
   ;; privileged primitives
-  panic-handler native-signal-handler
+  native-signal-handler
   ;; procedure-metadata returns a vector with this shape:
   ;;   #(,primitive ,captured ,code*)
   ;; where:
@@ -18,11 +18,14 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  make-parameter current-custodian make-custodian custodian-shutdown-all
-  current-thread thread thread/suspend-to-kill call-in-nested-thread
-  thread-suspend thread-resume thread-kill thread-wait
-  sleep
-  make-channel channel-get channel-put
+  make-parameter panic-handler current-custodian make-custodian custodian-shutdown-all
+  current-thread-group make-thread-group current-thread thread thread/suspend-to-kill
+  thread-resume thread-suspend thread-kill thread-wait
+  thread-resume-evt thread-suspend-evt thread-dead-evt
+  make-channel channel-get channel-put channel-get-evt channel-put-evt
+  make-semaphore semaphore-post semaphore-wait semaphore-try-wait? semaphore-peek-evt
+  call-with-semaphore sleep alarm-evt always-evt never-evt
+  sync sync/timeout handle-evt choice-evt guard-evt nack-guard-evt replace-evt
 
   panic apply values
   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
@@ -67,12 +70,16 @@
       (()                (rkt-param))
       ((new-value thunk) (parameterize ((rkt-param new-value)) (thunk))))))
 
-(define current-custodian
+(define (rkt-parameter->parameter rkt-param)
   (case-lambda
-    (()                (rkt:current-custodian))
-    ((new-value thunk) (parameterize ((rkt:current-custodian new-value)) (thunk)))))
+    (()                (rkt-param))
+    ((new-value thunk) (parameterize ((rkt-param new-value)) (thunk)))))
+(define current-custodian    (rkt-parameter->parameter rkt:current-custodian))
+(define current-thread-group (rkt-parameter->parameter rkt:current-thread-group))
 
 (define (thread-kill t) (kill-thread t))
+
+(define (channel-get-evt ch) ch)
 
 (define-syntax-rule (define-global-parameter name default)
   (define name
