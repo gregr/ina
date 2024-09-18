@@ -53,15 +53,15 @@
                       nde))
              nde*)
         thunk))))
-(define (with-simple-restart name desc thunk) (with-restart name desc (lambda () (values)) thunk))
 
-(define (with-restart:abort desc thunk) (with-simple-restart 'abort desc thunk))
-(define (with-restart:continue desc thunk) (with-simple-restart 'continue desc thunk))
-(define (with-restart:retry desc thunk) (let loop () (with-restart 'retry loop thunk)))
-(define (with-restart:use-value desc thunk) (with-restart 'use-value desc (lambda (x) x) thunk))
-(define (with-restart:use-values desc thunk) (with-restart 'use-values desc values thunk))
+(define (with-abort      desc on-abort thunk) (with-restart 'abort desc on-abort thunk))
+(define (with-continue   desc          thunk) (with-restart 'continue desc (lambda x* (values))
+                                                            thunk))
+(define (with-retry      desc          thunk) (let loop () (with-restart 'retry desc loop thunk)))
+(define (with-use-value  desc          thunk) (with-restart 'use-value desc (lambda (x) x) thunk))
+(define (with-use-values desc          thunk) (with-restart 'use-values desc values thunk))
 
-(define (with-restart:continue/choice* desc thunk . thunk*)
+(define (with-continue-alternative* desc thunk . thunk*)
   (let loop ((thunk thunk) (thunk* thunk*))
     (if (null? thunk*)
         (thunk)
@@ -75,6 +75,12 @@
 (define (invoke-restart name . arg*)
   (let ((r (find-restart name)))
     (when r (apply (restart-effector r) arg*))))
+
+(define (abort . x*)      (apply invoke-restart 'abort x*) (panic 'abort x*))
+(define (continue)        (invoke-restart 'continue))
+(define (retry)           (invoke-restart 'retry))
+(define (use-value x)     (invoke-restart 'use-value x))
+(define (use-values . x*) (apply invoke-restart 'use-values x*))
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; Raise handlers ;;;
@@ -95,17 +101,13 @@
             ((car h*) x)
             (loop (cdr h*))))))))
 (define (raise          x) (raise-continuable x) (panic 'raise x))
-(define (raise/continue x) (with-restart:continue 'raise/continue (lambda () (raise x))))
+(define (raise/continue x) (with-continue 'raise/continue (lambda () (raise x))))
 
-
-(define (with-raise-handler:catch catch? handle thunk)
-  (with-escape
-    handle
-    (lambda (escape)
-      (with-raise-handler
-        (lambda (exn) (when (catch? exn) (escape exn)))
-        thunk))))
-(define (with-raise-handler:catch* catch?handle* thunk)
+(define (with-catch catch? handle thunk)
+  (with-escape handle (lambda (escape)
+                        (with-raise-handler (lambda (exn) (when (catch? exn) (escape exn)))
+                                            thunk))))
+(define (with-catch* catch?handle* thunk)
   (with-escape
     (lambda (handle-exn) (handle-exn))
     (lambda (escape)

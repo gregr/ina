@@ -1393,18 +1393,18 @@
           (set! missing (cons (parse-error-syntax exn) missing)))
          ((parse-error? exn)
           (set! mistake* (cons (parse-error-syntax exn) mistake*))))
-       (invoke-restart 'use-value ($quote `(REPLACED: ,(parse-error-syntax exn))))
-       (invoke-restart 'continue))
+       (use-value ($quote `(REPLACED: ,(parse-error-syntax exn))))
+       (continue))
      (lambda ()
        (list
         (parse-expression env.test '(foo 1 2))
         (parse-expression env.test '(foo bar baz))
-        (with-restart:continue/choice*
-         '(try the next choice)
+        (with-continue-alternative*
+         '(try the next alternative)
          (lambda () (parse-expression env.test '#(not-ok)))
          (lambda () (parse-expression env.test '#(also-not-ok)))
          (lambda () (parse-expression env.test '#(still-not-ok)))
-         (lambda () 'final-choice))
+         (lambda () 'final-alternative))
         (reverse missing)
         (reverse mistake*)
         (map (lambda (r*) (map (lambda (r) (list (restart-name r) (restart-description r))) r*))
@@ -1412,7 +1412,7 @@
   ==>
   (#(E:call #(E:quote (REPLACED: foo)) (#(E:quote 1) #(E:quote 2)))
    #(E:call #(E:quote (REPLACED: foo)) (#(E:quote (REPLACED: bar)) #(E:quote (REPLACED: baz))))
-   final-choice
+   final-alternative
    (foo foo bar baz)
    (#(not-ok) #(also-not-ok) #(still-not-ok))
    (((continue (return unbound-variable-reference))
@@ -1423,7 +1423,7 @@
      (use-value (replace unbound-variable-reference)))
     ((continue (return unbound-variable-reference))
      (use-value (replace unbound-variable-reference)))
-    ((continue (try the next choice)))
-    ((continue (try the next choice)))
-    ((continue (try the next choice)))))
+    ((continue (try the next alternative)))
+    ((continue (try the next alternative)))
+    ((continue (try the next alternative)))))
   )

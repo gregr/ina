@@ -344,10 +344,10 @@
 
 (define (parse-free-variable-reference env stx)
   (let ((desc "not an expression"))
-    (with-restart:use-value
+    (with-use-value
       '(replace unbound-variable-reference)
       (lambda ()
-        (with-restart:continue
+        (with-continue
           '(return unbound-variable-reference)
           (lambda () (raise-unbound-identifier-parse-error desc stx vocab.expression env)))
         ($error ($quote 'unbound-variable-reference)
