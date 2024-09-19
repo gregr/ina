@@ -96,7 +96,15 @@
                              (raise c))))
     body ...))
 
-(define panic-handler (make-parameter #f))
+(define raw-panic-handler (make-parameter #f))
+(define panic-handler
+  (case-lambda
+    (()          (raw-panic-handler))
+    ((new thunk) (let ((old (raw-panic-handler)))
+                   (raw-panic-handler
+                    (lambda x* (raw-panic-handler old (lambda () (apply new x*))))
+                    thunk)))))
+
 (define (panic . x*)
   (let ((handle (panic-handler))) (when handle (apply handle x*)))
   (raise (vector 'panic x*)))

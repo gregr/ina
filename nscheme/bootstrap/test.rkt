@@ -1428,3 +1428,14 @@
    (lambda () (panic 'failure)))
    ==> (got panic: failure)
   )
+
+(displayln "\nBeginning recursive panic test:")
+(run-evaluation-tests
+  env.test.large
+
+  ! recursive-panic
+  (panic-handler
+   (lambda x* (begin (apply panic x*)))
+   (lambda () (panic 'a 'b 'c)))
+  ==> error:eval
+)
