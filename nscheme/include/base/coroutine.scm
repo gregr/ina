@@ -8,6 +8,6 @@
                         (lambda () (channel-get ch.in))
                         (lambda () (proc (channel-get ch.in))))))))
       (lambda (x)
-        (thread (lambda () (channel-put ch.in x)))
         (thread-resume t (current-thread))
+        (channel-put ch.in x)
         ((current-coroutine-receive))))))
