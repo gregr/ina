@@ -107,8 +107,7 @@
 
 (include "../include/platform/bootstrap.scm")
 
-(define (ns-eval E)
-  (with-pretty-panic (with-native-signal-handling (lambda () (E-eval E)))))
+(define (ns-eval E) (with-native-signal-handling (lambda () (E-eval E))))
 
 
 ;; Old notes:

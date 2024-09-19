@@ -45,7 +45,7 @@
   f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
   f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/
 
-  with-pretty-panic with-native-signal-handling
+  with-native-signal-handling
 
   stdio filesystem tcp udp tty console
   racket:eval)
@@ -88,26 +88,21 @@
         (() value)
         ((x) (set! value x))))))
 
-(define-syntax-rule (with-pretty-panic body ...)
-  (with-handlers ((vector? (lambda (c)
-                             (displayln 'unhandled-panic:)
-                             (pretty-write c)
-                             (newline)
-                             (raise c))))
-    body ...))
-
 (define raw-panic-handler (make-parameter #f))
 (define panic-handler
   (case-lambda
     (()          (raw-panic-handler))
     ((new thunk) (let ((old (raw-panic-handler)))
                    (raw-panic-handler
-                    (lambda x* (raw-panic-handler old (lambda () (apply new x*))))
+                    (lambda x* (raw-panic-handler old (lambda () (apply new x*) (apply panic x*))))
                     thunk)))))
-
 (define (panic . x*)
   (let ((handle (panic-handler))) (when handle (apply handle x*)))
-  (raise (vector 'panic x*)))
+  (displayln "unhandled panic:")
+  (pretty-write (cons 'panic x*))
+  (for-each (lambda (x) (when (exn? x) ((error-display-handler) (exn-message x) x))) x*)
+  (exit 1))
+(uncaught-exception-handler (lambda (exn) (panic 'uncaught-exception exn)))
 
 (define-global-parameter native-signal-handler #f)
 (define (with-native-signal-handling thunk)
