@@ -1422,11 +1422,23 @@
   (with-isolation
    (lambda x* `(got panic: . ,x*))
    (lambda () 'success))
-   ==> success
+  ==> success
   (with-isolation
    (lambda x* `(got panic: . ,x*))
    (lambda () (panic 'failure)))
-   ==> (got panic: failure)
+  ==> (got panic: failure)
+  (let ((ch (make-channel)))
+    (isolated-thread
+     (lambda x* (channel-put ch `(got panic: . ,x*)))
+     (lambda () (channel-put ch 'success)))
+    (channel-get ch))
+  ==> success
+  (let ((ch (make-channel)))
+    (isolated-thread
+     (lambda x* (channel-put ch `(got panic: . ,x*)))
+     (lambda () (panic 'failure)))
+    (channel-get ch))
+  ==> (got panic: failure)
   )
 
 (displayln "\nBeginning recursive panic test:")

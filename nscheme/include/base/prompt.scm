@@ -10,17 +10,15 @@
       (apply values x*))))
 
 (define (with-escape on-escape proc)
-  (let* ((ch.return (make-channel))
-         (escape    (lambda x*
-                      (channel-put ch.return (lambda () (apply on-escape x*)))
-                      (thread-wait (current-thread))))
-         (^return   (with-local-custodian
-                      (lambda ()
-                        (thread (lambda ()
-                                  (let-values ((x* (proc escape)))
-                                    (channel-put ch.return (lambda () (apply values x*))))))
-                        (channel-get ch.return)))))
-    (^return)))
+  (let* ((ch     (make-channel))
+         (escape (lambda x*
+                   (channel-put ch (lambda () (apply on-escape x*)))
+                   (thread-wait (current-thread)))))
+    ((with-local-custodian
+       (lambda ()
+         (thread (lambda () (let-values ((x* (proc escape)))
+                              (channel-put ch (lambda () (apply values x*))))))
+         (channel-get ch))))))
 
 (define (with-isolation on-panic thunk)
   (with-escape
@@ -29,6 +27,9 @@
       (panic-handler
         escape
         (lambda () (without-restarts (lambda () (without-raise-handlers thunk))))))))
+
+(define (isolated-thread on-panic thunk)
+  (thread (lambda () (with-isolation on-panic thunk))))
 
 ;;;;;;;;;;;;;;;;
 ;;; Restarts ;;;
