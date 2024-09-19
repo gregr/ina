@@ -24,7 +24,7 @@
   (with-escape
     on-panic
     (lambda (escape)
-      (panic-handler
+      (current-panic-handler
         escape
         (lambda () (without-restarts (lambda () (without-raise-handlers thunk))))))))
 

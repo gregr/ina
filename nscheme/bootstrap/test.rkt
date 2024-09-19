@@ -18,7 +18,7 @@
   (define (work-safely work)
     (with-escape
      (lambda x* (rkt:raise (apply vector 'panic x*)))
-     (lambda (escape) (panic-handler escape work))))
+     (lambda (escape) (current-panic-handler escape work))))
   (when (< 0 verbosity)
     (displayln "EXPRESSION:")
     (pretty-write stx))
@@ -1446,7 +1446,7 @@
   env.test.large
 
   ! recursive-panic
-  (panic-handler
+  (current-panic-handler
    (lambda x* (begin (apply panic x*)))
    (lambda () (panic 'a 'b 'c)))
   ==> error:eval

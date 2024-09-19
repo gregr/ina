@@ -18,7 +18,7 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  make-parameter panic-handler current-custodian make-custodian custodian-shutdown-all
+  make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
   current-thread-group make-thread-group current-thread thread thread/suspend-to-kill
   thread-resume thread-wait thread-resume-evt thread-suspend-evt thread-dead-evt
   make-channel channel-get channel-put channel-get-evt channel-put-evt
@@ -85,16 +85,17 @@
         (() value)
         ((x) (set! value x))))))
 
-(define raw-panic-handler (make-parameter #f))
-(define panic-handler
+(define raw-current-panic-handler (make-parameter #f))
+(define current-panic-handler
   (case-lambda
-    (()          (raw-panic-handler))
-    ((new thunk) (let ((old (raw-panic-handler)))
-                   (raw-panic-handler
-                    (lambda x* (raw-panic-handler old (lambda () (apply new x*) (apply panic x*))))
+    (()          (raw-current-panic-handler))
+    ((new thunk) (let ((old (raw-current-panic-handler)))
+                   (raw-current-panic-handler
+                    (lambda x*
+                      (raw-current-panic-handler old (lambda () (apply new x*) (apply panic x*))))
                     thunk)))))
 (define (panic . x*)
-  (let ((handle (panic-handler))) (when handle (apply handle x*)))
+  (let ((handle (current-panic-handler))) (when handle (apply handle x*)))
   (displayln "unhandled panic:")
   (pretty-write (cons 'panic x*))
   (for-each (lambda (x) (when (exn? x) ((error-display-handler) (exn-message x) x))) x*)
@@ -405,7 +406,7 @@
 
 (declare-primitives!
   ;; privileged primitives
-  panic-handler native-signal-handler
+  current-panic-handler native-signal-handler
   procedure-metadata
   record? record record-type-descriptor record-ref
   string->bytevector bytevector->string
