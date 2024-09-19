@@ -125,24 +125,34 @@ Eventually:
 
 ## TODO
 
-lost notes:
-eq-hash-code ? eq-unreliable-hash-code (in JS use a Map or WeakMap?)
-- for amortized constant time hash lookup
-- we need something like this to solve the E:quote sharing analysis problem
-  - because two different E:quotes might reference the exact same allocated object, and this needs to be preserved during compilation
+- cross-phase persistence/serialization transformation of E
+  - memoizing shared E-quote values
+    - replace non-procedure E-quotes with E:refs to shared constructor expressions
+      - or directly to contructor expressions if used only once
+      - or leave them as-is for small values that don't need to be shared
+  - (procedure) values that cannot be written
+    - transformation is parameterized by a lookup procedure
+    - may replace a procedure (or other data as well) with a global E:ref
+    - may replace a procedure with E:lambda when code and values of free variables are available
+      - if lookup is backed by a capability such as procedure-metadata, for instance
+    - otherwise, this transformation may fail in some standard way
+  - useful for all platforms, so should be located in include/compiler/, probably in high-level-ir.scm
+  - eq-hash-code ? eq-unreliable-hash-code (in JS use a Map or WeakMap?)
+    - for amortized constant time hash lookup
+    - we need something like this to solve the E:quote sharing analysis problem
+      - because two different E:quotes might reference the exact same allocated object, and this needs to be preserved during compilation
+    - alternatively, we can use a mostly-content-based hash code built as we analyze values bottom-up
+      - we can also avoid lookups for parent values as soon as one child is not found in our table
+        - we still have to insert them into the table, however, since they are newly seen
 
-maybe centralized system failures (platform/system-failure.scm?) which are used by stream io?
-- because we want to prevent accidentally ignoring
-- must guarantee no return by panicking if return (and by default if handler isn't set)
+- maybe centralized system failures (platform/system-failure.scm?) which are used by stream io?
+  - because we want to prevent accidentally ignoring
+  - must guarantee no return by panicking if a handler for this does return (and by default if handler isn't set)
+  - should we have low-level IO ops returning a status code rather than raising an exception after all?
+    - at least partly to avoid allocation in an environment without memory management
+    - this avoidance of allocation is only useful if there are no other forms of allocation at that
+      level of IO (e.g., no buffers), which may not be realistic
 
-no more include/posix and include/www, instead:
-- platform/ will contain common.scm privileged.scm thread.scm evt.scm dynamic-env.scm restart.scm raise.scm etc.
-- platform/posix/ will contain filesystem.scm network.scm process.scm cmdline.scm shell.scm etc. and
-  maybe also high-level-control.scm for platforms that don't already come with high-level primitives
-- platform/posix/racket/ will contain its own privileged.scm (with rkt-[text-]eval)
-
-
-platform/posix/racket/compile.scm should expose (E-compile-rkt E) but should not have to expose the prim-addr etc. mappings used to implement it
 
 ```
 high-level-ir.scm
@@ -152,43 +162,11 @@ high-level-ir.scm
 ;;   - so, when we look up a ref, we either get concrete primitive info we can apply
 ;;     or we just get an indicator for a fully abstract variable that we can't do much with
 ;;   - we might be able to do other kinds of constant folding/inlining through refs this way too
-;; TODO: E:let E:begin
+;; TODO: E:let E:begin, and probably also E:let-values for the same reason
 
 meta.scm
 ;; TODO: let-syntax let*-syntax letrec*-syntax letrec*-syntax&values ?
 ;; - splicing forms?
-
-bootstrap.scm
-(define env.primitive            (value-package->env package.primitive))
-;; TODO: could call this env.privileged-primitive for less confusion?
-(define env.primitive.privileged (env-conjoin*
-                                   ;; TODO: maybe these package names should put privileged- at the front instead
-                                   (value-package->env package.primitive.privileged)
-                                   (value-package->env package.primitive.control.low-level.privileged)))
-;; TODO: define a env.primitive.all ?  or env.primitive+privileged ?  (might be too easy to confuse)
-(define env.syntax               (value-package->env package.syntax))
-;; TODO: maybe rename these as env.minimal+primitive and env.minimal+primitive.all
-;; - or env.minimal+privileged ?
-;; - maybe we don't need the privileged version since it's only used to eval def*.base
-;; - and we use env.primitive.privileged separately for env.large.privileged
-;; TODO: although, maybe env.privileged is a good name for a subset to keep?
-;; - then modifiers like +privileged make more sense?
-(define env.privileged           (env-conjoin* env.minimal env.primitive env.primitive.privileged))
-(define env.unprivileged         (env-conjoin* env.minimal env.primitive))
-(define env.base                 (env-conjoin* env.unprivileged
-                                               (eval-definition* env.privileged def*.base)))
-(define env.compiler             (eval-definition* env.base def*.compiler))
-(define env.nscheme              (let ((env.deps (env-conjoin* env.base env.syntax env.compiler)))
-                                   (env-conjoin* env.deps env.meta
-                                                 (eval-definition* env.deps def*.nscheme))))
-(define env.text                 (eval-definition* env.base def*.text))
-(define env.large                (env-conjoin* env.nscheme env.text))
-;; TODO: call this env.large+privileged instead?
-(define env.large.privileged     (env-conjoin* env.large env.primitive.privileged))
-
-bootstrap-stratified.scm
-;; TODO: maybe rename these as minimal+primitive and minimal+primitive.privileged ?
-(define env.privileged           (env-conjoin* env.minimal env.primitive env.primitive.privileged))
 ```
 
 What is the next step?  We want to complete a Racket platform bootstrap.  We still need:
@@ -197,26 +175,21 @@ What is the next step?  We want to complete a Racket platform bootstrap.  We sti
 - cross-compiler and primitive implementations: include/platform/posix/rkt.scm
   - build env.primitive.whatever with fresh primitive addresses, mapping each to a parser that produces its (E:ref addr)
   - build a map of `prim-addr=>id` (the usual Racket ids for each) that we can pass to E-compile-rkt
-
-  - do we provide rkt-eval as a platform-specific privileged primitive? probably!
-
   - Racket platform stdio, file, and tcp streams, compatible with text/stream.scm interface
     - implementation for these platform-specific streams should be generated as literal Racket code, not nScheme code
       - we manually link to it during bootstrap, but also automatically link to it when compiling to posix Racket
     - expose only a limited set of IO primitives to nScheme
       - e.g., just a high-level interface for using filesystem, network, console
       - no need for lower level primitives, since high-level controllers can produce other encapsulated controllers
-
 - provide high level control and io primitives from Racket
 - include/text/read.scm and include/text/write.scm
   - initially test using bytevector ports
   - then try with ports backed by racket primitive io streams
-- include/posix/nscheme.scm
-  - posix capabilities: console stdio tty filesystem tcp udp
 - bootstrap/clean-bootstrap
 
 
 include/text/port.scm and include/text/stream.scm may belong in include/io/* instead?  not sure
+- maybe read.scm and write.scm belong there too
 
 
 proper fraction notation
@@ -237,10 +210,6 @@ list.scm
 
 define a (make-write super) in the same way
 - `#<unknown>` for opaque values without a generally-known predicate, such as records, unless overridden by super
-
-
-nscheme.rkt
-;; TODO: replace delimited prompts and escapes with threads and custodian shutdown
 
 
 start adopting a generic type-identification strategy across OOP-style procedures
@@ -282,11 +251,6 @@ top-level bootstrap/ directory
     - running cross-compilers on nscheme.scm should itself be a shared program, like bootstrap.scm
     - so this means bootstrapping will run nscheme.rkt on bootstrap.scm
 
-Maybe we should also expose block-device IO with a non-port interface
-- open/close, stat, no buffering
-- read/write some number of bytes from a specific position
-- can call this the byteblock interface, vs byteport
-
 top-level include/ directory
 - base/
   - misc.scm
@@ -295,10 +259,9 @@ top-level include/ directory
   - unicode.scm
   - etc.
 - syntax.scm  ; this doesn't have to be specific to the nscheme language, and doesn't really belong anywhere else?
-- control.scm  ; including make-dynamic-parameter, raise, restart, and higher-level thread constructors
 - text/
-  - byteblock.scm
-  - byteport.scm
+  - stream.scm
+  - port.scm
     - a general form that doesn't depend on posix or files
     - an implementation of string/bytevector ports too
   - read.scm   ; parameterize over an annotator so we don't depend on syntax.scm
@@ -314,7 +277,6 @@ top-level include/ directory
   - wasm.scm
   - lua.scm
 - compiler/
-  - eval-simple.scm
   ;; all of these passes include relevant IR definitions
   ;; if we end up needing more divisions, maybe these should be called level0.scm level1.scm etc.
   - high-level-ir.scm
@@ -345,179 +307,50 @@ top-level include/ directory
   - match.scm
 - gui/
   - library built on whatever native or emulated gui capabilities are provided
-- posix/  ; library for working in the context of a posix-like environment (simulated or otherwise)
-  - console, file-system, network, processes, shell-environment, command-line-arguments
-    - and system paths (bootstrapped from find-systme-path in Racket)
-      - (find-system-path 'orig-dir) (find-system-path 'run-file) (find-system-path 'exec-file)
-  - port.scm
-    - composes some of the above with the general form from text/port.scm
-  - stty interaction (depends on a privileged capability to run an external process)
-  - other things related to IO
-  - nscheme.scm  ; a (command-line) evaluation program that might also double as a library/module in the target platform language
-    - this interface is allowed to run code that overrides, or even throws away, the interface, replacing it with something else
-    - this repo may or may not include an implementation of a more featureful interactive editor/evaluator/desktop with documents, auto-save, snapshotting, and data export
-      - both TUI and GUI variants
-- www/  ; library for working in the context of a web browser-like environment (simulated or otherwise)
-  - nscheme.scm  ; like posix/nscheme.scm but implemented with www capabilities instead of posix capabilities
-    - it might be an .html file that you open in the browser that provides form-based IO (text fields or browser-based file opening)
-      - we could also emulate a limited posix-like interface
 - platform/
-  - primitive.scm etc.
+  - common.scm, control.scm, privileged.scm
+  - /low-level/
+    - for low-level primitive operators, such as those used to implement the operators provided by control.scm
   - bootstrap.scm etc.
-  ;; optional, shared by platforms that do not provide low-level control primitives
-  ;; we'll see if this sharing is effective, otherwise we'll have to move these to specific platform builds
-  - low-level-control.scm
-    - dynamic env, threads built on coroutines, custodians, etc., not used if platform already provides high-level control primitives (which is currently just non-simulator racket)
-    - concurrent ml in terms of CAS etc.
-  - low-level-io.scm
-  - each subdir describes a platform, and contains a build/ with one or more platform-specific primitive-envs/runtime/compiler/linker compositions and entry points
-
-    - ;; TODO: update these notes now that we no longer use E:prim
-
-    - for stratified cross-compilation, primitive envs should parse names to (E:prim prim-desc) rather than (E:quote prim-value)
-      - let's flatten the prim representation into E:prim, so something like (E:prim name value(optional) effect-description open-coding-description etc. ...)
-      - when cross-compiling, we should build an E:prim with an open-coding that matches the target platform
-        - the open-coding may simply reference a global variable on the target, if we don't want to perform inlining
-      - DANGER: if we include an optional value with E:prim, a malicious parser could construct an inconsistent E:prim with a value that does not match the other properties
-        - in fact, it's not just the value that can be inconsistent
-        - so maybe we should stick solely with (E:prim name), and let the compiler look up properties by name
-    - and a description for a non-stratified (i.e., E:quote OR E:prim with "value" populated) primitive package should be injected into
-      the resulting code so that when the target runs itself, it already has its primitives packaged up
-      - probably E:quote, since the DANGER mentioned above means we should omit the value field from E:prim
-    - DANGER MITIGATION:
-      - the name must include a unique mvector token to prevent capability forgery
-        - just like a fresh address
-      - if we package up not just the name, but also the optional value, descriptions, etc. with a unique mvector token, we can validate that entire package
-        - though, if we're doing this validation, it means we're already doing some kind of table lookup, defeating the purpose of the packaging
-  - posix
-    ; each of these puts together a platform-specific (cross-)compiler that also bundles a copy of all of source/
-    - racket.scm
-    - c.scm         ; more portable than c-x86-64.scm
-    - c-x86-64.scm  ; tail call and coroutine implementation differs from c.scm
-    - node.js.scm
-    - python.scm
-  - www
-    ; each of these puts together a platform-specific (cross-)compiler that also bundles a copy of all of source/
-    - js.scm
-    - wasm.scm
-
-
-set up platform-specific environment-preparing includes
-- what is the right way to cross-compile a posix program?
-  - should we provide stub procedures that contain posix platform code?
-  - e.g., stdio read/write calls on file descriptors, etc.
-  - but what if we want to reinstantiate a snapshot with isolation from the main capabilities?
-- we don't want naive reflection on IO capabilities because they should be instance-specific
-  - they should expire after their creating program exits, or else we may leak fake file descriptors
-  - but standardly-provided capabilities can be given names, and these named capabilities can be
-    rebound to freshly-provided capabilities to safely reinstantiate a snapshot that references them
-    - typical sets of names can themselves be standardized and used as an interface for snapshots
-- so the right way to cross-compile to posix still shouldn't assume too much about primitives
-  - because we might not even use the platform-specific ones
-- each target platform provides an ambient environment
-  - what is a platform again?  architecture, runtime, ambient environment
-  - the first two of these could be shared by multiple platforms
-  - the last (ambient environment) is a standard set of named capabilities as primitive procedures
-  - so we can have multiple posix-style platforms that vary in any of these three dimensions
+    - these currently test the process for building environments, but will probably be removed once nscheme.scm is implemented for each platform family (posix, www, etc.)
+  - posix/ and www/ subdirectories describe platforms, and contain one or more platform-specific primitive-envs/runtime/compiler/linker compositions
+  - posix  ; library for working in the context of a posix-like environment (simulated or otherwise)
+    - privileged.scm
+      - console streams/ports, file-system, network, process, shell-environment, command-line-arguments
+        - and system paths (bootstrapped from find-systme-path in Racket)
+          - (find-system-path 'orig-dir) (find-system-path 'run-file) (find-system-path 'exec-file)
+    - port.scm
+      - composes some of the above with the general form from text/port.scm
+    - stty interaction
+      - depends on a privileged capability to run an external process
+    - other things related to IO
+    - nscheme.scm  ; a (command-line) evaluation/compilation program that might also double as a library/module in the target platform language
+      - this interface is allowed to run code that overrides, or even throws away, the interface, replacing it with something else
+      - this repo may or may not include an implementation of a more featureful interactive editor/evaluator/desktop with documents, auto-save, snapshotting, and data export
+        - both TUI and GUI variants
+    ; each of these puts together a platform-specific (cross-)compiler that also bundles a copy of all of include/
+    - racket/
+    - c/         ; c/compile.scm will be more portable than c/x86-64/compile.scm
+    - c/x86-64/  ; tail call and coroutine implementation differs from c/compile.scm
+    - node.js/
+    - python/
+  - www  ; library for working in the context of a web browser-like environment (simulated or otherwise)
+    - nscheme.scm  ; like posix/nscheme.scm but implemented with www capabilities instead of posix capabilities
+      - it might be an .html file that you open in the browser that provides form-based IO (text fields or browser-based file opening)
+        - we could also emulate a limited posix-like interface
+    ; each of these puts together a platform-specific (cross-)compiler that also bundles a copy of all of include/
+    - js/
+    - js/wasm/
 
 
 ;;;;;;;;;;;;;;;;; DO THE ABOVE FIRST
 
-
-Find out if we can compile the definitions for null? and boolean? efficiently, so they don't need to be primitives
-
-
-it should be safe to bootstrap using Racket's concurrency primitives if we choose
-- which means Racket interop does not need to incur interrupt polling overhead, we can turn that off
-- though we should still simulate our own concurrency and interrupt polling, at least for testing
-
-
-ok, let's implement threads and thread-groups in terms of nested engines after all
-- and no need for thread-groups if we have custodians double as thread-groups themselves
-- now that we're getting rid of escape-prompts, engines are safe again
-  - are engines managed by custodians?
-- what about generators?  maybe just implement this in user-space as a stateful procedure that communicates with a private thread?
-  - can also implement engines in user-space though, in terms of threads...
-
-
-the ability to isolate can strip the raise-handlers and restarts, but should not implicitly clear the entire dynamic env
-- clearing the entire dynamic env is too much power, since it can disrupt desired state and/or long-distance communication used by privileged procedures
-  - and also reveal hidden default values, but this isn't as serious
-- only clear dynamic env entries on a case-by-case basis, based on access to a parameter
-- rename with-dynamic-env-extend to with-dynamic-env-branch
-- regarding the stripping, we're not leaving raise-handlers and restarts empty, we install a new abort restart that is local to the isolated code
-
-- you know what, maybe it's fine to clear the entire dynamic env in some isolation situations
-  - and then still install a new abort restart, of course
-    - can we do this in a way that is natural with dynamic-env clearing?
-    - for instance, we can define invoke-restart to always have a default "abort" restart available that exits/kills the current thread
-      - and so we don't need to look for this in the dynamic environment
-  - dynamic-env-ref and dynamic-env-set! are safe to provide to the user
-    - we can pass found/missing handlers to dynamic-env-ref
-    - we can also provide dynamic-env-remove and dynamic-env-update ?
-  - make-parameter can be defined in user-space, and doesn't have to provide unsafe default values
-  - keep in mind though, the problem with clearing the dynamic env is that privileged procedures that expect to use thread-local state won't have access to it
-
-- maybe no special dynamic parameter treatment is necessary, instead, determine treatment based on nested vs. non-nested spawning of a thread
-  - nested inherits parameters, non-nested starts with an empty dynamic env
-  - alternatively, non-nested starts with a slightly adjusted dynamic env, without clearing (so no danger of eliminating necessary thread-local state communication)
-  - more generally, different kinds of thread construction can be defined that adjust the dynamic env parameters in a certain way, for instance for using a new stdout / console / OS interface
-
-
-
-;; like with-finally, but there is no longer any unwinding guarantee in our new design (no more escape-prompts)
-;; - run body-thunk and save returned values
-;; - run after-thunk while ignoring its return values
-;; - return the saved values
-(with-after
-  after-thunk
-  body-thunk)
-
-
-panic-handler vs. native-panic-handler ?  native doesn't really make sense... base-panic-handler? raw-panic-handler?
-- reason: we would like to reserve the name panic-handler for a dynamic parameter, unless there's a better name for this?
-- or: change dynamic parameter name to local-panic-handler
-- better: change the base panic-handler to native-thread-local-panic-handler ?
-  - in fact, timer-interrupt-handler should also be native-thread-local
-  - ok, this is getting tedious, maybe this is a bad idea, and raw-panic-handler is better ? no...
-- it seems best to just shadow the name panic-handler, which means we have to change how env visibility works during boot and base env construction
-  - or a stack of panic-handler*
-
-
-should we add power-supply as an orthogonal concept?
-- also managed by a custodian
-- maybe this isn't necessary, and custodians themselves can supply power, and have this turned on or off at any time
-  - so custodians don't have power-related state per-thread, but to all threads at once (much simpler to manage)
-  - if we want a per-thread power state, we can insert a private custodian between the main one and the thread
-  - for a thread to be running, power has to have at least one path of flow to a thread that is not blocked by an unpowered custodian or benefactor thread
+- nscheme stage/unstage macro
 
 
 when will a thread's resources be garbage collected when using reference counting?
 - have to avoid cyclic references, which seems challenging in combination with threads that link themselves to other threads
 - but should be acyclic if they just use (current-thread) to do so, right?
-
-
-BEGIN VIRTUAL_THREADS_TODO
-
-try to implement virtual thread scheduling
-- rename current control.scm to control-cooperative.scm ?
-
-real virtualization
-- think interpreters and IO effect requests to a host
-- programming language that can be used as an OS
-
-  ok, let's move towards ONLY THREADS, because symmetric coroutines and generators are both kind of crappy
-
-  from a resource-cleanup perspective, symmetric coroutines are dangerous
-  - do we really want to expose these?
-  - could say "user beware", and sharp edges are ok
-  - NO, structured concurrency should apply here too!
-    - this just happens to be a cooperative (rather than preemptive) system!
-    - but is direct invocation a safe communication strategy?  what about leaks?
-      - doesn't seem safe ...
-
-END VIRTUAL_THREADS_TODO
-
 
 
 see what affect on timing we get from introducing E:begin/E:seq and E:let
@@ -550,8 +383,6 @@ what if a program obtains new platform-specific capabilities at runtime?  how do
         - default reinstantiation handler for an open file might just say, "sorry, can't reinstantiate this without more context"
 
 
-
-
 reimplement read and write
 - a variant for syntax objects
 - a variant for styled document objects
@@ -559,7 +390,6 @@ reimplement read and write
 
 continue with tty library and other posix-interfacing stuff
 - maybe work on an editor / repl
-
 
 
 a quasiquote intermediate language that can be used both for expressions and patterns?
@@ -594,16 +424,13 @@ local/global unique/shared
     - e.g., ```(let ((x __)) __)``` vs. ```(let ((#(x local unique) __)) __)```
   - how would block scope behave operationally? how do we achieve exclave? (how does exclave work exactly?)
 
-
-need some form of annotation that isn't ignored by evaluation / analysis?  NO, SEE BELOW ABOUT EMBEDDING SCHEME IN LLL
-- needed for properly suppressing interrupts etc. in low-level code, maybe other things too?
-- could also be used for type checking, (un)safety ...
-- alternative thought: Scheme expressions should be embedded in LLL, not the other way around
+- Scheme expressions should be embedded in LLL, not the other way around
   - LLL can be a "richer" language
   - Scheme can still express LLL ideas with unsafe primitives for memory and machine arithmetic, and by disabling interrupts
     - It's the compiler's job to enforce the efficiency of these ideas
       - e.g., if static analysis can show that a procedure is only ever called while interrupts are
         disabled, interrupt polling code will not be inserted into the procedure body
+
 - non-semantic E:annotated directives can describe communication preferences about analysis results
   - e.g.,
     - "Ignore all errors within this expression."
@@ -632,9 +459,6 @@ need some form of annotation that isn't ignored by evaluation / analysis?  NO, S
     - "I consider it an error if X escapes this expression through side channels."
     - "I consider it an error if X escapes this expression at all (even via direct return)."
   - non-semantic because these don't change the effects and result of simply running a program
-
-
-introduce E:begin or E:seq ?
 
 lower the IR to at least make captured variables explicit, to allow safe-for-space closures
 - assignment 12 convert-closures
@@ -1991,7 +1815,7 @@ immediately become the return values, as if `values` had been called instead.
   - High-level synchronizable actions interface
     - as in Concurrent ML and Racket synchronizable events
 
-- Programming mistakes should panic, not raise
+- Programming mistakes should `panic`, not `raise`
   - Examples of programming mistakes:
     - assertion violations
     - type errors
@@ -2006,15 +1830,11 @@ immediately become the return values, as if `values` had been called instead.
     - This implicit error-checking will take place inside primitive operator definitions, sites that
       call unknown procedures, arity-checking preludes of non-primitive procedure definitions, and
       sites that reference variables whose initialization status is unknown (possible with letrec)
-  - A panic does not trigger typical error handling, restart handling, or finalization
-    - But a panic only suspends the current virtual-thread, so a virtual-thread caller can respond
-    - Resuming a panicked virtual-thread will just panic again, unless privileged reflection and
-      program modification capabilities, like those in a debugger, are used.
-      - Such capabilities can also surgically perform finalization if resource cleanup is needed
-- Errors that are not programming mistakes should raise
-  - Unlike panic, raise is not a primitive, it can be defined in a library
-  - This library should support error handling with restarts and finalization, built on top of
-    coroutines and dynamic parameters
+  - Panic handling is independent of raise handling and restart handling by default
+    - `panic` behavior is determined by current-panic-handler
+- Errors or failures that are not programming mistakes should `raise`
+  - e.g., IO errors
+  - Unlike `panic`, `raise` is not a primitive, it can be defined in a library
 
 ## Numbers
 
