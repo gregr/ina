@@ -30,6 +30,8 @@
 
 (define (isolated-thread on-panic thunk)
   (thread (lambda () (with-isolation on-panic thunk))))
+(define (isolated-thread/suspend-to-kill on-panic thunk)
+  (thread (lambda () (with-isolation on-panic thunk))))
 
 ;;;;;;;;;;;;;;;;
 ;;; Restarts ;;;
