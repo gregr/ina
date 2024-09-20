@@ -198,8 +198,6 @@ proper fraction notation
 limit preference for decimal notation to radix-powered denominators only
 
 
-remove tail recursiveness from [range-]for-each again, for consistent return values
-
 list.scm
 ;; TODO: maybe specialize 2-list argument variants of for-each, map, and fold to avoid apply
 

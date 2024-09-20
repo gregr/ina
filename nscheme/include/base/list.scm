@@ -77,14 +77,12 @@
 (define range-for-each
   (let ((go (lambda (f start end inc)
               (let ((? (if (< inc 0) > <)))
-                (when (? start end)
-                  (let loop ((i start))
-                    (let ((next (+ i inc)))
-                      (if (? next end)
-                          (begin (f i) (loop next))
-                          (f i)))))))))
+                (let loop ((i start))
+                  (when (? i end)
+                    (f i)
+                    (loop (+ i inc))))))))
     (case-lambda
-      ((f end)           (go f 0 end 1))
+      ((f end)           (go f 0     end 1))
       ((f start end)     (go f start end 1))
       ((f start end inc) (go f start end inc)))))
 
@@ -162,27 +160,14 @@
 
   (define for-each
     (case-lambda
-      ((f x*) (unless (null? x*)
-                (let loop ((x* x*))
-                  (let ((y* (cdr x*)))
-                    (if (null? y*)
-                        (f (car x*))
-                        (begin (f (car x*)) (loop y*)))))))
-      ((f y* . y**)
-       (define (done? x* x**)
-         (and (null? x*)
-              (begin (unless (andmap1 null? x**)
-                       (error "lists of different length"
-                              (cons (length y*) (map1 length y**))))
-                     #t)))
-       (unless (done? y* y**)
-         (let loop ((x* y*) (x** y**))
-           (let ((y* (cdr x*)) (y** (map1 cdr x**)))
-             (if (done? y* y**)
-                 (apply f (car x*) (map1 car x**))
-                 (begin
-                   (apply f (car x*) (map1 car x**))
-                   (loop y* y**)))))))))
+      ((f x*)       (let loop ((x* x*)) (unless (null? x*) (f (car x*)) (loop (cdr x*)))))
+      ((f y* . y**) (let loop ((x* y*) (x** y**))
+                      (if (null? x*)
+                          (unless (andmap1 null? x**)
+                            (error "lists of different length"
+                                   (cons (length y*) (map1 length y**))))
+                          (begin (apply f (car x*) (map1 car x**))
+                                 (loop (cdr x*) (map1 cdr x**))))))))
 
   (define andmap
     (case-lambda
