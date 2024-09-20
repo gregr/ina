@@ -141,6 +141,21 @@
      (let loop ((x* x*))
        (cond ((null? x*) '())
              (else       (cons (f (car x*)) (loop (cdr x*)))))))
+   (define (map2 f x*.0 y*.0)
+     (let loop ((x* x*.0) (y* y*.0))
+       (if (null? x*)
+           (if (null? y*)
+               '()
+               (error "lists of different length" (list (length x*.0) (length y*.0))))
+           (cons (f (car x*) (car y*)) (loop (cdr x*) (cdr y*))))))
+   (define (map3 f x*.0 y*.0 z*.0)
+     (let loop ((x* x*.0) (y* y*.0) (z* z*.0))
+       (if (null? x*)
+           (if (and (null? y*) (null? z*))
+               '()
+               (error "lists of different length"
+                      (list (length x*.0) (length y*.0) (length z*.0))))
+           (cons (f (car x*) (car y*) (car z*)) (loop (cdr x*) (cdr y*) (cdr z*))))))
    (define (andmap1 f x*)
      (or (null? x*)
          (let loop ((x (car x*)) (x* (cdr x*)))
@@ -150,6 +165,8 @@
   (define map
     (case-lambda
       ((f x*)       (map1 f x*))
+      ((f x* y*)    (map2 f x* y*))
+      ((f x* y* z*) (map3 f x* y* z*))
       ((f y* . y**) (let loop ((x* y*) (x** y**))
                       (cond ((null? x*) (unless (andmap1 null? x**)
                                           (error "lists of different length"
@@ -160,14 +177,27 @@
 
   (define for-each
     (case-lambda
-      ((f x*)       (let loop ((x* x*)) (unless (null? x*) (f (car x*)) (loop (cdr x*)))))
-      ((f y* . y**) (let loop ((x* y*) (x** y**))
-                      (if (null? x*)
-                          (unless (andmap1 null? x**)
-                            (error "lists of different length"
-                                   (cons (length y*) (map1 length y**))))
-                          (begin (apply f (car x*) (map1 car x**))
-                                 (loop (cdr x*) (map1 cdr x**))))))))
+      ((f x*)             (let loop ((x* x*)) (unless (null? x*) (f (car x*)) (loop (cdr x*)))))
+      ((f x*.0 y*.0)      (let loop ((x* x*.0) (y* y*.0))
+                            (if (null? x*)
+                                (unless (null? y*)
+                                  (error "lists of different length"
+                                         (list (length x*.0) (length y*.0))))
+                                (begin (f (car x*) (car y*)) (loop (cdr x*) (cdr y*))))))
+      ((f x*.0 y*.0 z*.0) (let loop ((x* x*.0) (y* y*.0) (z* z*.0))
+                            (if (null? x*)
+                                (unless (and (null? y*) (null? z*))
+                                  (error "lists of different length"
+                                         (list (length x*.0) (length y*.0) (length z*.0))))
+                                (begin (f (car x*) (car y*) (car z*))
+                                       (loop (cdr x*) (cdr y*) (cdr z*))))))
+      ((f y* . y**)       (let loop ((x* y*) (x** y**))
+                            (if (null? x*)
+                                (unless (andmap1 null? x**)
+                                  (error "lists of different length"
+                                         (cons (length y*) (map1 length y**))))
+                                (begin (apply f (car x*) (map1 car x**))
+                                       (loop (cdr x*) (map1 cdr x**))))))))
 
   (define andmap
     (case-lambda
@@ -214,9 +244,23 @@
 
   (define fold-left
     (case-lambda
-      ((f acc x*) (let loop ((x* x*) (acc acc))
-                    (cond ((null? x*) acc)
-                          (else       (loop (cdr x*) (f acc (car x*)))))))
+      ((f acc x*)             (let loop ((x* x*) (acc acc))
+                                (if (null? x*) acc (loop (cdr x*) (f acc (car x*))))))
+      ((f acc x*.0 y*.0)      (let loop ((x* x*.0) (y* y*.0) (acc acc))
+                                (if (null? x*)
+                                    (if (null? y*)
+                                        acc
+                                        (error "lists of different length"
+                                               (list (length x*.0) (length y*.0))))
+                                    (loop (cdr x*) (cdr y*) (f acc (car x*) (car y*))))))
+      ((f acc x*.0 y*.0 z*.0) (let loop ((x* x*.0) (y* y*.0) (z* z*.0) (acc acc))
+                                (if (null? x*)
+                                    (if (and (null? y*) (null? z*))
+                                        acc
+                                        (error "lists of different length"
+                                               (list (length x*.0) (length y*.0) (length z*.0))))
+                                    (loop (cdr x*) (cdr y*) (cdr z*)
+                                          (f acc (car x*) (car y*) (car z*))))))
       ((f acc y* . y**)
        (let loop ((x* y*) (x** y**) (acc acc))
          (cond ((null? x*) (unless (andmap1 null? x**)
@@ -228,9 +272,23 @@
 
   (define fold-right
     (case-lambda
-      ((f acc x*) (let loop ((x* x*))
-                    (cond ((null? x*) acc)
-                          (else       (f (loop (cdr x*)) (car x*))))))
+      ((f acc x*)             (let loop ((x* x*))
+                                (if (null? x*) acc (f (loop (cdr x*)) (car x*)))))
+      ((f acc x*.0 y*.0)      (let loop ((x* x*.0) (y* y*.0))
+                                (if (null? x*)
+                                    (if (null? y*)
+                                        acc
+                                        (error "lists of different length"
+                                               (list (length x*.0) (length y*.0))))
+                                    (f (loop (cdr x*) (cdr y*)) (car x*) (car y*)))))
+      ((f acc x*.0 y*.0 z*.0) (let loop ((x* x*.0) (y* y*.0) (z* z*.0))
+                                (if (null? x*)
+                                    (if (and (null? y*) (null? z*))
+                                        acc
+                                        (error "lists of different length"
+                                               (list (length x*.0) (length y*.0) (length z*.0))))
+                                    (f (loop (cdr x*) (cdr y*) (cdr z*))
+                                       (car x*) (car y*) (car z*)))))
       ((f acc y* . y**)
        (let loop ((x* y*) (x** y**))
          (cond ((null? x*) (unless (andmap1 null? x**)

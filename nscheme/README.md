@@ -198,9 +198,6 @@ proper fraction notation
 limit preference for decimal notation to radix-powered denominators only
 
 
-list.scm
-;; TODO: maybe specialize 2-list argument variants of for-each, map, and fold to avoid apply
-
 (make-equal? super)
 (define equal? (make-equal? (lambda (a b) #f)))
 - alternative to providing super, provide an association list of type-predicate => type-destructurer (or type-component-iterator)
