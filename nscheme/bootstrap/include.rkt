@@ -20,9 +20,9 @@
 (include "../include/base/prompt.scm")
 (include "../include/base/coroutine.scm")
 (include "../include/base/generator.scm")
+(include "../include/base/stream.scm")
+(include "../include/base/port.scm")
 
-(include "../include/text/stream.scm")
-(include "../include/text/port.scm")
 (include "../include/text/terminal-control.scm")
 
 (include "../include/syntax.scm")
@@ -73,12 +73,12 @@
      "../include/base/prompt.scm"
      "../include/base/coroutine.scm"
      "../include/base/generator.scm"
+     "../include/base/stream.scm"
+     "../include/base/port.scm"
      )))
 (define def*.text
   (file-name*->stx*
-   '("../include/text/stream.scm"
-     "../include/text/port.scm"
-     "../include/text/terminal-control.scm"
+   '("../include/text/terminal-control.scm"
      )))
 (define def*.syntax
   (file-name*->stx*
