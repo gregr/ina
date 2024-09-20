@@ -23,7 +23,7 @@
   thread-resume thread-wait thread-resume-evt thread-suspend-evt thread-dead-evt
   make-channel channel-get channel-put channel-get-evt channel-put-evt
   make-semaphore semaphore-post semaphore-wait semaphore-try-wait? semaphore-peek-evt
-  call-with-semaphore sleep alarm-evt always-evt never-evt
+  sleep alarm-evt always-evt never-evt
   sync sync/timeout handle-evt choice-evt guard-evt nack-guard-evt replace-evt
 
   panic apply values
