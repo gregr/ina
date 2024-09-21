@@ -1097,11 +1097,12 @@
   ==>
   error:eval
   ;#(panic
-  ;  (raise
-  ;   (#(error #(description) io-error #(operation))
-  ;    .
-  ;    #("not enough space in ostream"
-  ;      ((mbytevector-ostream 0 20) (write 0 23 23))))))
+  ;  raise
+  ;  (#(error #(description) io-error #(tag detail))
+  ;   .
+  ;   #("oport-flush failed"
+  ;     no-space
+  ;     ((mbytevector-ostream 0 20) (write 0 23 23)))))
   (let ((buf (make-mbytevector 20 0)))
     (call-with-output-mbytevector
      buf

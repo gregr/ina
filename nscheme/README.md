@@ -145,14 +145,6 @@ Eventually:
       - we can also avoid lookups for parent values as soon as one child is not found in our table
         - we still have to insert them into the table, however, since they are newly seen
 
-- maybe centralized system failures (platform/system-failure.scm?) which are used by stream io?
-  - because we want to prevent accidentally ignoring
-  - must guarantee no return by panicking if a handler for this does return (and by default if handler isn't set)
-  - should we have low-level IO ops returning a status code rather than raising an exception after all?
-    - at least partly to avoid allocation in an environment without memory management
-    - this avoidance of allocation is only useful if there are no other forms of allocation at that
-      level of IO (e.g., no buffers), which may not be realistic
-
 
 ```
 high-level-ir.scm
