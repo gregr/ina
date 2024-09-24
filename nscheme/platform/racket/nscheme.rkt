@@ -46,8 +46,8 @@
 
   with-native-signal-handling
 
-  stdio filesystem tcp udp tty console
-  racket:eval)
+  ;stdio filesystem tcp udp tty console
+  )
 (require
   racket/control racket/file racket/flonum racket/list racket/match racket/port racket/pretty
   racket/string racket/struct racket/system racket/tcp racket/udp racket/vector
@@ -698,50 +698,8 @@
     (cond ((<= src-end i) (- i src-start))
           (else (mvector-set! mv (+ start (- i src-start)) (ref src i))
                 (loop (+ i 1))))))
-(define (mvector-copy! mv start src src-start src-end)
-  (mvector-copy!/ref mv start src src-start src-end mvector-ref))
 (define (mvector-copy!/bytes mv start src src-start src-end)
   (mvector-copy!/ref mv start src src-start src-end bytes-ref))
-(define (mvector-copy!/vector mv start src src-start src-end)
-  (mvector-copy!/ref mv start src src-start src-end vector-ref))
-;; TODO: this operation needs to be removed
-(define (mvector-copy!/string mv start src src-start src-end)
-  (mvector-copy!/ref mv start src src-start src-end
-                     (lambda (s i) (char->integer (string-ref s i)))))
-
-(define (call-with-input-string s k) (k (string:port:input s)))
-;; TODO: consider wrapping out to limit capability given to k
-(define (call-with-output-string  k) (let ((out (string:port:output)))
-                                       (k out)
-                                       (out 'string)))
-
-;; TODO: synchronizable events for ports
-
-(define (port-close    p)   (p 'close))
-(define (port-flush    p)   (p 'flush))
-(define (port-put      p b) (p 'put  b))
-;; TODO: this should take a (byte)vector as input
-(define (port-put*     p s) (p 'put* s))
-;; TODO: define port-put-string separately for convenience
-
-(define (port-forget p amount) (p 'forget amount))
-(define (port-get    p)        (p 'get))
-(define (port-peek   p skip)   (p 'peek skip))
-;; TODO: ideally these would be a general implementation in terms of port-get/peek.
-;; Revisit these when testing compiler optimizations.
-;; TODO: also, define non-! versions that return a new (byte)vector for convenience
-(define (port-get*!  p mv start len)        (p 'get*!  mv start len))
-(define (port-peek*! p mv start skip until) (p 'peek*! mv start skip until))
-
-(define (port-truncate         p)   (p 'truncate))
-(define (port-position         p)   (p 'position-ref))
-(define (port-position-set!    p i) (p 'position-set! i))
-(define (port-buffer-mode      p)   (p 'buffer-mode-ref))
-(define (port-buffer-mode-set! p m) (p 'buffer-mode-set! m))
-
-;; TODO: model file descriptors and their operations directly?
-
-;; TODO: for simplicity, have get* directly return a string rather than fill a buffer?
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generic bytestream IO
@@ -961,88 +919,16 @@
 ;; Standard IO and consoles
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (console in out err)
-  (lambda/handle-fail (lambda (x) x)
-                      (method-lambda ((in) in) ((out) out) ((error) err))))
-
-(define (stdio:port:input  port) (bytestream:port:input  (bytestream:port port) port))
-(define (stdio:port:output port) (bytestream:port:output (bytestream:port port) port))
-
-(define stdio (console (stdio:port:input  (current-input-port))
-                       (stdio:port:output (current-output-port))
-                       (stdio:port:output (current-error-port))))
-
-(define null:port:output
-  (method-lambda
-    ((put  _) #t)
-    ((put* _) #t)
-    ((close)  #t)
-    ((flush)  #t)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; String IO
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; TODO: these should be built on (byte)vector:port:input/output
-
-;; TODO: we don't want these operations.  Use bytevectors instead.
-(define (string->vector s)
-  (list->vector (bytes->list (string->bytes/utf-8 s))))
-(define (vector->string v)
-  (bytes->string/utf-8 (list->bytes (vector->list v))))
-
-(define (string:port:input s)
-  (define v (string->vector s))
-  (define i 0)
-  (define (ref i) (and (< i (vector-length v)) (vector-ref v i)))
-  (define (ref* mv start i skip until)
-    (mvector-copy!/vector mv start v (+ i skip)
-                          (min (vector-length v) (+ i until))))
-  (method-lambda
-    ((get)                        (define b (ref i))
-                                  (when b (set! i (+ i 1)))
-                                  b)
-    ((peek skip)                  (ref (+ i skip)))
-    ((get*! mv start len)         (define amount (ref* mv start i 0 len))
-                                  (set! i (+ i amount))
-                                  amount)
-    ((peek*! mv start skip until) (ref* mv start i skip until))
-    ((forget amount) (define next-i (min (vector-length v) (+ i amount)))
-                     (define actual (- next-i i))
-                     (set! i next-i) actual)
-    ((position-ref)        i)
-    ((position-set! index) (set! i (min (max index 0) (vector-length v))))))
-
-(define (string:port:output)
-  (define buffer (make-mvector 32 0))
-  (define i 0)
-  (define (grow mult)
-    (define current buffer)
-    (set! buffer (make-mvector (* mult (mvector-length buffer)) 0))
-    (mvector-copy! buffer 0 current 0 (mvector-length current)))
-  (method-lambda
-    ((string) (define out (make-mvector i 0))
-              (mvector-copy! out 0 buffer 0 i)
-              (vector->string (mvector->vector out)))
-    ((put b)  (when (= i (mvector-length buffer)) (grow 2))
-              (mvector-set! buffer i b)
-              (set! i (+ i 1)))
-    ;; TODO: this should take a (byte)vector as input
-    ;; TODO: do not use these string operations
-    ((put* s) (define u (- (string-length s) (- (mvector-length buffer) i)))
-              (when (< 0 u) (grow (+ (quotient u (mvector-length buffer)) 2)))
-              (mvector-copy!/string buffer i s 0 (string-length s))
-              (set! i (+ i (string-length s))))
-    ((close)               #t)
-    ((flush)               #t)
-    ((position-ref)        i)
-    ((position-set! index) (set! i (min (max index 0) i)))
-    ((truncate)            (set! i 0) (set! buffer (make-mvector 32 0)))))
-
-;; TODO: synchronous channels, generators
-;; NOTE: these are not ports; ports are restricted to transferring bytes
-;; TODO: channels that get from sequences or put to mvectors
-;; TODO: generators that iterate over sequences
+;(define (console in out err)
+;  (lambda/handle-fail (lambda (x) x)
+;                      (method-lambda ((in) in) ((out) out) ((error) err))))
+;
+;(define (stdio:port:input  port) (bytestream:port:input  (bytestream:port port) port))
+;(define (stdio:port:output port) (bytestream:port:output (bytestream:port port) port))
+;
+;(define stdio (console (stdio:port:input  (current-input-port))
+;                       (stdio:port:output (current-output-port))
+;                       (stdio:port:output (current-error-port))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; TTY manipulation
@@ -1071,18 +957,3 @@
       ((stty-ref)   (stty "-g"))
       ((stty-set s) (stty s))
       ((stty-raw)   (stty "raw")))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (racket:eval rkt-datum)
-  (define (racket-datum form)
-    (define (@ i) (vector-ref form i))
-    (cond ((pair? form)         (cons (racket-datum (car form))
-                                      (racket-datum (cdr form))))
-          ((not (vector? form)) form)
-          ((eq? (@ 0) 'quote)   (@ 1))
-          ((eq? (@ 0) 'vector)  (vector-map racket-datum (@ 1)))
-          ((eq? (@ 0) 'keyword) (string->keyword (@ 1)))
-          (else                 (error "invalid racket-datum:" form))))
-  (parameterize ((current-namespace (make-base-namespace)))
-    (eval (racket-datum rkt-datum))))
