@@ -715,10 +715,10 @@
   (with-handlers ((exn:fail:filesystem:exists? (lambda (e) (values 'exists (exn-message e))))
                   (exn:fail:filesystem:errno?  (lambda (e) (values (exn:fail:filesystem:errno-errno e)
                                                                    (exn-message e))))
+                  (exn:fail:filesystem?        (lambda (e) (values #f (exn-message e))))
                   (exn:fail:network:errno?     (lambda (e) (values (exn:fail:network:errno-errno e)
                                                                    (exn-message e))))
-                  (exn:fail:contract?          (lambda (e) (panic #f (exn-message e))))
-                  (exn:fail?                   (lambda (e) (values #f (exn-message e)))))
+                  (exn:fail:network?           (lambda (e) (values #f (exn-message e)))))
     (thunk)))
 (define-syntax-rule (io-guard body ...) (with-io-guard (lambda () body ...)))
 
@@ -762,22 +762,22 @@
                                                  total))))))))))
        ((pread)         (lambda (pos dst start count)
                           (buffer-range?! dst start count count)
-                          (let ((pos.current (file-position* port)))
-                            (if pos.current
-                                (rkt-port-set-position!/k
-                                 port pos
-                                 (lambda ()
-                                   (let ((amount (io-guard
-                                                  (read-bytes! (mbytevector-bv dst) port start
-                                                               (+ start count)))))
-                                     (rkt-port-set-position!/k
-                                      port pos.current
-                                      (if (eof-object? amount)
-                                          (lambda () (values))
-                                          (lambda () amount))))))
-                                (values 'no-position "istream does not support pread")))))
-       ((read-byte)     (lambda ()    (let ((b (io-guard (read-byte port))))
-                                        (if (eof-object? b) (values) b))))
+                          (io-guard
+                           (let ((pos.current (file-position* port)))
+                             (if pos.current
+                                 (rkt-port-set-position!/k
+                                  port pos
+                                  (lambda ()
+                                    (let ((amount (read-bytes! (mbytevector-bv dst) port start
+                                                               (+ start count))))
+                                      (rkt-port-set-position!/k
+                                       port pos.current
+                                       (if (eof-object? amount)
+                                           (lambda () (values))
+                                           (lambda () amount))))))
+                                 (values 'no-position "istream does not support pread"))))))
+       ((read-byte)     (lambda ()    (io-guard (let ((b (read-byte port)))
+                                                  (if (eof-object? b) (values) b)))))
        ((position)      (lambda ()    (file-position* port)))
        ((set-position!) (lambda (new) (rkt-port-set-position!/k port new values)))
        ((close)         (lambda ()    (close-input-port port) (values)))
@@ -811,8 +811,8 @@
                                   port pos
                                   (lambda () (write-bytes src port start (+ start count)) (values)))
                                  (values 'no-position "ostream does not support pwrite"))))))
-       ((write-byte)    (lambda (b)   (io-guard (write-byte b port)) (values)))
-       ((set-size!)     (lambda (new) (io-guard (file-truncate port new))))
+       ((write-byte)    (lambda (b)   (io-guard (write-byte b port) (values))))
+       ((set-size!)     (lambda (new) (io-guard (file-truncate port new) (values))))
        ((close)         (lambda ()    (close-output-port port) (values)))
        ((position)      (lambda ()    (file-position* port)))
        ((set-position!) (lambda (new) (rkt-port-set-position!/k port new values)))
