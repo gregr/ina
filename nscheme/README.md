@@ -304,8 +304,6 @@ top-level include/ directory
   - posix  ; library for working in the context of a posix-like environment (simulated or otherwise)
     - privileged.scm
       - console streams/ports, file-system, network, process, shell-environment, command-line-arguments
-        - and system paths (bootstrapped from find-systme-path in Racket)
-          - (find-system-path 'orig-dir) (find-system-path 'run-file) (find-system-path 'exec-file)
     - port.scm
       - composes some of the above with the general form from text/port.scm
     - stty interaction

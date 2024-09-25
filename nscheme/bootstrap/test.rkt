@@ -1458,6 +1458,9 @@
 #;(run-evaluation-tests
  env.test.posix
 
+ ! cmdline
+ command-line-argument* ==> #("bootstrap/test.rkt")
+
  ! stdio
  (begin
    (ostream-write-byte standard-output-stream 65)

@@ -18,7 +18,7 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  standard-input-stream standard-output-stream standard-error-stream
+  command-line-argument* standard-input-stream standard-output-stream standard-error-stream
   change-directory directory-file* make-symbolic-link make-directory
   delete-directory delete-file move-file open-file-istream open-file-ostream
   file-type file-size file-permissions file-modified-seconds
@@ -824,16 +824,22 @@
        (else            (error "not an ostream method" method)))
      arg*)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Standard IO streams
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Command line arguments ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define command-line-argument* (apply vector (path->string (find-system-path 'run-file))
+                                      (vector->list (current-command-line-arguments))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Standard IO streams ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define standard-input-stream  (rkt-port->istream (current-input-port)))
 (define standard-output-stream (rkt-port->ostream (current-output-port)))
 (define standard-error-stream  (rkt-port->ostream (current-error-port)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; File IO
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;
+;;; File IO ;;;
+;;;;;;;;;;;;;;;
 (define (change-directory      path) (rkt:current-directory path) (values))
 (define (directory-file*       path) (io-guard (map path->string (rkt:directory-list path))))
 (define (make-symbolic-link to path) (io-guard (make-file-or-directory-link to path) (values)))
