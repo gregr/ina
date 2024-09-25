@@ -718,6 +718,8 @@
                   (exn:fail:contract?          (lambda (e) (panic #f (exn-message e))))
                   (exn:fail?                   (lambda (e) (values #f (exn-message e)))))
     (thunk)))
+(define-syntax-rule (io-guard body ...) (with-io-guard (lambda () body ...)))
+
 (define (nonnegative-integer?! x) (unless (exact-nonnegative-integer? x)
                                     (panic #f "not a nonnegative integer" x)))
 (define (buffer-range?! buf start min-count desired-count)
@@ -735,28 +737,27 @@
      (case method
        ((read)          (lambda (dst start min-count count)
                           (buffer-range?! dst start min-count count)
-                          (with-io-guard
-                           (lambda ()
-                             (cond
-                               ((= count 0) 0)
-                               ((= min-count count)
-                                (let ((amount (read-bytes! (mbytevector-bv dst) port start
-                                                           (+ start count))))
-                                  (if (eof-object? amount) (values) amount)))
-                               ((= min-count 0)
-                                (let ((amount (read-bytes-avail!* (mbytevector-bv dst) port start
-                                                                  (+ start count))))
-                                  (if (eof-object? amount) (values) amount)))
-                               (else (let loop ((total 0))
-                                       (let ((amount (read-bytes-avail! (mbytevector-bv dst) port
-                                                                        (+ start total)
-                                                                        (+ start count))))
-                                         (if (eof-object? amount)
-                                             (if (= total 0) (values) total)
-                                             (let ((total (+ total amount)))
-                                               (if (< total min-count)
-                                                   (loop total)
-                                                   total)))))))))))
+                          (io-guard
+                           (cond
+                             ((= count 0) 0)
+                             ((= min-count count)
+                              (let ((amount (read-bytes! (mbytevector-bv dst) port start
+                                                         (+ start count))))
+                                (if (eof-object? amount) (values) amount)))
+                             ((= min-count 0)
+                              (let ((amount (read-bytes-avail!* (mbytevector-bv dst) port start
+                                                                (+ start count))))
+                                (if (eof-object? amount) (values) amount)))
+                             (else (let loop ((total 0))
+                                     (let ((amount (read-bytes-avail! (mbytevector-bv dst) port
+                                                                      (+ start total)
+                                                                      (+ start count))))
+                                       (if (eof-object? amount)
+                                           (if (= total 0) (values) total)
+                                           (let ((total (+ total amount)))
+                                             (if (< total min-count)
+                                                 (loop total)
+                                                 total))))))))))
        ((pread)         (lambda (pos dst start count)
                           (buffer-range?! dst start count count)
                           (let ((pos.current (file-position* port)))
@@ -764,17 +765,16 @@
                                 (rkt-port-set-position!/k
                                  port pos
                                  (lambda ()
-                                   (let ((amount (with-io-guard
-                                                  (lambda ()
-                                                    (read-bytes! (mbytevector-bv dst) port start
-                                                                 (+ start count))))))
+                                   (let ((amount (io-guard
+                                                  (read-bytes! (mbytevector-bv dst) port start
+                                                               (+ start count)))))
                                      (rkt-port-set-position!/k
                                       port pos.current
                                       (if (eof-object? amount)
                                           (lambda () (values))
                                           (lambda () amount))))))
                                 (values 'no-position "istream does not support pread")))))
-       ((read-byte)     (lambda ()    (let ((b (with-io-guard (lambda () (read-byte port)))))
+       ((read-byte)     (lambda ()    (let ((b (io-guard (read-byte port))))
                                         (if (eof-object? b) (values) b))))
        ((position)      (lambda ()    (file-position* port)))
        ((set-position!) (lambda (new) (rkt-port-set-position!/k port new values)))
@@ -789,30 +789,28 @@
      (case method
        ((write)         (lambda (src start min-count count)
                           (buffer-range?! src start min-count count)
-                          (with-io-guard
-                           (lambda ()
-                             (cond
-                               ((= min-count count) (write-bytes src port start (+ start count))
-                                                    (values))
-                               ((= min-count 0)
-                                (or (write-bytes-avail* src port start (+ start count)) 0))
-                               (else (let loop ((total 0))
-                                       (let* ((amount (write-bytes-avail src port (+ start total)
-                                                                         (+ start count)))
-                                              (total  (+ total amount)))
-                                         (if (< total min-count) (loop total) total)))))))))
+                          (io-guard
+                           (cond
+                             ((= min-count count) (write-bytes src port start (+ start count))
+                                                  (values))
+                             ((= min-count 0)
+                              (or (write-bytes-avail* src port start (+ start count)) 0))
+                             (else (let loop ((total 0))
+                                     (let* ((amount (write-bytes-avail src port (+ start total)
+                                                                       (+ start count)))
+                                            (total  (+ total amount)))
+                                       (if (< total min-count) (loop total) total))))))))
        ((pwrite)        (lambda (pos src start count)
                           (buffer-range?! src start count count)
-                          (with-io-guard
-                           (lambda ()
-                             (let ((pos.current (file-position* port)))
-                               (if pos.current
-                                   (rkt-port-set-position!/k
-                                    port pos
-                                    (lambda () (write-bytes src port start (+ start count)) (values)))
-                                   (values 'no-position "ostream does not support pwrite")))))))
-       ((write-byte)    (lambda (b)   (with-io-guard (lambda () (write-byte b port))) (values)))
-       ((set-size!)     (lambda (new) (with-io-guard (lambda () (file-truncate port new)))))
+                          (io-guard
+                           (let ((pos.current (file-position* port)))
+                             (if pos.current
+                                 (rkt-port-set-position!/k
+                                  port pos
+                                  (lambda () (write-bytes src port start (+ start count)) (values)))
+                                 (values 'no-position "ostream does not support pwrite"))))))
+       ((write-byte)    (lambda (b)   (io-guard (write-byte b port)) (values)))
+       ((set-size!)     (lambda (new) (io-guard (file-truncate port new))))
        ((close)         (lambda ()    (close-output-port port) (values)))
        ((position)      (lambda ()    (file-position* port)))
        ((set-position!) (lambda (new) (rkt-port-set-position!/k port new values)))
