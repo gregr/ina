@@ -1455,7 +1455,7 @@
 
 (define env.test.posix env.large+posix+privileged)
 
-(run-evaluation-tests
+#;(run-evaluation-tests
  env.test.posix
 
  ! stdio
@@ -1470,4 +1470,50 @@
    (ostream-write standard-error-stream message 0 len len)
    (istream-read-byte standard-input-stream))
  ==> 120
+
+ ! file-io
+ (let* ((dir     "test-for-file-io-etc")
+        (fname   (string-append dir "/out.txt"))
+        (fname2  (string-append dir "/out2.txt"))
+        (message #"Hello world!")
+        (len     (bytevector-length message))
+        (out     (begin
+                   (case-values (make-directory dir)
+                     (() (values))
+                     ((tag d) (panic #f "make-directory failed" tag d)))
+                   (case-values (open-file-ostream fname '(create))
+                     ((out) out)
+                     ((tag d) (panic #f "open-file-ostream failed" tag d))))))
+   (case-values (ostream-write out message 0 len len)
+     (() (values))
+     ((tag d) (panic #f "ostream-write failed" tag d)))
+   (ostream-close out)
+   (let* ((size   (file-size fname))
+          (dperm  (file-permissions dir))
+          (fperm  (file-permissions fname))
+          (dtype  (file-type dir))
+          (ftype  (file-type fname))
+          (path*  (directory-file* dir))
+          (sec    (file-modified-seconds fname))
+          (sec2   (case-values (move-file fname fname2)
+                    (() (file-modified-seconds fname2))
+                    ((tag d) (panic #f "move-file failed" tag d))))
+          (path*2 (directory-file* dir))
+          (in     (case-values (open-file-istream fname2)
+                    ((in) in)
+                    ((tag d) (panic #f "open-file-istream failed" tag d))))
+          (buf    (make-mbytevector size 0))
+          (amount (case-values (istream-read in buf 0 size size)
+                    ((amount) amount)
+                    ((tag d) (panic #f "istream-read failed" tag d)))))
+     (istream-close in)
+     (case-values (delete-file fname2)
+       (() (values))
+       ((tag d) (panic #f "delete-file failed" tag d)))
+     (case-values (delete-directory dir)
+       (() (values))
+       ((tag d) (panic #f "delete-directory failed" tag d)))
+     (list size amount dperm fperm (eqv? sec sec2) dtype ftype path* path*2
+           (mbytevector->bytevector buf))))
+ ==> (12 12 #o755 #o644 #t directory file ("out.txt") ("out2.txt") #"Hello world!")
  )

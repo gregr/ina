@@ -19,6 +19,11 @@
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
   standard-input-stream standard-output-stream standard-error-stream
+  change-directory directory-file* make-symbolic-link make-directory
+  delete-directory delete-file move-file open-file-istream open-file-ostream
+  file-type file-size file-permissions file-modified-seconds
+  set-file-permissions! set-file-modified-seconds!
+  filesystem-change-evt filesystem-change-evt-cancel
 
   make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
   current-thread-group make-thread-group current-thread thread thread/suspend-to-kill
@@ -827,6 +832,40 @@
 (define standard-error-stream  (rkt-port->ostream (current-error-port)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; File IO
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define (change-directory      path) (rkt:current-directory path) (values))
+(define (directory-file*       path) (io-guard (map path->string (rkt:directory-list path))))
+(define (make-symbolic-link to path) (io-guard (make-file-or-directory-link to path) (values)))
+(define (make-directory        path) (io-guard (rkt:make-directory path) (values)))
+(define (move-file          old new) (io-guard (rename-file-or-directory old new #f) (values)))
+(define (delete-file           path) (io-guard (rkt:delete-file path) (values)))
+(define (delete-directory      path) (io-guard (rkt:delete-directory path) (values)))
+(define (file-type             path) (io-guard (let ((type (file-or-directory-type path)))
+                                                 (case type
+                                                   ((file directory link #f) type)
+                                                   (else                     'unknown)))))
+(define (file-size             path) (io-guard (rkt:file-size path)))
+(define (file-permissions      path) (io-guard (file-or-directory-permissions path 'bits)))
+(define (file-modified-seconds path) (io-guard (file-or-directory-modify-seconds path)))
+(define (set-file-permissions! path permissions)
+  (nonnegative-integer?! permissions)
+  (io-guard (file-or-directory-permissions path permissions) (values)))
+(define (set-file-modified-seconds! path seconds)
+  (nonnegative-integer?! seconds)
+  (io-guard (file-or-directory-modify-seconds path seconds) (values)))
+(define (open-file-istream path) (io-guard (rkt-port->istream (open-input-file path))))
+(define (open-file-ostream path option*)
+  (let ((option*.all '(create update)))
+    (for-each (lambda (option) (unless (memv option option*.all)
+                                 (panic #f "not an open-file-ostream option" path option)))
+              option*))
+  (let* ((create? (member 'create option*))
+         (update? (member 'update option*))
+         (exists  (cond ((and create? update?) 'can-update) (create? 'error) (update? 'update))))
+    (io-guard (rkt-port->ostream (open-output-file path #:exists exists)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generic bytestream IO
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -860,76 +899,6 @@
     ((put* s) (write-string s port))
     ((flush)  (flush-output port))
     (else     super)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; File IO
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (filesystem root)
-  ;; NOTE: this is not a secure abstraction of a subtree of the file system.
-  ;; There is no protection against using ".." to access parent directories.
-  (define (path/root path)
-    (append root (if (string? path)
-                   ;; #:trim? works around weird string-split default behavior
-                   (string-split path "/" #:trim? #f)
-                   path)))
-  (define (resolve path) (string-join (path/root path) "/"))
-  (lambda/handle-fail
-    (lambda (x) x)
-    (method-lambda
-      ((subsystem path) (filesystem (path/root path)))
-
-      ((open-input        path                ) (file:port:input  (open-input-file  (resolve path))))
-      ((open-output       path (exists 'error)) (file:port:output (open-output-file (resolve path) #:exists exists)))
-      ((open-input-output path (exists 'error)) (define-values (in out)
-                                                  (open-input-output-file (resolve path) #:exists exists))
-                                                (list (file:port:input in) (file:port:output in)))
-
-      ((directory              path) (map path->string         (directory-list (resolve path))))
-      ((file-exists?           path) (file-exists?                             (resolve path)))
-      ((directory-exists?      path) (directory-exists?                        (resolve path)))
-      ((link-exists?           path) (link-exists?                             (resolve path)))
-      ((make-directory         path) (make-directory                           (resolve path)))
-      ((make-directory*        path) (make-directory*                          (resolve path)))
-      ((make-parent-directory* path) (make-parent-directory*                   (resolve path)))
-      ((make-link           to path) (make-file-or-directory-link (resolve to) (resolve path)))
-      ((delete-file            path) (delete-file                              (resolve path)))
-      ((delete-directory       path) (delete-directory                         (resolve path)))
-      ((delete-directory/files path) (delete-directory/files                   (resolve path)))
-
-      ((rename old new (exists-ok? #f)) (rename-file-or-directory (resolve old) (resolve new) exists-ok?))
-      ((copy   old new (exists-ok? #f)) (copy-file                (resolve old) (resolve new) exists-ok?))
-      ((copy-directory/files src dest (keep-modify-time? #f) (keep-links? #f))
-       (copy-directory/files (resolve src) (resolve dest)
-                             #:keep-modify-seconds? keep-modify-time?
-                             #:preserve-links? keep-links?))
-
-      ((size             path)         (file-size                        (resolve path)))
-      ((permissions-ref  path)         (file-or-directory-permissions    (resolve path) 'bits))
-      ((permissions-set! path mode)    (assert (integer? mode))
-                                       (file-or-directory-permissions    (resolve path) mode))
-      ((modify-time-ref  path)         (file-or-directory-modify-seconds (resolve path)))
-      ((modify-time-set! path seconds) (file-or-directory-modify-seconds (resolve path) seconds))
-
-      ((wait path) (define evt (filesystem-change-evt (resolve path)))
-                   (sync evt)
-                   (filesystem-change-evt-cancel evt)))))
-
-(define (file:port port)
-  (define super (bytestream:port port))
-  (method-lambda
-    ((position-ref)        (file-position* port))
-    ((position-set! index) (file-position* port index))
-    (else                  super)))
-
-(define (file:port:input  port) (bytestream:port:input (file:port port) port))
-(define (file:port:output port)
-  (define super (file:port port))
-  (bytestream:port:output
-    (method-lambda
-      ((truncate size) (file-truncate port size))
-      (else            super))
-    port))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Network communication
