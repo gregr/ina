@@ -56,8 +56,8 @@
      (parse-body env.large stx*.test))))
 (displayln "parsing self-apply1:")
 ;; ~2ms
-(define E.self-apply1 (time (parse-body env.large+privileged stx*.self-apply1)))
-;(define E.self-apply1 (profile (parse-body env.large+privileged stx*.self-apply1)))
+(define E.self-apply1 (time (parse-body env.large+posix+privileged stx*.self-apply1)))
+;(define E.self-apply1 (profile (parse-body env.large+posix+privileged stx*.self-apply1)))
 (displayln "evaluating self-apply1 to parse self-apply2:")
 ;; ~553ms
 (define E.self-apply2 (time (ns-eval E.self-apply1)))

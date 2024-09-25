@@ -16,3 +16,6 @@
 (define env.text             (eval-definition* env.base def*.text))
 (define env.large            (env-conjoin* env.nscheme env.text))
 (define env.large+privileged (env-conjoin* env.large env.privileged))
+
+(define env.posix.privileged       (value-package->env package.posix.privileged))
+(define env.large+posix+privileged (env-conjoin* env.large+privileged env.posix.privileged))

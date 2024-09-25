@@ -1,4 +1,4 @@
-(define package.rkt.privileged
+(define package.posix.rkt.privileged
   (cons
     '(
       rkt-eval rkt-text-eval)

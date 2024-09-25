@@ -18,6 +18,8 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
+  standard-input-stream standard-output-stream standard-error-stream
+
   make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
   current-thread-group make-thread-group current-thread thread thread/suspend-to-kill
   thread-resume thread-wait thread-resume-evt thread-suspend-evt thread-dead-evt
@@ -818,6 +820,13 @@
      arg*)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Standard IO streams
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define standard-input-stream  (rkt-port->istream (current-input-port)))
+(define standard-output-stream (rkt-port->ostream (current-output-port)))
+(define standard-error-stream  (rkt-port->ostream (current-error-port)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generic bytestream IO
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1030,21 +1039,6 @@
       ((multicast-loopback?-set! loopback?) (udp-multicast-set-loopback!  socket loopback?))
       ((multicast-ttl-ref)                  (udp-multicast-ttl            socket))
       ((multicast-ttl-set! ttl)             (udp-multicast-set-ttl!       socket ttl)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Standard IO and consoles
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;(define (console in out err)
-;  (lambda/handle-fail (lambda (x) x)
-;                      (method-lambda ((in) in) ((out) out) ((error) err))))
-;
-;(define (stdio:port:input  port) (bytestream:port:input  (bytestream:port port) port))
-;(define (stdio:port:output port) (bytestream:port:output (bytestream:port port) port))
-;
-;(define stdio (console (stdio:port:input  (current-input-port))
-;                       (stdio:port:output (current-output-port))
-;                       (stdio:port:output (current-error-port))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; TTY manipulation

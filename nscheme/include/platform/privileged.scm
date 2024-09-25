@@ -26,5 +26,4 @@
       native-signal-handler
       procedure-metadata
       record? record record-type-descriptor record-ref
-      string->bytevector bytevector->string
-      )))
+      string->bytevector bytevector->string)))

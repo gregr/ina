@@ -1452,3 +1452,22 @@
    (lambda () (panic 'a 'b 'c)))
   ==> error:eval
 )
+
+(define env.test.posix env.large+posix+privileged)
+
+(run-evaluation-tests
+ env.test.posix
+
+ ! stdio
+ (begin
+   (ostream-write-byte standard-output-stream 65)
+   (ostream-write-byte standard-output-stream 66)
+   (ostream-write-byte standard-output-stream 67)
+   (ostream-write-byte standard-output-stream 10))
+ ==> (values)
+ (let* ((message #"Type 'x' and hit enter: ")
+        (len (bytevector-length message)))
+   (ostream-write standard-error-stream message 0 len len)
+   (istream-read-byte standard-input-stream))
+ ==> 120
+ )

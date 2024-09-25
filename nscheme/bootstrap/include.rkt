@@ -42,6 +42,7 @@
 (include "../include/platform/control.scm")
 (include "../include/platform/privileged.scm")
 (include "../include/platform/low-level/control.scm")
+(include "../include/platform/posix/privileged.scm")
 
 (define-runtime-path path.here ".")
 
@@ -101,6 +102,7 @@
      "../include/platform/control.scm"
      "../include/platform/privileged.scm"
      "../include/platform/low-level/control.scm"
+     "../include/platform/posix/privileged.scm"
      )))
 
 (include "../include/platform/bootstrap.scm")
