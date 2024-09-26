@@ -1,3 +1,5 @@
+;; TODO: expose (E-compile-rkt E) but do not expose the prim-addr etc. mappings used to implement it
+
 ;;; This file sets up a full compiler for the posix/racket platform.  This compiler can be used for
 ;;; cross-compilation, and when already running on posix/racket, also runtime compilation.
 
@@ -8,6 +10,10 @@
 (define (name*->addr-package    name*) (cons name* (map (lambda (n) (make-address n #f)) name*)))
 (define (addr-package->addr=>id pkg)   (map cons (cdr pkg) (car pkg)))
 
+;; TODO:
+;; - handle this through cross-phase persistence of primitive operators
+;; - then we won't have to re-list all these names, just those of privileged operators?  maybe not even those?
+;;   - nscheme program, which has access to all the privileged packages, can build the E-quote memoizer
 (define addr-package.posix/racket.primitive
   (name*->addr-package
     '(
@@ -44,13 +50,20 @@
 
 ;; We only want two hand-written .rkt files in this project:
 ;; - bootstrap.rkt
-;;   - builds a fresh posix/racket system without needing an existing nscheme system
-;;   - this will contain only the Racket primitive implementations needed for bootstrap
-;;     - the complete primitive implementations are only defined right here, in platform/posix/racket.scm
+;;   - build a fresh posix/racket system without needing an existing nscheme system
+;;     - this will only implement the Racket primitives needed for bootstrap
+;;     - the complete set of primitives are only defined right here, in platform/posix/racket/compile.scm, in a string/bytevector
 ;;     - so, only a small amount of duplication
+;;   - use the generated posix/racket system to generate itself again, and compare the result to verify it is identical
+;;   - use the generated posix/racket system to generate code for all other platform systems
+;;     - some platforms, such as posix/c, will either involve a separate build step, or an interpreter-style script
+;;       - e.g., invoke gcc and run the result immediately
 ;; - test.rkt
 ;;   - validates just enough to have confidence in the bootstrapping process
 ;;   - other testing can happen elsewhere
+;; - question: should bootstrap.rkt be responsible for packaging up all the text files in a data structure?
+;;   - maybe posix/whatever can do that since it can access the filesystem?
+;;     - unlike www
 
 
 ;;; OLD, SEE ABOVE INSTEAD
@@ -59,32 +72,29 @@
 ;;   - containing the necessary parts currently found in nscheme.rkt
 ;; - bootstrap.rkt  (maybe we should call this something else, depending on what it REALLY does (nscheme.rkt ?))
 ;;   - orchestrates the bootstrap build process for a fresh system
-;;   - or maybe it should just started up the equivalent of posix/nscheme.rkt, and let the
+;;   - or maybe it should just start up the equivalent of posix/nscheme.rkt, and let the
 ;;     user decide what to do with it
 ;;     - leaning towards just doing the build for a fresh posix/racket system, and from there the user can do
 ;;       what they want
 ;; - test.rkt
 ;;   - validates just enough to have confidence in the bootstrapping process
 ;;   - other testing can happen elsewhere
-;; We need to be able to carry the text in primitive.rkt forward for building new instances of posix/racket
-;; - this is actually true of all the text files, and needs to be solved in a platform-specific way
+
+;; We need to be able to carry the code in all the text files forward
+;; - needs to be solved in a platform-specific way
 ;;   - e.g., posix understands directories and files, so one option is to expect such a system to read those directly
 ;;   - a www system won't have that option, so we could package up the text files as some data structure
 ;;   - and a "livingnet" system is different from www, but will solve this problem in a similar way
-;; - though primitive.rkt specifically is required for cross-compiling to racket, so its text should be
-;;   internalized on all platforms whenever posix/racket.scm is used ... chicken and egg problem unless we maintain
+;; - though primitives in bootstrap.rkt are required for cross-compiling to racket, so its text should be
+;;   internalized on all platforms whenever posix/racket/ is used ... chicken and egg problem unless we maintain
 ;;   two separate copies: one here, and one in bootstrap/
 ;;   - or, we could somehow include the copy from here during the bootstrap process, if we can
 ;;     minimize the dependencies we need for doing so... how is this possible though, since nscheme just won't
 ;;     work without its primitives?
 ;;   - maybe it's even a good idea to maintain two copies
-;;     - it makes it possible to change how posix/racket.scm works without having to change the current system
+;;     - it makes it possible to change how posix/racket/ works without having to change the current system
 ;;       - no need to redo the entire bootstrap
 ;;     - also good for security of the bootstrap (trusting trust)
-;; - so maybe no primitive.rkt at all, since the duplicate copy can live in bootstrap.rkt
-;;   - and we'll just have the text for the would-be primitive.rkt embedded in a string/bytevector here
-;;   - we don't even have to provide all the primitives in bootstrap.rkt, just enough for
-;;     the bootstrap itself to succeed
 
 
 ;; provide global names for all of these too
