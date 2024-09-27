@@ -711,21 +711,20 @@
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; IO primitives ;;;
 ;;;;;;;;;;;;;;;;;;;;;
-(define (rkt-port-set-position!/k port new k)
-  (with-handlers ((exn:fail:filesystem? (lambda (e) (values 'no-position (exn-message e))))
-                  (exn:fail:contract?   (lambda (e) (panic #f (exn-message e)))))
+(define (rkt-port-set-position!/k port new kf k)
+  (with-handlers ((exn:fail:filesystem? (lambda (e) (kf 'no-position (exn-message e)))))
     (file-position port (or new eof))
     (k)))
-(define (with-io-guard thunk)
-  (with-handlers ((exn:fail:filesystem:exists? (lambda (e) (values 'exists (exn-message e))))
-                  (exn:fail:filesystem:errno?  (lambda (e) (values (exn:fail:filesystem:errno-errno e)
-                                                                   (exn-message e))))
-                  (exn:fail:filesystem?        (lambda (e) (values #f (exn-message e))))
-                  (exn:fail:network:errno?     (lambda (e) (values (exn:fail:network:errno-errno e)
-                                                                   (exn-message e))))
-                  (exn:fail:network?           (lambda (e) (values #f (exn-message e)))))
+(define (with-io-guard kfail thunk)
+  (with-handlers ((exn:fail:filesystem:exists? (lambda (e) (kfail 'exists (exn-message e))))
+                  (exn:fail:filesystem:errno?  (lambda (e) (kfail (exn:fail:filesystem:errno-errno e)
+                                                                  (exn-message e))))
+                  (exn:fail:filesystem?        (lambda (e) (kfail #f (exn-message e))))
+                  (exn:fail:network:errno?     (lambda (e) (kfail (exn:fail:network:errno-errno e)
+                                                                  (exn-message e))))
+                  (exn:fail:network?           (lambda (e) (kfail #f (exn-message e)))))
     (thunk)))
-(define-syntax-rule (io-guard body ...) (with-io-guard (lambda () body ...)))
+(define-syntax-rule (io-guard kfail body ...) (with-io-guard kfail (lambda () body ...)))
 
 (define (nonnegative-integer?! x) (unless (exact-nonnegative-integer? x)
                                     (panic #f "not a nonnegative integer" x)))
@@ -742,50 +741,50 @@
   (lambda (method . arg*)
     (apply
      (case method
-       ((read)          (lambda (dst start min-count count)
+       ((read)          (lambda (dst start min-count count kf keof k)
                           (buffer-range?! dst start min-count count)
                           (io-guard
+                           kf
                            (cond
                              ((= count 0) 0)
                              ((= min-count count)
                               (let ((amount (read-bytes! (mbytevector-bv dst) port start
                                                          (+ start count))))
-                                (if (eof-object? amount) (values) amount)))
+                                (if (eof-object? amount) (keof) (k amount))))
                              ((= min-count 0)
                               (let ((amount (read-bytes-avail!* (mbytevector-bv dst) port start
                                                                 (+ start count))))
-                                (if (eof-object? amount) (values) amount)))
+                                (if (eof-object? amount) (keof) (k amount))))
                              (else (let loop ((total 0))
                                      (let ((amount (read-bytes-avail! (mbytevector-bv dst) port
                                                                       (+ start total)
                                                                       (+ start count))))
                                        (if (eof-object? amount)
-                                           (if (= total 0) (values) total)
+                                           (if (= total 0) (keof) (k total))
                                            (let ((total (+ total amount)))
                                              (if (< total min-count)
                                                  (loop total)
-                                                 total))))))))))
-       ((pread)         (lambda (pos dst start count)
+                                                 (k total)))))))))))
+       ((pread)         (lambda (pos dst start count kf keof k)
                           (buffer-range?! dst start count count)
                           (io-guard
+                           kf
                            (let ((pos.current (file-position* port)))
                              (if pos.current
                                  (rkt-port-set-position!/k
-                                  port pos
+                                  port pos kf
                                   (lambda ()
                                     (let ((amount (read-bytes! (mbytevector-bv dst) port start
                                                                (+ start count))))
                                       (rkt-port-set-position!/k
-                                       port pos.current
-                                       (if (eof-object? amount)
-                                           (lambda () (values))
-                                           (lambda () amount))))))
-                                 (values 'no-position "istream does not support pread"))))))
-       ((read-byte)     (lambda ()    (io-guard (let ((b (read-byte port)))
-                                                  (if (eof-object? b) (values) b)))))
-       ((position)      (lambda ()    (file-position* port)))
-       ((set-position!) (lambda (new) (rkt-port-set-position!/k port new values)))
-       ((close)         (lambda ()    (close-input-port port) (values)))
+                                       port pos.current kf
+                                       (if (eof-object? amount) keof (lambda () (k amount)))))))
+                                 (kf 'no-position "istream does not support pread"))))))
+       ((read-byte)     (lambda (kf keof k) (io-guard kf (let ((b (read-byte port)))
+                                                           (if (eof-object? b) (keof) (k b))))))
+       ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
+       ((position)      (lambda ()         (file-position* port)))
+       ((close)         (lambda (kf k)     (io-guard kf (close-input-port port) (k))))
        (else            (error "not an istream method" method)))
      arg*)))
 
@@ -794,33 +793,34 @@
   (lambda (method . arg*)
     (apply
      (case method
-       ((write)         (lambda (src start min-count count)
+       ((write)         (lambda (src start min-count count kf k)
                           (buffer-range?! src start min-count count)
                           (io-guard
+                           kf
                            (cond
-                             ((= min-count count) (write-bytes src port start (+ start count))
-                                                  (values))
+                             ((= min-count count) (k (write-bytes src port start (+ start count))))
                              ((= min-count 0)
-                              (or (write-bytes-avail* src port start (+ start count)) 0))
+                              (k (or (write-bytes-avail* src port start (+ start count)) 0)))
                              (else (let loop ((total 0))
                                      (let* ((amount (write-bytes-avail src port (+ start total)
                                                                        (+ start count)))
                                             (total  (+ total amount)))
-                                       (if (< total min-count) (loop total) total))))))))
-       ((pwrite)        (lambda (pos src start count)
+                                       (if (< total min-count) (loop total) (k total)))))))))
+       ((pwrite)        (lambda (pos src start count kf k)
                           (buffer-range?! src start count count)
                           (io-guard
+                           kf
                            (let ((pos.current (file-position* port)))
                              (if pos.current
                                  (rkt-port-set-position!/k
-                                  port pos
-                                  (lambda () (write-bytes src port start (+ start count)) (values)))
-                                 (values 'no-position "ostream does not support pwrite"))))))
-       ((write-byte)    (lambda (b)   (io-guard (write-byte b port) (values))))
-       ((set-size!)     (lambda (new) (io-guard (file-truncate port new) (values))))
-       ((close)         (lambda ()    (close-output-port port) (values)))
-       ((position)      (lambda ()    (file-position* port)))
-       ((set-position!) (lambda (new) (rkt-port-set-position!/k port new values)))
+                                  port pos kf
+                                  (lambda () (write-bytes src port start (+ start count)) (k)))
+                                 (kf 'no-position "ostream does not support pwrite"))))))
+       ((write-byte)    (lambda (b kf k)   (io-guard kf (write-byte b port) (k))))
+       ((set-size!)     (lambda (new kf k) (io-guard kf (file-truncate port new) (k))))
+       ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
+       ((position)      (lambda ()         (file-position* port)))
+       ((close)         (lambda (kf k)     (io-guard kf (close-output-port port) (k))))
        (else            (error "not an ostream method" method)))
      arg*)))
 
@@ -841,26 +841,26 @@
 ;;; File IO ;;;
 ;;;;;;;;;;;;;;;
 (define (change-directory      path) (rkt:current-directory path) (values))
-(define (directory-file*       path) (io-guard (map path->string (rkt:directory-list path))))
-(define (make-symbolic-link to path) (io-guard (make-file-or-directory-link to path) (values)))
-(define (make-directory        path) (io-guard (rkt:make-directory path) (values)))
-(define (move-file          old new) (io-guard (rename-file-or-directory old new #f) (values)))
-(define (delete-file           path) (io-guard (rkt:delete-file path) (values)))
-(define (delete-directory      path) (io-guard (rkt:delete-directory path) (values)))
-(define (file-type             path) (io-guard (let ((type (file-or-directory-type path)))
+(define (directory-file*       path) (io-guard values (map path->string (rkt:directory-list path))))
+(define (make-symbolic-link to path) (io-guard values (make-file-or-directory-link to path) (values)))
+(define (make-directory        path) (io-guard values (rkt:make-directory path) (values)))
+(define (move-file          old new) (io-guard values (rename-file-or-directory old new #f) (values)))
+(define (delete-file           path) (io-guard values (rkt:delete-file path) (values)))
+(define (delete-directory      path) (io-guard values (rkt:delete-directory path) (values)))
+(define (file-type             path) (io-guard values (let ((type (file-or-directory-type path)))
                                                  (case type
                                                    ((file directory link #f) type)
                                                    (else                     'unknown)))))
-(define (file-size             path) (io-guard (rkt:file-size path)))
-(define (file-permissions      path) (io-guard (file-or-directory-permissions path 'bits)))
-(define (file-modified-seconds path) (io-guard (file-or-directory-modify-seconds path)))
+(define (file-size             path) (io-guard values (rkt:file-size path)))
+(define (file-permissions      path) (io-guard values (file-or-directory-permissions path 'bits)))
+(define (file-modified-seconds path) (io-guard values (file-or-directory-modify-seconds path)))
 (define (set-file-permissions! path permissions)
   (nonnegative-integer?! permissions)
-  (io-guard (file-or-directory-permissions path permissions) (values)))
+  (io-guard values (file-or-directory-permissions path permissions) (values)))
 (define (set-file-modified-seconds! path seconds)
   (nonnegative-integer?! seconds)
-  (io-guard (file-or-directory-modify-seconds path seconds) (values)))
-(define (open-file-istream path) (io-guard (rkt-port->istream (open-input-file path))))
+  (io-guard values (file-or-directory-modify-seconds path seconds) (values)))
+(define (open-file-istream path) (io-guard values (rkt-port->istream (open-input-file path))))
 (define (open-file-ostream path option*)
   (let ((option*.all '(create update)))
     (for-each (lambda (option) (unless (memv option option*.all)
@@ -869,7 +869,7 @@
   (let* ((create? (member 'create option*))
          (update? (member 'update option*))
          (exists  (cond ((and create? update?) 'can-update) (create? 'error) (update? 'update))))
-    (io-guard (rkt-port->ostream (open-output-file path #:exists exists)))))
+    (io-guard values (rkt-port->ostream (open-output-file path #:exists exists)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generic bytestream IO
