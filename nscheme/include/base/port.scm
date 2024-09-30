@@ -124,8 +124,9 @@
 
 (define (open-mbytevector-ostream buf)
   (mlet ((pos.st 0))
-    (define (full-error kf pos.current . x*)
-      (kf 'no-space (list (list 'mbytevector-ostream pos.current (mbytevector-length buf)) x*)))
+    (define (full-error kf pos.current name . x*)
+      (kf 'no-space (list (vector (vector 'mbytevector-ostream pos.current (mbytevector-length buf))
+                                  name x*))))
     (define (do-write update-pos? pos.current src start min-count count kf k)
       (buffer-range?! src start min-count count)
       (let ((amount (min (- (mbytevector-length buf) pos.current) count)))
@@ -248,7 +249,7 @@
 
 (define full-ostream
   (lambda (method . arg*)
-    (define (full-error kf . x*) (kf 'no-space (list 'full-ostream x*)))
+    (define (full-error kf name . x*) (kf 'no-space (list (vector 'full-ostream name x*))))
     (apply (case method
              ((write)         (lambda (src start min-count count kf k)
                                 (buffer-range?! src start min-count count)
@@ -313,10 +314,10 @@
 ;;;;;;;;;;;;;;;;;
 ;;; Improper use of a port operation will panic.  Proper use of a port operation may still fail by
 ;;; raising an io-error, which will include a stream failure tag and any extra detail.
-(define-values (io-error:kind io-error? io-error-tag io-error-detail)
-  (make-exception-kind-etc error:kind 'io-error '#(tag detail)))
-(define (make-io-error  desc tag detail) (make-exception io-error:kind (vector desc tag detail)))
-(define (raise-io-error desc tag detail) (raise (make-io-error desc tag detail)))
+(define-values (io-error:kind io-error? io-error-tag io-error-context)
+  (make-exception-kind-etc error:kind 'io-error '#(tag context)))
+(define (make-io-error  desc tag context) (make-exception io-error:kind (vector desc tag context)))
+(define (raise-io-error tag context) (raise (make-io-error "IO error" tag context)))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Input ports ;;;
@@ -416,7 +417,7 @@
                                   (if (< skip end)
                                       (mbytevector-ref buf.new skip)
                                       (begin (iport-set-eof?! p #t) (values)))))
-                      ((tag d)  (raise-io-error "iport-peek-byte failed" tag d)))))
+                      ((tag x)  (raise-io-error tag (cons (vector 'iport-peek-byte skip) x))))))
                 (if (<= len skip)
                     (let* ((len (max (+ skip 1) (+ len len))) (new (make-mbytevector len 0)))
                       (iport-set-buffer! p new)
@@ -435,11 +436,13 @@
                   ((amount) (iport-set-pos! p 1)
                             (iport-set-end! p amount)
                             (mbytevector-ref buf 0))
-                  ((tag d)  (raise-io-error "iport-read-byte failed" tag d))))))))
+                  ((tag x)  (raise-io-error tag (cons 'iport-read-byte x)))))))))
 
   ;; Returns (values) on EOF or amount read.
   (define iport-read
     (let ((go (lambda (p dst start min-count count)
+                (define (fail tag ctx)
+                  (raise-io-error tag (cons (vector 'iport-read start min-count count) ctx)))
                 (buffer-range?! dst start min-count count)
                 (let* ((pos (iport-pos p)) (end (iport-end p)) (available (- end pos)))
                   (let ((amount (min count available)))
@@ -465,11 +468,11 @@
                                                          (iport-set-end! p amount)
                                                          (+ available count))
                                                   (+ available amount)))
-                                    ((tag d)  (raise-io-error "iport-read failed" tag d)))
+                                    ((tag x)  (fail tag x)))
                                   (case-values (istream-read s dst start min-count count)
                                     (()       (if (< 0 available) available (values)))
                                     ((amount) (+ available amount))
-                                    ((tag d)  (raise-io-error "iport-read failed" tag d))))))))))))
+                                    ((tag x)  (fail tag x))))))))))))
       (case-lambda
         ((p dst start count)           (go p dst start count     count))
         ((p dst start min-count count) (go p dst start min-count count)))))
@@ -484,7 +487,7 @@
   (define (iport-set-position! p pos)
     (iport-buffer/refresh p)
     (case-values (istream-set-position! (iport-stream p) pos)
-      ((tag d) (raise-io-error "iport-set-position! failed" tag d))
+      ((tag x) (raise-io-error tag (cons (vector 'iport-set-position! pos) x)))
       (_       (iport-set-pos! p 0) (iport-set-end! p 0))))
 
   ;; returns (values) on EOF or amount read.
@@ -492,7 +495,7 @@
     (case-values (istream-pread (iport-stream p) pos dst start count)
       (()       (values))
       ((amount) amount)
-      ((tag d)  (raise-io-error "iport-pread failed" tag d)))))
+      ((tag x)  (raise-io-error tag (cons (vector 'iport-pread pos start count) x))))))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Output ports ;;;
@@ -537,7 +540,7 @@
   (define (oport-flush p)
     (let ((pos (oport-pos p)))
       (case-values (ostream-write (oport-stream p) (oport-buffer p) 0 pos pos)
-        ((tag d) (raise-io-error "oport-flush failed" tag d))
+        ((tag x) (raise-io-error tag (cons 'oport-flush x)))
         (_       (oport-set-pos! p 0)))))
 
   (define (oport-write-byte p byte)
@@ -547,14 +550,14 @@
            (available (- len pos)))
       (cond
         ((= len 0)       (case-values (ostream-write-byte (oport-stream p) byte)
-                           ((tag d) (raise-io-error "oport-write-byte failed" tag d))
+                           ((tag x) (raise-io-error tag (cons (vector 'oport-write-byte byte) x)))
                            (_       (values))))
         ((= available 0) (case-values (ostream-write (oport-stream p) buf 0 1 len)
                            ((amount) (let ((pos (- len amount)))
                                        (mbytevector-copy! buf amount buf 0 pos)
                                        (mbytevector-set! buf pos byte)
                                        (oport-set-pos! p (+ pos 1))))
-                           ((tag d) (raise-io-error "oport-write-byte failed" tag d))))
+                           ((tag x) (raise-io-error tag (cons (vector 'oport-write-byte byte) x)))))
         (else            (mbytevector-set! buf pos byte)
                          (oport-set-pos! p (+ pos 1))))))
 
@@ -569,7 +572,8 @@
                   (define (do-write src start min-count count)
                     (case-values (ostream-write (oport-stream p) src start min-count len)
                       ((amount) amount)
-                      ((tag d)  (raise-io-error "oport-write failed" tag d))))
+                      ((tag x)  (raise-io-error
+                                  tag (cons (vector 'oport-write start min-count count) x)))))
                   (define (drain min-count)
                     (let* ((amount (do-write buf 0 min-count len))
                            (pos    (- len amount)))
@@ -610,19 +614,19 @@
   (define (oport-set-position! p pos)
     (oport-flush p)
     (case-values (ostream-set-position! (oport-stream p) pos)
-      ((tag d) (raise-io-error "oport-set-position! failed" tag d))
+      ((tag x) (raise-io-error tag (cons (vector 'oport-set-position! pos) x)))
       (_       (oport-set-pos! p 0))))
 
   (define (oport-set-size! p size)
     (oport-flush p)
     (case-values (ostream-set-size! (oport-stream p) size)
-      ((tag d) (raise-io-error "oport-set-size! failed" tag d))
+      ((tag x) (raise-io-error tag (cons (vector 'oport-set-size! size) x)))
       (_       (values))))
 
   (define (oport-pwrite p pos src start count)
     (oport-flush p)
     (case-values (ostream-pwrite (oport-stream p) pos src start count)
-      ((tag d)  (raise-io-error "oport-pwrite failed" tag d))
+      ((tag x)  (raise-io-error tag (cons (vector 'oport-pwrite pos start count) x)))
       (_        (values)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
