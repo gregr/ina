@@ -712,17 +712,17 @@
 ;;; IO primitives ;;;
 ;;;;;;;;;;;;;;;;;;;;;
 (define (rkt-port-set-position!/k port new kf k)
-  (with-handlers ((exn:fail:filesystem? (lambda (e) (kf 'no-position (exn-message e)))))
+  (with-handlers ((exn:fail:filesystem? (lambda (e) (kf 'no-position (list (exn-message e))))))
     (file-position port (or new eof))
     (k)))
 (define (with-io-guard kfail thunk)
-  (with-handlers ((exn:fail:filesystem:exists? (lambda (e) (kfail 'exists (exn-message e))))
+  (with-handlers ((exn:fail:filesystem:exists? (lambda (e) (kfail 'exists (list (exn-message e)))))
                   (exn:fail:filesystem:errno?  (lambda (e) (kfail (exn:fail:filesystem:errno-errno e)
-                                                                  (exn-message e))))
-                  (exn:fail:filesystem?        (lambda (e) (kfail #f (exn-message e))))
+                                                                  (list (exn-message e)))))
+                  (exn:fail:filesystem?        (lambda (e) (kfail #f (list (exn-message e)))))
                   (exn:fail:network:errno?     (lambda (e) (kfail (exn:fail:network:errno-errno e)
-                                                                  (exn-message e))))
-                  (exn:fail:network?           (lambda (e) (kfail #f (exn-message e)))))
+                                                                  (list (exn-message e)))))
+                  (exn:fail:network?           (lambda (e) (kfail #f (list (exn-message e))))))
     (thunk)))
 (define-syntax-rule (io-guard kfail body ...) (with-io-guard kfail (lambda () body ...)))
 
