@@ -40,7 +40,8 @@
    `((define def*.base     ',def*.base)
      (define def*.compiler ',def*.compiler)
      (define def*.nscheme  ',def*.nscheme)
-     (define def*.text     ',def*.text))
+     (define def*.text     ',def*.text)
+     (define def*.posix    ',def*.posix))
    def*.primitive
    def*.syntax
    (file-name->stx* "../include/platform/bootstrap.scm")

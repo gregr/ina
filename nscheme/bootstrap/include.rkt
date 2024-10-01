@@ -43,6 +43,7 @@
 (include "../include/platform/privileged.scm")
 (include "../include/platform/low-level/control.scm")
 (include "../include/platform/posix/common.scm")
+(include "../include/platform/posix/io.scm")
 
 (define-runtime-path path.here ".")
 
@@ -103,6 +104,10 @@
      "../include/platform/privileged.scm"
      "../include/platform/low-level/control.scm"
      "../include/platform/posix/common.scm"
+     )))
+(define def*.posix
+  (file-name*->stx*
+   '("../include/platform/posix/io.scm"
      )))
 
 (include "../include/platform/bootstrap.scm")

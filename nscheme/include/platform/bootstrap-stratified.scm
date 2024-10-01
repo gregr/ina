@@ -19,6 +19,8 @@
 (define env.large            (env-conjoin* env.nscheme env.text))
 (define env.large+privileged (env-conjoin* env.large env.privileged))
 
-(define env.posix.common           (value-package->env package.posix.common))
-(define env.posix                  (env-conjoin* env.posix.common))
+(define env.posix.common (value-package->env package.posix.common))
+(define env.posix        (env-conjoin* (link-definition* (env-conjoin* env.base env.posix.common)
+                                                         def*.posix)
+                                       env.posix.common))
 (define env.large+posix+privileged (env-conjoin* env.large+privileged env.posix))
