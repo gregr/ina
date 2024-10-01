@@ -1,4 +1,4 @@
-(define package.posix.privileged
+(define package.posix.common
   (cons
     '(
       command-line-argument* standard-input-stream standard-output-stream standard-error-stream
