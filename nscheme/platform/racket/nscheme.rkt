@@ -18,12 +18,13 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  command-line-argument* standard-input-stream standard-output-stream standard-error-stream
-  change-directory directory-file* make-symbolic-link make-directory
-  delete-directory delete-file move-file open-file-istream open-file-ostream
-  file-type file-size file-permissions file-modified-seconds
-  set-file-permissions! set-file-modified-seconds!
+  change-directory command-line-argument*
+  standard-input-stream standard-output-stream standard-error-stream
   filesystem-change-evt filesystem-change-evt-cancel
+  directory-file*/k make-symbolic-link/k make-directory/k
+  delete-directory/k delete-file/k move-file/k open-file-istream/k open-file-ostream/k
+  file-type/k file-size/k file-permissions/k file-modified-seconds/k
+  set-file-permissions!/k set-file-modified-seconds!/k
 
   make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
   current-thread-group make-thread-group current-thread thread thread/suspend-to-kill
@@ -840,28 +841,28 @@
 ;;;;;;;;;;;;;;;
 ;;; File IO ;;;
 ;;;;;;;;;;;;;;;
-(define (change-directory      path) (rkt:current-directory path) (values))
-(define (directory-file*       path) (io-guard values (map path->string (rkt:directory-list path))))
-(define (make-symbolic-link to path) (io-guard values (make-file-or-directory-link to path) (values)))
-(define (make-directory        path) (io-guard values (rkt:make-directory path) (values)))
-(define (move-file          old new) (io-guard values (rename-file-or-directory old new #f) (values)))
-(define (delete-file           path) (io-guard values (rkt:delete-file path) (values)))
-(define (delete-directory      path) (io-guard values (rkt:delete-directory path) (values)))
-(define (file-type             path) (io-guard values (let ((type (file-or-directory-type path)))
-                                                 (case type
-                                                   ((file directory link #f) type)
-                                                   (else                     'unknown)))))
-(define (file-size             path) (io-guard values (rkt:file-size path)))
-(define (file-permissions      path) (io-guard values (file-or-directory-permissions path 'bits)))
-(define (file-modified-seconds path) (io-guard values (file-or-directory-modify-seconds path)))
-(define (set-file-permissions! path permissions)
+(define (change-directory        path)      (rkt:current-directory path) (values))
+(define (directory-file*/k       path kf k) (io-guard kf (k (map path->string (rkt:directory-list path)))))
+(define (make-symbolic-link/k to path kf k) (io-guard kf (make-file-or-directory-link to path) (k)))
+(define (make-directory/k        path kf k) (io-guard kf (rkt:make-directory path) (k)))
+(define (move-file/k          old new kf k) (io-guard kf (rename-file-or-directory old new #f) (k)))
+(define (delete-file/k           path kf k) (io-guard kf (rkt:delete-file path) (k)))
+(define (delete-directory/k      path kf k) (io-guard kf (rkt:delete-directory path) (k)))
+(define (file-type/k             path kf k) (io-guard kf (let ((type (file-or-directory-type path)))
+                                                           (k (case type
+                                                                ((file directory link #f) type)
+                                                                (else                     'unknown))))))
+(define (file-size/k             path kf k) (io-guard kf (k (rkt:file-size path))))
+(define (file-permissions/k      path kf k) (io-guard kf (k (file-or-directory-permissions path 'bits))))
+(define (file-modified-seconds/k path kf k) (io-guard kf (k (file-or-directory-modify-seconds path))))
+(define (set-file-permissions!/k path permissions kf k)
   (nonnegative-integer?! permissions)
-  (io-guard values (file-or-directory-permissions path permissions) (values)))
-(define (set-file-modified-seconds! path seconds)
+  (io-guard kf (file-or-directory-permissions path permissions) (k)))
+(define (set-file-modified-seconds!/k path seconds kf k)
   (nonnegative-integer?! seconds)
-  (io-guard values (file-or-directory-modify-seconds path seconds) (values)))
-(define (open-file-istream path) (io-guard values (rkt-port->istream (open-input-file path))))
-(define (open-file-ostream path option*)
+  (io-guard kf (file-or-directory-modify-seconds path seconds) (k)))
+(define (open-file-istream/k path kf k) (io-guard kf (k (rkt-port->istream (open-input-file path)))))
+(define (open-file-ostream/k path option* kf k)
   (let ((option*.all '(create update)))
     (for-each (lambda (option) (unless (memv option option*.all)
                                  (panic #f "not an open-file-ostream option" path option)))
@@ -869,7 +870,7 @@
   (let* ((create? (member 'create option*))
          (update? (member 'update option*))
          (exists  (cond ((and create? update?) 'can-update) (create? 'error) (update? 'update))))
-    (io-guard values (rkt-port->ostream (open-output-file path #:exists exists)))))
+    (io-guard kf (k (rkt-port->ostream (open-output-file path #:exists exists))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generic bytestream IO

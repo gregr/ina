@@ -1,16 +1,19 @@
 (define package.posix.common
   (cons
     '(
-      command-line-argument* standard-input-stream standard-output-stream standard-error-stream
-      change-directory directory-file* make-symbolic-link make-directory
-      delete-directory delete-file move-file open-file-istream open-file-ostream
-      file-type file-size file-permissions file-modified-seconds
-      set-file-permissions! set-file-modified-seconds!
-      filesystem-change-evt filesystem-change-evt-cancel)
+      change-directory command-line-argument*
+      standard-input-stream standard-output-stream standard-error-stream
+      filesystem-change-evt filesystem-change-evt-cancel
+      directory-file*/k make-symbolic-link/k make-directory/k
+      delete-directory/k delete-file/k move-file/k open-file-istream/k open-file-ostream/k
+      file-type/k file-size/k file-permissions/k file-modified-seconds/k
+      set-file-permissions!/k set-file-modified-seconds!/k
+      )
     (list
-      command-line-argument* standard-input-stream standard-output-stream standard-error-stream
-      change-directory directory-file* make-symbolic-link make-directory
-      delete-directory delete-file move-file open-file-istream open-file-ostream
-      file-type file-size file-permissions file-modified-seconds
-      set-file-permissions! set-file-modified-seconds!
-      filesystem-change-evt filesystem-change-evt-cancel)))
+      change-directory command-line-argument*
+      standard-input-stream standard-output-stream standard-error-stream
+      filesystem-change-evt filesystem-change-evt-cancel
+      directory-file*/k make-symbolic-link/k make-directory/k
+      delete-directory/k delete-file/k move-file/k open-file-istream/k open-file-ostream/k
+      file-type/k file-size/k file-permissions/k file-modified-seconds/k
+      set-file-permissions!/k set-file-modified-seconds!/k)))
