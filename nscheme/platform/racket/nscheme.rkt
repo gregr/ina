@@ -862,15 +862,13 @@
   (nonnegative-integer?! seconds)
   (io-guard kf (file-or-directory-modify-seconds path seconds) (k)))
 (define (open-file-istream/k path kf k) (io-guard kf (k (rkt-port->istream (open-input-file path)))))
-(define (open-file-ostream/k path option* kf k)
-  (let ((option*.all '(create update)))
-    (for-each (lambda (option) (unless (memv option option*.all)
-                                 (panic #f "not an open-file-ostream option" path option)))
-              option*))
-  (let* ((create? (member 'create option*))
-         (update? (member 'update option*))
-         (exists  (cond ((and create? update?) 'can-update) (create? 'error) (update? 'update))))
-    (io-guard kf (k (rkt-port->ostream (open-output-file path #:exists exists))))))
+(define (open-file-ostream/k path restriction kf k)
+  (let ((exists-flag (case restriction
+                       ((create) 'error)
+                       ((update) 'udpate)
+                       ((#f)     'can-update)
+                       (else     (panic #f "not an open-file-ostream restriction" restriction)))))
+    (io-guard kf (k (rkt-port->ostream (open-output-file path #:exists exists-flag))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generic bytestream IO

@@ -1484,7 +1484,7 @@
                    (case-values (make-directory/k dir values values)
                      (() (values))
                      ((tag d) (panic #f "make-directory failed" tag d)))
-                   (case-values (open-file-ostream/k fname '(create) values values)
+                   (case-values (open-file-ostream/k fname 'create values values)
                      ((out) out)
                      ((tag d) (panic #f "open-file-ostream failed" tag d))))))
    (case-values (ostream-write/k out message 0 len len values values)
