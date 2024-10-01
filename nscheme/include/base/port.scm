@@ -21,62 +21,62 @@
 ;;; Input streams ;;;
 ;;;;;;;;;;;;;;;;;;;;;
 (define (istream-close/k s kf k) (s 'close kf k))
-(define (istream-close   s)      (istream-close/k s values values))
+(define (istream-close   s)      (istream-close/k s raise-io-error values))
 ;; Returns EOF, the byte read, or a failure indication.
 (define (istream-read-byte/k s kf keof k) (s 'read-byte kf keof k))
-(define (istream-read-byte   s)           (istream-read-byte/k s values values values))
+(define (istream-read-byte   s)           (istream-read-byte/k s raise-io-error values values))
 ;; Returns EOF, the amount read, or a failure indication.
 ;; Blocks until at least (min min-count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
 (define (istream-read/k s dst start min-count count kf keof k)
   (s 'read dst start min-count count kf keof k))
 (define (istream-read s dst start min-count count)
-  (istream-read/k s dst start min-count count values values values))
+  (istream-read/k s dst start min-count count raise-io-error values values))
 ;; Returns #f if stream does not have a position.
 (define (istream-position s) (s 'position))
 
 ;;; Input streams with a position
 ;; When pos is #f, set position to EOF.  May return a failure indication.
 (define (istream-set-position!/k s pos kf k) (s 'set-position! pos kf k))
-(define (istream-set-position!   s pos)      (istream-set-position!/k s pos values values))
+(define (istream-set-position!   s pos)      (istream-set-position!/k s pos raise-io-error values))
 ;; Returns EOF, the amount read, or a failure indication.
 ;; Blocks until at least (min count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
 (define (istream-pread/k s pos dst start count kf keof k) (s 'pread pos dst start count kf keof k))
 (define (istream-pread   s pos dst start count)
-  (istream-pread/k s pos dst start count values values values))
+  (istream-pread/k s pos dst start count raise-io-error values values))
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; Output streams ;;;
 ;;;;;;;;;;;;;;;;;;;;;;
 (define (ostream-close/k s kf k) (s 'close kf k))
-(define (ostream-close   s)      (ostream-close/k s values values))
+(define (ostream-close   s)      (ostream-close/k s raise-io-error values))
 ;; May return a failure indication.
 (define (ostream-write-byte/k s byte kf k) (s 'write-byte byte kf k))
-(define (ostream-write-byte   s byte)      (ostream-write-byte/k s byte values values))
+(define (ostream-write-byte   s byte)      (ostream-write-byte/k s byte raise-io-error values))
 ;; Returns the amount written, or a failure indication.
 ;; Blocks until at least min-count bytes are written.
 ;; Failure may occur after a partial write.
 (define (ostream-write/k s src start min-count count kf k)
   (s 'write src start min-count count kf k))
 (define (ostream-write   s src start min-count count)
-  (ostream-write/k s src start min-count count values values))
+  (ostream-write/k s src start min-count count raise-io-error values))
 ;; Returns #f if stream does not have a position.
 (define (ostream-position   s)                           (s 'position))
 
 ;;; Output streams with a position
 ;; When pos is #f, set position to EOF.  May return a failure indication.
 (define (ostream-set-position!/k s pos kf k) (s 'set-position! pos kf k))
-(define (ostream-set-position!   s pos)      (ostream-set-position!/k s pos values values))
+(define (ostream-set-position!   s pos)      (ostream-set-position!/k s pos raise-io-error values))
 ;; May return a failure indication.
 (define (ostream-set-size!/k s size kf k) (s 'set-size! size kf k))
-(define (ostream-set-size!   s size)      (ostream-set-size!/k s size values values))
+(define (ostream-set-size!   s size)      (ostream-set-size!/k s size raise-io-error values))
 ;; May return a failure indication.
 ;; Blocks until count bytes are written.
 ;; Failure may occur after a partial write.
 (define (ostream-pwrite/k s pos src start count kf k) (s 'pwrite pos src start count kf k))
 (define (ostream-pwrite s pos src start count)
-  (ostream-pwrite/k s pos src start count values values))
+  (ostream-pwrite/k s pos src start count raise-io-error values))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Bytevector streams ;;;
