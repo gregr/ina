@@ -58,9 +58,10 @@
   ;stdio filesystem tcp udp tty console
   )
 (require
-  ffi/unsafe/vm
-  racket/control racket/file racket/flonum racket/list racket/match racket/port racket/pretty
-  racket/os racket/string racket/struct racket/system racket/tcp racket/udp racket/vector
+  ffi/unsafe/port ffi/unsafe/vm
+  racket/control racket/file racket/flonum racket/list racket/match racket/path racket/port
+  racket/pretty racket/os racket/string racket/struct racket/system racket/tcp racket/udp
+  racket/vector
   (prefix-in rkt: racket/base))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -765,8 +766,11 @@
     (unless (<= (+ start min-count) (+ start desired-count) len)
       (panic #f "buffer range out of bounds" start min-count desired-count len))))
 
-(define (rkt-port->istream port)
+(define (rkt:istream partial-description port)
   (file-stream-buffer-mode port 'none)
+  (define description (list* (cons 'terminal?       (terminal-port? port))
+                             (cons 'file-descriptor (unsafe-port->file-descriptor port))
+                             partial-description))
   (lambda (method . arg*)
     (apply
      (case method
@@ -814,11 +818,15 @@
        ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
        ((position)      (lambda ()         (file-position* port)))
        ((close)         (lambda (kf k)     (io-guard kf (close-input-port port) (k))))
+       ((description)   (lambda ()         description))
        (else            (error "not an istream method" method)))
      arg*)))
 
-(define (rkt-port->ostream port)
+(define (rkt:ostream partial-description port)
   (file-stream-buffer-mode port 'none)
+  (define description (list* (cons 'terminal?       (terminal-port? port))
+                             (cons 'file-descriptor (unsafe-port->file-descriptor port))
+                             partial-description))
   (lambda (method . arg*)
     (apply
      (case method
@@ -850,6 +858,7 @@
        ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
        ((position)      (lambda ()         (file-position* port)))
        ((close)         (lambda (kf k)     (io-guard kf (close-output-port port) (k))))
+       ((description)   (lambda ()         description))
        (else            (error "not an ostream method" method)))
      arg*)))
 
@@ -862,9 +871,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Standard IO streams ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define standard-input-stream  (rkt-port->istream (current-input-port)))
-(define standard-output-stream (rkt-port->ostream (current-output-port)))
-(define standard-error-stream  (rkt-port->ostream (current-error-port)))
+(define standard-input-stream  (rkt:istream '((type . stdin))  (current-input-port)))
+(define standard-output-stream (rkt:ostream '((type . stdout)) (current-output-port)))
+(define standard-error-stream  (rkt:ostream '((type . stderr)) (current-error-port)))
 
 ;;;;;;;;;;;;;;;
 ;;; File IO ;;;
@@ -889,14 +898,19 @@
 (define (set-file-modified-seconds!/k path seconds kf k)
   (nonnegative-integer?! seconds)
   (io-guard kf (file-or-directory-modify-seconds path seconds) (k)))
-(define (open-file-istream/k path kf k) (io-guard kf (k (rkt-port->istream (open-input-file path)))))
+(define (open-file-istream/k path kf k)
+  (let ((path        (normalize-path path)))
+    (io-guard kf (k (rkt:istream (list '(type . file-istream) (cons 'path path))
+                                 (open-input-file path))))))
 (define (open-file-ostream/k path restriction kf k)
-  (let ((exists-flag (case restriction
+  (let ((path        (normalize-path path))
+        (exists-flag (case restriction
                        ((create) 'error)
                        ((update) 'udpate)
                        ((#f)     'can-update)
                        (else     (panic #f "not an open-file-ostream restriction" restriction)))))
-    (io-guard kf (k (rkt-port->ostream (open-output-file path #:exists exists-flag))))))
+    (io-guard kf (k (rkt:ostream (list '(type . file-ostream) (cons 'path path))
+                                 (open-output-file path #:exists exists-flag))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Host system processes ;;;
@@ -926,7 +940,9 @@
                         ((eq? #t new-group?)      'new)
                         (else                     (panic #f "not a boolean" new-group?))))
                  (find-executable-path path) arg*))))
-      (let ((in (rkt-port->ostream in)) (out (rkt-port->istream out)) (err (rkt-port->istream err)))
+      (let ((in  (rkt:ostream '((type . host-process-ostream)) in))
+            (out (rkt:istream '((type . host-process-istream)) out))
+            (err (rkt:istream '((type . host-process-istream)) err)))
         (lambda (method)
           (case method
             ((in)            in)
