@@ -20,6 +20,7 @@
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Input streams ;;;
 ;;;;;;;;;;;;;;;;;;;;;
+(define (istream-description s) (s 'description))
 (define (istream-close/k s kf k) (s 'close kf k))
 (define (istream-close   s)      (istream-close/k s raise-io-error values))
 ;; Returns EOF, the byte read, or a failure indication.
@@ -49,6 +50,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; Output streams ;;;
 ;;;;;;;;;;;;;;;;;;;;;;
+(define (ostream-description s) (s 'description))
 (define (ostream-close/k s kf k) (s 'close kf k))
 (define (ostream-close   s)      (ostream-close/k s raise-io-error values))
 ;; May return a failure indication.
@@ -119,6 +121,7 @@
                                (k)))
             ((position)      (lambda ()     pos))
             ((close)         (lambda (kf k) (k)))
+            ((description)   (lambda ()     '((type . bytevector-istream))))
             (else            (error "not a bytevector-istream method" method)))
           arg*)))))
 
@@ -167,6 +170,7 @@
                              (k)))
           ((position)      (lambda ()     pos.st))
           ((close)         (lambda (kf k) (k)))
+          ((description)   (lambda ()     '((type . mbytevector-ostream))))
           (else            (error "not an mbytevector-ostream method" method)))
         arg*))))
 
@@ -223,7 +227,8 @@
                              (k)))
           ((position)      (lambda ()     pos.st))
           ((close)         (lambda (kf k) (k)))
-          ((current)       (lambda ()    (mbytevector->bytevector buf.st 0 end.st)))
+          ((current)       (lambda ()     (mbytevector->bytevector buf.st 0 end.st)))
+          ((description)   (lambda ()     '((type . bytevector-ostream))))
           (else            (error "not a bytevector-ostream method" method)))
         arg*))))
 
@@ -242,6 +247,7 @@
              ((set-size!)     (lambda (new kf k)                 (k)))
              ((position)      (lambda ()                         0))
              ((close)         (lambda (kf k)                     (k)))
+             ((description)   (lambda () '((type . null-ostream))))
              (else            (error "not a null-ostream method" method)))
            arg*)))
 
@@ -266,6 +272,7 @@
              ((set-position!) (lambda (new kf k) (k)))
              ((position)      (lambda ()         0))
              ((close)         (lambda (kf k)     (k)))
+             ((description)   (lambda () '((type . full-ostream))))
              (else            (error "not a full-ostream method" method)))
            arg*)))
 
@@ -283,6 +290,7 @@
         ((set-position!) (lambda (new kf k) (k)))
         ((position)      (lambda ()         0))
         ((close)         (lambda (kf k)     (k)))
+        ((description)   (lambda () '((type . empty-istream))))
         (else            (error "not an empty-istream method" method)))
       arg*)))
 
@@ -304,6 +312,7 @@
         ((set-position!) (lambda (new kf k) (k)))
         ((position)      (lambda ()         0))
         ((close)         (lambda (kf k)     (k)))
+        ((description)   (lambda () '((type . constant-istream))))
         (else            (error "not a constant-istream method" method)))
       arg*)))
 
