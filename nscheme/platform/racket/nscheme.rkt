@@ -921,28 +921,34 @@
   (let ((host-env (current-environment-variables)))
     (map (lambda (name) (cons name (environment-variables-ref host-env name)))
          (environment-variables-names host-env))))
-(define (host-process new-group? env path arg*)
-  (define (start-process new-group? env path arg*)
+(define (host-process in out err new-group? env path arg*)
+  (define (start-process in out err new-group? env path arg*)
+    (define (s->rkt-port s name mode)
+      (and s (let ((kv (assoc 'file-descriptor (s 'description))))
+               (and kv (unsafe-file-descriptor->port (cdr kv) name mode)))))
     (let-values
       (((sp out in err)
-        (parameterize ((current-environment-variables
-                        (if env
-                            (apply make-environment-variables
-                                   (let loop ((env env))
-                                     (if (null? env)
-                                         '()
-                                         (cons (caar env) (cons (cdar env) (loop (cdr env)))))))
-                            (current-environment-variables))))
-          (apply subprocess #f #f #f
-                 (and new-group?
-                      (cond
-                        ((subprocess? new-group?) new-group?)
-                        ((eq? #t new-group?)      'new)
-                        (else                     (panic #f "not a boolean" new-group?))))
-                 (find-executable-path path) arg*))))
-      (let ((in  (rkt:ostream '((type . host-process-ostream)) in))
-            (out (rkt:istream '((type . host-process-istream)) out))
-            (err (rkt:istream '((type . host-process-istream)) err)))
+        (let ((in  (s->rkt-port in  'in  '(read)))
+              (out (s->rkt-port out 'out '(write)))
+              (err (s->rkt-port err 'err '(write))))
+          (parameterize ((current-environment-variables
+                          (if env
+                              (apply make-environment-variables
+                                     (let loop ((env env))
+                                       (if (null? env)
+                                           '()
+                                           (cons (caar env) (cons (cdar env) (loop (cdr env)))))))
+                              (current-environment-variables))))
+            (apply subprocess out in err
+                   (and new-group?
+                        (cond
+                          ((subprocess? new-group?) new-group?)
+                          ((eq? #t new-group?)      'new)
+                          (else                     (panic #f "not a boolean" new-group?))))
+                   (find-executable-path path) arg*)))))
+      (let ((in  (and in  (rkt:ostream '((type . host-process-ostream)) in)))
+            (out (and out (rkt:istream '((type . host-process-istream)) out)))
+            (err (and err (rkt:istream '((type . host-process-istream)) err))))
         (lambda (method)
           (case method
             ((in)            in)
@@ -950,12 +956,13 @@
             ((err)           err)
             ((exit-code)     (let ((code (subprocess-status sp))) (and (number? code) code)))
             ((pid)           (subprocess-pid  sp))
-            ((wait)          (subprocess-wait sp))
-            ((kill)          (subprocess-kill sp #t))
-            ((interrupt)     (subprocess-kill sp #f))
-            ((process/group) (lambda (env path arg*) (start-process sp env path arg*)))
+            ((wait)          (subprocess-wait sp)    (values))
+            ((kill)          (subprocess-kill sp #t) (values))
+            ((interrupt)     (subprocess-kill sp #f) (values))
+            ((process/group) (lambda (in out err env path arg*)
+                               (start-process in out err sp env path arg*)))
             (else            (panic #f "not a host-process method" method)))))))
-  (start-process new-group? env path arg*))
+  (start-process in out err new-group? env path arg*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generic bytestream IO
