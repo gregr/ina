@@ -33,7 +33,7 @@
   make-channel channel-get channel-put channel-get-evt channel-put-evt
   make-semaphore semaphore-post semaphore-wait semaphore-try-wait? semaphore-peek-evt
   sync sync/timeout handle-evt choice-evt guard-evt nack-guard-evt replace-evt always-evt never-evt
-  current-milliseconds current-process-milliseconds sleep alarm-evt
+  current-time/type sleep-seconds-nanoseconds alarm-evt
 
   panic apply values
   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
@@ -58,6 +58,7 @@
   ;stdio filesystem tcp udp tty console
   )
 (require
+  ffi/unsafe/vm
   racket/control racket/file racket/flonum racket/list racket/match racket/port racket/pretty
   racket/os racket/string racket/struct racket/system racket/tcp racket/udp racket/vector
   (prefix-in rkt: racket/base))
@@ -713,8 +714,28 @@
 ;;;;;;;;;;;;
 ;;; Time ;;;
 ;;;;;;;;;;;;
-(define (current-process-milliseconds) (rkt:current-process-milliseconds #f))
-(define (sleep milliseconds)           (rkt:sleep (/ milliseconds 1000)))
+(let ((vm (system-type 'vm)))
+  (unless (eq? vm 'chez-scheme) (error "virtual machine is not chez-scheme" vm)))
+(define current-time/type
+  (let ((chez:current-time    (vm-primitive 'current-time))
+        (chez:time-second     (vm-primitive 'time-second))
+        (chez:time-nanosecond (vm-primitive 'time-nanosecond)))
+    (lambda (type)
+      (let ((type (case type
+                    ((utc)                    'time-utc)
+                    ((monotonic)              'time-monotonic)
+                    ((process)                'time-process)
+                    ((thread)                 'time-thread)
+                    ((garbage-collector-cpu)  'time-collector-cpu)
+                    ((garbage-collector-real) 'time-collector-real)
+                    (else (panic #f "not a current-time type" type)))))
+        (lambda () (let ((time (chez:current-time type)))
+                     (values (chez:time-second time) (chez:time-nanosecond time))))))))
+(define sleep-seconds-nanoseconds
+  (let ((chez:sleep (vm-eval '($primitive sleep))) (chez:make-time (vm-primitive 'make-time)))
+    (lambda (sec nsec)
+      (chez:sleep (chez:make-time 'time-duration nsec sec))
+      (values))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; IO primitives ;;;
