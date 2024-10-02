@@ -32,8 +32,8 @@
   thread-resume thread-wait thread-resume-evt thread-suspend-evt thread-dead-evt
   make-channel channel-get channel-put channel-get-evt channel-put-evt
   make-semaphore semaphore-post semaphore-wait semaphore-try-wait? semaphore-peek-evt
-  sleep alarm-evt always-evt never-evt
-  sync sync/timeout handle-evt choice-evt guard-evt nack-guard-evt replace-evt
+  sync sync/timeout handle-evt choice-evt guard-evt nack-guard-evt replace-evt always-evt never-evt
+  current-milliseconds current-process-milliseconds sleep alarm-evt
 
   panic apply values
   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
@@ -709,6 +709,12 @@
                 (loop (+ i 1))))))
 (define (mvector-copy!/bytes mv start src src-start src-end)
   (mvector-copy!/ref mv start src src-start src-end bytes-ref))
+
+;;;;;;;;;;;;
+;;; Time ;;;
+;;;;;;;;;;;;
+(define (current-process-milliseconds) (rkt:current-process-milliseconds #f))
+(define (sleep milliseconds)           (rkt:sleep (/ milliseconds 1000)))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; IO primitives ;;;
