@@ -27,3 +27,13 @@
   (set-file-permissions!/k path permissions raise-io-error values))
 (define (set-file-modified-seconds! path seconds)
   (set-file-modified-seconds!/k path seconds raise-io-error values))
+
+(define (host-process-in            p) (p 'in))
+(define (host-process-out           p) (p 'out))
+(define (host-process-err           p) (p 'err))
+(define (host-process-exit-code     p) (p 'exit-code))
+(define (host-process-pid           p) (p 'pid))
+(define (host-process-wait          p) (p 'wait))
+(define (host-process-kill          p) (p 'kill))
+(define (host-process-interrupt     p) (p 'interrupt))
+(define (host-process-process/group p) (p 'process/group))

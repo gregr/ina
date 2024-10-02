@@ -1552,8 +1552,8 @@
   (lambda (out)
     (let ((p (host-process #f #f "echo" '("hello world"))))
       (let loop ()
-        (case-values ((p 'out) 'read-byte panic values values)
-          (()  (oport-write-byte out (+ (p 'exit-code) 48)))
+        (case-values (istream-read-byte (host-process-out p))
+          (()  (oport-write-byte out (+ (host-process-exit-code p) 48)))
           ((b) (oport-write-byte out b) (loop)))))))
  ==>
  #"hello world\n0"
@@ -1567,14 +1567,14 @@
                  (lambda (in)
                    (let loop ()
                      (case-values (iport-read-byte in)
-                       (()  ((p 'in) 'close values values))
-                       ((b) ((p 'in) 'write-byte b values values)
-                            (loop))))))))
+                       (()  (ostream-close (host-process-in p)))
+                       ((b) (ostream-write-byte (host-process-in p) b) (loop))))))))
       (let loop ((sname 'out))
-        (case-values ((p sname) 'read-byte panic values values)
+        (case-values (istream-read-byte
+                      (if (eq? sname 'out) (host-process-out p) (host-process-err p)))
           (()  (if (eq? sname 'out)
                    (loop 'err)
-                   (oport-write-byte out (+ (p 'exit-code) 48))))
+                   (oport-write-byte out (+ (host-process-exit-code p) 48))))
           ((b) (oport-write-byte out b) (loop sname)))))))
  ==>
  #"another example0"
