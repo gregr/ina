@@ -18,6 +18,7 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
+  host-pid host-environment host-process
   change-directory command-line-argument*
   standard-input-stream standard-output-stream standard-error-stream
   filesystem-change-evt filesystem-change-evt-cancel
@@ -58,7 +59,7 @@
   )
 (require
   racket/control racket/file racket/flonum racket/list racket/match racket/port racket/pretty
-  racket/string racket/struct racket/system racket/tcp racket/udp racket/vector
+  racket/os racket/string racket/struct racket/system racket/tcp racket/udp racket/vector
   (prefix-in rkt: racket/base))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -869,6 +870,49 @@
                        ((#f)     'can-update)
                        (else     (panic #f "not an open-file-ostream restriction" restriction)))))
     (io-guard kf (k (rkt-port->ostream (open-output-file path #:exists exists-flag))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Host system processes ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(current-subprocess-custodian-mode 'kill)
+(define host-pid (getpid))
+(define host-environment
+  (let ((host-env (current-environment-variables)))
+    (map (lambda (name) (cons name (environment-variables-ref host-env name)))
+         (environment-variables-names host-env))))
+(define (host-process new-group? env path arg*)
+  (define (start-process new-group? env path arg*)
+    (let-values
+      (((sp out in err)
+        (parameterize ((current-environment-variables
+                        (if env
+                            (apply make-environment-variables
+                                   (let loop ((env env))
+                                     (if (null? env)
+                                         '()
+                                         (cons (caar env) (cons (cdar env) (loop (cdr env)))))))
+                            (current-environment-variables))))
+          (apply subprocess #f #f #f
+                 (and new-group?
+                      (cond
+                        ((subprocess? new-group?) new-group?)
+                        ((eq? #t new-group?)      'new)
+                        (else                     (panic #f "not a boolean" new-group?))))
+                 (find-executable-path path) arg*))))
+      (let ((in (rkt-port->ostream in)) (out (rkt-port->istream out)) (err (rkt-port->istream err)))
+        (lambda (method)
+          (case method
+            ((in)            in)
+            ((out)           out)
+            ((err)           err)
+            ((exit-code)     (let ((code (subprocess-status sp))) (and (number? code) code)))
+            ((pid)           (subprocess-pid  sp))
+            ((wait)          (subprocess-wait sp))
+            ((kill)          (subprocess-kill sp #t))
+            ((interrupt)     (subprocess-kill sp #f))
+            ((process/group) (lambda (env path arg*) (start-process sp env path arg*)))
+            (else            (panic #f "not a host-process method" method)))))))
+  (start-process new-group? env path arg*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generic bytestream IO

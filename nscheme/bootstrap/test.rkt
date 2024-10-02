@@ -1546,4 +1546,36 @@
      (list size amount dperm fperm (eqv? sec sec2) dtype ftype path* path*2
            (mbytevector->bytevector buf))))
  ==> (12 12 #o755 #o644 #t directory file ("out.txt") ("out2.txt") #"Hello world!")
+
+ ! host-processes
+ (call-with-output-bytevector
+  (lambda (out)
+    (let ((p (host-process #f #f "echo" '("hello world"))))
+      (let loop ()
+        (case-values ((p 'out) 'read-byte panic values values)
+          (()  (oport-write-byte out (+ (p 'exit-code) 48)))
+          ((b) (oport-write-byte out b) (loop)))))))
+ ==>
+ #"hello world\n0"
+
+ (call-with-output-bytevector
+  (lambda (out)
+    (let ((p (host-process #f #f "cat" '())))
+      (thread (lambda ()
+                (call-with-input-bytevector
+                 #"another example"
+                 (lambda (in)
+                   (let loop ()
+                     (case-values (iport-read-byte in)
+                       (()  ((p 'in) 'close values values))
+                       ((b) ((p 'in) 'write-byte b values values)
+                            (loop))))))))
+      (let loop ((sname 'out))
+        (case-values ((p sname) 'read-byte panic values values)
+          (()  (if (eq? sname 'out)
+                   (loop 'err)
+                   (oport-write-byte out (+ (p 'exit-code) 48))))
+          ((b) (oport-write-byte out b) (loop sname)))))))
+ ==>
+ #"another example0"
  )
