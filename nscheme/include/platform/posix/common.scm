@@ -1,7 +1,7 @@
 (define package.posix.common
   (cons
     '(
-      host-pid host-environment host-process
+      host-pid host-environment raw-host-process
       change-directory command-line-argument*
       standard-input-stream standard-output-stream standard-error-stream
       filesystem-change-evt filesystem-change-evt-cancel
@@ -11,7 +11,7 @@
       set-file-permissions!/k set-file-modified-seconds!/k
       )
     (list
-      host-pid host-environment host-process
+      host-pid host-environment raw-host-process
       change-directory command-line-argument*
       standard-input-stream standard-output-stream standard-error-stream
       filesystem-change-evt filesystem-change-evt-cancel

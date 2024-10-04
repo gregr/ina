@@ -1550,7 +1550,7 @@
  ! host-processes
  (call-with-output-bytevector
   (lambda (out)
-    (let ((p (host-process #f #f #f #f #f "echo" '("hello world"))))
+    (let ((p (raw-host-process #f #f #f #f #f "echo" '("hello world"))))
       (let loop ()
         (case-values (istream-read-byte (host-process-out p))
           (()  (oport-write-byte out (+ (host-process-exit-code p) 48)))
@@ -1560,7 +1560,7 @@
 
  (call-with-output-bytevector
   (lambda (out)
-    (let ((p (host-process #f #f #f #f #f "cat" '())))
+    (let ((p (raw-host-process #f #f #f #f #f "cat" '())))
       (thread (lambda ()
                 (call-with-input-bytevector
                  #"another example"

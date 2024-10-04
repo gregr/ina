@@ -18,7 +18,7 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  host-pid host-environment host-process
+  host-pid host-environment raw-host-process
   change-directory command-line-argument*
   standard-input-stream standard-output-stream standard-error-stream
   filesystem-change-evt filesystem-change-evt-cancel
@@ -921,16 +921,16 @@
   (let ((host-env (current-environment-variables)))
     (map (lambda (name) (cons name (environment-variables-ref host-env name)))
          (environment-variables-names host-env))))
-(define (host-process in out err new-group? env path arg*)
+(define (raw-host-process in out err new-group? env path arg*)
   (define (start-process in out err new-group? env path arg*)
-    (define (s->rkt-port s name mode)
-      (and s (let ((kv (assoc 'file-descriptor (s 'description))))
-               (and kv (unsafe-file-descriptor->port (cdr kv) name mode)))))
+    (define (fd->rkt-port fd name mode)
+      (and fd (unless (exact-nonnegative-integer? fd) (panic #f "not a file descriptor" fd))
+           (unsafe-file-descriptor->port fd name mode)))
     (let-values
       (((sp out in err)
-        (let ((in  (s->rkt-port in  'in  '(read)))
-              (out (s->rkt-port out 'out '(write)))
-              (err (s->rkt-port err 'err '(write))))
+        (let ((in  (fd->rkt-port in  'in  '(read)))
+              (out (fd->rkt-port out 'out '(write)))
+              (err (fd->rkt-port err 'err '(write))))
           (parameterize ((current-environment-variables
                           (if env
                               (apply make-environment-variables
