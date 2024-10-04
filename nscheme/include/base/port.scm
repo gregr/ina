@@ -17,10 +17,11 @@
 ;;;   - no-position
 ;;; - failed operation details
 
+(define (iostream-description s) (s 'description))
+
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Input streams ;;;
 ;;;;;;;;;;;;;;;;;;;;;
-(define (istream-description s) (s 'description))
 (define (istream-close/k s kf k) (s 'close kf k))
 (define (istream-close   s)      (istream-close/k s raise-io-error values))
 ;; Returns EOF, the byte read, or a failure indication.
@@ -50,7 +51,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; Output streams ;;;
 ;;;;;;;;;;;;;;;;;;;;;;
-(define (ostream-description s) (s 'description))
 (define (ostream-close/k s kf k) (s 'close kf k))
 (define (ostream-close   s)      (ostream-close/k s raise-io-error values))
 ;; May return a failure indication.
@@ -651,16 +651,12 @@
 (define (open-output-bytevector)      (ostream->oport (open-bytevector-ostream)))
 (define (output-bytevector-current p) (oport-flush p) (bytevector-ostream-current (oport-stream p)))
 
-(define (call-with-input-bytevector   bv  k) (k (open-input-bytevector bv)))
-(define (call-with-output-mbytevector mbv k) (let ((p (open-output-mbytevector mbv)))
-                                               (let-values ((x* (k p)))
-                                                 (oport-flush p)
-                                                 (apply values x*))))
-(define (call-with-output-bytevector      k) (let* ((out (open-output-bytevector))
-                                                    (s   (oport-stream out)))
-                                               (k out)
-                                               (oport-flush out)
-                                               (bytevector-ostream-current s)))
+(define (call-with-input-bytevector bv k) (k (open-input-bytevector bv)))
+(define (call-with-output-bytevector   k) (let* ((out (open-output-bytevector))
+                                                 (s   (oport-stream out)))
+                                            (k out)
+                                            (oport-flush out)
+                                            (bytevector-ostream-current s)))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Other ports ;;;
