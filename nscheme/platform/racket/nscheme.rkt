@@ -32,8 +32,8 @@
   thread-resume thread-wait thread-resume-evt thread-suspend-evt thread-dead-evt
   make-channel channel-get channel-put channel-get-evt channel-put-evt
   make-semaphore semaphore-post semaphore-wait semaphore-try-wait? semaphore-peek-evt
-  sync sync/timeout handle-evt choice-evt guard-evt nack-guard-evt replace-evt always-evt never-evt
-  current-time/type sleep-seconds-nanoseconds alarm-evt
+  sync/timeout handle-evt choice-evt guard-evt nack-guard-evt replace-evt
+  current-time/type sleep-seconds-nanoseconds
 
   panic apply values
   eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
