@@ -20,6 +20,7 @@
 (include "../include/base/prompt.scm")
 (include "../include/base/coroutine.scm")
 (include "../include/base/generator.scm")
+(include "../include/base/time.scm")
 (include "../include/base/port.scm")
 
 (include "../include/text/terminal-control.scm")
@@ -74,6 +75,7 @@
      "../include/base/prompt.scm"
      "../include/base/coroutine.scm"
      "../include/base/generator.scm"
+     "../include/base/time.scm"
      "../include/base/port.scm"
      )))
 (define def*.text
