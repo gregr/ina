@@ -1,4 +1,7 @@
-(define (sleep-seconds sec) (sleep-seconds-nanoseconds sec 0))
+(define (sleep sec)
+  (let ((denom (denominator sec)))
+    (let-values (((whole-seconds rem) (integer-floor-divmod (numerator sec) denom)))
+      (sleep-seconds-nanoseconds whole-seconds (integer-floor-div (* rem 1000000000) denom)))))
 
 (define current-time-utc                    (current-time/type 'utc))
 (define current-time-monotonic              (current-time/type 'monotonic))
