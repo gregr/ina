@@ -733,11 +733,7 @@
                     (else (panic #f "not a current-time type" type)))))
         (lambda () (let ((time (chez:current-time type)))
                      (values (chez:time-second time) (chez:time-nanosecond time))))))))
-(define sleep-seconds-nanoseconds
-  (let ((chez:sleep (vm-eval '($primitive sleep))) (chez:make-time (vm-primitive 'make-time)))
-    (lambda (sec nsec)
-      (chez:sleep (chez:make-time 'time-duration nsec sec))
-      (values))))
+(define (sleep-seconds-nanoseconds sec nsec) (rkt:sleep (+ sec (/ nsec 1000000000))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; IO primitives ;;;
