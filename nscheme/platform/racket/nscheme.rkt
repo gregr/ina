@@ -917,29 +917,40 @@
 ;;; Pipe IO ;;;
 ;;;;;;;;;;;;;;;
 (define (open-pipe-streams/k kf k)
-  (io-guard
-   kf
-   (case-values
-     (let* ((out.msg   (open-output-string))
-            (dir       (make-temporary-directory))
-            (pipe-path (path->string (build-path dir "pipe"))))
-       (dynamic-wind
-        void
-        (lambda ()
-          (let ((exit-code (parameterize ((current-output-port out.msg)
-                                          (current-error-port  out.msg))
-                             (system*/exit-code (find-executable-path "mkfifo") pipe-path))))
-            (if (= exit-code 0)
-                (let ((out (rkt:istream '((type . pipe-istream)) (open-input-file pipe-path)))
-                      (in  (rkt:ostream '((type . pipe-ostream))
-                                        (open-output-file pipe-path #:exists 'update))))
-                  (values in out))
-                (values #f exit-code (get-output-string out.msg)))))
-        (lambda ()
-          (delete-file pipe-path)
-          (delete-directory dir))))
-     ((in out)          (k in out))
-     ((_ exit-code msg) (kf exit-code msg)))))
+  ;; This produces a blocking pipe, but at the cost of running another process, and at the cost of
+  ;; that process copying data from its stdin to its stdout.  Fortunately, at least the process will
+  ;; be cleaned up once its stdin is closed.
+  (let ((p.pipe (raw-host-process #f #f #f #f #f "cat" '())))
+    (k (p.pipe 'in) (p.pipe 'out)))
+  ;; Unfortunately, this produces a non-blocking pipe because Racket opens files with O_NONBLOCK.
+  ;; This hack also comes with some extra risk because it creates and then quickly removes a
+  ;; temporary directory and fifo.
+  ;(io-guard
+  ; kf
+  ; (case-values
+  ;   (let* ((out.msg   (open-output-string))
+  ;          (dir       (make-temporary-directory))
+  ;          (pipe-path (path->string (build-path dir "pipe"))))
+  ;     (dynamic-wind
+  ;      void
+  ;      (lambda ()
+  ;        (let ((exit-code (parameterize ((current-output-port out.msg)
+  ;                                        (current-error-port  out.msg))
+  ;                           (system*/exit-code (find-executable-path "mkfifo") pipe-path))))
+  ;          (if (= exit-code 0)
+  ;              (let ((out (rkt:istream '((type . pipe-istream)) (open-input-file pipe-path)))
+  ;                    (in  (rkt:ostream '((type . pipe-ostream))
+  ;                                      (open-output-file pipe-path #:exists 'update))))
+  ;                (values in out))
+  ;              (values #f exit-code (get-output-string out.msg)))))
+  ;      (lambda ()
+  ;        (delete-file pipe-path)
+  ;        (delete-directory dir))))
+  ;   ((in out)          (k in out))
+  ;   ((_ exit-code msg) (kf exit-code msg))))
+  ;; It would be nicer if Racket exposed the ability to create host pipes directly.  It already does
+  ;; this internally to implement subprocesses.
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Host system processes ;;;
