@@ -1,7 +1,3 @@
-(define standard-input-port  (istream->iport standard-input-stream))
-(define standard-output-port (ostream->oport standard-output-stream))
-(define standard-error-port  (ostream->oport standard-error-stream))
-
 (define (open-input-file path) (open-input-file/k path raise-io-error values))
 (define (open-input-file/k path kf k)
   (open-file-istream/k path kf (lambda (s) (k (istream->iport s)))))

@@ -20,8 +20,9 @@
 (include "../include/base/prompt.scm")
 (include "../include/base/coroutine.scm")
 (include "../include/base/generator.scm")
-(include "../include/base/time.scm")
 (include "../include/base/port.scm")
+(include "../include/base/time.scm")
+(include "../include/base/io.scm")
 
 (include "../include/text/terminal-control.scm")
 
@@ -41,6 +42,7 @@
 
 (include "../include/platform/common.scm")
 (include "../include/platform/control.scm")
+(include "../include/platform/io.scm")
 (include "../include/platform/privileged.scm")
 (include "../include/platform/low-level/control.scm")
 (include "../include/platform/posix/common.scm")
@@ -75,8 +77,9 @@
      "../include/base/prompt.scm"
      "../include/base/coroutine.scm"
      "../include/base/generator.scm"
-     "../include/base/time.scm"
      "../include/base/port.scm"
+     "../include/base/time.scm"
+     "../include/base/io.scm"
      )))
 (define def*.text
   (file-name*->stx*
@@ -103,6 +106,7 @@
   (file-name*->stx*
    '("../include/platform/common.scm"
      "../include/platform/control.scm"
+     "../include/platform/io.scm"
      "../include/platform/privileged.scm"
      "../include/platform/low-level/control.scm"
      "../include/platform/posix/common.scm"

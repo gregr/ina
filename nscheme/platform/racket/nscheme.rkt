@@ -20,13 +20,14 @@
 
   host-pid host-environment raw-host-process
   change-directory command-line-argument*
-  standard-input-stream standard-output-stream standard-error-stream
   filesystem-change-evt filesystem-change-evt-cancel
   directory-file*/k make-symbolic-link/k make-directory/k
   delete-directory/k delete-file/k move-file/k open-file-istream/k open-file-ostream/k
   file-type/k file-size/k file-permissions/k file-modified-seconds/k
   set-file-permissions!/k set-file-modified-seconds!/k
   open-pipe-streams/k
+
+  standard-input-stream standard-output-stream standard-error-stream
 
   make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
   current-thread-group make-thread-group current-thread thread thread/suspend-to-kill

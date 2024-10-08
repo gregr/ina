@@ -3,7 +3,6 @@
     '(
       host-pid host-environment raw-host-process
       change-directory command-line-argument*
-      standard-input-stream standard-output-stream standard-error-stream
       filesystem-change-evt filesystem-change-evt-cancel
       directory-file*/k make-symbolic-link/k make-directory/k
       delete-directory/k delete-file/k move-file/k open-file-istream/k open-file-ostream/k
@@ -13,7 +12,6 @@
     (list
       host-pid host-environment raw-host-process
       change-directory command-line-argument*
-      standard-input-stream standard-output-stream standard-error-stream
       filesystem-change-evt filesystem-change-evt-cancel
       directory-file*/k make-symbolic-link/k make-directory/k
       delete-directory/k delete-file/k move-file/k open-file-istream/k open-file-ostream/k

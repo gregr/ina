@@ -1,0 +1,6 @@
+(define standard-input-port  (istream->iport standard-input-stream))
+(define standard-output-port (ostream->oport standard-output-stream))
+(define standard-error-port  (ostream->oport standard-error-stream))
+(define current-input-port   (make-parameter standard-input-port))
+(define current-output-port  (make-parameter standard-output-port))
+(define current-error-port   (make-parameter standard-error-port))
