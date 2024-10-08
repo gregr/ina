@@ -920,8 +920,10 @@
   ;; This produces a blocking pipe, but at the cost of running another process, and at the cost of
   ;; that process copying data from its stdin to its stdout.  Fortunately, at least the process will
   ;; be cleaned up once its stdin is closed.
-  (let ((p.pipe (raw-host-process #f #f #f #f #f "cat" '())))
-    (k (p.pipe 'in) (p.pipe 'out)))
+  (let-values (((sp out in err) (subprocess #f #f 'stdout #f (find-executable-path "cat"))))
+    (let ((in  (and in  (rkt:ostream '((type . pipe-ostream)) in)))
+          (out (and out (rkt:istream '((type . pipe-istream)) out))))
+      (k in out)))
   ;; Unfortunately, this produces a non-blocking pipe because Racket opens files with O_NONBLOCK.
   ;; This hack also comes with some extra risk because it creates and then quickly removes a
   ;; temporary directory and fifo.
@@ -986,9 +988,9 @@
                           ((eq? #t new-group?)      'new)
                           (else                     (panic #f "not a boolean" new-group?))))
                    (find-executable-path path) arg*)))))
-      (let ((in  (and in  (rkt:ostream '((type . host-process-ostream)) in)))
-            (out (and out (rkt:istream '((type . host-process-istream)) out)))
-            (err (and err (rkt:istream '((type . host-process-istream)) err))))
+      (let ((in  (and in  (rkt:ostream '((type . pipe-ostream)) in)))
+            (out (and out (rkt:istream '((type . pipe-istream)) out)))
+            (err (and err (rkt:istream '((type . pipe-istream)) err))))
         (lambda (method)
           (case method
             ((in)            in)
