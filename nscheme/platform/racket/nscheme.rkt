@@ -26,6 +26,7 @@
   delete-directory/k delete-file/k move-file/k open-file-istream/k open-file-ostream/k
   file-type/k file-size/k file-permissions/k file-modified-seconds/k
   set-file-permissions!/k set-file-modified-seconds!/k
+  open-pipe-streams/k
 
   make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
   current-thread-group make-thread-group current-thread thread thread/suspend-to-kill
@@ -911,6 +912,34 @@
                        (else     (panic #f "not an open-file-ostream restriction" restriction)))))
     (io-guard kf (k (rkt:ostream (list '(type . file-ostream) (cons 'path path))
                                  (open-output-file path #:exists exists-flag))))))
+
+;;;;;;;;;;;;;;;
+;;; Pipe IO ;;;
+;;;;;;;;;;;;;;;
+(define (open-pipe-streams/k kf k)
+  (io-guard
+   kf
+   (case-values
+     (let* ((out.msg   (open-output-string))
+            (dir       (make-temporary-directory))
+            (pipe-path (path->string (build-path dir "pipe"))))
+       (dynamic-wind
+        void
+        (lambda ()
+          (let ((exit-code (parameterize ((current-output-port out.msg)
+                                          (current-error-port  out.msg))
+                             (system*/exit-code (find-executable-path "mkfifo") pipe-path))))
+            (if (= exit-code 0)
+                (let ((out (rkt:istream '((type . pipe-istream)) (open-input-file pipe-path)))
+                      (in  (rkt:ostream '((type . pipe-ostream))
+                                        (open-output-file pipe-path #:exists 'update))))
+                  (values in out))
+                (values #f exit-code (get-output-string out.msg)))))
+        (lambda ()
+          (delete-file pipe-path)
+          (delete-directory dir))))
+     ((in out)          (k in out))
+     ((_ exit-code msg) (kf exit-code msg)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Host system processes ;;;

@@ -1574,4 +1574,31 @@
           ((b) (oport-write-byte out b) (loop sname)))))))
  ==>
  #"another example0"
+
+ (call-with-output-bytevector
+  (lambda (result)
+    (let-values (((out1 in1) (open-pipe-streams/k
+                              (lambda (t d) (panic #f "open-pipe-streams/k failed" t d))
+                              values))
+                 ((out2 in2) (open-pipe-streams/k
+                              (lambda (t d) (panic #f "open-pipe-streams/k failed" t d))
+                              values)))
+      (let* ((fd.out1 (cdr (assoc 'file-descriptor (iostream-description out1))))
+             (fd.in1  (cdr (assoc 'file-descriptor (iostream-description in1))))
+             (fd.out2 (cdr (assoc 'file-descriptor (iostream-description out2))))
+             (p1      (raw-host-process #f fd.out1 fd.out1 #f #f "echo" '("pipe test")))
+             (p2      (begin
+                        ;; This allows cat to receive EOF.  In case the pipe is nonblocking, it
+                        ;; also prevents cat from encountering EAGAIN.
+                        (ostream-close out1)
+                        (raw-host-process fd.in1 fd.out2 fd.out2 #f #f "cat" '()))))
+        (istream-close in1)   ; not necessary for this test to pass
+        (ostream-close out2)  ; necessary to unblock reading on in2
+        (let loop ()
+          (case-values (istream-read-byte in2)
+            (()  (istream-close in2)
+                 (oport-write-byte result (+ (host-process-exit-code p1) 48))
+                 (oport-write-byte result (+ (host-process-exit-code p2) 48)))
+            ((b) (oport-write-byte result b) (loop))))))))
+ ==> #"pipe test\n00"
  )
