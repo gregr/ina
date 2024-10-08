@@ -3,9 +3,7 @@
 (define env.common           (value-package->env package.common))
 (define env.control          (value-package->env package.control))
 (define env.io               (value-package->env package.io))
-(define env.privileged       (env-conjoin* (value-package->env package.privileged)
-                                           ;; TODO: eliminate the need for this during bootstrap
-                                           (value-package->env package.low-level:control)))
+(define env.privileged       (value-package->env package.privileged))
 (define env.syntax           (value-package->env package.syntax))
 (define env.tiny             (env-conjoin* env.minimal env.common))
 (define env.small            (env-conjoin* env.tiny env.control env.io))

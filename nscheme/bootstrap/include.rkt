@@ -44,7 +44,6 @@
 (include "../include/platform/control.scm")
 (include "../include/platform/io.scm")
 (include "../include/platform/privileged.scm")
-(include "../include/platform/low-level/control.scm")
 (include "../include/platform/posix/common.scm")
 (include "../include/platform/posix/io.scm")
 
@@ -108,7 +107,6 @@
      "../include/platform/control.scm"
      "../include/platform/io.scm"
      "../include/platform/privileged.scm"
-     "../include/platform/low-level/control.scm"
      "../include/platform/posix/common.scm"
      )))
 (define def*.posix
