@@ -1546,35 +1546,90 @@
  ! host-processes
  (call-with-output-bytevector
   (lambda (out)
-    (let ((p (raw-host-process #f #f #f #f #f "echo" '("hello world"))))
+    (let* ((p (raw-host-process #f #f 'stdout "echo" '("hello world") #f))
+           (out.p.out (host-process-out p)))
+      (ostream-close (host-process-in p))
       (let loop ()
-        (case-values (istream-read-byte (host-process-out p))
-          (()  (oport-write-byte out (+ (host-process-exit-code p) 48)))
+        (case-values (istream-read-byte out.p.out)
+          (()  (istream-close out.p.out) (oport-write-byte out (+ (host-process-wait p) 48)))
           ((b) (oport-write-byte out b) (loop)))))))
+ ==>
+ #"hello world\n0"
+ (call-with-output-bytevector
+  (lambda (out)
+    (let-values (((out.p.in out.p.out) (open-pipe-streams/k panic values)))
+      (let* ((fd.out.p.in  (cdr (assoc 'file-descriptor (iostream-description out.p.in))))
+             (fd.out.p.out (cdr (assoc 'file-descriptor (iostream-description out.p.out))))
+             (p (raw-host-process #f fd.out.p.in fd.out.p.in "echo" '("hello world") #f)))
+        (ostream-close (host-process-in p))
+        (ostream-close out.p.in)
+        (let loop ()
+          (case-values (istream-read-byte out.p.out)
+            (()  (istream-close out.p.out) (oport-write-byte out (+ (host-process-wait p) 48)))
+            ((b) (oport-write-byte out b) (loop))))))))
  ==>
  #"hello world\n0"
 
  (call-with-output-bytevector
   (lambda (out)
-    (let ((p (raw-host-process #f #f #f #f #f "cat" '())))
+    (let* ((p (raw-host-process #f #f 'stdout "cat" '() #f))
+           (in.p.in   (host-process-in p))
+           (out.p.out (host-process-out p)))
       (thread (lambda ()
                 (call-with-input-bytevector
                  #"another example"
                  (lambda (in)
                    (let loop ()
                      (case-values (iport-read-byte in)
-                       (()  (ostream-close (host-process-in p)))
-                       ((b) (ostream-write-byte (host-process-in p) b) (loop))))))))
-      (let loop ((sname 'out))
-        (case-values (istream-read-byte
-                      (if (eq? sname 'out) (host-process-out p) (host-process-err p)))
-          (()  (if (eq? sname 'out)
-                   (loop 'err)
-                   (oport-write-byte out (+ (host-process-exit-code p) 48))))
-          ((b) (oport-write-byte out b) (loop sname)))))))
+                       (()  (ostream-close in.p.in))
+                       ((b) (ostream-write-byte in.p.in b) (loop))))))))
+      (let loop ()
+        (case-values (istream-read-byte out.p.out)
+          (()  (istream-close out.p.out) (oport-write-byte out (+ (host-process-wait p) 48)))
+          ((b) (oport-write-byte out b) (loop)))))))
+ ==>
+ #"another example0"
+ (call-with-output-bytevector
+  (lambda (out)
+    (let-values (((in.p.in  in.p.out)  (open-pipe-streams/k panic values))
+                 ((out.p.in out.p.out) (open-pipe-streams/k panic values)))
+      (let* ((fd.in.p.in   (cdr (assoc 'file-descriptor (iostream-description in.p.in))))
+             (fd.in.p.out  (cdr (assoc 'file-descriptor (iostream-description in.p.out))))
+             (fd.out.p.in  (cdr (assoc 'file-descriptor (iostream-description out.p.in))))
+             (fd.out.p.out (cdr (assoc 'file-descriptor (iostream-description out.p.out))))
+             (p (raw-host-process fd.in.p.out fd.out.p.in fd.out.p.in "cat" '() #f)))
+        (istream-close in.p.out)
+        (ostream-close out.p.in)
+        (thread (lambda ()
+                  (call-with-input-bytevector
+                   #"another example"
+                   (lambda (in)
+                     (let loop ()
+                       (case-values (iport-read-byte in)
+                         (()  (ostream-close in.p.in))
+                         ((b) (ostream-write-byte in.p.in b) (loop))))))))
+        (let loop ()
+          (case-values (istream-read-byte out.p.out)
+            (()  (istream-close out.p.out) (oport-write-byte out (+ (host-process-wait p) 48)))
+            ((b) (oport-write-byte out b) (loop))))))))
  ==>
  #"another example0"
 
+ (call-with-output-bytevector
+  (lambda (result)
+    (let* ((p1     (raw-host-process #f #f 'stdout "echo" '("pipe test") #f))
+           (in1    (host-process-out p1))
+           (fd.in1 (cdr (assoc 'file-descriptor (iostream-description in1))))
+           (p2     (raw-host-process fd.in1 #f 'stdout "cat" '() #f))
+           (in2    (host-process-out p2)))
+      (ostream-close (host-process-in p1))
+      (let loop ()
+        (case-values (istream-read-byte in2)
+          (()  (istream-close in2)
+               (oport-write-byte result (+ (host-process-wait p1) 48))
+               (oport-write-byte result (+ (host-process-wait p2) 48)))
+          ((b) (oport-write-byte result b) (loop)))))))
+ ==> #"pipe test\n00"
  (call-with-output-bytevector
   (lambda (result)
     (let-values (((out1 in1) (open-pipe-streams/k
@@ -1586,19 +1641,20 @@
       (let* ((fd.out1 (cdr (assoc 'file-descriptor (iostream-description out1))))
              (fd.in1  (cdr (assoc 'file-descriptor (iostream-description in1))))
              (fd.out2 (cdr (assoc 'file-descriptor (iostream-description out2))))
-             (p1      (raw-host-process #f fd.out1 fd.out1 #f #f "echo" '("pipe test")))
+             (p1      (raw-host-process #f fd.out1 fd.out1 "echo" '("pipe test") #f))
              (p2      (begin
                         ;; This allows cat to receive EOF.  In case the pipe is nonblocking, it
                         ;; also prevents cat from encountering EAGAIN.
                         (ostream-close out1)
-                        (raw-host-process fd.in1 fd.out2 fd.out2 #f #f "cat" '()))))
+                        (raw-host-process fd.in1 fd.out2 fd.out2 "cat" '() #f))))
+        (ostream-close (host-process-in p1))
         (istream-close in1)   ; not necessary for this test to pass
         (ostream-close out2)  ; necessary to unblock reading on in2
         (let loop ()
           (case-values (istream-read-byte in2)
             (()  (istream-close in2)
-                 (oport-write-byte result (+ (host-process-exit-code p1) 48))
-                 (oport-write-byte result (+ (host-process-exit-code p2) 48)))
+                 (oport-write-byte result (+ (host-process-wait p1) 48))
+                 (oport-write-byte result (+ (host-process-wait p2) 48)))
             ((b) (oport-write-byte result b) (loop))))))))
  ==> #"pipe test\n00"
  )

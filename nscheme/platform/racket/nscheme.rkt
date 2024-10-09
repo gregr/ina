@@ -954,54 +954,45 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Host system processes ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(current-subprocess-custodian-mode 'kill)
 (define host-pid (getpid))
 (define host-environment
   (let ((host-env (current-environment-variables)))
     (map (lambda (name) (cons name (environment-variables-ref host-env name)))
          (environment-variables-names host-env))))
-(define (raw-host-process in out err new-group? env path arg*)
-  (define (start-process in out err new-group? env path arg*)
-    (define (fd->rkt-port fd name mode)
-      (and fd (unless (exact-nonnegative-integer? fd) (panic #f "not a file descriptor" fd))
-           (unsafe-file-descriptor->port fd name mode)))
-    (let-values
-      (((sp out in err)
-        (let ((in  (fd->rkt-port in  'in  '(read)))
-              (out (fd->rkt-port out 'out '(write)))
-              (err (fd->rkt-port err 'err '(write))))
-          (parameterize ((current-environment-variables
-                          (if env
-                              (apply make-environment-variables
-                                     (let loop ((env env))
-                                       (if (null? env)
-                                           '()
-                                           (cons (caar env) (cons (cdar env) (loop (cdr env)))))))
-                              (current-environment-variables))))
-            (apply subprocess out in err
-                   (and new-group?
-                        (cond
-                          ((subprocess? new-group?) new-group?)
-                          ((eq? #t new-group?)      'new)
-                          (else                     (panic #f "not a boolean" new-group?))))
-                   (find-executable-path path) arg*)))))
-      (let ((in  (and in  (rkt:ostream '((type . pipe-ostream)) in)))
-            (out (and out (rkt:istream '((type . pipe-istream)) out)))
-            (err (and err (rkt:istream '((type . pipe-istream)) err))))
-        (lambda (method)
-          (case method
-            ((in)            in)
-            ((out)           out)
-            ((err)           err)
-            ((exit-code)     (let ((code (subprocess-status sp))) (and (number? code) code)))
-            ((pid)           (subprocess-pid  sp))
-            ((wait)          (subprocess-wait sp)    (values))
-            ((kill)          (subprocess-kill sp #t) (values))
-            ((interrupt)     (subprocess-kill sp #f) (values))
-            ((process/group) (lambda (in out err env path arg*)
-                               (start-process in out err sp env path arg*)))
-            (else            (panic #f "not a host-process method" method)))))))
-  (start-process in out err new-group? env path arg*))
+(current-subprocess-custodian-mode #f)
+(define (raw-host-process in out err path arg* env)
+  (define (fd->rkt-port fd name mode)
+    (and fd (unless (exact-nonnegative-integer? fd) (panic #f "not a file descriptor" fd name))
+         (unsafe-file-descriptor->port fd name mode)))
+  (let-values
+    (((sp out in err)
+      (let ((in  (fd->rkt-port in  'in  '(read)))
+            (out (fd->rkt-port out 'out '(write)))
+            (err (if (or (and out err (eqv? out err)) (eq? err 'stdout))
+                     'stdout
+                     (fd->rkt-port err 'err '(write)))))
+        (parameterize ((current-environment-variables
+                        (if env
+                            (apply make-environment-variables
+                                   (let loop ((env env))
+                                     (if (null? env)
+                                         '()
+                                         (cons (caar env) (cons (cdar env) (loop (cdr env)))))))
+                            (current-environment-variables))))
+          (apply subprocess out in err #f (find-executable-path path) arg*)))))
+    (let ((in  (and in  (rkt:ostream '((type . pipe-ostream)) in)))
+          (out (and out (rkt:istream '((type . pipe-istream)) out)))
+          (err (and err (rkt:istream '((type . pipe-istream)) err))))
+      (lambda (method)
+        (case method
+          ((in)        in)
+          ((out)       out)
+          ((err)       err)
+          ((pid)       (subprocess-pid sp))
+          ((wait)      (subprocess-wait sp) (subprocess-status sp))
+          ((kill)      (subprocess-kill sp #t) (values))
+          ((interrupt) (subprocess-kill sp #f) (values))
+          (else        (panic #f "not a raw-host-process method" method)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generic bytestream IO
