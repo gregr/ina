@@ -24,6 +24,11 @@
 (define (set-file-modified-seconds! path seconds)
   (set-file-modified-seconds!/k path seconds raise-io-error values))
 
+(define (open-pipe-streams) (open-pipe-streams/k raise-io-error values))
+(define (open-pipe)         (open-pipe/k         raise-io-error values))
+(define (open-pipe/k kf k)
+  (open-pipe-streams/k kf (lambda (out in) (k (ostream->oport out) (istream->iport in)))))
+
 (define (host-process-in        p) (p 'in))
 (define (host-process-out       p) (p 'out))
 (define (host-process-err       p) (p 'err))
