@@ -1,7 +1,7 @@
 (define package.posix.common
   (cons
     '(
-      host-pid host-environment raw-host-process
+      host-pid host-environment raw-host-process/k
       change-directory command-line-argument*
       filesystem-change-evt filesystem-change-evt-cancel
       directory-file*/k make-symbolic-link/k make-directory/k
@@ -10,7 +10,7 @@
       set-file-permissions!/k set-file-modified-seconds!/k
       open-pipe-streams/k)
     (list
-      host-pid host-environment raw-host-process
+      host-pid host-environment raw-host-process/k
       change-directory command-line-argument*
       filesystem-change-evt filesystem-change-evt-cancel
       directory-file*/k make-symbolic-link/k make-directory/k

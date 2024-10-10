@@ -1546,7 +1546,7 @@
  ! host-processes
  (call-with-output-bytevector
   (lambda (out)
-    (let* ((p (raw-host-process #f #f 'stdout "echo" '("hello world") #f))
+    (let* ((p (raw-host-process/k #f #f 'stdout "echo" '("hello world") #f panic values))
            (out.p.out (host-process-out p)))
       (ostream-close (host-process-in p))
       (let loop ()
@@ -1560,7 +1560,8 @@
     (let-values (((out.p.in out.p.out) (open-pipe-streams/k panic values)))
       (let* ((fd.out.p.in  (cdr (assoc 'file-descriptor (iostream-description out.p.in))))
              (fd.out.p.out (cdr (assoc 'file-descriptor (iostream-description out.p.out))))
-             (p (raw-host-process #f fd.out.p.in fd.out.p.in "echo" '("hello world") #f)))
+             (p (raw-host-process/k #f fd.out.p.in fd.out.p.in "echo" '("hello world") #f
+                                    panic values)))
         (ostream-close (host-process-in p))
         (ostream-close out.p.in)
         (let loop ()
@@ -1572,7 +1573,7 @@
 
  (call-with-output-bytevector
   (lambda (out)
-    (let* ((p (raw-host-process #f #f 'stdout "cat" '() #f))
+    (let* ((p (raw-host-process/k #f #f 'stdout "cat" '() #f panic values))
            (in.p.in   (host-process-in p))
            (out.p.out (host-process-out p)))
       (thread (lambda ()
@@ -1597,7 +1598,7 @@
              (fd.in.p.out  (cdr (assoc 'file-descriptor (iostream-description in.p.out))))
              (fd.out.p.in  (cdr (assoc 'file-descriptor (iostream-description out.p.in))))
              (fd.out.p.out (cdr (assoc 'file-descriptor (iostream-description out.p.out))))
-             (p (raw-host-process fd.in.p.out fd.out.p.in fd.out.p.in "cat" '() #f)))
+             (p (raw-host-process/k fd.in.p.out fd.out.p.in fd.out.p.in "cat" '() #f panic values)))
         (istream-close in.p.out)
         (ostream-close out.p.in)
         (thread (lambda ()
@@ -1617,10 +1618,10 @@
 
  (call-with-output-bytevector
   (lambda (result)
-    (let* ((p1     (raw-host-process #f #f 'stdout "echo" '("pipe test") #f))
+    (let* ((p1     (raw-host-process/k #f #f 'stdout "echo" '("pipe test") #f panic values))
            (in1    (host-process-out p1))
            (fd.in1 (cdr (assoc 'file-descriptor (iostream-description in1))))
-           (p2     (raw-host-process fd.in1 #f 'stdout "cat" '() #f))
+           (p2     (raw-host-process/k fd.in1 #f 'stdout "cat" '() #f panic values))
            (in2    (host-process-out p2)))
       (ostream-close (host-process-in p1))
       (let loop ()
@@ -1641,12 +1642,12 @@
       (let* ((fd.out1 (cdr (assoc 'file-descriptor (iostream-description out1))))
              (fd.in1  (cdr (assoc 'file-descriptor (iostream-description in1))))
              (fd.out2 (cdr (assoc 'file-descriptor (iostream-description out2))))
-             (p1      (raw-host-process #f fd.out1 fd.out1 "echo" '("pipe test") #f))
+             (p1      (raw-host-process/k #f fd.out1 fd.out1 "echo" '("pipe test") #f panic values))
              (p2      (begin
                         ;; This allows cat to receive EOF.  In case the pipe is nonblocking, it
                         ;; also prevents cat from encountering EAGAIN.
                         (ostream-close out1)
-                        (raw-host-process fd.in1 fd.out2 fd.out2 "cat" '() #f))))
+                        (raw-host-process/k fd.in1 fd.out2 fd.out2 "cat" '() #f panic values))))
         (ostream-close (host-process-in p1))
         (istream-close in1)   ; not necessary for this test to pass
         (ostream-close out2)  ; necessary to unblock reading on in2

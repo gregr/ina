@@ -18,7 +18,7 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  host-pid host-environment raw-host-process
+  host-pid host-environment raw-host-process/k
   change-directory command-line-argument*
   filesystem-change-evt filesystem-change-evt-cancel
   directory-file*/k make-symbolic-link/k make-directory/k
@@ -750,7 +750,9 @@
                   (exn:fail:filesystem?        (lambda (e) (kfail #f (list (exn-message e)))))
                   (exn:fail:network:errno?     (lambda (e) (kfail (exn:fail:network:errno-errno e)
                                                                   (list (exn-message e)))))
-                  (exn:fail:network?           (lambda (e) (kfail #f (list (exn-message e))))))
+                  (exn:fail:network?           (lambda (e) (kfail #f (list (exn-message e)))))
+                  ((lambda (e) (and (exn:fail? e) (not (exn:fail:contract? e))))
+                   (lambda (e) (kfail #f (list (exn-message e))))))
     (thunk)))
 (define-syntax-rule (io-guard kfail body ...) (with-io-guard kfail (lambda () body ...)))
 
@@ -914,13 +916,15 @@
 ;;; Pipe IO ;;;
 ;;;;;;;;;;;;;;;
 (define (open-pipe-streams/k kf k)
-  ;; This produces a blocking pipe, but at the cost of running another process, and at the cost of
-  ;; that process copying data from its stdin to its stdout.  Fortunately, at least the process will
-  ;; be cleaned up once its stdin is closed.
-  (let-values (((sp out in err) (subprocess #f #f 'stdout #f (find-executable-path "cat"))))
-    (let ((in  (and in  (rkt:ostream '((type . pipe-ostream)) in)))
-          (out (and out (rkt:istream '((type . pipe-istream)) out))))
-      (k in out)))
+  (io-guard
+   kf
+   ;; This produces a blocking pipe, but at the cost of running another process, and at the cost of
+   ;; that process copying data from its stdin to its stdout.  Fortunately, at least the process will
+   ;; be cleaned up once its stdin is closed.
+   (let-values (((sp out in err) (subprocess #f #f 'stdout #f (find-executable-path "cat"))))
+     (let ((in  (and in  (rkt:ostream '((type . pipe-ostream)) in)))
+           (out (and out (rkt:istream '((type . pipe-istream)) out))))
+       (k in out))))
   ;; Unfortunately, this produces a non-blocking pipe because Racket opens files with O_NONBLOCK.
   ;; This hack also comes with some extra risk because it creates and then quickly removes a
   ;; temporary directory and fifo.
@@ -960,39 +964,41 @@
     (map (lambda (name) (cons name (environment-variables-ref host-env name)))
          (environment-variables-names host-env))))
 (current-subprocess-custodian-mode #f)
-(define (raw-host-process in out err path arg* env)
+(define (raw-host-process/k in out err path arg* env kf k)
   (define (fd->rkt-port fd name mode)
     (and fd (unless (exact-nonnegative-integer? fd) (panic #f "not a file descriptor" fd name))
          (unsafe-file-descriptor->port fd name mode)))
-  (let-values
-    (((sp out in err)
-      (let ((in  (fd->rkt-port in  'in  '(read)))
-            (out (fd->rkt-port out 'out '(write)))
-            (err (if (or (and out err (eqv? out err)) (eq? err 'stdout))
-                     'stdout
-                     (fd->rkt-port err 'err '(write)))))
-        (parameterize ((current-environment-variables
-                        (if env
-                            (apply make-environment-variables
-                                   (let loop ((env env))
-                                     (if (null? env)
-                                         '()
-                                         (cons (caar env) (cons (cdar env) (loop (cdr env)))))))
-                            (current-environment-variables))))
-          (apply subprocess out in err #f (find-executable-path path) arg*)))))
-    (let ((in  (and in  (rkt:ostream '((type . pipe-ostream)) in)))
-          (out (and out (rkt:istream '((type . pipe-istream)) out)))
-          (err (and err (rkt:istream '((type . pipe-istream)) err))))
-      (lambda (method)
-        (case method
-          ((in)        in)
-          ((out)       out)
-          ((err)       err)
-          ((pid)       (subprocess-pid sp))
-          ((wait)      (subprocess-wait sp) (subprocess-status sp))
-          ((kill)      (subprocess-kill sp #t) (values))
-          ((interrupt) (subprocess-kill sp #f) (values))
-          (else        (panic #f "not a raw-host-process method" method)))))))
+  (io-guard
+   kf
+   (let-values
+     (((sp out in err)
+       (let ((in  (fd->rkt-port in  'in  '(read)))
+             (out (fd->rkt-port out 'out '(write)))
+             (err (if (or (and out err (eqv? out err)) (eq? err 'stdout))
+                      'stdout
+                      (fd->rkt-port err 'err '(write)))))
+         (parameterize ((current-environment-variables
+                         (if env
+                             (apply make-environment-variables
+                                    (let loop ((env env))
+                                      (if (null? env)
+                                          '()
+                                          (cons (caar env) (cons (cdar env) (loop (cdr env)))))))
+                             (current-environment-variables))))
+           (apply subprocess out in err #f (find-executable-path path) arg*)))))
+     (let ((in  (and in  (rkt:ostream '((type . pipe-ostream)) in)))
+           (out (and out (rkt:istream '((type . pipe-istream)) out)))
+           (err (and err (rkt:istream '((type . pipe-istream)) err))))
+       (k (lambda (method)
+            (case method
+              ((in)        in)
+              ((out)       out)
+              ((err)       err)
+              ((pid)       (subprocess-pid sp))
+              ((wait)      (subprocess-wait sp) (subprocess-status sp))
+              ((kill)      (subprocess-kill sp #t) (values))
+              ((interrupt) (subprocess-kill sp #f) (values))
+              (else        (panic #f "not a raw-host-process/k method" method)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generic bytestream IO
