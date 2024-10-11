@@ -17,6 +17,7 @@
 ;;;   - no-position
 ;;; - failed operation details
 
+(define (iostream? x) (procedure? x))
 (define (iostream-description s) (s 'description))
 
 ;;;;;;;;;;;;;;;;;;;;;
@@ -353,6 +354,23 @@
            buf))))
 
   (define (iport-stream p) (mvector-ref p 0))
+  (define (iport->istream p)
+    (if (= (iport-peeked-count p) 0)
+        (iport-stream p)
+        (lambda (method . arg*)
+          (apply
+            (case method
+              ((read)          (lambda (dst start min-count count kf keof k)
+                                 (iport-read/k p dst start min-count count kf keof k)))
+              ((pread)         (lambda (pos dst start count kf keof k)
+                                 (iport-pread/k p pos dst start count kf keof k)))
+              ((read-byte)     (lambda (kf keof k) (iport-read-byte/k p kf keof k)))
+              ((set-position!) (lambda (pos kf k)  (iport-set-position!/k p pos kf k)))
+              ((position)      (lambda ()          (iport-position p)))
+              ((close)         (lambda (kf k)      (iport-close/k p kf k)))
+              ((description)   (lambda ()          '((type . iport-istream))))
+              (else            (error "not an iport-istream method" method)))
+            arg*))))
 
   (define istream->iport
     (let ((go (lambda (s buffer-size)
@@ -388,6 +406,8 @@
                (iport-set-eof?!   p #f)
                (istream-close/k s kf k))
             (else (k)))))
+
+  (define (iport-peeked-count p) (- (iport-end p) (iport-pos p)))
 
   (define (iport-drop-peeked p count)
     (nonnegative-integer?! count)
@@ -522,6 +542,8 @@
    (define (oport-set-pos!    p x) (mvector-set! p 2 x)))
 
   (define (oport-stream p) (mvector-ref p 0))
+  (define (oport->ostream p) (oport->ostream/k p raise-io-error values))
+  (define (oport->ostream/k p kf k) (oport-flush/k p kf (lambda () (k (oport-stream p)))))
 
   (define ostream->oport
     (let ((go (lambda (s buffer-size) (make-oport s (make-mbytevector buffer-size 0) 0))))
