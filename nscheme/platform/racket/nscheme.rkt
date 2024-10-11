@@ -988,7 +988,7 @@
                                           '()
                                           (cons (caar env) (cons (cdar env) (loop (cdr env)))))))
                              (current-environment-variables))))
-           (apply subprocess out in err #f (find-executable-path path) arg*)))))
+           (apply subprocess out in err #f path arg*)))))
      (let ((in  (and in  (rkt:ostream '((type . pipe-ostream)) in)))
            (out (and out (rkt:istream '((type . pipe-istream)) out)))
            (err (and err (rkt:istream '((type . pipe-istream)) err))))
