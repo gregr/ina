@@ -18,9 +18,8 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  host-pid host-environment raw-host-process/k
-  change-directory command-line-argument*
-  filesystem-change-evt filesystem-change-evt-cancel
+  host-pid host-argument* host-environment raw-host-process/k
+  change-directory filesystem-change-evt filesystem-change-evt-cancel
   directory-file*/k make-symbolic-link/k make-directory/k
   delete-directory/k delete-file/k move-file/k open-file-istream/k open-file-ostream/k
   file-type/k file-size/k file-permissions/k file-modified-seconds/k
@@ -865,12 +864,6 @@
        (else            (error "not an ostream method" method)))
      arg*)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Command line arguments ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define command-line-argument* (apply vector (path->string (find-system-path 'run-file))
-                                      (vector->list (current-command-line-arguments))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Standard IO streams ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -962,6 +955,8 @@
 ;;; Host system processes ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define host-pid (getpid))
+(define host-argument* (apply vector (path->string (find-system-path 'run-file))
+                              (vector->list (current-command-line-arguments))))
 (define host-environment
   (let ((host-env (current-environment-variables)))
     (map (lambda (name) (cons name (environment-variables-ref host-env name)))
