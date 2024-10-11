@@ -36,3 +36,58 @@
 (define (host-process-wait      p) (p 'wait))
 (define (host-process-kill      p) (p 'kill))
 (define (host-process-interrupt p) (p 'interrupt))
+(define (host-process in out err path arg* env)
+  (host-process/k in out err path arg* env raise-io-error raise-io-error values))
+(define (host-process/k in out err path arg* env handle-internal-error kf k)
+  (define (x->fd x) (and x (let ((kv (assoc 'file-descriptor (iostream-description x))))
+                             (and kv (cdr kv)))))
+  (raw-host-process/k
+    (x->fd in) (x->fd out) (if (or (and out err (eqv? out err)) (eq? err 'stdout))
+                               'stdout
+                               (x->fd err))
+    path arg* env kf
+    (lambda (p)
+      (let ((in.p  (host-process-in  p))
+            (out.p (host-process-out p))
+            (err.p (host-process-err p)))
+        (mlet ((fuse* '()) (cust.stdin #f))
+          (define (fuse-io in out close!)
+            (set! fuse*
+              (cons (thread
+                      (lambda ()
+                        (let* ((buffer-size 4096) (buffer (make-mbytevector buffer-size 0)))
+                          (let loop ()
+                            (istream-read/k
+                              in buffer 0 1 buffer-size handle-internal-error close!
+                              (lambda (amount)
+                                (ostream-write/k out buffer 0 amount amount handle-internal-error
+                                                 (lambda (amount) (loop)))))))))
+                    fuse*))
+            #f)
+          (define (fuse-input in out)
+            (fuse-io in out (lambda () (ostream-close/k out handle-internal-error values))))
+          (define (fuse-output in out)
+            (fuse-io in out (lambda () (istream-close/k in  handle-internal-error values))))
+          (let ((in  (and in.p (if in
+                                   (let ((cust (make-custodian)))
+                                     (set! cust.stdin cust)
+                                     (current-custodian cust (lambda () (fuse-input in in.p))))
+                                   in.p)))
+                (out (and out.p (if out (fuse-output out.p out) out.p)))
+                (err (and err.p (if err (fuse-output err.p err) err.p))))
+            (k (if (null? fuse*)
+                   p
+                   (lambda (method)
+                     (case method
+                       ((in)   in)
+                       ((out)  out)
+                       ((err)  err)
+                       ((wait) (let ((exit-code (p 'wait)))
+                                 (when cust.stdin
+                                   (custodian-shutdown-all cust.stdin)
+                                   (set! cust.stdin #f)
+                                   (ostream-close/k in.p handle-internal-error values))
+                                 (for-each thread-wait fuse*)
+                                 (set! fuse* '())
+                                 exit-code))
+                       (else   (p method))))))))))))

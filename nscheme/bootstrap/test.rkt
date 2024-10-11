@@ -1570,6 +1570,12 @@
             ((b) (oport-write-byte out b) (loop))))))))
  ==>
  #"hello world\n0"
+ (let* ((out (open-bytevector-ostream))
+        (p (host-process #f out 'stdout "echo" '("hello world") #f)))
+   (ostream-close (host-process-in p))
+   (values (host-process-wait p) (bytevector-ostream-current out)))
+ ==>
+ (values 0 #"hello world\n")
 
  (call-with-output-bytevector
   (lambda (out)
@@ -1615,6 +1621,12 @@
             ((b) (oport-write-byte out b) (loop))))))))
  ==>
  #"another example0"
+ (let* ((out (open-bytevector-ostream))
+        (in  (open-bytevector-istream #"another example"))
+        (p   (host-process in out 'stdout "cat" '() #f)))
+   (values (host-process-wait p) (bytevector-ostream-current out)))
+ ==>
+ (values 0 #"another example")
 
  (call-with-output-bytevector
   (lambda (result)
@@ -1658,4 +1670,12 @@
                  (oport-write-byte result (+ (host-process-wait p2) 48)))
             ((b) (oport-write-byte result b) (loop))))))))
  ==> #"pipe test\n00"
+ (let* ((result (open-bytevector-ostream))
+        (p1     (host-process #f #f 'stdout "echo" '("pipe test") #f))
+        (p2     (host-process (host-process-out p1) result 'stdout "cat" '() #f))
+        )
+   (ostream-close (host-process-in p1))
+   (values (host-process-wait p1) (host-process-wait p2) (bytevector-ostream-current result)))
+ ==>
+ (values 0 0 #"pipe test\n")
  )
