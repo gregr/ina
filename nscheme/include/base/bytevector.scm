@@ -43,3 +43,14 @@
                   (loop (+ i len.sep) (car x*) (cdr x*)))))))))
 
 (define (bytevector-join separator . x*) (bytevector-join* separator x*))
+
+(define (bytevector-split bv separator)
+  (let ((len (bytevector-length bv)))
+    (let loop-segment ((start 0))
+      (let loop-byte ((i start))
+        (define (make-segment) (let* ((len (- i start)) (segment (make-mbytevector len 0)))
+                                 (mbytevector-copy! bv start segment 0 len)
+                                 (mbytevector->bytevector segment)))
+        (cond ((= i len)                           (list (make-segment)))
+              ((= (bytevector-ref bv i) separator) (cons (make-segment) (loop-segment (+ i 1))))
+              (else                                (loop-byte (+ i 1))))))))
