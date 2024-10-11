@@ -1571,9 +1571,15 @@
  ==>
  #"hello world\n0"
  (let* ((out (open-bytevector-ostream))
-        (p (host-process #f out 'stdout "echo" '("hello world") #f)))
+        (p   (host-process #f out 'stdout "echo" '("hello world") #f)))
    (ostream-close (host-process-in p))
    (values (host-process-wait p) (bytevector-ostream-current out)))
+ ==>
+ (values 0 #"hello world\n")
+ (let* ((out (open-output-bytevector))
+        (p   (host-process #f out 'stdout "echo" '("hello world") #f)))
+   (ostream-close (host-process-in p))
+   (values (host-process-wait p) (output-bytevector-current out)))
  ==>
  (values 0 #"hello world\n")
 
@@ -1627,6 +1633,12 @@
    (values (host-process-wait p) (bytevector-ostream-current out)))
  ==>
  (values 0 #"another example")
+ (let* ((out (open-output-bytevector))
+        (in  (open-input-bytevector #"another example"))
+        (p   (host-process in out 'stdout "cat" '() #f)))
+   (values (host-process-wait p) (output-bytevector-current out)))
+ ==>
+ (values 0 #"another example")
 
  (call-with-output-bytevector
   (lambda (result)
@@ -1672,10 +1684,16 @@
  ==> #"pipe test\n00"
  (let* ((result (open-bytevector-ostream))
         (p1     (host-process #f #f 'stdout "echo" '("pipe test") #f))
-        (p2     (host-process (host-process-out p1) result 'stdout "cat" '() #f))
-        )
+        (p2     (host-process (host-process-out p1) result 'stdout "cat" '() #f)))
    (ostream-close (host-process-in p1))
    (values (host-process-wait p1) (host-process-wait p2) (bytevector-ostream-current result)))
+ ==>
+ (values 0 0 #"pipe test\n")
+ (let* ((result (open-output-bytevector))
+        (p1     (host-process #f #f 'stdout "echo" '("pipe test") #f))
+        (p2     (host-process (host-process-out p1) result 'stdout "cat" '() #f)))
+   (ostream-close (host-process-in p1))
+   (values (host-process-wait p1) (host-process-wait p2) (output-bytevector-current result)))
  ==>
  (values 0 0 #"pipe test\n")
  )
