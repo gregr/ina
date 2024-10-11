@@ -832,27 +832,30 @@
      (case method
        ((write)         (lambda (src start min-count count kf k)
                           (buffer-range?! src start min-count count)
-                          (io-guard
-                           kf
-                           (cond
-                             ((= min-count count) (k (write-bytes src port start (+ start count))))
-                             ((= min-count 0)
-                              (k (or (write-bytes-avail* src port start (+ start count)) 0)))
-                             (else (let loop ((total 0))
-                                     (let* ((amount (write-bytes-avail src port (+ start total)
-                                                                       (+ start count)))
-                                            (total  (+ total amount)))
-                                       (if (< total min-count) (loop total) (k total)))))))))
+                          (let ((src (if (mbytevector? src) (mbytevector-bv src) src)))
+                            (io-guard
+                             kf
+                             (cond
+                               ((= min-count count)
+                                (k (write-bytes src port start (+ start count))))
+                               ((= min-count 0)
+                                (k (or (write-bytes-avail* src port start (+ start count)) 0)))
+                               (else (let loop ((total 0))
+                                       (let* ((amount (write-bytes-avail src port (+ start total)
+                                                                         (+ start count)))
+                                              (total  (+ total amount)))
+                                         (if (< total min-count) (loop total) (k total))))))))))
        ((pwrite)        (lambda (pos src start count kf k)
                           (buffer-range?! src start count count)
-                          (io-guard
-                           kf
-                           (let ((pos.current (file-position* port)))
-                             (if pos.current
-                                 (rkt-port-set-position!/k
-                                  port pos kf
-                                  (lambda () (write-bytes src port start (+ start count)) (k)))
-                                 (kf 'no-position "ostream does not support pwrite"))))))
+                          (let ((src (if (mbytevector? src) (mbytevector-bv src) src)))
+                            (io-guard
+                             kf
+                             (let ((pos.current (file-position* port)))
+                               (if pos.current
+                                   (rkt-port-set-position!/k
+                                    port pos kf
+                                    (lambda () (write-bytes src port start (+ start count)) (k)))
+                                   (kf 'no-position "ostream does not support pwrite")))))))
        ((write-byte)    (lambda (b kf k)   (io-guard kf (write-byte b port) (k))))
        ((set-size!)     (lambda (new kf k) (io-guard kf (file-truncate port new) (k))))
        ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
