@@ -1574,14 +1574,14 @@
  ==>
  #"hello world\n0"
  (let* ((out (open-bytevector-ostream))
-        (p   (host-process #f out 'stdout (find-file/env host-environment "echo") '("hello world") #f)))
-   (ostream-close (host-process-in p))
+        (p   (host-process empty-istream out 'stdout
+                           (find-file/env host-environment "echo") '("hello world") #f)))
    (values (host-process-wait p) (bytevector-ostream-current out)))
  ==>
  (values 0 #"hello world\n")
  (let* ((out (open-output-bytevector))
-        (p   (host-process #f out 'stdout (find-file/env host-environment "echo") '("hello world") #f)))
-   (ostream-close (host-process-in p))
+        (p   (host-process empty-istream out 'stdout
+                           (find-file/env host-environment "echo") '("hello world") #f)))
    (values (host-process-wait p) (output-bytevector-current out)))
  ==>
  (values 0 #"hello world\n")
@@ -1697,20 +1697,18 @@
             ((b) (oport-write-byte result b) (loop))))))))
  ==> #"pipe test\n00"
  (let* ((result (open-bytevector-ostream))
-        (p1     (host-process #f #f 'stdout
+        (p1     (host-process empty-istream #f 'stdout
                               (find-file/env host-environment "echo") '("pipe test") #f))
         (p2     (host-process (host-process-out p1) result 'stdout
                               (find-file/env host-environment "cat") '() #f)))
-   (ostream-close (host-process-in p1))
    (values (host-process-wait p1) (host-process-wait p2) (bytevector-ostream-current result)))
  ==>
  (values 0 0 #"pipe test\n")
  (let* ((result (open-output-bytevector))
-        (p1     (host-process #f #f 'stdout
+        (p1     (host-process empty-istream #f 'stdout
                               (find-file/env host-environment "echo") '("pipe test") #f))
         (p2     (host-process (host-process-out p1) result 'stdout
                               (find-file/env host-environment "cat") '() #f)))
-   (ostream-close (host-process-in p1))
    (values (host-process-wait p1) (host-process-wait p2) (output-bytevector-current result)))
  ==>
  (values 0 0 #"pipe test\n")
