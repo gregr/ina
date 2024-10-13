@@ -54,10 +54,7 @@
   f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
   f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/
 
-  with-native-signal-handling
-
-  ;stdio filesystem tcp udp tty console
-  )
+  with-native-signal-handling)
 (require
   ffi/unsafe/port ffi/unsafe/vm
   racket/control racket/file racket/flonum racket/list racket/match racket/path racket/port
@@ -1141,31 +1138,3 @@
       ((multicast-loopback?-set! loopback?) (udp-multicast-set-loopback!  socket loopback?))
       ((multicast-ttl-ref)                  (udp-multicast-ttl            socket))
       ((multicast-ttl-set! ttl)             (udp-multicast-set-ttl!       socket ttl)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; TTY manipulation
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; NOTE: see text/terminal-control.scm for escape codes
-
-(define tty
-  (let ()
-    (define (command name . args)
-      (string-trim
-        (with-output-to-string
-          (lambda () (apply system* (find-executable-path name) args)))))
-    (define (tput arg)    (command "tput" arg))
-    (define (stty . args) (apply command "stty" args))
-    (method-lambda
-      ;; NOTE: ec:display-size can report these, but reading the report may be inconvenient
-      ((lines)      (string->number (string-trim (tput "lines"))))
-      ((columns)    (string->number (string-trim (tput "cols"))))
-      ;; NOTE: these don't seem necessary due to existing escape codes
-      ;((clear)       (command "clear")) ; \e[2J
-      ;((save)        (tput "smcup"))    ; \e[?47h
-      ;((restore)     (tput "rmcup"))    ; \e[?47l
-      ;((cursor-show) (tput "cnorm"))    ; \e[?25h
-      ;((cursor-hide) (tput "civis"))    ; \e[?25l
-      ((stty-ref)   (stty "-g"))
-      ((stty-set s) (stty s))
-      ((stty-raw)   (stty "raw")))))
