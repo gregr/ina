@@ -54,3 +54,11 @@
         (cond ((= i len)                           (list (make-segment)))
               ((= (bytevector-ref bv i) separator) (cons (make-segment) (loop-segment (+ i 1))))
               (else                                (loop-byte (+ i 1))))))))
+
+(define (bytevector-rtrim bv b)
+  (let ((len (bytevector-length bv)))
+    (if (and (< 0 len) (= (bytevector-ref bv (- len 1)) b))
+        (let ((new (make-mbytevector (- len 1) 0)))
+          (mbytevector-copy! bv 0 new 0 (- len 1))
+          (mbytevector->bytevector new))
+        bv)))
