@@ -1451,24 +1451,24 @@
 
 (define env.test.posix env.large+posix+privileged)
 
-#;(run-evaluation-tests
+(run-evaluation-tests
  env.test.posix
 
  ! cmdline
  host-argument* ==> #("bootstrap/test.rkt")
 
- ! stdio
- (begin
-   (ostream-write-byte standard-output-stream 65)
-   (ostream-write-byte standard-output-stream 66)
-   (ostream-write-byte standard-output-stream 67)
-   (ostream-write-byte standard-output-stream 10))
- ==> (values)
- (let* ((message #"Type 'x' and hit enter: ")
-        (len (bytevector-length message)))
-   (ostream-write standard-error-stream message 0 len len)
-   (istream-read-byte standard-input-stream))
- ==> 120
+ ;! stdio
+ ;(begin
+ ;  (ostream-write-byte standard-output-stream 65)
+ ;  (ostream-write-byte standard-output-stream 66)
+ ;  (ostream-write-byte standard-output-stream 67)
+ ;  (ostream-write-byte standard-output-stream 10))
+ ;==> (values)
+ ;(let* ((message #"Type 'x' and hit enter: ")
+ ;       (len (bytevector-length message)))
+ ;  (ostream-write standard-error-stream message 0 len len)
+ ;  (istream-read-byte standard-input-stream))
+ ;==> 120
 
  ! file-io
  (let* ((dir     "test-for-file-io-etc")
@@ -1542,6 +1542,38 @@
      (list size amount dperm fperm (eqv? sec sec2) dtype ftype path* path*2
            (mbytevector->bytevector buf))))
  ==> (12 12 #o755 #o644 #t directory file ("out.txt") ("out2.txt") #"Hello world!")
+
+ ! network-io
+ (let ((ch.client (make-channel)))
+   (open-tcp-listener/k
+    (gethostname) 8765 #t 5 raise-io-error
+    (lambda (listener)
+      (thread
+       (lambda ()
+         (open-tcp-connection/k
+          (gethostname) 8765 #f #f raise-io-error
+          (lambda (in out)
+            (ostream-write-byte out 65)
+            (ostream-write-byte out 66)
+            (ostream-write-byte out 67)
+            (ostream-close out)
+            (channel-put ch.client (bytevector (istream-read-byte in)
+                                               (istream-read-byte in)
+                                               (istream-read-byte in)))
+            (istream-close in)))))
+      (listener
+       'accept/k raise-io-error
+       (lambda (in out)
+         (let ((result (bytevector (istream-read-byte in)
+                                   (istream-read-byte in)
+                                   (istream-read-byte in))))
+           (ostream-write-byte out 97)
+           (ostream-write-byte out 98)
+           (ostream-write-byte out 99)
+           (ostream-close out)
+           (istream-close in)
+           (values (list 'server result) (list 'client (channel-get ch.client)))))))))
+ ==> (values (server #"ABC") (client #"abc"))
 
  ! host-processes
  (call-with-output-bytevector

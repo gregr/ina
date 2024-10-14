@@ -24,6 +24,7 @@
   delete-directory/k delete-file/k move-file/k open-file-istream/k open-file-ostream/k
   file-type/k file-size/k file-permissions/k file-modified-seconds/k
   set-file-permissions!/k set-file-modified-seconds!/k
+  gethostname open-tcp-listener/k open-tcp-connection/k
   open-pipe-streams/k
 
   standard-input-stream standard-output-stream standard-error-stream
@@ -904,6 +905,38 @@
                        (else     (panic #f "not an open-file-ostream restriction" restriction)))))
     (io-guard kf (k (rkt:ostream (list '(type . file-ostream) (cons 'path path))
                                  (open-output-file path #:exists exists-flag))))))
+
+;;;;;;;;;;;;;;;;;;
+;;; Network IO ;;;
+;;;;;;;;;;;;;;;;;;
+
+(define (make-socket-streams/k in out k)
+  (define (tcp-address-description p)
+    (let-values (((local-host local-port remote-host remote-port) (tcp-addresses p #t)))
+      (cons 'address
+            (list (cons 'local  (list (cons 'host local-host)
+                                      (cons 'port local-port)))
+                  (cons 'remote (list (cons 'host remote-host)
+                                      (cons 'port remote-port)))))))
+  (k (rkt:istream (list '(type . tcp-istream) (tcp-address-description in))  in)
+     (rkt:ostream (list '(type . tcp-ostream) (tcp-address-description out)) out)))
+
+(define (open-tcp-listener/k hostname port reuse? max-backlog kf k)
+  (io-guard
+   kf (let ((listener (tcp-listen port max-backlog reuse? hostname)))
+        (k (lambda (method . arg*)
+             (apply
+              (case method
+                ((accept/k) (lambda (kf k)
+                              (io-guard kf (let-values (((in out) (tcp-accept listener)))
+                                             (make-socket-streams/k in out k)))))
+                ((close/k)  (lambda (kf k) (io-guard kf (tcp-close listener) (k))))
+                (else       (panic #f "not a listener method" method)))
+              arg*))))))
+
+(define (open-tcp-connection/k host port local-host local-port kf k)
+  (io-guard kf (let-values (((in out) (tcp-connect host port local-host local-port)))
+                 (make-socket-streams/k in out k))))
 
 ;;;;;;;;;;;;;;;
 ;;; Pipe IO ;;;
