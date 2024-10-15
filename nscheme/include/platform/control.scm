@@ -6,7 +6,7 @@
       thread-resume thread-wait thread-resume-evt thread-suspend-evt thread-dead-evt
       make-channel channel-get channel-put channel-get-evt channel-put-evt
       make-semaphore semaphore-post semaphore-wait semaphore-try-wait? semaphore-peek-evt
-      sync/timeout handle-evt choice-evt guard-evt nack-guard-evt replace-evt
+      sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt
       current-time/type sleep-seconds-nanoseconds)
     (list
       make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
@@ -14,5 +14,5 @@
       thread-resume thread-wait thread-resume-evt thread-suspend-evt thread-dead-evt
       make-channel channel-get channel-put channel-get-evt channel-put-evt
       make-semaphore semaphore-post semaphore-wait semaphore-try-wait? semaphore-peek-evt
-      sync/timeout handle-evt choice-evt guard-evt nack-guard-evt replace-evt
+      sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt
       current-time/type sleep-seconds-nanoseconds)))

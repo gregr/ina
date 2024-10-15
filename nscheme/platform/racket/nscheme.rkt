@@ -33,7 +33,7 @@
   thread-resume thread-wait thread-resume-evt thread-suspend-evt thread-dead-evt
   make-channel channel-get channel-put channel-get-evt channel-put-evt
   make-semaphore semaphore-post semaphore-wait semaphore-try-wait? semaphore-peek-evt
-  sync/timeout handle-evt choice-evt guard-evt nack-guard-evt replace-evt
+  sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt
   current-time/type sleep-seconds-nanoseconds
 
   panic apply values
@@ -70,6 +70,8 @@
       (if (string? a)
           (and (string? b) (string=? a b))
           (and (bytevector? a) (bytevector? b) (bytes=? a b)))))
+
+(define (sync/default handle-default . evt*) (apply sync/timeout handle-default evt*))
 
 (define (make-parameter default)
   (let ((rkt-param (rkt:make-parameter default)))
