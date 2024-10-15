@@ -45,7 +45,8 @@
 (include "../include/platform/io.scm")
 (include "../include/platform/privileged.scm")
 (include "../include/platform/posix/common.scm")
-(include "../include/platform/posix/io.scm")
+(include "../include/platform/posix/file.scm")
+(include "../include/platform/posix/host-process.scm")
 
 (define-runtime-path path.here ".")
 
@@ -111,7 +112,8 @@
      )))
 (define def*.posix
   (file-name*->stx*
-   '("../include/platform/posix/io.scm"
+   '("../include/platform/posix/file.scm"
+     "../include/platform/posix/host-process.scm"
      )))
 
 (include "../include/platform/bootstrap.scm")
