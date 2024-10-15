@@ -913,7 +913,7 @@
 (define (make-socket-streams/k in out k)
   (define (tcp-address-description p)
     (let-values (((local-host local-port remote-host remote-port) (tcp-addresses p #t)))
-      (cons 'address
+      (cons 'address*
             (list (cons 'local  (list (cons 'host local-host)
                                       (cons 'port local-port)))
                   (cons 'remote (list (cons 'host remote-host)

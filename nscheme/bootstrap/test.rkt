@@ -1545,6 +1545,15 @@
 
  ! network-io
  (let ((ch.client (make-channel)))
+   (define (istream->bv in)
+     (apply bytevector
+            (let loop ()
+              (case-values (istream-read-byte in)
+                (() '())
+                ((b) (cons b (loop)))))))
+   (define (ostream-write-bv out bv)
+     (let ((len (bytevector-length bv)))
+       (ostream-write out bv 0 len len)))
    (open-tcp-listener/k
     (gethostname) 8765 #t 5 raise-io-error
     (lambda (listener)
@@ -1553,25 +1562,17 @@
          (open-tcp-connection/k
           (gethostname) 8765 #f #f raise-io-error
           (lambda (in out)
-            (ostream-write-byte out 65)
-            (ostream-write-byte out 66)
-            (ostream-write-byte out 67)
+            (ostream-write-bv out #"ABC")
             (ostream-close out)
-            (channel-put ch.client (bytevector (istream-read-byte in)
-                                               (istream-read-byte in)
-                                               (istream-read-byte in)))
+            (channel-put ch.client (istream->bv in))
             (istream-close in)))))
       (listener
        'accept/k raise-io-error
        (lambda (in out)
-         (let ((result (bytevector (istream-read-byte in)
-                                   (istream-read-byte in)
-                                   (istream-read-byte in))))
-           (ostream-write-byte out 97)
-           (ostream-write-byte out 98)
-           (ostream-write-byte out 99)
-           (ostream-close out)
+         (let ((result (istream->bv in)))
            (istream-close in)
+           (ostream-write-bv out #"abc")
+           (ostream-close out)
            (values (list 'server result) (list 'client (channel-get ch.client)))))))))
  ==> (values (server #"ABC") (client #"abc"))
 
