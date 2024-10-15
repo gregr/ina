@@ -49,17 +49,16 @@
   bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
   bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
   numerator denominator = <= >= < > + - * /
-  f32->u32 u32->f32 f64->u64 u64->f64
-  f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
-  f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
-  f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/
+
+  ;f32->u32 u32->f32 f64->u64 u64->f64
+  ;f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
+  ;f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
+  ;f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/
 
   with-native-signal-handling)
 (require
   ffi/unsafe/port ffi/unsafe/vm
-  racket/control racket/file racket/flonum racket/list racket/match racket/path racket/port
-  racket/pretty racket/os racket/string racket/struct racket/system racket/tcp racket/udp
-  racket/vector
+  racket/flonum racket/match racket/path racket/pretty racket/os racket/tcp racket/udp racket/vector
   (prefix-in rkt: racket/base))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -481,234 +480,172 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Snapshot saving and loading ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+;; TODO: port this to nscheme
 ;; TODO: update this ast representation
-(define (ast:quote v)                      `#(quote ,v))
-(define (ast:ref name)                     `#(ref ,name))
-(define (ast:if ast.c ast.t ast.f)         `#(if ,ast.c ,ast.t ,ast.f))
-(define (ast:begin ast.effect* ast.result) `#(begin ,ast.effect* ,ast.result))
-(define (ast:call ast.proc . ast.args)     `#(call #f ,ast.proc ,ast.args))
-(define (ast:case-lambda sinfo clause*)    `#(case-lambda ,sinfo ,clause*))
-(define (ast:letrec bpair* body)           `#(letrec ,bpair* ,body))
-(define (ast:lambda sinfo param ast.body)  (ast:case-lambda sinfo (list (make-case-clause param ast.body))))
-(define (ast:let bpair* body)              (apply ast:call (ast:lambda #f (map car bpair*) body) (map cdr bpair*)))
-(define (ast:list ast*)                    (apply ast:call (ast:lambda #f 'xs (ast:ref 'xs)) ast*))
-
-(define (ast:binding-pair left right)  (cons left right))
-(define (ast:binding-pair-left  bpair) (car bpair))
-(define (ast:binding-pair-right bpair) (cdr bpair))
-
-(define (ast-lift-complex-values ast value->ast)
-  (let loop ((ast ast))
-    (match ast
-      (`#(quote ,value)            (if (ormap (lambda (?) (? value))
-                                              (list symbol? string? pair? vector?
-                                                    record? mvector? mbytevector? procedure?))
-                                     (value->ast value)
-                                     ast))
-      (`#(ref ,name)               ast)
-      (`#(if ,c ,t ,f)             (ast:if (loop c) (loop t) (loop f)))
-      (`#(begin ,effect* ,result)  (ast:begin (map loop effect*) (loop result)))
-      (`#(call ,sinfo ,proc ,arg*) (ast:call sinfo (loop proc) (map loop arg*)))
-      (`#(case-lambda ,sinfo ,cc*) (ast:case-lambda
-                                     sinfo (map (lambda (cc) (make-case-clause
-                                                               (case-clause-param cc)
-                                                               (loop (case-clause-body cc))))
-                                                cc*)))
-      (`#(letrec ,bpair* ,body)    (ast:letrec
-                                     (map (lambda (bp) (ast:binding-pair
-                                                         (ast:binding-pair-left bp)
-                                                         (loop (ast:binding-pair-right bp))))
-                                          bpair*)
-                                     (loop body))))))
-
-(struct snapshot (value=>name primitive* io* value* initialization* root))
-
-(define (snapshot-ast ss ast:primitive ast:io external-binding-pairs)
-  (ast:let external-binding-pairs
-           (ast:letrec (append (map (lambda (name pname)
-                                      (ast:binding-pair name (ast:primitive pname)))
-                                    (map car (snapshot-primitive* ss))
-                                    (map cdr (snapshot-primitive* ss)))
-                               (map (lambda (name pname&desc)
-                                      (ast:binding-pair name (ast:io (car pname&desc) (cdr pname&desc))))
-                                    (map car (snapshot-io* ss))
-                                    (map cdr (snapshot-io* ss)))
-                               (snapshot-value* ss))
-                       (ast:begin (snapshot-initialization* ss) (snapshot-root ss)))))
-
-(define (make-snapshot library? value.root id->name external-value=>name)
-  (let ((value=>name      (make-hasheq))
-        (primitive*       '())
-        (io*              '())
-        (procedure*       '())
-        (other*           '())
-        (initialization** '()))
-    (define (args-name)      (id->name (- -1 (hash-count value=>name))))
-    (define (gen-name value) (let ((name (id->name (hash-count value=>name))))
-                               (hash-set! value=>name value name)
-                               name))
-    (define-syntax-rule (push! stack name value)
-      (set! stack (cons (cons name value) stack)))
-    (define (ast:ref/loop v) (ast:ref (loop v)))
-    (define (loop value)
-      (or (let ((name (or (hash-ref value=>name          value #f)
-                          (hash-ref external-value=>name value #f))))
-            (and name (ast:ref name)))
-          (match value
-            ((or '() #f #t (? fixnum?)) (ast:quote value))
-            (_ (let ((name (gen-name value)))
-                 (match value
-                   ((? procedure?)
-                    (match (procedure-metadata value)
-                      (`#(primitive ,pname) (push! primitive* name pname))
-                      (`#(io ,pname ,desc)  (push! io*        name (cons pname desc)))
-                      ;; TODO: redefine this to use new metadata shape:
-                      ;;   `#(case-lambda ,stx ,vector-of-case-clauses ,vector-of-captured-values)
-                      ;; The new case-clauses will correspond to a later-stage language AST that
-                      ;; references variables using lexical addresses rather than parsed names.
-                      ;; This means the code representation only needs a captured variable count,
-                      ;; not a list of captured names.
-                      (`#(closure ,code ,cvalues)
-                        ;; We want to avoid duplicating code shared by multiple closures.  To accomplish
-                        ;; this, we need to build a separate case-lambda corresponding to the potentially-
-                        ;; shared code, and have each closure reference it.  However, each closure may bind a
-                        ;; different set of values for the captured variables.  To handle these, the shared
-                        ;; code must be abstracted over the captured variables, and each closure must inject
-                        ;; its own captured values.
-                        (let* ((prov (code-provenance code))
-                               (name.code
-                                 (or (hash-ref value=>name          code #f)
-                                     (hash-ref external-value=>name code #f)
-                                     (let ((name (gen-name code)))
-                                       (push! procedure* name
-                                              (ast:lambda
-                                                prov (error "TODO: replace this section") ;(code-captured-variables code)
-                                                (ast:case-lambda
-                                                  prov (map (lambda (cc) (make-case-clause
-                                                                           (case-clause-param cc)
-                                                                           (ast-lift-complex-values
-                                                                             (case-clause-body cc) loop)))
-                                                            (code-case-clauses code)))))
-                                       name))))
-                          (push! procedure* name
-                                 (if (null? cvalues)
-                                   ;; When there are no cvalues, there is nothing to inject, so it is safe to
-                                   ;; immediately unwrap the shared code procedure.
-                                   (ast:call (ast:ref name.code))
-                                   ;; Because closures and captured values may reference each other
-                                   ;; recursively, if we inject captured values naively, we may mistakenly
-                                   ;; reference a snapshotted value before it has been evaluated.  To avoid
-                                   ;; this problem we eta expand the closure, i.e., turn it into a variadic
-                                   ;; lambda.  Each time the closure's procedure is applied, it will perform
-                                   ;; the injection just-in-time, and then forward its arguments to the
-                                   ;; resulting shared-code procedure.
-                                   (let ((name.args (args-name)))
-                                     (ast:lambda prov name.args
-                                                 (ast:call (loop apply)
-                                                           (apply ast:call (ast:ref name.code)
-                                                                  (map loop cvalues))
-                                                           (ast:ref name.args))))))))))
-                   ((? mvector?)
-                    (push! other* name (ast:call (loop make-mvector) (loop (mvector-length value)) (loop 0)))
-                    (set! initialization**
-                      (cons (map (lambda (i)
-                                   (ast:call (loop mvector-set!)
-                                             (ast:ref name) (loop i)
-                                             (loop (mvector-ref value i))))
-                                 (range (mvector-length value)))
-                            initialization**)))
-                   ;((? record?)
-                   ; ;; TODO: if the RTD transitively points to this record, this will fail to terminate.
-                   ; ;; This could be solved by thunking initializer creation.
-                   ; (push! other* name (ast:call (loop make-record) (loop (record-type-descriptor value)) (loop 0)))
-                   ; (set! initialization**
-                   ;   (cons (map (lambda (i)
-                   ;                (ast:call (loop record-set!)
-                   ;                          (ast:ref name) (loop i)
-                   ;                          (loop (record-ref value i))))
-                   ;              (range (vector-ref (record-type-descriptor value) 0)))
-                   ;         initialization**)))
-                   (_ (let ((ast (match value
-                                   ((cons v.a v.d) (ast:call (loop cons) (loop v.a) (loop v.d)))
-                                   ((? vector?)    (apply ast:call (loop vector)
-                                                          (map loop (vector->list value))))
-                                   ((? mbytevector?)
-                                    (set! initialization**
-                                      (cons (map (lambda (i) (ast:call (loop mbytevector-set!)
-                                                                       (ast:ref name) (loop i)
-                                                                       (loop (mbytevector-ref value i))))
-                                                 (range (mbytevector-length value)))
-                                            initialization**))
-                                    (ast:call (loop make-mbytevector)
-                                              (loop (mbytevector-length value)) (loop 0)))
-                                   ((or (? number?) (? symbol?) (? string?) (? bytevector?))
-                                    (ast:quote value)))))
-                        (push! other* name ast))))
-                 (ast:ref name))))))
-    (let ((ast.root (loop value.root)))
-      (snapshot value=>name
-                (reverse primitive*)
-                (reverse io*)
-                (append (reverse procedure*) (reverse other*))
-                (foldl append '() initialization**)
-                (if library?
-                  (let ((names (hash-values value=>name)))
-                    (if (null? names)
-                      (loop '())
-                      (let ((ast.cons (loop cons)))
-                        (foldr (lambda (name ast)
-                                 (ast:call ast.cons (ast:call ast.cons (ast:quote name) (ast:ref name)) ast))
-                               (loop '())
-                               names))))
-                  ast.root)))))
-
-
-;;; TODO: reorganize the remainder of this file.
-
-(define (lambda/handle-fail handle inner)
-  (define (fail x datum) (handle (vector 'fail datum (exn-message x))))
-  (lambda args
-    (with-handlers*
-      ((exn:fail:filesystem:errno?  (lambda (x) (fail x `(filesystem ,(exn:fail:filesystem:errno-errno x)))))
-       (exn:fail:filesystem:exists? (lambda (x) (fail x '(filesystem exists))))
-       (exn:fail:filesystem?        (lambda (x) (fail x '(filesystem #f))))
-       (exn:fail:network:errno?     (lambda (x) (fail x `(network ,(exn:fail:network:errno-errno x)))))
-       (exn:fail:network?           (lambda (x) (fail x '(network #f))))
-       (exn:fail?                   (lambda (x) (fail x '(#f #f)))))
-      (apply inner args))))
-
-(define (method-unknown name . args) (error "unknown method:" name args))
-(define (method-except m names)
-  (lambda (name . args)
-    (apply (if (member name names) method-unknown m) name args)))
-(define (method-only m names)
-  (lambda (name . args)
-    (apply (if (member name names) m method-unknown) name args)))
-
-(define-syntax method-choose
-  (syntax-rules (else)
-    ((_ ((name ...) body ...) ... (else else-body ...))
-     (lambda (method-name . args)
-       (apply (case method-name
-                ((name ...) body ...) ...
-                (else       else-body ...))
-              method-name args)))
-    ((_ body ...) (method-choose body ... (else method-unknown)))))
-
-(define-syntax method-lambda
-  (syntax-rules (else)
-    ((_ ((name . param) body ...) ... (else else-body ...))
-     (method-choose ((name) (lambda (_ . param) body ...)) ... (else else-body ...)))
-    ((_ body ...) (method-lambda body ... (else method-unknown)))))
-
-(define (mvector-copy!/ref mv start src src-start src-end ref)
-  (let loop ((i src-start))
-    (cond ((<= src-end i) (- i src-start))
-          (else (mvector-set! mv (+ start (- i src-start)) (ref src i))
-                (loop (+ i 1))))))
-(define (mvector-copy!/bytes mv start src src-start src-end)
-  (mvector-copy!/ref mv start src src-start src-end bytes-ref))
+;(define (ast-lift-complex-values ast value->ast)
+;  (let loop ((ast ast))
+;    (match ast
+;      (`#(quote ,value)            (if (ormap (lambda (?) (? value))
+;                                              (list symbol? string? pair? vector?
+;                                                    record? mvector? mbytevector? procedure?))
+;                                     (value->ast value)
+;                                     ast))
+;      (`#(ref ,name)               ast)
+;      (`#(if ,c ,t ,f)             (ast:if (loop c) (loop t) (loop f)))
+;      (`#(begin ,effect* ,result)  (ast:begin (map loop effect*) (loop result)))
+;      (`#(call ,sinfo ,proc ,arg*) (ast:call sinfo (loop proc) (map loop arg*)))
+;      (`#(case-lambda ,sinfo ,cc*) (ast:case-lambda
+;                                     sinfo (map (lambda (cc) (make-case-clause
+;                                                               (case-clause-param cc)
+;                                                               (loop (case-clause-body cc))))
+;                                                cc*)))
+;      (`#(letrec ,bpair* ,body)    (ast:letrec
+;                                     (map (lambda (bp) (ast:binding-pair
+;                                                         (ast:binding-pair-left bp)
+;                                                         (loop (ast:binding-pair-right bp))))
+;                                          bpair*)
+;                                     (loop body))))))
+;
+;(struct snapshot (value=>name primitive* io* value* initialization* root))
+;
+;(define (snapshot-ast ss ast:primitive ast:io external-binding-pairs)
+;  (ast:let external-binding-pairs
+;           (ast:letrec (append (map (lambda (name pname)
+;                                      (ast:binding-pair name (ast:primitive pname)))
+;                                    (map car (snapshot-primitive* ss))
+;                                    (map cdr (snapshot-primitive* ss)))
+;                               (map (lambda (name pname&desc)
+;                                      (ast:binding-pair name (ast:io (car pname&desc) (cdr pname&desc))))
+;                                    (map car (snapshot-io* ss))
+;                                    (map cdr (snapshot-io* ss)))
+;                               (snapshot-value* ss))
+;                       (ast:begin (snapshot-initialization* ss) (snapshot-root ss)))))
+;
+;(define (make-snapshot library? value.root id->name external-value=>name)
+;  (let ((value=>name      (make-hasheq))
+;        (primitive*       '())
+;        (io*              '())
+;        (procedure*       '())
+;        (other*           '())
+;        (initialization** '()))
+;    (define (args-name)      (id->name (- -1 (hash-count value=>name))))
+;    (define (gen-name value) (let ((name (id->name (hash-count value=>name))))
+;                               (hash-set! value=>name value name)
+;                               name))
+;    (define-syntax-rule (push! stack name value)
+;      (set! stack (cons (cons name value) stack)))
+;    (define (ast:ref/loop v) (ast:ref (loop v)))
+;    (define (loop value)
+;      (or (let ((name (or (hash-ref value=>name          value #f)
+;                          (hash-ref external-value=>name value #f))))
+;            (and name (ast:ref name)))
+;          (match value
+;            ((or '() #f #t (? fixnum?)) (ast:quote value))
+;            (_ (let ((name (gen-name value)))
+;                 (match value
+;                   ((? procedure?)
+;                    (match (procedure-metadata value)
+;                      (`#(primitive ,pname) (push! primitive* name pname))
+;                      (`#(io ,pname ,desc)  (push! io*        name (cons pname desc)))
+;                      ;; TODO: redefine this to use new metadata shape:
+;                      ;;   `#(case-lambda ,stx ,vector-of-case-clauses ,vector-of-captured-values)
+;                      ;; The new case-clauses will correspond to a later-stage language AST that
+;                      ;; references variables using lexical addresses rather than parsed names.
+;                      ;; This means the code representation only needs a captured variable count,
+;                      ;; not a list of captured names.
+;                      (`#(closure ,code ,cvalues)
+;                        ;; We want to avoid duplicating code shared by multiple closures.  To accomplish
+;                        ;; this, we need to build a separate case-lambda corresponding to the potentially-
+;                        ;; shared code, and have each closure reference it.  However, each closure may bind a
+;                        ;; different set of values for the captured variables.  To handle these, the shared
+;                        ;; code must be abstracted over the captured variables, and each closure must inject
+;                        ;; its own captured values.
+;                        (let* ((prov (code-provenance code))
+;                               (name.code
+;                                 (or (hash-ref value=>name          code #f)
+;                                     (hash-ref external-value=>name code #f)
+;                                     (let ((name (gen-name code)))
+;                                       (push! procedure* name
+;                                              (ast:lambda
+;                                                prov (error "TODO: replace this section") ;(code-captured-variables code)
+;                                                (ast:case-lambda
+;                                                  prov (map (lambda (cc) (make-case-clause
+;                                                                           (case-clause-param cc)
+;                                                                           (ast-lift-complex-values
+;                                                                             (case-clause-body cc) loop)))
+;                                                            (code-case-clauses code)))))
+;                                       name))))
+;                          (push! procedure* name
+;                                 (if (null? cvalues)
+;                                   ;; When there are no cvalues, there is nothing to inject, so it is safe to
+;                                   ;; immediately unwrap the shared code procedure.
+;                                   (ast:call (ast:ref name.code))
+;                                   ;; Because closures and captured values may reference each other
+;                                   ;; recursively, if we inject captured values naively, we may mistakenly
+;                                   ;; reference a snapshotted value before it has been evaluated.  To avoid
+;                                   ;; this problem we eta expand the closure, i.e., turn it into a variadic
+;                                   ;; lambda.  Each time the closure's procedure is applied, it will perform
+;                                   ;; the injection just-in-time, and then forward its arguments to the
+;                                   ;; resulting shared-code procedure.
+;                                   (let ((name.args (args-name)))
+;                                     (ast:lambda prov name.args
+;                                                 (ast:call (loop apply)
+;                                                           (apply ast:call (ast:ref name.code)
+;                                                                  (map loop cvalues))
+;                                                           (ast:ref name.args))))))))))
+;                   ((? mvector?)
+;                    (push! other* name (ast:call (loop make-mvector) (loop (mvector-length value)) (loop 0)))
+;                    (set! initialization**
+;                      (cons (map (lambda (i)
+;                                   (ast:call (loop mvector-set!)
+;                                             (ast:ref name) (loop i)
+;                                             (loop (mvector-ref value i))))
+;                                 (range (mvector-length value)))
+;                            initialization**)))
+;                   ;((? record?)
+;                   ; ;; TODO: if the RTD transitively points to this record, this will fail to terminate.
+;                   ; ;; This could be solved by thunking initializer creation.
+;                   ; (push! other* name (ast:call (loop make-record) (loop (record-type-descriptor value)) (loop 0)))
+;                   ; (set! initialization**
+;                   ;   (cons (map (lambda (i)
+;                   ;                (ast:call (loop record-set!)
+;                   ;                          (ast:ref name) (loop i)
+;                   ;                          (loop (record-ref value i))))
+;                   ;              (range (vector-ref (record-type-descriptor value) 0)))
+;                   ;         initialization**)))
+;                   (_ (let ((ast (match value
+;                                   ((cons v.a v.d) (ast:call (loop cons) (loop v.a) (loop v.d)))
+;                                   ((? vector?)    (apply ast:call (loop vector)
+;                                                          (map loop (vector->list value))))
+;                                   ((? mbytevector?)
+;                                    (set! initialization**
+;                                      (cons (map (lambda (i) (ast:call (loop mbytevector-set!)
+;                                                                       (ast:ref name) (loop i)
+;                                                                       (loop (mbytevector-ref value i))))
+;                                                 (range (mbytevector-length value)))
+;                                            initialization**))
+;                                    (ast:call (loop make-mbytevector)
+;                                              (loop (mbytevector-length value)) (loop 0)))
+;                                   ((or (? number?) (? symbol?) (? string?) (? bytevector?))
+;                                    (ast:quote value)))))
+;                        (push! other* name ast))))
+;                 (ast:ref name))))))
+;    (let ((ast.root (loop value.root)))
+;      (snapshot value=>name
+;                (reverse primitive*)
+;                (reverse io*)
+;                (append (reverse procedure*) (reverse other*))
+;                (foldl append '() initialization**)
+;                (if library?
+;                  (let ((names (hash-values value=>name)))
+;                    (if (null? names)
+;                      (loop '())
+;                      (let ((ast.cons (loop cons)))
+;                        (foldr (lambda (name ast)
+;                                 (ast:call ast.cons (ast:call ast.cons (ast:quote name) (ast:ref name)) ast))
+;                               (loop '())
+;                               names))))
+;                  ast.root)))))
 
 ;;;;;;;;;;;;
 ;;; Time ;;;
