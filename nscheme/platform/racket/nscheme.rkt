@@ -24,7 +24,7 @@
   delete-directory/k delete-file/k move-file/k open-file-istream/k open-file-ostream/k
   file-type/k file-size/k file-permissions/k file-modified-seconds/k
   set-file-permissions!/k set-file-modified-seconds!/k
-  gethostname open-tcp-listener/k open-tcp-connection/k
+  gethostname open-tcp-listener/k open-tcp-connection/k open-udp-socket/k
   open-pipe-streams/k
 
   standard-input-stream standard-output-stream standard-error-stream
@@ -938,6 +938,67 @@
   (io-guard kf (let-values (((in out) (tcp-connect host port local-host local-port)))
                  (make-socket-streams/k in out k))))
 
+(define (open-udp-socket/k family-host family-port kf k)
+  (io-guard
+   kf (k (let ((socket (udp-open-socket family-host family-port)))
+           (define (receive-from/k dst start count kf k)
+             (buffer-range?! dst start count count)
+             (io-guard kf (let-values (((amount host port)
+                                        (udp-receive! socket dst start (+ start count))))
+                            (k amount host port))))
+           (lambda (method . arg*)
+             (apply
+              (case method
+                ((receive-from/k) receive-from/k)
+                ((receive/k)
+                 (lambda (dst start count kf k)
+                   (receive-from/k dst start count kf (lambda (amount host port) (k amount)))))
+                ((send-to/k)
+                 (lambda (host port src start count kf k)
+                   (buffer-range?! src start count count)
+                   (let ((src (if (mbytevector? src) (mbytevector-bv src) src)))
+                     (io-guard kf (udp-send-to socket host port src start (+ start count)) (k)))))
+                ((send/k)
+                 (lambda (          src start count kf k)
+                   (buffer-range?! src start count count)
+                   (let ((src (if (mbytevector? src) (mbytevector-bv src) src)))
+                     (io-guard kf (udp-send    socket           src start (+ start count)) (k)))))
+                ((address*/k)
+                 (lambda (kf k)
+                   (io-guard kf (let-values (((local-host local-port remote-host remote-port)
+                                              (udp-addresses socket #t)))
+                                  (k (list (cons 'local  (list (cons 'host local-host)
+                                                               (cons 'port local-port)))
+                                           (cons 'remote (list (cons 'host remote-host)
+                                                               (cons 'port remote-port)))))))))
+                ((connect/k) (lambda (host port kf k)
+                               (io-guard kf (udp-connect! socket host port) (k))))
+                ((bind/k)    (lambda (host port reuse? kf k)
+                               (io-guard kf (udp-bind! socket host port reuse?) (k))))
+                ((close/k)   (lambda (kf k) (io-guard kf (udp-close socket) (k))))
+                ((set-receive-buffer-size!/k)
+                 (lambda (amount kf k)
+                   (io-guard kf (udp-set-receive-buffer-size! socket amount) (k))))
+                ((ttl)        (lambda () (udp-ttl socket)))
+                ((set-ttl!/k) (lambda (ttl kf k) (io-guard kf (udp-set-ttl! socket ttl) (k))))
+                ((multicast-join!/k)
+                 (lambda (addr local-host kf k)
+                   (io-guard kf (udp-multicast-join-group!  socket addr local-host) (k))))
+                ((multicast-leave!/k)
+                 (lambda (addr local-host kf k)
+                   (io-guard kf (udp-multicast-leave-group! socket addr local-host) (k))))
+                ((set-multicast-ttl!/k)
+                 (lambda (ttl kf k) (io-guard kf (udp-multicast-set-ttl! socket ttl) (k))))
+                ((set-multicast-loopback!/k)
+                 (lambda (loop? kf k) (io-guard kf (udp-multicast-set-loopback! socket loop?) (k))))
+                ((set-multicast-interface!/k)
+                 (lambda (host kf k) (io-guard kf (udp-multicast-set-interface! socket host) (k))))
+                ((multicast-ttl)       (lambda () (udp-multicast-ttl socket)))
+                ((multicast-loopback?) (lambda () (udp-multicast-loopback? socket)))
+                ((multicast-interface) (lambda () (udp-multicast-interface socket)))
+                (else                  (panic #f "not a udp-socket method" method)))
+              arg*))))))
+
 ;;;;;;;;;;;;;;;
 ;;; Pipe IO ;;;
 ;;;;;;;;;;;;;;;
@@ -1027,147 +1088,3 @@
               ((kill)      (subprocess-kill sp #t) (values))
               ((interrupt) (subprocess-kill sp #f) (values))
               (else        (panic #f "not a raw-host-process/k method" method)))))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Generic bytestream IO
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (bytestream:port port)
-  (method-lambda
-    ((buffer-mode-ref)       (file-stream-buffer-mode port))
-    ((buffer-mode-set! mode) (file-stream-buffer-mode port mode))))
-
-;; TODO: IO operations should return (values) or #f instead of eof-object
-(define (bytestream:port:input super port)
-  (define (eof->false d) (if (eof-object? d) #f d))
-  (method-lambda
-    ((close)     (close-input-port port))
-    ((get)       (eof->false (read-byte port)))
-    ((peek skip) (eof->false (peek-byte port skip)))
-    ((get*! mv start len)
-     (define bs (eof->false (read-bytes len port)))
-     (if bs (mvector-copy!/bytes mv start bs 0 (bytes-length bs)) 0))
-    ((peek*! mv start skip until)
-     (define bs (eof->false (peek-bytes (- until skip) skip port)))
-     (if bs (mvector-copy!/bytes mv start bs 0 (bytes-length bs)) 0))
-    ((forget amount) (define bs (eof->false (read-bytes amount port)))
-                     (if bs (bytes-length bs) 0))
-    (else        super)))
-
-(define (bytestream:port:output super port)
-  (method-lambda
-    ((close)  (close-output-port port))
-    ((put b)  (write-byte b port))
-    ;; TODO: this should take a (byte)vector as input
-    ((put* s) (write-string s port))
-    ((flush)  (flush-output port))
-    (else     super)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Network communication
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define tcp
-  (lambda/handle-fail
-    (lambda (x) x)
-    (method-lambda
-      ((listen hostname port (max-wait 4) (reuse? #f))
-       (tcp:listener (tcp-listen port max-wait reuse? hostname)))
-      ((connect host port (localhost #f) (localport #f))
-       (define-values (in out) (tcp-connect host port localhost localport))
-       (tcp:port in out)))))
-
-(define (tcp:listener listen)
-  (lambda/handle-fail
-    (lambda (x) x)
-    (method-lambda
-      ((close)  (tcp-close listen))
-      ;; TODO: use a synchronizable event instead, based on tcp-accept-evt
-      ((ready?) (tcp-accept-ready? listen))
-      ((accept) (define-values (in out) (tcp-accept listen))
-                (tcp:port in out)))))
-
-(define (tcp:port in out)
-  (define (abandoner port)
-    (define super (bytestream:port port))
-    (lambda/handle-fail
-      (lambda (x) x)
-      (method-lambda
-        ((abandon) (tcp-abandon-port port))
-        (else super))))
-  (define a.in  (abandoner in))
-  (define a.out (abandoner out))
-  (define super
-    (lambda/handle-fail
-      (lambda (x) x)
-      (method-lambda
-        ((addresses)  (define-values
-                        (host.local port.local host.remote port.remote)
-                        (tcp-addresses in #t))
-                      (list host.local port.local host.remote port.remote))
-        ((in  . args) (if (null? args) (bytestream:port:input  a.in  in)
-                        (apply a.in  args)))
-        ((out . args) (if (null? args) (bytestream:port:output a.out out)
-                        (apply a.out args))))))
-  (bytestream:port:output (bytestream:port:input super in) out))
-
-;; TODO: synchronizable events for udp sending, receiving, and readiness
-(define udp
-  (lambda/handle-fail
-    (lambda (x) x)
-    (method-lambda
-      ((open host.family port.family (port.local #f) (reuse? #f))
-       (define p (udp:port (udp-open-socket host.family port.family)))
-       (when port.local (p 'bind #f port.local reuse?))
-       p)
-      ((listen host.local port.local (reuse? #f))
-       (define p (udp:port (udp-open-socket host.local port.local)))
-       (p 'bind host.local port.local reuse?)
-       p)
-      ((connect host port (port.local #f) (reuse? #f))
-       (define p (udp:port (udp-open-socket host port)))
-       (when port.local (p 'bind #f port.local reuse?))
-       (p 'connect host port)
-       p))))
-
-(define (udp:port socket)
-  (lambda/handle-fail
-    (lambda (x) x)
-    (method-lambda
-      ((close)                      (udp-close    socket))
-      ((bind host port (reuse? #f)) (udp-bind!    socket host port reuse?))
-      ((connect host port)          (udp-connect! socket host port))
-      ((disconnect)                 (udp-connect! socket #f   #f))
-      ((addresses)                  (define-values
-                                      (host.local port.local host.remote port.remote)
-                                      (udp-addresses socket #t))
-                                    (list host.local port.local host.remote port.remote))
-
-      ;; TODO: this should take a (byte)vector as input
-      ((put* s)        (udp-send socket (string->bytes/utf-8 s)))
-      ((aim host port) (lambda/handle-fail
-                         (lambda (x) x)
-                         (method-lambda
-                           ;; TODO: synchronizable events
-                           ;; TODO: this should take a (byte)vector as input
-                           ((put* s) (udp-send-to socket host port (string->bytes/utf-8 s))))))
-
-      ;; TODO: omit remote host and port when connected?
-      ((get*! mv start len)
-       (define        bs                 (make-bytes len 0))
-       (define-values (amount host port) (udp-receive! socket bs 0 len))
-       (mvector-copy!/bytes mv start bs 0 amount)
-       (cons amount (cons host port)))
-
-      ((buffer-size-set! amount) (udp-set-receive-buffer-size! socket amount))
-      ((ttl-ref)                 (udp-ttl                      socket))
-      ((ttl-set! ttl)            (udp-set-ttl!                 socket ttl))
-
-      ((multicast-join  addr host.local)    (udp-multicast-join-group!    socket addr host.local))
-      ((multicast-leave addr host.local)    (udp-multicast-leave-group!   socket addr host.local))
-      ((multicast-iface-ref)                (udp-multicast-interface      socket))
-      ((multicast-iface-set! host.local)    (udp-multicast-set-interface! socket      host.local))
-      ((multicast-loopback?-ref)            (udp-multicast-loopback?      socket))
-      ((multicast-loopback?-set! loopback?) (udp-multicast-set-loopback!  socket loopback?))
-      ((multicast-ttl-ref)                  (udp-multicast-ttl            socket))
-      ((multicast-ttl-set! ttl)             (udp-multicast-set-ttl!       socket ttl)))))
