@@ -125,6 +125,36 @@ Eventually:
 
 ## TODO
 
+parsing and printing:
+- utf8/string <-> number conversion is too language/notation-specific to be part of base?
+- same would be true of read.scm and write.scm
+  - not sure: include/text/read.scm and include/text/write.scm
+  - include/base/port.scm may belong in include/io/* instead?  not sure
+    - maybe read.scm and write.scm belong there too
+- reimplement read and write
+  - a variant for syntax objects
+  - a variant for styled document objects
+- proper fraction notation
+  - more generally, allow any expanded addition/subtraction as input, though we will only ever output one proper or improper fraction
+- limit preference for decimal notation to radix-powered denominators only
+
+
+What is the next step?  We want to complete a Racket platform bootstrap.  We still need:
+- include/compiler/backend/rkt.scm
+  - module construction, literal code construction, and linking
+- cross-compiler and primitive implementations: include/platform/posix/rkt.scm
+  - build env.primitive.whatever with fresh primitive addresses, mapping each to a parser that produces its (E:ref addr)
+  - build a map of `prim-addr=>id` (the usual Racket ids for each) that we can pass to E-compile-rkt
+- bootstrap/clean-bootstrap
+```
+backend/rkt.scm
+;; TODO: rkt->rkt-text
+;; - the caller is responsible for providing code with structure that explicitly ensures the
+;;   desired level sharing of quoted data
+;;   - because unlike the rkt form, rkt-text serialization loses object identity (it's just text)
+;; - the caller is also responsible for replacing any E-quotes whose values cannot be written
+;;   - particularly procedures, where we likely need either a lambda or a (global) variable ref
+```
 - cross-phase persistence/serialization transformation of E
   - memoizing shared E-quote values
     - replace non-procedure E-quotes with E:refs to shared constructor expressions
@@ -144,8 +174,6 @@ Eventually:
     - alternatively, we can use a mostly-content-based hash code built as we analyze values bottom-up
       - we can also avoid lookups for parent values as soon as one child is not found in our table
         - we still have to insert them into the table, however, since they are newly seen
-
-
 ```
 high-level-ir.scm
 ;; TODO: just replace E:prim with uses of E:ref instead?
@@ -156,65 +184,48 @@ high-level-ir.scm
 ;;   - we might be able to do other kinds of constant folding/inlining through refs this way too
 ;; TODO: E:let E:begin, and probably also E:let-values for the same reason
 
+
+Start with a simpler model for stratified evaluation (phases) for macro expansion before cross-compilation?
+- it means not having begin-meta, or at least not using it to define procedures that are used in the object program
+- but we still need a way to define procedures that are only used in the meta program (particularly in procedural macros)
+- one option is to not have macro definition syntax, and manually populate meta environments before parsing an object program
+- another option is to maintain (2?) separate environments, in a Racket-like phasing model
+- manual population seems like a nice low-tech approach to try first, to see whether its affordances are already good enough
+  - it could still support defining non-procedural macros in an object program, in a style like syntax-rules
 meta.scm
 ;; TODO: let-syntax let*-syntax letrec*-syntax letrec*-syntax&values ?
 ;; - splicing forms?
 ```
 
-What is the next step?  We want to complete a Racket platform bootstrap.  We still need:
-- include/compiler/backend/rkt.scm
-  - module construction, literal code construction, and linking
-- cross-compiler and primitive implementations: include/platform/posix/rkt.scm
-  - build env.primitive.whatever with fresh primitive addresses, mapping each to a parser that produces its (E:ref addr)
-  - build a map of `prim-addr=>id` (the usual Racket ids for each) that we can pass to E-compile-rkt
-  - Racket platform stdio, file, and tcp streams, compatible with text/stream.scm interface
-    - implementation for these platform-specific streams should be generated as literal Racket code, not nScheme code
-      - we manually link to it during bootstrap, but also automatically link to it when compiling to posix Racket
-    - expose only a limited set of IO primitives to nScheme
-      - e.g., just a high-level interface for using filesystem, network, console
-      - no need for lower level primitives, since high-level controllers can produce other encapsulated controllers
-- provide high level control and io primitives from Racket
-- include/text/read.scm and include/text/write.scm
-  - initially test using bytevector ports
-  - then try with ports backed by racket primitive io streams
-- bootstrap/clean-bootstrap
-
-
-include/text/port.scm and include/text/stream.scm may belong in include/io/* instead?  not sure
-- maybe read.scm and write.scm belong there too
-
-
-proper fraction notation
-- more generally, allow any expanded addition/subtraction as input, though we will only ever output one proper or improper fraction
-
-limit preference for decimal notation to radix-powered denominators only
-
-
-(make-equal? super)
-(define equal? (make-equal? (lambda (a b) #f)))
-- alternative to providing super, provide an association list of type-predicate => type-destructurer (or type-component-iterator)
-- though this is less general as far as the forms of equality that can be encoded (e.g., set equality would be challenging to do this way)
-
-define a (make-write super) in the same way
+- curate a "safe" subset of base?
+  - how safe is "safe"?
+    - how safe is mutation?
+  - maybe a "pure" subset of "safe" too?
+- what is the right thread-safe stdio api?
+  - don't worry about thread-safety at the port level
+  - instead, come up with a higher-level concurrency-oriented io system
+    - common logging procedures, like displayln or something analogous, should use this by default
+      - they should implement their own line-based flushing (we don't support line-buffering in ports)
+    - "hello world" should be straightforward
+  - alternatively, we can put optional thread-safety into some io streams, and make it easy to swap out the ports that wrap them
+    - so dangerous threads don't corrupt your ports
+- (make-equal? super)
+  - (define equal? (make-equal? (lambda (a b) #f)))
+  - alternative to providing super, provide an association list of type-predicate => type-destructurer (or type-component-iterator)
+  - though this is less general as far as the forms of equality that can be encoded (e.g., set equality would be challenging to do this way)
+- define a (make-write super) in the same way as make-equal?
 - `#<unknown>` for opaque values without a generally-known predicate, such as records, unless overridden by super
-
-
-start adopting a generic type-identification strategy across OOP-style procedures
-- examples:
-  - io streams (therefore affecting ports)
-  - envs
-  - programs from nscheme/program.scm
-- the method-taking lambda is actually a case-lambda that can take 0 args, and in
-  that case returns some (ideally human-readable) type identifier and possibly other descriptive info?
-
-what is the right thread-safe stdio api?
-- don't worry about thread-safety at the port level
-- instead, come up with a higher-level concurrency-oriented io system
-  - common logging procedures, like displayln or something analogous, should use this by default
-    - they should implement their own line-based flushing (we don't support line-buffering in ports)
-  - "hello world" should be straightforward
-- alternatively, we can put optional thread-safety into some io streams, and make it easy to swap out the ports that wrap them
-  - so dangerous threads don't corrupt your ports
+- start adopting a generic type-identification strategy across OOP-style procedures
+  - examples:
+    - io streams (therefore affecting ports)
+    - envs
+    - programs from nscheme/program.scm
+  - the method-taking lambda is actually a case-lambda that can take 0 args, and in
+    that case returns some (ideally human-readable) type identifier and possibly other descriptive info?
+- finish platform interoperation:
+  - gui?
+- maybe remove pipe IO
+- at some point, Racket primitives that return void should be modified to return (values).
 
 
 bootstrap/include.rkt should build a database out of include/: an association-list-tree of directories, files, and their contents
@@ -246,6 +257,9 @@ top-level include/ directory
   - unicode.scm
   - etc.
 - syntax.scm  ; this doesn't have to be specific to the nscheme language, and doesn't really belong anywhere else?
+  - interesting thing to note: it not only provides definitions, but also packages them up
+    - because we want the same syntax record definitions to persist across phases so that macros/parsers behave intuitively
+    - we would probably also do this in any other situation where we want to share the same representation across phases
 - text/
   - stream.scm
   - port.scm
@@ -295,26 +309,23 @@ top-level include/ directory
 - gui/
   - library built on whatever native or emulated gui capabilities are provided
 - platform/
-  - common.scm, control.scm, privileged.scm
+  - common.scm, control.scm, privileged.scm  ; primitive packages shared by all platforms
   - /low-level/
     - for low-level primitive operators, such as those used to implement the operators provided by control.scm
   - bootstrap.scm etc.
     - these currently test the process for building environments, but will probably be removed once nscheme.scm is implemented for each platform family (posix, www, etc.)
   - posix/ and www/ subdirectories describe platforms, and contain one or more platform-specific primitive-envs/runtime/compiler/linker compositions
   - posix  ; library for working in the context of a posix-like environment (simulated or otherwise)
-    - privileged.scm
-      - console streams/ports, file-system, network, process, shell-environment, command-line-arguments
-    - port.scm
-      - composes some of the above with the general form from text/port.scm
-    - stty interaction
-      - depends on a privileged capability to run an external process
-    - other things related to IO
+    - common.scm  ; package of posix-specific primitives
+    - host-process.scm, file.scm, network.scm
     - nscheme.scm  ; a (command-line) evaluation/compilation program that might also double as a library/module in the target platform language
       - this interface is allowed to run code that overrides, or even throws away, the interface, replacing it with something else
       - this repo may or may not include an implementation of a more featureful interactive editor/evaluator/desktop with documents, auto-save, snapshotting, and data export
         - both TUI and GUI variants
     ; each of these puts together a platform-specific (cross-)compiler that also bundles a copy of all of include/
     - racket/
+      - implementation for Racket primitives should be generated as literal Racket code, not nScheme code
+      - we manually link to it during bootstrap, but also automatically link to it when compiling to posix Racket
     - c/         ; c/compile.scm will be more portable than c/x86-64/compile.scm
     - c/x86-64/  ; tail call and coroutine implementation differs from c/compile.scm
     - node.js/
@@ -326,6 +337,9 @@ top-level include/ directory
     ; each of these puts together a platform-specific (cross-)compiler that also bundles a copy of all of include/
     - js/
     - js/wasm/
+
+time and date:
+https://srfi.schemers.org/srfi-19/srfi-19.html
 
 
 ;;;;;;;;;;;;;;;;; DO THE ABOVE FIRST
@@ -366,11 +380,6 @@ what if a program obtains new platform-specific capabilities at runtime?  how do
       - the handler decides when we want to do extreme things like this
       - platform can provide some default handlers, and users can override and augment this set of handlers
         - default reinstantiation handler for an open file might just say, "sorry, can't reinstantiate this without more context"
-
-
-reimplement read and write
-- a variant for syntax objects
-- a variant for styled document objects
 
 
 continue with tty library and other posix-interfacing stuff
