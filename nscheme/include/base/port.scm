@@ -35,6 +35,11 @@
   (p 'read dst start min-count count kf keof k))
 (define (iport-read p dst start min-count count)
   (iport-read/k p dst start min-count count raise-io-error values values))
+;; Reverts the most recent read of count bytes, provided by the mbytevector src.
+;; It is an error to unread different bytes from those that were originally read, but the particular
+;; port implementation decides whether to enforce this.
+(define (iport-unread/k p src start count kf k) (p 'unread src start count kf k))
+(define (iport-unread p src start count) (iport-unread/k p src start count raise-io-error values))
 ;; Returns #f if port does not have a position.
 (define (iport-position p) (p 'position))
 
@@ -114,6 +119,13 @@
                                                                   (k (mbytevector-ref src i))
                                                                   (k (bytevector-ref src i))))
                                                        (keof)))))
+            ((unread)        (lambda (src start count kf k)
+                               (buffer-range?! src start count count)
+                               (let ((i pos))
+                                 (when (< i count) (error "too many bytes unread" count
+                                                          (vector 'input-bytevector i len)))
+                                 (set! pos (- i count))
+                                 (k))))
             ((set-position!) (lambda (new kf k)
                                (set! pos (if new
                                              (begin (nonnegative-integer?! new)
@@ -295,6 +307,9 @@
                            (buffer-range?! dst start count count)
                            (if (< 0 count) (keof) (k 0))))
         ((read-byte)     (lambda (kf keof k) (keof)))
+        ((unread)        (lambda (src start count kf k)
+                           (buffer-range?! src start count count)
+                           (error "too many bytes unread" count 'empty-iport)))
         ((set-position!) (lambda (new kf k) (k)))
         ((position)      (lambda ()         0))
         ((close)         (lambda (kf k)     (k)))
@@ -317,6 +332,7 @@
                                (begin (mbytevector-fill! dst byte start count) (k count))
                                (k 0))))
         ((read-byte)     (lambda (kf keof k) (k byte)))
+        ((unread)        (lambda (src start count kf k) (buffer-range?! src start count count) (k)))
         ((set-position!) (lambda (new kf k) (k)))
         ((position)      (lambda ()         0))
         ((close)         (lambda (kf k)     (k)))
@@ -402,6 +418,19 @@
     (nonnegative-integer?! count)
     (let ((pos (+ (iport-buffer-pos p) count)) (end (iport-buffer-end p)))
       (iport-buffer-set-pos! p (if (< end pos) (begin (iport-buffer-set-eof?! p #f) end) pos))))
+
+  ;; Reverts all peeked bytes, returning them to the underlying port via unread.
+  ;; Cannot unpeek if EOF is currently in the peek buffer.
+  (define (iport-buffer-unpeek p) (iport-buffer-unpeek/k p raise-io-error values))
+  (define (iport-buffer-unpeek/k p kf k)
+    (when (iport-buffer-eof? p) (error "cannot unpeak EOF"))
+    (let ((pos (iport-buffer-pos p)) (end (iport-buffer-end p)))
+      (iport-unread/k (iport-buffer-port p) (iport-buffer-buffer p) pos (- end pos) kf
+                      (lambda ()
+                        (iport-buffer-set-pos! p 0)
+                        (iport-buffer-set-end! p 0)
+                        (iport-buffer-buffer/refresh p)
+                        (k)))))
 
   ;; Returns (values) on EOF or amount read.
   (define (iport-buffer-peek-byte   p skip)
