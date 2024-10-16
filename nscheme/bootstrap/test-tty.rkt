@@ -13,11 +13,11 @@
     (define (command path . arg*)
       (let ((result (call-with-output-bytevector
                      (lambda (out)
-                       (let ((in (open-file-istream "/dev/tty")))
+                       (let ((in (open-input-file "/dev/tty")))
                          (host-process-wait
                           (host-process in out out
                                         (find-file/env host-environment path) arg* #f))
-                         (istream-close in))))))
+                         (iport-close in))))))
         (pretty-write `(result: ,result))
         result))
     (define (tput        x) (command "tput" x))

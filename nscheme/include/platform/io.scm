@@ -1,6 +1,6 @@
 (define package.io
   (cons
     '(
-      standard-input-stream standard-output-stream standard-error-stream)
+      standard-input-port standard-output-port standard-error-port)
     (list
-      standard-input-stream standard-output-stream standard-error-stream)))
+      standard-input-port standard-output-port standard-error-port)))

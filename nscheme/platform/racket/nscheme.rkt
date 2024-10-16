@@ -18,15 +18,15 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  host-pid host-argument* host-environment raw-host-process/k open-pipe-streams/k
+  host-pid host-argument* host-environment raw-host-process/k open-pipe/k
   change-directory filesystem-change-evt filesystem-change-evt-cancel
   directory-file*/k make-symbolic-link/k make-directory/k
-  delete-directory/k delete-file/k move-file/k open-file-istream/k open-file-ostream/k
+  delete-directory/k delete-file/k move-file/k open-input-file/k open-output-file/k
   file-type/k file-size/k file-permissions/k file-modified-seconds/k
   set-file-permissions!/k set-file-modified-seconds!/k
   gethostname open-tcp-listener/k open-tcp-connection/k open-udp-socket/k
 
-  standard-input-stream standard-output-stream standard-error-stream
+  standard-input-port standard-output-port standard-error-port
 
   make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
   current-thread-group make-thread-group current-thread thread thread/suspend-to-kill
@@ -701,7 +701,7 @@
     (unless (<= (+ start min-count) (+ start desired-count) len)
       (panic #f "buffer range out of bounds" start min-count desired-count len))))
 
-(define (rkt:istream partial-description port)
+(define (rkt:iport partial-description port)
   (file-stream-buffer-mode port 'none)
   (define description (list* (cons 'terminal?       (terminal-port? port))
                              (cons 'file-descriptor (unsafe-port->file-descriptor port))
@@ -747,17 +747,17 @@
                                       (rkt-port-set-position!/k
                                        port pos.current kf
                                        (if (eof-object? amount) keof (lambda () (k amount)))))))
-                                 (kf 'no-position "istream does not support pread"))))))
+                                 (kf 'no-position "iport does not support pread"))))))
        ((read-byte)     (lambda (kf keof k) (io-guard kf (let ((b (read-byte port)))
                                                            (if (eof-object? b) (keof) (k b))))))
        ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
        ((position)      (lambda ()         (file-position* port)))
        ((close)         (lambda (kf k)     (io-guard kf (close-input-port port) (k))))
        ((description)   (lambda ()         description))
-       (else            (error "not an istream method" method)))
+       (else            (error "not an iport method" method)))
      arg*)))
 
-(define (rkt:ostream partial-description port)
+(define (rkt:oport partial-description port)
   (file-stream-buffer-mode port 'none)
   (define description (list* (cons 'terminal?       (terminal-port? port))
                              (cons 'file-descriptor (unsafe-port->file-descriptor port))
@@ -790,22 +790,22 @@
                                    (rkt-port-set-position!/k
                                     port pos kf
                                     (lambda () (write-bytes src port start (+ start count)) (k)))
-                                   (kf 'no-position "ostream does not support pwrite")))))))
+                                   (kf 'no-position "oport does not support pwrite")))))))
        ((write-byte)    (lambda (b kf k)   (io-guard kf (write-byte b port) (k))))
        ((set-size!)     (lambda (new kf k) (io-guard kf (file-truncate port new) (k))))
        ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
        ((position)      (lambda ()         (file-position* port)))
        ((close)         (lambda (kf k)     (io-guard kf (close-output-port port) (k))))
        ((description)   (lambda ()         description))
-       (else            (error "not an ostream method" method)))
+       (else            (error "not an oport method" method)))
      arg*)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Standard IO streams ;;;
+;; Standard IO ports ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define standard-input-stream  (rkt:istream '((type . stdin))  (current-input-port)))
-(define standard-output-stream (rkt:ostream '((type . stdout)) (current-output-port)))
-(define standard-error-stream  (rkt:ostream '((type . stderr)) (current-error-port)))
+(define standard-input-port  (rkt:iport '((type . stdin))  (current-input-port)))
+(define standard-output-port (rkt:oport '((type . stdout)) (current-output-port)))
+(define standard-error-port  (rkt:oport '((type . stderr)) (current-error-port)))
 
 ;;;;;;;;;;;;;;;
 ;;; File IO ;;;
@@ -830,25 +830,25 @@
 (define (set-file-modified-seconds!/k path seconds kf k)
   (nonnegative-integer?! seconds)
   (io-guard kf (file-or-directory-modify-seconds path seconds) (k)))
-(define (open-file-istream/k path kf k)
+(define (open-input-file/k path kf k)
   (let ((path        (normalize-path path)))
-    (io-guard kf (k (rkt:istream (list '(type . file-istream) (cons 'path path))
-                                 (open-input-file path))))))
-(define (open-file-ostream/k path restriction kf k)
+    (io-guard kf (k (rkt:iport (list '(type . file-iport) (cons 'path path))
+                               (open-input-file path))))))
+(define (open-output-file/k path restriction kf k)
   (let ((path        (normalize-path path))
         (exists-flag (case restriction
                        ((create) 'error)
                        ((update) 'udpate)
                        ((#f)     'can-update)
-                       (else     (panic #f "not an open-file-ostream restriction" restriction)))))
-    (io-guard kf (k (rkt:ostream (list '(type . file-ostream) (cons 'path path))
-                                 (open-output-file path #:exists exists-flag))))))
+                       (else     (panic #f "not an open-output-file restriction" restriction)))))
+    (io-guard kf (k (rkt:oport (list '(type . file-oport) (cons 'path path))
+                               (open-output-file path #:exists exists-flag))))))
 
 ;;;;;;;;;;;;;;;;;;
 ;;; Network IO ;;;
 ;;;;;;;;;;;;;;;;;;
 
-(define (make-socket-streams/k in out k)
+(define (make-socket-ports/k in out k)
   (define (tcp-address-description p)
     (let-values (((local-host local-port remote-host remote-port) (tcp-addresses p #t)))
       (cons 'address*
@@ -856,8 +856,8 @@
                                       (cons 'port local-port)))
                   (cons 'remote (list (cons 'host remote-host)
                                       (cons 'port remote-port)))))))
-  (k (rkt:istream (list '(type . tcp-istream) (tcp-address-description in))  in)
-     (rkt:ostream (list '(type . tcp-ostream) (tcp-address-description out)) out)))
+  (k (rkt:iport (list '(type . tcp-iport) (tcp-address-description in))  in)
+     (rkt:oport (list '(type . tcp-oport) (tcp-address-description out)) out)))
 
 (define (open-tcp-listener/k hostname port reuse? max-backlog kf k)
   (io-guard
@@ -867,14 +867,14 @@
               (case method
                 ((accept/k) (lambda (kf k)
                               (io-guard kf (let-values (((in out) (tcp-accept listener)))
-                                             (make-socket-streams/k in out k)))))
+                                             (make-socket-ports/k in out k)))))
                 ((close/k)  (lambda (kf k) (io-guard kf (tcp-close listener) (k))))
                 (else       (panic #f "not a listener method" method)))
               arg*))))))
 
 (define (open-tcp-connection/k host port local-host local-port kf k)
   (io-guard kf (let-values (((in out) (tcp-connect host port local-host local-port)))
-                 (make-socket-streams/k in out k))))
+                 (make-socket-ports/k in out k))))
 
 (define (open-udp-socket/k family-host family-port kf k)
   (io-guard
@@ -940,15 +940,15 @@
 ;;;;;;;;;;;;;;;
 ;;; Pipe IO ;;;
 ;;;;;;;;;;;;;;;
-(define (open-pipe-streams/k kf k)
+(define (open-pipe/k kf k)
   (io-guard
    kf
    ;; This produces a blocking pipe, but at the cost of running another process, and at the cost of
    ;; that process copying data from its stdin to its stdout.  Fortunately, at least the process will
    ;; be cleaned up once its stdin is closed.
    (let-values (((sp out in err) (subprocess #f #f 'stdout #f (find-executable-path "cat"))))
-     (let ((in  (and in  (rkt:ostream '((type . pipe-ostream)) in)))
-           (out (and out (rkt:istream '((type . pipe-istream)) out))))
+     (let ((in  (and in  (rkt:oport '((type . pipe-oport)) in)))
+           (out (and out (rkt:iport '((type . pipe-iport)) out))))
        (k in out))))
   ;; Unfortunately, this produces a non-blocking pipe because Racket opens files with O_NONBLOCK.
   ;; This hack also comes with some extra risk because it creates and then quickly removes a
@@ -966,8 +966,8 @@
   ;                                        (current-error-port  out.msg))
   ;                           (system*/exit-code (find-executable-path "mkfifo") pipe-path))))
   ;          (if (= exit-code 0)
-  ;              (let ((out (rkt:istream '((type . pipe-istream)) (open-input-file pipe-path)))
-  ;                    (in  (rkt:ostream '((type . pipe-ostream))
+  ;              (let ((out (rkt:iport '((type . pipe-iport)) (open-input-file pipe-path)))
+  ;                    (in  (rkt:oport '((type . pipe-oport))
   ;                                      (open-output-file pipe-path #:exists 'update))))
   ;                (values in out))
   ;              (values #f exit-code (get-output-string out.msg)))))
@@ -1013,9 +1013,9 @@
                                           (cons (caar env) (cons (cdar env) (loop (cdr env)))))))
                              (current-environment-variables))))
            (apply subprocess out in err #f path arg*)))))
-     (let ((in  (and in  (rkt:ostream '((type . pipe-ostream)) in)))
-           (out (and out (rkt:istream '((type . pipe-istream)) out)))
-           (err (and err (rkt:istream '((type . pipe-istream)) err))))
+     (let ((in  (and in  (rkt:oport '((type . pipe-oport)) in)))
+           (out (and out (rkt:iport '((type . pipe-iport)) out)))
+           (err (and err (rkt:iport '((type . pipe-iport)) err))))
        (k (lambda (method)
             (case method
               ((in)        in)

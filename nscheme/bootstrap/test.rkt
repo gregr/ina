@@ -1056,58 +1056,65 @@
 (run-evaluation-tests
   env.test.large
 
-  ! bytevector-ports
+  ! bytevector-port-buffers
   (call-with-output-bytevector
    (lambda (out)
-     (oport-set-size! out 2)
      (call-with-input-bytevector
       #"testing 1 2 3"
       (lambda (in)
-        (let ((buf (make-mbytevector 18 0)))
+        (let ((in  (iport->iport-buffer in))
+              (out (oport->oport-buffer out))
+              (buf (make-mbytevector 18 0)))
+          (oport-buffer-set-size! out 2)
           (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
-          (iport-read in buf 5 6)
-          (iport-read in buf 11 5)
-          (oport-write out buf 0 3)
-          (oport-write out buf 3 (- (mbytevector-length buf) 3)))))))
+          (iport-buffer-read in buf 5 6)
+          (iport-buffer-read in buf 11 5)
+          (oport-buffer-write out buf 0 3)
+          (oport-buffer-write out buf 3 (- (mbytevector-length buf) 3))
+          (oport-buffer-flush out))))))
   ==>
   #"ABCDEtesting 1 2QR"
   (call-with-output-bytevector
    (lambda (out)
-     (oport-set-size! out 2)
      (call-with-input-bytevector
       #"testing"
       (lambda (in)
-        (let ((buf (make-mbytevector 20 0)))
+        (let ((in  (iport->iport-buffer in))
+              (out (oport->oport-buffer out))
+              (buf (make-mbytevector 20 0)))
+          (oport-buffer-set-size! out 2)
           (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
-          (iport-read in buf 3 2)
-          (iport-read in buf 5 (- (mbytevector-length buf) 5))
-          (oport-write out buf 0 3)
-          (oport-write out buf 3 (- (mbytevector-length buf) 3)))))))
+          (iport-buffer-read in buf 3 2)
+          (iport-buffer-read in buf 5 (- (mbytevector-length buf) 5))
+          (oport-buffer-write out buf 0 3)
+          (oport-buffer-write out buf 3 (- (mbytevector-length buf) 3))
+          (oport-buffer-flush out))))))
   ==>
   #"ABCtestingKLMNOPQRST"
   (let* ((buf (make-mbytevector 20 0))
-         (out (open-output-mbytevector buf)))
+         (out (oport->oport-buffer (open-output-mbytevector buf))))
     (let ((src #"testing 4 5 6 7 8 9 10 11"))
-      (oport-write out src 0 8)
-      (oport-write out src 10 (- (bytevector-length src) 10))
-      (oport-flush out)
+      (oport-buffer-write out src 0 8)
+      (oport-buffer-write out src 10 (- (bytevector-length src) 10))
+      (oport-buffer-flush out)
       (mbytevector->bytevector buf)))
   ==>
   error:eval
   ;#(panic
   ;  raise
-  ;  (#(error #(description) io-error #(tag detail))
+  ;  (#(error #(description) io-error #(tag context))
   ;   .
-  ;   #("oport-flush failed"
+  ;   #("IO error"
   ;     no-space
-  ;     ((mbytevector-ostream 0 20) (write 0 23 23)))))
+  ;     (oport-buffer-flush
+  ;      #(#(output-mbytevector 0 20) write (0 23 23))))))))
   (let* ((buf (make-mbytevector 20 0))
-         (out (open-output-mbytevector buf)))
+         (out (oport->oport-buffer (open-output-mbytevector buf))))
     (let* ((src    #"testing 4 5 6 7 8 9 10 11")
-           (amount (oport-write out src 0 8)))
-      (oport-write out src 10 (min (- (bytevector-length src) 10)
-                                   (- (mbytevector-length buf) amount)))
-      (oport-flush out)
+           (amount (oport-buffer-write out src 0 8)))
+      (oport-buffer-write out src 10 (min (- (bytevector-length src) 10)
+                                          (- (mbytevector-length buf) amount)))
+      (oport-buffer-flush out)
       (mbytevector->bytevector buf)))
   ==>
   #"testing 5 6 7 8 9 10"
@@ -1441,13 +1448,11 @@
 (displayln "\nBeginning recursive panic test:")
 (run-evaluation-tests
   env.test.large
-
   ! recursive-panic
   (current-panic-handler
    (lambda x* (begin (apply panic x*)))
    (lambda () (panic 'a 'b 'c)))
-  ==> error:eval
-)
+  ==> error:eval)
 
 (define env.test.posix env.large+posix+privileged)
 
@@ -1459,15 +1464,15 @@
 
  ;! stdio
  ;(begin
- ;  (ostream-write-byte standard-output-stream 65)
- ;  (ostream-write-byte standard-output-stream 66)
- ;  (ostream-write-byte standard-output-stream 67)
- ;  (ostream-write-byte standard-output-stream 10))
+ ;  (oport-write-byte standard-output-port 65)
+ ;  (oport-write-byte standard-output-port 66)
+ ;  (oport-write-byte standard-output-port 67)
+ ;  (oport-write-byte standard-output-port 10))
  ;==> (values)
  ;(let* ((message #"Type 'x' and hit enter: ")
  ;       (len (bytevector-length message)))
- ;  (ostream-write standard-error-stream message 0 len len)
- ;  (istream-read-byte standard-input-stream))
+ ;  (oport-write standard-error-port message 0 len len)
+ ;  (iport-read-byte standard-input-port))
  ;==> 120
 
  ! file-io
@@ -1480,13 +1485,13 @@
                    (case-values (make-directory/k dir values values)
                      (() (values))
                      ((tag d) (panic #f "make-directory failed" tag d)))
-                   (case-values (open-file-ostream/k fname 'create values values)
+                   (case-values (open-output-file/k fname 'create values values)
                      ((out) out)
-                     ((tag d) (panic #f "open-file-ostream failed" tag d))))))
-   (case-values (ostream-write/k out message 0 len len values values)
+                     ((tag d) (panic #f "open-output-file failed" tag d))))))
+   (case-values (oport-write/k out message 0 len len values values)
      ((amount) (values))
-     ((tag d)  (panic #f "ostream-write failed" tag d)))
-   (ostream-close out)
+     ((tag d)  (panic #f "oport-write failed" tag d)))
+   (oport-close out)
    (let* ((size   (file-size/k fname values values))
           (dperm  (file-permissions/k dir values values))
           (fperm  (file-permissions/k fname values values))
@@ -1498,14 +1503,14 @@
                     (() (file-modified-seconds/k fname2 values values))
                     ((tag d) (panic #f "move-file failed" tag d))))
           (path*2 (directory-file*/k dir values values))
-          (in     (case-values (open-file-istream/k fname2 values values)
+          (in     (case-values (open-input-file/k fname2 values values)
                     ((in) in)
-                    ((tag d) (panic #f "open-file-istream failed" tag d))))
+                    ((tag d) (panic #f "open-input-file failed" tag d))))
           (buf    (make-mbytevector size 0))
-          (amount (case-values (istream-read/k in buf 0 size size values values values)
+          (amount (case-values (iport-read/k in buf 0 size size values values values)
                     ((amount) amount)
-                    ((tag d) (panic #f "istream-read failed" tag d)))))
-     (istream-close in)
+                    ((tag d) (panic #f "iport-read failed" tag d)))))
+     (iport-close in)
      (case-values (delete-file/k fname2 values values)
        (() (values))
        ((tag d) (panic #f "delete-file failed" tag d)))
@@ -1521,9 +1526,9 @@
         (fname2  (string-append dir "/out2.txt"))
         (message #"Hello world!")
         (len     (bytevector-length message))
-        (out     (begin (make-directory dir) (open-file-ostream fname 'create))))
-   (ostream-write out message 0 len len)
-   (ostream-close out)
+        (out     (begin (make-directory dir) (open-output-file fname 'create))))
+   (oport-write out message 0 len len)
+   (oport-close out)
    (let* ((size   (file-size fname))
           (dperm  (file-permissions dir))
           (fperm  (file-permissions fname))
@@ -1533,10 +1538,10 @@
           (sec    (file-modified-seconds fname))
           (sec2   (begin (move-file fname fname2) (file-modified-seconds fname2)))
           (path*2 (directory-file* dir))
-          (in     (open-file-istream fname2))
+          (in     (open-input-file fname2))
           (buf    (make-mbytevector size 0))
-          (amount (istream-read in buf 0 size size)))
-     (istream-close in)
+          (amount (iport-read in buf 0 size size)))
+     (iport-close in)
      (delete-file fname2)
      (delete-directory dir)
      (list size amount dperm fperm (eqv? sec sec2) dtype ftype path* path*2
@@ -1545,15 +1550,15 @@
 
  ! network-io
  (let ((ch.client (make-channel)))
-   (define (istream->bv in)
+   (define (iport->bv in)
      (apply bytevector
             (let loop ()
-              (case-values (istream-read-byte in)
+              (case-values (iport-read-byte in)
                 (() '())
                 ((b) (cons b (loop)))))))
-   (define (ostream-write-bv out bv)
+   (define (oport-write-bv out bv)
      (let ((len (bytevector-length bv)))
-       (ostream-write out bv 0 len len)))
+       (oport-write out bv 0 len len)))
    (open-tcp-listener/k
     (gethostname) 8765 #t 5 raise-io-error
     (lambda (listener)
@@ -1562,17 +1567,17 @@
          (open-tcp-connection/k
           (gethostname) 8765 #f #f raise-io-error
           (lambda (in out)
-            (ostream-write-bv out #"ABC")
-            (ostream-close out)
-            (channel-put ch.client (istream->bv in))
-            (istream-close in)))))
+            (oport-write-bv out #"ABC")
+            (oport-close out)
+            (channel-put ch.client (iport->bv in))
+            (iport-close in)))))
       (listener
        'accept/k raise-io-error
        (lambda (in out)
-         (let ((result (istream->bv in)))
-           (istream-close in)
-           (ostream-write-bv out #"abc")
-           (ostream-close out)
+         (let ((result (iport->bv in)))
+           (iport-close in)
+           (oport-write-bv out #"abc")
+           (oport-close out)
            (values (list 'server result) (list 'client (channel-get ch.client)))))))))
  ==> (values (server #"ABC") (client #"abc"))
 
@@ -1583,37 +1588,33 @@
                                   (find-file/env host-environment "echo") '("hello world") #f
                                   panic values))
            (out.p.out (host-process-out p)))
-      (ostream-close (host-process-in p))
+      (oport-close (host-process-in p))
       (let loop ()
-        (case-values (istream-read-byte out.p.out)
-          (()  (istream-close out.p.out) (oport-write-byte out (+ (host-process-wait p) 48)))
+        (case-values (iport-read-byte out.p.out)
+          (()  (iport-close out.p.out)
+               (oport-write-byte out (+ (host-process-wait p) 48)))
           ((b) (oport-write-byte out b) (loop)))))))
  ==>
  #"hello world\n0"
  (call-with-output-bytevector
   (lambda (out)
-    (let-values (((out.p.in out.p.out) (open-pipe-streams/k panic values)))
-      (let* ((fd.out.p.in  (cdr (assoc 'file-descriptor (iostream-description out.p.in))))
-             (fd.out.p.out (cdr (assoc 'file-descriptor (iostream-description out.p.out))))
+    (let-values (((out.p.in out.p.out) (open-pipe/k panic values)))
+      (let* ((fd.out.p.in  (cdr (assoc 'file-descriptor (port-description out.p.in))))
+             (fd.out.p.out (cdr (assoc 'file-descriptor (port-description out.p.out))))
              (p (raw-host-process/k #f fd.out.p.in fd.out.p.in
                                     (find-file/env host-environment "echo") '("hello world") #f
                                     panic values)))
-        (ostream-close (host-process-in p))
-        (ostream-close out.p.in)
+        (oport-close (host-process-in p))
+        (oport-close out.p.in)
         (let loop ()
-          (case-values (istream-read-byte out.p.out)
-            (()  (istream-close out.p.out) (oport-write-byte out (+ (host-process-wait p) 48)))
+          (case-values (iport-read-byte out.p.out)
+            (()  (iport-close out.p.out)
+                 (oport-write-byte out (+ (host-process-wait p) 48)))
             ((b) (oport-write-byte out b) (loop))))))))
  ==>
  #"hello world\n0"
- (let* ((out (open-bytevector-ostream))
-        (p   (host-process empty-istream out 'stdout
-                           (find-file/env host-environment "echo") '("hello world") #f)))
-   (values (host-process-wait p) (bytevector-ostream-current out)))
- ==>
- (values 0 #"hello world\n")
  (let* ((out (open-output-bytevector))
-        (p   (host-process empty-istream out 'stdout
+        (p   (host-process empty-iport out 'stdout
                            (find-file/env host-environment "echo") '("hello world") #f)))
    (values (host-process-wait p) (output-bytevector-current out)))
  ==>
@@ -1631,47 +1632,42 @@
                  (lambda (in)
                    (let loop ()
                      (case-values (iport-read-byte in)
-                       (()  (ostream-close in.p.in))
-                       ((b) (ostream-write-byte in.p.in b) (loop))))))))
+                       (()  (oport-close in.p.in))
+                       ((b) (oport-write-byte in.p.in b) (loop))))))))
       (let loop ()
-        (case-values (istream-read-byte out.p.out)
-          (()  (istream-close out.p.out) (oport-write-byte out (+ (host-process-wait p) 48)))
+        (case-values (iport-read-byte out.p.out)
+          (()  (iport-close out.p.out) (oport-write-byte out (+ (host-process-wait p) 48)))
           ((b) (oport-write-byte out b) (loop)))))))
  ==>
  #"another example0"
  (call-with-output-bytevector
   (lambda (out)
-    (let-values (((in.p.in  in.p.out)  (open-pipe-streams/k panic values))
-                 ((out.p.in out.p.out) (open-pipe-streams/k panic values)))
-      (let* ((fd.in.p.in   (cdr (assoc 'file-descriptor (iostream-description in.p.in))))
-             (fd.in.p.out  (cdr (assoc 'file-descriptor (iostream-description in.p.out))))
-             (fd.out.p.in  (cdr (assoc 'file-descriptor (iostream-description out.p.in))))
-             (fd.out.p.out (cdr (assoc 'file-descriptor (iostream-description out.p.out))))
+    (let-values (((in.p.in  in.p.out)  (open-pipe/k panic values))
+                 ((out.p.in out.p.out) (open-pipe/k panic values)))
+      (let* ((fd.in.p.in   (cdr (assoc 'file-descriptor (port-description in.p.in))))
+             (fd.in.p.out  (cdr (assoc 'file-descriptor (port-description in.p.out))))
+             (fd.out.p.in  (cdr (assoc 'file-descriptor (port-description out.p.in))))
+             (fd.out.p.out (cdr (assoc 'file-descriptor (port-description out.p.out))))
              (p (raw-host-process/k fd.in.p.out fd.out.p.in fd.out.p.in
                                     (find-file/env host-environment "cat") '() #f
                                     panic values)))
-        (istream-close in.p.out)
-        (ostream-close out.p.in)
+        (iport-close in.p.out)
+        (oport-close out.p.in)
         (thread (lambda ()
                   (call-with-input-bytevector
                    #"another example"
                    (lambda (in)
                      (let loop ()
                        (case-values (iport-read-byte in)
-                         (()  (ostream-close in.p.in))
-                         ((b) (ostream-write-byte in.p.in b) (loop))))))))
+                         (()  (oport-close in.p.in))
+                         ((b) (oport-write-byte in.p.in b) (loop))))))))
         (let loop ()
-          (case-values (istream-read-byte out.p.out)
-            (()  (istream-close out.p.out) (oport-write-byte out (+ (host-process-wait p) 48)))
+          (case-values (iport-read-byte out.p.out)
+            (()  (iport-close out.p.out)
+                 (oport-write-byte out (+ (host-process-wait p) 48)))
             ((b) (oport-write-byte out b) (loop))))))))
  ==>
  #"another example0"
- (let* ((out (open-bytevector-ostream))
-        (in  (open-bytevector-istream #"another example"))
-        (p   (host-process in out 'stdout (find-file/env host-environment "cat") '() #f)))
-   (values (host-process-wait p) (bytevector-ostream-current out)))
- ==>
- (values 0 #"another example")
  (let* ((out (open-output-bytevector))
         (in  (open-input-bytevector #"another example"))
         (p   (host-process in out 'stdout (find-file/env host-environment "cat") '() #f)))
@@ -1685,60 +1681,52 @@
                                        (find-file/env host-environment "echo") '("pipe test") #f
                                        panic values))
            (in1    (host-process-out p1))
-           (fd.in1 (cdr (assoc 'file-descriptor (iostream-description in1))))
+           (fd.in1 (cdr (assoc 'file-descriptor (port-description in1))))
            (p2     (raw-host-process/k fd.in1 #f 'stdout
                                        (find-file/env host-environment "cat") '() #f
                                        panic values))
            (in2    (host-process-out p2)))
-      (ostream-close (host-process-in p1))
+      (oport-close (host-process-in p1))
       (let loop ()
-        (case-values (istream-read-byte in2)
-          (()  (istream-close in2)
+        (case-values (iport-read-byte in2)
+          (()  (iport-close in2)
                (oport-write-byte result (+ (host-process-wait p1) 48))
                (oport-write-byte result (+ (host-process-wait p2) 48)))
           ((b) (oport-write-byte result b) (loop)))))))
  ==> #"pipe test\n00"
  (call-with-output-bytevector
   (lambda (result)
-    (let-values (((out1 in1) (open-pipe-streams/k
-                              (lambda (t d) (panic #f "open-pipe-streams/k failed" t d))
+    (let-values (((out1 in1) (open-pipe/k
+                              (lambda (t d) (panic #f "open-pipe/k failed" t d))
                               values))
-                 ((out2 in2) (open-pipe-streams/k
-                              (lambda (t d) (panic #f "open-pipe-streams/k failed" t d))
+                 ((out2 in2) (open-pipe/k
+                              (lambda (t d) (panic #f "open-pipe/k failed" t d))
                               values)))
-      (let* ((fd.out1 (cdr (assoc 'file-descriptor (iostream-description out1))))
-             (fd.in1  (cdr (assoc 'file-descriptor (iostream-description in1))))
-             (fd.out2 (cdr (assoc 'file-descriptor (iostream-description out2))))
+      (let* ((fd.out1 (cdr (assoc 'file-descriptor (port-description out1))))
+             (fd.in1  (cdr (assoc 'file-descriptor (port-description in1))))
+             (fd.out2 (cdr (assoc 'file-descriptor (port-description out2))))
              (p1      (raw-host-process/k #f fd.out1 fd.out1
                                           (find-file/env host-environment "echo") '("pipe test") #f
                                           panic values))
              (p2      (begin
                         ;; This allows cat to receive EOF.  In case the pipe is nonblocking, it
                         ;; also prevents cat from encountering EAGAIN.
-                        (ostream-close out1)
+                        (oport-close out1)
                         (raw-host-process/k fd.in1 fd.out2 fd.out2
                                             (find-file/env host-environment "cat") '() #f
                                             panic values))))
-        (ostream-close (host-process-in p1))
-        (istream-close in1)   ; not necessary for this test to pass
-        (ostream-close out2)  ; necessary to unblock reading on in2
+        (oport-close (host-process-in p1))
+        (iport-close in1)   ; not necessary for this test to pass
+        (oport-close out2)  ; necessary to unblock reading on in2
         (let loop ()
-          (case-values (istream-read-byte in2)
-            (()  (istream-close in2)
+          (case-values (iport-read-byte in2)
+            (()  (iport-close in2)
                  (oport-write-byte result (+ (host-process-wait p1) 48))
                  (oport-write-byte result (+ (host-process-wait p2) 48)))
             ((b) (oport-write-byte result b) (loop))))))))
  ==> #"pipe test\n00"
- (let* ((result (open-bytevector-ostream))
-        (p1     (host-process empty-istream #f 'stdout
-                              (find-file/env host-environment "echo") '("pipe test") #f))
-        (p2     (host-process (host-process-out p1) result 'stdout
-                              (find-file/env host-environment "cat") '() #f)))
-   (values (host-process-wait p1) (host-process-wait p2) (bytevector-ostream-current result)))
- ==>
- (values 0 0 #"pipe test\n")
  (let* ((result (open-output-bytevector))
-        (p1     (host-process empty-istream #f 'stdout
+        (p1     (host-process empty-iport #f 'stdout
                               (find-file/env host-environment "echo") '("pipe test") #f))
         (p2     (host-process (host-process-out p1) result 'stdout
                               (find-file/env host-environment "cat") '() #f)))

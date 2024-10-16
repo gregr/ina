@@ -1,7 +1,4 @@
-(define (open-pipe-streams) (open-pipe-streams/k raise-io-error values))
-(define (open-pipe)         (open-pipe/k         raise-io-error values))
-(define (open-pipe/k kf k)
-  (open-pipe-streams/k kf (lambda (out in) (k (ostream->oport out) (istream->iport in)))))
+(define (open-pipe) (open-pipe/k raise-io-error values))
 
 (define (host-process-in        p) (p 'in))
 (define (host-process-out       p) (p 'out))
@@ -15,7 +12,7 @@
 (define (host-process/k in.0 out.0 err.0 path arg* env handle-internal-error kf k)
   (define (continue in out err)
     (define (x->fd x)
-      (and x (let ((kv (assoc 'file-descriptor (iostream-description x))))
+      (and x (let ((kv (assoc 'file-descriptor (port-description x))))
                (and kv (cdr kv)))))
     (raw-host-process/k
       (x->fd in) (x->fd out) (if (and err (or (eqv? out err) (eq? err 'stdout)))
@@ -32,17 +29,17 @@
                 (lambda ()
                   (let* ((buffer-size 4096) (buffer (make-mbytevector buffer-size 0)))
                     (let loop ()
-                      (istream-read/k
+                      (iport-read/k
                         in buffer 0 1 buffer-size handle-internal-error close!
                         (lambda (amount)
-                          (ostream-write/k out buffer 0 amount amount handle-internal-error
-                                           (lambda (amount) (loop))))))))))
+                          (oport-write/k out buffer 0 amount amount handle-internal-error
+                                         (lambda (amount) (loop))))))))))
             (define (fuse*-push t) (set! fuse* (cons t fuse*)) #f)
             (define (fuse-input in out)
-              (fuse-io in out (lambda () (ostream-close/k out handle-internal-error values))))
+              (fuse-io in out (lambda () (oport-close/k out handle-internal-error values))))
             (define (fuse-output in out)
               (fuse*-push
-                (fuse-io in out (lambda () (istream-close/k in handle-internal-error values)))))
+                (fuse-io in out (lambda () (iport-close/k in handle-internal-error values)))))
             (let ((out (and out.p (if out (fuse-output out.p out) out.p)))
                   (err (and err.p (if err (fuse-output err.p err) err.p)))
                   (in  (and in.p
@@ -56,7 +53,7 @@
                                           (p 'wait)
                                           (custodian-shutdown-all cust)
                                           (thread-wait t.in)
-                                          (ostream-close/k in.p handle-internal-error values))))))
+                                          (oport-close/k in.p handle-internal-error values))))))
                                 in.p))))
               (k (if (null? fuse*)
                      p
@@ -76,12 +73,12 @@
                            (else   (p method)))))))))))))
   (define (k.out out)
     (define (k.err err)
-      (let ((in (and in.0 (if (iostream? in.0) in.0 (iport->istream in.0)))))
+      (let ((in (and in.0 (if (port? in.0) in.0 (iport-buffer->iport in.0)))))
         (continue in out err)))
     (cond ((not err.0)                                 (k.err #f))
           ((or (eqv? out.0 err.0) (eq? err.0 'stdout)) (k.err 'stdout))
-          ((iostream? err.0)                           (k.err err.0))
-          (else                                        (oport->ostream/k err.0 kf k.err))))
+          ((port? err.0)                           (k.err err.0))
+          (else                                        (oport-buffer->oport/k err.0 kf k.err))))
   (cond ((not out.0)       (k.out #f))
-        ((iostream? out.0) (k.out out.0))
-        (else              (oport->ostream/k out.0 kf k.out))))
+        ((port? out.0) (k.out out.0))
+        (else              (oport-buffer->oport/k out.0 kf k.out))))
