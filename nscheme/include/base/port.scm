@@ -403,17 +403,6 @@
     (let ((pos (+ (iport-buffer-pos p) count)) (end (iport-buffer-end p)))
       (iport-buffer-set-pos! p (if (< end pos) (begin (iport-buffer-set-eof?! p #f) end) pos))))
 
-  (define (iport-buffer-read-peeked p count)
-    (nonnegative-integer?! count)
-    (let* ((start (iport-buffer-pos p)) (end (iport-buffer-end p)) (pos (+ start count)))
-      (if (and (< 0 count) (= start end) (iport-buffer-eof? p))
-          (begin (iport-buffer-set-eof?! p #f) (values))
-          (let* ((count (if (< end pos) (begin (iport-buffer-set-eof?! p #f) (- end start)) count))
-                 (dst   (make-mbytevector count 0)))
-            (iport-buffer-set-pos! p (+ start count))
-            (mbytevector-copy! (iport-buffer-data p) start dst 0 count)
-            dst))))
-
   ;; Returns (values) on EOF or amount read.
   (define (iport-buffer-peek-byte   p skip)
     (iport-buffer-peek-byte/k p skip raise-io-error values values))
