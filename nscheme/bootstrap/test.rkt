@@ -1062,15 +1062,16 @@
      (call-with-input-bytevector
       #"testing 1 2 3"
       (lambda (in)
-        (let ((in  (iport->iport-buffer in))
-              (out (oport->oport-buffer out))
-              (buf (make-mbytevector 18 0)))
+        (let* ((in    (iport->iport-buffer in))
+               (out   (oport->oport-buffer out))
+               (buf   (make-mbytevector 18 0))
+               (count (- (mbytevector-length buf) 3)))
           (oport-buffer-set-size! out 2)
           (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
-          (iport-buffer-read in buf 5 6)
-          (iport-buffer-read in buf 11 5)
-          (oport-buffer-write out buf 0 3)
-          (oport-buffer-write out buf 3 (- (mbytevector-length buf) 3))
+          (iport-buffer-read in buf 5 6 6)
+          (iport-buffer-read in buf 11 5 5)
+          (oport-buffer-write out buf 0 3 3)
+          (oport-buffer-write out buf 3 count count)
           (oport-buffer-flush out))))))
   ==>
   #"ABCDEtesting 1 2QR"
@@ -1079,25 +1080,28 @@
      (call-with-input-bytevector
       #"testing"
       (lambda (in)
-        (let ((in  (iport->iport-buffer in))
-              (out (oport->oport-buffer out))
-              (buf (make-mbytevector 20 0)))
+        (let* ((in          (iport->iport-buffer in))
+               (out         (oport->oport-buffer out))
+               (buf         (make-mbytevector 20 0))
+               (count.read  (- (mbytevector-length buf) 5))
+               (count.write (- (mbytevector-length buf) 3)))
           (oport-buffer-set-size! out 2)
           (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
-          (iport-buffer-read in buf 3 2)
-          (iport-buffer-read in buf 5 (- (mbytevector-length buf) 5))
-          (oport-buffer-write out buf 0 3)
-          (oport-buffer-write out buf 3 (- (mbytevector-length buf) 3))
+          (iport-buffer-read in buf 3 2 2)
+          (iport-buffer-read in buf 5 count.read count.read)
+          (oport-buffer-write out buf 0 3 3)
+          (oport-buffer-write out buf 3 count.write count.write)
           (oport-buffer-flush out))))))
   ==>
   #"ABCtestingKLMNOPQRST"
-  (let* ((buf (make-mbytevector 20 0))
-         (out (oport->oport-buffer (open-output-mbytevector buf))))
-    (let ((src #"testing 4 5 6 7 8 9 10 11"))
-      (oport-buffer-write out src 0 8)
-      (oport-buffer-write out src 10 (- (bytevector-length src) 10))
-      (oport-buffer-flush out)
-      (mbytevector->bytevector buf)))
+  (let* ((buf   (make-mbytevector 20 0))
+         (out   (oport->oport-buffer (open-output-mbytevector buf)))
+         (src   #"testing 4 5 6 7 8 9 10 11")
+         (count (- (bytevector-length src) 10)))
+    (oport-buffer-write out src 0 8 8)
+    (oport-buffer-write out src 10 count count)
+    (oport-buffer-flush out)
+    (mbytevector->bytevector buf))
   ==>
   error:eval
   ;#(panic
@@ -1108,14 +1112,15 @@
   ;     no-space
   ;     (oport-buffer-flush
   ;      #(#(output-mbytevector 0 20) write (0 23 23))))))))
-  (let* ((buf (make-mbytevector 20 0))
-         (out (oport->oport-buffer (open-output-mbytevector buf))))
-    (let* ((src    #"testing 4 5 6 7 8 9 10 11")
-           (amount (oport-buffer-write out src 0 8)))
-      (oport-buffer-write out src 10 (min (- (bytevector-length src) 10)
-                                          (- (mbytevector-length buf) amount)))
-      (oport-buffer-flush out)
-      (mbytevector->bytevector buf)))
+  (let* ((buf    (make-mbytevector 20 0))
+         (out    (oport->oport-buffer (open-output-mbytevector buf)))
+         (src    #"testing 4 5 6 7 8 9 10 11")
+         (amount (oport-buffer-write out src 0 8 8))
+         (count  (min (- (bytevector-length src) 10)
+                      (- (mbytevector-length buf) amount))))
+    (oport-buffer-write out src 10 count count)
+    (oport-buffer-flush out)
+    (mbytevector->bytevector buf))
   ==>
   #"testing 5 6 7 8 9 10"
 

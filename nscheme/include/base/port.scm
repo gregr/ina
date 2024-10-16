@@ -573,12 +573,8 @@
                   ((tag x)  (kf tag (cons 'iport-buffer-read-byte x)))))))))
 
   ;; Returns (values) on EOF or amount read.
-  (define iport-buffer-read
-    (let ((go (lambda (p dst start min-count count)
-                (iport-buffer-read/k p dst start min-count count raise-io-error values values))))
-      (case-lambda
-        ((p dst start           count) (go p dst start count     count))
-        ((p dst start min-count count) (go p dst start min-count count)))))
+  (define (iport-buffer-read p dst start min-count count)
+    (iport-buffer-read/k p dst start min-count count raise-io-error values values))
   (define (iport-buffer-read/k p dst start min-count count kf keof k)
     (define (fail tag ctx) (kf tag (cons (vector 'iport-buffer-read start min-count count) ctx)))
     (buffer-range?! dst start min-count count)
@@ -704,15 +700,8 @@
                          (k)))))
 
   ;; Returns the "amount" written.  Block until at least min-count bytes are written.
-  (define oport-buffer-write
-    (let ((go (lambda (p src start min-count count)
-                (oport-buffer-write/k p src start min-count count raise-io-error values))))
-      (case-lambda
-        ((p src)
-         (let ((len (if (mbytevector? src) (mbytevector-length src) (bytevector-length src))))
-           (go p src 0 len len)))
-        ((p src start count)           (go p src start count     count))
-        ((p src start min-count count) (go p src start min-count count)))))
+  (define (oport-buffer-write p src start min-count count)
+    (oport-buffer-write/k p src start min-count count raise-io-error values))
   (define (oport-buffer-write/k p src start min-count count kf k)
     (buffer-range?! src start min-count count)
     (let* ((buf       (oport-buffer-buffer p))
