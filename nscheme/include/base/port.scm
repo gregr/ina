@@ -41,7 +41,7 @@
 (define (iport-unread/k p src start count kf k) (p 'unread src start count kf k))
 (define (iport-unread p src start count) (iport-unread/k p src start count raise-io-error values))
 ;; Returns #f if port does not have a position.
-(define (iport-position p) (p 'position))
+(define (iport-position p) (p 'position values))
 
 ;;; Input ports with a position
 ;; When pos is #f, set position to EOF.  May return a failure indication.
@@ -70,7 +70,7 @@
 (define (oport-write   p src start min-count count)
   (oport-write/k p src start min-count count raise-io-error values))
 ;; Returns #f if port does not have a position.
-(define (oport-position p) (p 'position))
+(define (oport-position p) (p 'position values))
 
 ;;; Output ports with a position
 ;; When pos is #f, set position to EOF.  May return a failure indication.
@@ -132,7 +132,7 @@
                                                     (min len new))
                                              len))
                                (k)))
-            ((position)      (lambda ()     pos))
+            ((position)      (lambda (k)    (k pos)))
             ((close)         (lambda (kf k) (k)))
             ((description)   (lambda ()     '((type . input-bytevector))))
             (else            (error "not an input-bytevector method" method)))
@@ -182,7 +182,7 @@
                                                      (min (mbytevector-length buf) new))
                                               (mbytevector-length buf)))
                              (k)))
-          ((position)      (lambda ()     pos.st))
+          ((position)      (lambda (k)    (k pos.st)))
           ((close)         (lambda (kf k) (k)))
           ((description)   (lambda ()     '((type . output-mbytevector))))
           (else            (error "not an output-mbytevector method" method)))
@@ -240,7 +240,7 @@
                                                      (min end.st new))
                                               end.st))
                              (k)))
-          ((position)      (lambda ()     pos.st))
+          ((position)      (lambda (k)    (k pos.st)))
           ((close)         (lambda (kf k) (k)))
           ((current)       (lambda ()     (mbytevector->bytevector buf.st 0 end.st)))
           ((description)   (lambda ()     '((type . output-bytevector))))
@@ -265,7 +265,7 @@
              ((write-byte)    (lambda (b kf k)                   (k)))
              ((set-position!) (lambda (new kf k)                 (k)))
              ((set-size!)     (lambda (new kf k)                 (k)))
-             ((position)      (lambda ()                         0))
+             ((position)      (lambda (k)                        (k 0)))
              ((close)         (lambda (kf k)                     (k)))
              ((description)   (lambda () '((type . null-oport))))
              (else            (error "not a null-oport method" method)))
@@ -284,13 +284,13 @@
                                 (buffer-range?! src start count count)
                                 (if (< 0 count)
                                     (full-error kf 'pwrite pos start count)
-                                    (k 0))))
+                                    (k))))
              ((write-byte)    (lambda (b kf k) (full-error kf 'write-byte b)))
              ((set-size!)     (lambda (new kf k)
                                 (nonnegative-integer?! new)
                                 (if (< 0 new) (full-error kf 'set-size! new) (k))))
              ((set-position!) (lambda (new kf k) (k)))
-             ((position)      (lambda ()         0))
+             ((position)      (lambda (k)        (k 0)))
              ((close)         (lambda (kf k)     (k)))
              ((description)   (lambda () '((type . full-oport))))
              (else            (error "not a full-oport method" method)))
@@ -311,7 +311,7 @@
                            (buffer-range?! src start count count)
                            (error "too many bytes unread" count 'empty-iport)))
         ((set-position!) (lambda (new kf k) (k)))
-        ((position)      (lambda ()         0))
+        ((position)      (lambda (k)        (k 0)))
         ((close)         (lambda (kf k)     (k)))
         ((description)   (lambda () '((type . empty-iport))))
         (else            (error "not an empty-iport method" method)))
@@ -334,7 +334,7 @@
         ((read-byte)     (lambda (kf keof k) (k byte)))
         ((unread)        (lambda (src start count kf k) (buffer-range?! src start count count) (k)))
         ((set-position!) (lambda (new kf k) (k)))
-        ((position)      (lambda ()         0))
+        ((position)      (lambda (k)        (k 0)))
         ((close)         (lambda (kf k)     (k)))
         ((description)   (lambda () '((type . constant-iport))))
         (else            (error "not a constant-iport method" method)))
