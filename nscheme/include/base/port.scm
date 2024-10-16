@@ -340,6 +340,101 @@
         (else            (error "not a constant-iport method" method)))
       arg*)))
 
+(splicing-local
+  ((define (thread-safe-port-request port)
+     (let* ((ch.request (make-channel))
+            (t          (thread/suspend-to-kill
+                          (lambda ()
+                            (let loop ()
+                              (let* ((req         (channel-get ch.request))
+                                     (ch.reply    (car req))
+                                     (method&arg* (cdr req)))
+                                (current-panic-handler
+                                  (lambda x* (channel-put ch.reply (lambda () (apply panic x*))))
+                                  (lambda () (channel-put ch.reply (apply port method&arg*))))
+                                (loop)))))))
+       (lambda req (let ((ch.reply (make-channel)))
+                     (thread-resume t (current-thread))
+                     (channel-put ch.request (cons ch.reply req))
+                     ((channel-get ch.reply)))))))
+
+  (define (iport->thread-safe-iport port)
+    (let ((description (list '(type  . thread-safe-iport)
+                             (cons 'sub-port (port-description port))))
+          (request     (thread-safe-port-request port)))
+      (lambda (method . arg*)
+        (apply
+          (case method
+            ((read)          (lambda (dst start min-count count kf keof k)
+                               (request 'read dst start min-count count
+                                        (lambda (t ctx)  (lambda () (kf t ctx)))
+                                        (lambda ()       keof)
+                                        (lambda (amount) (lambda () (k amount))))))
+            ((pread)         (lambda (pos dst start count kf keof k)
+                               (request 'pread pos dst start count
+                                        (lambda (t ctx)  (lambda () (kf t ctx)))
+                                        (lambda ()       keof)
+                                        (lambda (amount) (lambda () (k amount))))))
+            ((read-byte)     (lambda (kf keof k)
+                               (request 'read-byte
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      keof)
+                                        (lambda (byte)  (lambda () (k byte))))))
+            ((unread)        (lambda (src start count kf k)
+                               (request 'unread src start count
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      (lambda () (k))))))
+            ((set-position!) (lambda (new kf k)
+                               (request 'set-position! new
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      (lambda () (k))))))
+            ((position)      (lambda (k)
+                               (request 'position (lambda (pos) (lambda () (k pos))))))
+            ((close)         (lambda (kf k)
+                               (request 'close
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      (lambda () (k))))))
+            ((description)   (lambda () description))
+            (else            (error "not a thread-safe-iport method" method)))
+          arg*))))
+
+  (define (oport->thread-safe-oport port)
+    (let ((description (list '(type  . thread-safe-oport)
+                             (cons 'sub-port (port-description port))))
+          (request     (thread-safe-port-request port)))
+      (lambda (method . arg*)
+        (apply
+          (case method
+            ((write)         (lambda (src start min-count count kf k)
+                               (request 'write src start min-count count
+                                        (lambda (t ctx)  (lambda () (kf t ctx)))
+                                        (lambda (amount) (lambda () (k amount))))))
+            ((pwrite)        (lambda (pos src start count kf k)
+                               (request 'pwrite pos src start count
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      (lambda () (k))))))
+            ((write-byte)    (lambda (b kf k)
+                               (request 'write-byte b
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      (lambda () (k))))))
+            ((set-size!)     (lambda (new kf k)
+                               (request 'set-size! new
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      (lambda () (k))))))
+            ((set-position!) (lambda (new kf k)
+                               (request 'set-position! new
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      (lambda () (k))))))
+            ((position)      (lambda (k)
+                               (request 'position (lambda (pos) (lambda () (k pos))))))
+            ((close)         (lambda (kf k)
+                               (request 'close
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      (lambda () (k))))))
+            ((description)   (lambda () description))
+            (else            (error "not a thread-safe-oport method" method)))
+          arg*)))))
+
 ;;;;;;;;;;;;;;;;;
 ;;; IO Errors ;;;
 ;;;;;;;;;;;;;;;;;
