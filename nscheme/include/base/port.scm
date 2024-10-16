@@ -18,68 +18,68 @@
 ;;; - failed operation details
 
 (define (port? x) (procedure? x))
-(define (port-description s) (s 'description))
+(define (port-description p) (p 'description))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Input ports ;;;
 ;;;;;;;;;;;;;;;;;;;
-(define (iport-close/k s kf k) (s 'close kf k))
-(define (iport-close   s)      (iport-close/k s raise-io-error values))
+(define (iport-close/k p kf k) (p 'close kf k))
+(define (iport-close   p)      (iport-close/k p raise-io-error values))
 ;; Returns EOF, the byte read, or a failure indication.
-(define (iport-read-byte/k s kf keof k) (s 'read-byte kf keof k))
-(define (iport-read-byte   s)           (iport-read-byte/k s raise-io-error values values))
+(define (iport-read-byte/k p kf keof k) (p 'read-byte kf keof k))
+(define (iport-read-byte   p)           (iport-read-byte/k p raise-io-error values values))
 ;; Returns EOF, the amount read, or a failure indication.
 ;; Blocks until at least (min min-count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
-(define (iport-read/k s dst start min-count count kf keof k)
-  (s 'read dst start min-count count kf keof k))
-(define (iport-read s dst start min-count count)
-  (iport-read/k s dst start min-count count raise-io-error values values))
+(define (iport-read/k p dst start min-count count kf keof k)
+  (p 'read dst start min-count count kf keof k))
+(define (iport-read p dst start min-count count)
+  (iport-read/k p dst start min-count count raise-io-error values values))
 ;; Returns #f if port does not have a position.
-(define (iport-position s) (s 'position))
+(define (iport-position p) (p 'position))
 
 ;;; Input ports with a position
 ;; When pos is #f, set position to EOF.  May return a failure indication.
-(define (iport-set-position!/k s pos kf k) (s 'set-position! pos kf k))
-(define (iport-set-position!   s pos)      (iport-set-position!/k s pos raise-io-error values))
+(define (iport-set-position!/k p pos kf k) (p 'set-position! pos kf k))
+(define (iport-set-position!   p pos)      (iport-set-position!/k p pos raise-io-error values))
 ;; Returns EOF, the amount read, or a failure indication.
 ;; Blocks until at least (min count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
-(define (iport-pread/k s pos dst start count kf keof k) (s 'pread pos dst start count kf keof k))
-(define (iport-pread   s pos dst start count)
-  (iport-pread/k s pos dst start count raise-io-error values values))
+(define (iport-pread/k p pos dst start count kf keof k) (p 'pread pos dst start count kf keof k))
+(define (iport-pread   p pos dst start count)
+  (iport-pread/k p pos dst start count raise-io-error values values))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Output ports ;;;
 ;;;;;;;;;;;;;;;;;;;;
-(define (oport-close/k s kf k) (s 'close kf k))
-(define (oport-close   s)      (oport-close/k s raise-io-error values))
+(define (oport-close/k p kf k) (p 'close kf k))
+(define (oport-close   p)      (oport-close/k p raise-io-error values))
 ;; May return a failure indication.
-(define (oport-write-byte/k s byte kf k) (s 'write-byte byte kf k))
-(define (oport-write-byte   s byte)      (oport-write-byte/k s byte raise-io-error values))
+(define (oport-write-byte/k p byte kf k) (p 'write-byte byte kf k))
+(define (oport-write-byte   p byte)      (oport-write-byte/k p byte raise-io-error values))
 ;; Returns the amount written, or a failure indication.
 ;; Blocks until at least min-count bytes are written.
 ;; Failure may occur after a partial write.
-(define (oport-write/k s src start min-count count kf k)
-  (s 'write src start min-count count kf k))
-(define (oport-write   s src start min-count count)
-  (oport-write/k s src start min-count count raise-io-error values))
+(define (oport-write/k p src start min-count count kf k)
+  (p 'write src start min-count count kf k))
+(define (oport-write   p src start min-count count)
+  (oport-write/k p src start min-count count raise-io-error values))
 ;; Returns #f if port does not have a position.
-(define (oport-position s) (s 'position))
+(define (oport-position p) (p 'position))
 
 ;;; Output ports with a position
 ;; When pos is #f, set position to EOF.  May return a failure indication.
-(define (oport-set-position!/k s pos kf k) (s 'set-position! pos kf k))
-(define (oport-set-position!   s pos)      (oport-set-position!/k s pos raise-io-error values))
+(define (oport-set-position!/k p pos kf k) (p 'set-position! pos kf k))
+(define (oport-set-position!   p pos)      (oport-set-position!/k p pos raise-io-error values))
 ;; May return a failure indication.
-(define (oport-set-size!/k s size kf k) (s 'set-size! size kf k))
-(define (oport-set-size!   s size)      (oport-set-size!/k s size raise-io-error values))
+(define (oport-set-size!/k p size kf k) (p 'set-size! size kf k))
+(define (oport-set-size!   p size)      (oport-set-size!/k p size raise-io-error values))
 ;; May return a failure indication.
 ;; Blocks until count bytes are written.
 ;; Failure may occur after a partial write.
-(define (oport-pwrite/k s pos src start count kf k) (s 'pwrite pos src start count kf k))
-(define (oport-pwrite s pos src start count)
-  (oport-pwrite/k s pos src start count raise-io-error values))
+(define (oport-pwrite/k p pos src start count kf k) (p 'pwrite pos src start count kf k))
+(define (oport-pwrite p pos src start count)
+  (oport-pwrite/k p pos src start count raise-io-error values))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Bytevector ports ;;;
@@ -176,7 +176,7 @@
           (else            (error "not an output-mbytevector method" method)))
         arg*))))
 
-(define (output-bytevector-current s) (s 'current))
+(define (output-bytevector-current p) (p 'current))
 (define (open-output-bytevector) (open-output-bytevector/buffer-size 64))
 (define (open-output-bytevector/buffer-size buffer-size)
   (positive-integer?! buffer-size)
@@ -342,7 +342,7 @@
    (define (make-iport-buffer port buffer pos end eof? target-buffer-size)
      (mvector port buffer pos end eof? target-buffer-size))
    (define (iport-buffer-port             p)   (mvector-ref p 0))
-   (define (iport-buffer-data             p)   (mvector-ref p 1))
+   (define (iport-buffer-buffer           p)   (mvector-ref p 1))
    (define (iport-buffer-pos              p)   (mvector-ref p 2))
    (define (iport-buffer-end              p)   (mvector-ref p 3))
    (define (iport-buffer-eof?             p)   (mvector-ref p 4))
@@ -353,8 +353,8 @@
    (define (iport-buffer-set-end!         p x) (mvector-set! p 3 x))
    (define (iport-buffer-set-eof?!        p x) (mvector-set! p 4 x))
    (define (iport-buffer-set-target-size! p x) (mvector-set! p 5 x))
-   (define (iport-buffer-data/refresh p)
-     (let ((buf (iport-buffer-data p)) (size (iport-buffer-target-size p)))
+   (define (iport-buffer-buffer/refresh p)
+     (let ((buf (iport-buffer-buffer p)) (size (iport-buffer-target-size p)))
        (if (< size (mbytevector-length buf))
            (let ((buf (make-mbytevector size 0)))
              (iport-buffer-set-buffer! p buf)
@@ -362,16 +362,16 @@
            buf))))
 
   (define iport->iport-buffer
-    (let ((go (lambda (s buffer-size)
-                (make-iport-buffer s (make-mbytevector buffer-size 0) 0 0 #f buffer-size))))
+    (let ((go (lambda (p buffer-size)
+                (make-iport-buffer p (make-mbytevector buffer-size 0) 0 0 #f buffer-size))))
       (case-lambda
-        ((s)             (go s default-iport-buffer-size))
-        ((s buffer-size) (positive-integer?! buffer-size) (go s buffer-size)))))
+        ((p)             (go p default-iport-buffer-size))
+        ((p buffer-size) (positive-integer?! buffer-size) (go p buffer-size)))))
 
   (define iport-buffer-set-buffer-size!
     (let ((go (lambda (p size)
                 (iport-buffer-set-target-size! p size)
-                (let* ((buf  (iport-buffer-data p))
+                (let* ((buf  (iport-buffer-buffer p))
                        (pos  (iport-buffer-pos p))
                        (end  (- (iport-buffer-end p) pos))
                        (size (max size end)))
@@ -387,13 +387,13 @@
 
   (define (iport-buffer-close p) (iport-buffer-close/k p raise-io-error values))
   (define (iport-buffer-close/k p kf k)
-    (let ((s (iport-buffer-port p)))
-      (cond (s (iport-buffer-set-port! p #f)
-               (iport-buffer-set-buffer! p #f)
-               (iport-buffer-set-pos!    p 0)
-               (iport-buffer-set-end!    p 0)
-               (iport-buffer-set-eof?!   p #f)
-               (iport-close/k s kf k))
+    (let ((port (iport-buffer-port p)))
+      (cond (port (iport-buffer-set-port!   p #f)
+                  (iport-buffer-set-buffer! p #f)
+                  (iport-buffer-set-pos!    p 0)
+                  (iport-buffer-set-end!    p 0)
+                  (iport-buffer-set-eof?!   p #f)
+                  (iport-close/k port kf k))
             (else (k)))))
 
   (define (iport-buffer-peeked-count p) (- (iport-buffer-end p) (iport-buffer-pos p)))
@@ -408,10 +408,10 @@
     (iport-buffer-peek-byte/k p skip raise-io-error values values))
   (define (iport-buffer-peek-byte/k p skip kf keof k)
     (nonnegative-integer?! skip)
-    (let ((buf (iport-buffer-data p)) (pos (iport-buffer-pos p)) (end (iport-buffer-end p)))
+    (let ((buf (iport-buffer-buffer p)) (pos (iport-buffer-pos p)) (end (iport-buffer-end p)))
       (cond
-        ((< (+ pos skip) end) (k (mbytevector-ref buf (+ pos skip))))
-        ((iport-buffer-eof? p)       (keof))
+        ((< (+ pos skip) end)  (k (mbytevector-ref buf (+ pos skip))))
+        ((iport-buffer-eof? p) (keof))
         (else (let ((len (mbytevector-length buf)))
                 (define (fill-and-peek buf.new len)
                   (let ((end (- end pos)))
@@ -435,11 +435,11 @@
   ;; Returns (values) on EOF or amount read.
   (define (iport-buffer-read-byte   p) (iport-buffer-read-byte/k p raise-io-error values values))
   (define (iport-buffer-read-byte/k p kf keof k)
-    (let ((buf (iport-buffer-data p)) (pos (iport-buffer-pos p)) (end (iport-buffer-end p)))
+    (let ((buf (iport-buffer-buffer p)) (pos (iport-buffer-pos p)) (end (iport-buffer-end p)))
       (cond
-        ((< pos end)    (iport-buffer-set-pos! p (+ pos 1)) (k (mbytevector-ref buf pos)))
+        ((< pos end)           (iport-buffer-set-pos! p (+ pos 1)) (k (mbytevector-ref buf pos)))
         ((iport-buffer-eof? p) (iport-buffer-set-eof?! p #f) (keof))
-        (else (let ((buf (iport-buffer-data/refresh p)))
+        (else (let ((buf (iport-buffer-buffer/refresh p)))
                 (case-values (iport-read/k (iport-buffer-port p) buf 0 1 (mbytevector-length buf)
                                            values values values)
                   (()       (keof))
@@ -461,20 +461,20 @@
     (let* ((pos (iport-buffer-pos p)) (end (iport-buffer-end p)) (available (- end pos)))
       (let ((amount (min count available)))
         (iport-buffer-set-pos! p (+ pos amount))
-        (mbytevector-copy! (iport-buffer-data p) pos dst start amount))
+        (mbytevector-copy! (iport-buffer-buffer p) pos dst start amount))
       (cond
         ((<= count available)     (k count))
-        ((iport-buffer-eof? p)           (iport-buffer-set-eof?! p #f)
-                                         (if (< 0 available) (k available) (keof)))
+        ((iport-buffer-eof? p)    (iport-buffer-set-eof?! p #f)
+                                  (if (< 0 available) (k available) (keof)))
         ((<= min-count available) available)
-        (else (let ((buf (iport-buffer-data/refresh p)))
+        (else (let ((buf (iport-buffer-buffer/refresh p)))
                 (let ((start     (+ start available))
                       (count     (- count available))
                       (min-count (- min-count available))
                       (len       (mbytevector-length buf))
-                      (s         (iport-buffer-port p)))
+                      (port      (iport-buffer-port p)))
                   (if (< (+ count count) len)  ; only use buffer if count is small
-                      (case-values (iport-read/k s buf 0 min-count len values values values)
+                      (case-values (iport-read/k port buf 0 min-count len values values values)
                         (()       (k available))
                         ((amount) (mbytevector-copy! buf 0 dst start (min count amount))
                                   (k (if (< count amount)
@@ -483,7 +483,8 @@
                                                 (+ available count))
                                          (+ available amount))))
                         ((tag x)  (fail tag x)))
-                      (case-values (iport-read/k s dst start min-count count values values values)
+                      (case-values (iport-read/k
+                                     port dst start min-count count values values values)
                         (()       (if (< 0 available) (k available) (keof)))
                         ((amount) (k (+ available amount)))
                         ((tag x)  (fail tag x))))))))))
@@ -498,7 +499,7 @@
   (define (iport-buffer-set-position!   p pos)
     (iport-buffer-set-position!/k p pos raise-io-error values))
   (define (iport-buffer-set-position!/k p pos kf k)
-    (iport-buffer-data/refresh p)
+    (iport-buffer-buffer/refresh p)
     (case-values (iport-set-position!/k (iport-buffer-port p) pos values values)
       ((tag x) (kf tag (cons (vector 'iport-buffer-set-position! pos) x)))
       (_       (iport-buffer-set-pos! p 0) (iport-buffer-set-end! p 0) (k))))
@@ -516,21 +517,21 @@
   ((define default-oport-buffer-size 4096)
    (define (make-oport-buffer port buffer pos) (mvector port buffer pos))
    (define (oport-buffer-port        p)   (mvector-ref p 0))
-   (define (oport-buffer-data        p)   (mvector-ref p 1))
+   (define (oport-buffer-buffer      p)   (mvector-ref p 1))
    (define (oport-buffer-pos         p)   (mvector-ref p 2))
    (define (oport-buffer-set-port!   p x) (mvector-set! p 0 x))
    (define (oport-buffer-set-buffer! p x) (mvector-set! p 1 x))
    (define (oport-buffer-set-pos!    p x) (mvector-set! p 2 x)))
 
   (define oport->oport-buffer
-    (let ((go (lambda (s buffer-size) (make-oport-buffer s (make-mbytevector buffer-size 0) 0))))
+    (let ((go (lambda (p buffer-size) (make-oport-buffer p (make-mbytevector buffer-size 0) 0))))
       (case-lambda
-        ((s)             (go s default-oport-buffer-size))
-        ((s buffer-size) (positive-integer?! buffer-size) (go s buffer-size)))))
+        ((p)             (go p default-oport-buffer-size))
+        ((p buffer-size) (positive-integer?! buffer-size) (go p buffer-size)))))
 
   (define oport-buffer-set-buffer-size!
     (let ((go (lambda (p size)
-                (let ((buf (oport-buffer-data p)) (pos (oport-buffer-pos p)))
+                (let ((buf (oport-buffer-buffer p)) (pos (oport-buffer-pos p)))
                   (when (< size pos) (oport-buffer-flush p))
                   (unless (= size (mbytevector-length buf))
                     (let ((new (make-mbytevector size 0)))
@@ -542,25 +543,25 @@
 
   (define (oport-buffer-close p) (oport-buffer-close/k p raise-io-error values))
   (define (oport-buffer-close/k p kf k)
-    (let ((s (oport-buffer-port p)))
-      (if s
+    (let ((port (oport-buffer-port p)))
+      (if port
           (oport-buffer-flush/k p kf (lambda ()
                                        (oport-buffer-set-port! p #f)
                                        (oport-buffer-set-buffer! p #f)
-                                       (oport-close/k s kf k)))
+                                       (oport-close/k port kf k)))
           (k))))
 
   (define (oport-buffer-flush p) (oport-buffer-flush/k p raise-io-error values))
   (define (oport-buffer-flush/k p kf k)
     (let ((pos (oport-buffer-pos p)))
-      (case-values (oport-write/k (oport-buffer-port p) (oport-buffer-data p)
+      (case-values (oport-write/k (oport-buffer-port p) (oport-buffer-buffer p)
                                   0 pos pos values values)
         ((tag x) (kf tag (cons 'oport-buffer-flush x)))
         (_       (oport-buffer-set-pos! p 0) (k)))))
 
   (define (oport-buffer-write-byte p byte) (oport-buffer-write-byte/k p byte raise-io-error values))
   (define (oport-buffer-write-byte/k p byte kf k)
-    (let* ((buf       (oport-buffer-data p))
+    (let* ((buf       (oport-buffer-buffer p))
            (len       (mbytevector-length buf))
            (pos       (oport-buffer-pos p))
            (available (- len pos)))
@@ -590,7 +591,7 @@
         ((p src start min-count count) (go p src start min-count count)))))
   (define (oport-buffer-write/k p src start min-count count kf k)
     (buffer-range?! src start min-count count)
-    (let* ((buf       (oport-buffer-data p))
+    (let* ((buf       (oport-buffer-buffer p))
            (len       (mbytevector-length buf))
            (pos       (oport-buffer-pos p))
            (available (- len pos)))
