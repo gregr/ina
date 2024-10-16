@@ -361,24 +361,6 @@
              buf)
            buf))))
 
-  (define (iport-buffer->iport p)
-    (if (= (iport-buffer-peeked-count p) 0)
-        (iport-buffer-port p)
-        (lambda (method . arg*)
-          (apply
-            (case method
-              ((read)          (lambda (dst start min-count count kf keof k)
-                                 (iport-buffer-read/k p dst start min-count count kf keof k)))
-              ((pread)         (lambda (pos dst start count kf keof k)
-                                 (iport-buffer-pread/k p pos dst start count kf keof k)))
-              ((read-byte)     (lambda (kf keof k) (iport-buffer-read-byte/k p kf keof k)))
-              ((set-position!) (lambda (pos kf k)  (iport-buffer-set-position!/k p pos kf k)))
-              ((position)      (lambda ()          (iport-buffer-position p)))
-              ((close)         (lambda (kf k)      (iport-buffer-close/k p kf k)))
-              ((description)   (lambda ()          '((type . iport-buffer-iport))))
-              (else            (error "not an iport-buffer-iport method" method)))
-            arg*))))
-
   (define iport->iport-buffer
     (let ((go (lambda (s buffer-size)
                 (make-iport-buffer s (make-mbytevector buffer-size 0) 0 0 #f buffer-size))))
@@ -550,10 +532,6 @@
    (define (oport-buffer-set-port!   p x) (mvector-set! p 0 x))
    (define (oport-buffer-set-buffer! p x) (mvector-set! p 1 x))
    (define (oport-buffer-set-pos!    p x) (mvector-set! p 2 x)))
-
-  (define (oport-buffer->oport p) (oport-buffer->oport/k p raise-io-error values))
-  (define (oport-buffer->oport/k p kf k)
-    (oport-buffer-flush/k p kf (lambda () (k (oport-buffer-port p)))))
 
   (define oport->oport-buffer
     (let ((go (lambda (s buffer-size) (make-oport-buffer s (make-mbytevector buffer-size 0) 0))))
