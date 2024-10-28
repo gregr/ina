@@ -358,7 +358,7 @@
                      (channel-put ch.request (cons ch.reply req))
                      ((channel-get ch.reply)))))))
 
-  (define (iport->thread-safe-iport port)
+  (define (thread-safe-iport port)
     (let ((description (list '(type  . thread-safe-iport)
                              (cons 'sub-port (port-description port))))
           (request     (thread-safe-port-request port)))
@@ -398,7 +398,7 @@
             (else            (error "not a thread-safe-iport method" method)))
           arg*))))
 
-  (define (oport->thread-safe-oport port)
+  (define (thread-safe-oport port)
     (let ((description (list '(type  . thread-safe-oport)
                              (cons 'sub-port (port-description port))))
           (request     (thread-safe-port-request port)))

@@ -1130,8 +1130,8 @@
      (call-with-input-bytevector
       #"testing 1 2 3"
       (lambda (in)
-        (let* ((in    (iport->thread-safe-iport in))
-               (out   (oport->thread-safe-oport out))
+        (let* ((in    (thread-safe-iport in))
+               (out   (thread-safe-oport out))
                (buf   (make-mbytevector 18 0))
                (count (- (mbytevector-length buf) 3)))
           (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
@@ -1146,8 +1146,8 @@
      (call-with-input-bytevector
       #"testing"
       (lambda (in)
-        (let* ((in          (iport->thread-safe-iport in))
-               (out         (oport->thread-safe-oport out))
+        (let* ((in          (thread-safe-iport in))
+               (out         (thread-safe-oport out))
                (buf         (make-mbytevector 20 0))
                (count.read  (- (mbytevector-length buf) 5))
                (count.write (- (mbytevector-length buf) 3)))
@@ -1159,7 +1159,7 @@
   ==>
   #"ABCtestingKLMNOPQRST"
   (let* ((buf (make-mbytevector 20 0))
-         (out (oport->thread-safe-oport (open-output-mbytevector buf)))
+         (out (thread-safe-oport (open-output-mbytevector buf)))
          (out (open-output-mbytevector buf))
          (src   #"testing 4 5 6 7 8 9 10 11")
          (count (- (bytevector-length src) 10)))
@@ -1176,7 +1176,7 @@
   ;     no-space
   ;     (#(#(output-mbytevector 8 20) write (10 15 15))))))))
   (let* ((buf    (make-mbytevector 20 0))
-         (out    (oport->thread-safe-oport (open-output-mbytevector buf)))
+         (out    (thread-safe-oport (open-output-mbytevector buf)))
          (out    (open-output-mbytevector buf))
          (src    #"testing 4 5 6 7 8 9 10 11")
          (amount (oport-write out src 0 8 8))
