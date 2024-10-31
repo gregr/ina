@@ -281,6 +281,12 @@
     ((7 8 9) 'c)
     (=> (lambda (x) (+ x 1))))
   ==> 16
+  (case '(4 5 6)
+    (((1 2 3)) 'top)
+    (((4 5 6)) 'middle)
+    (((7 8 9)) 'bottom)
+    (else 'other))
+  ==> middle
 
   ! case1
   (case1 5
@@ -301,6 +307,12 @@
     (8 'c)
     (=> (lambda (x) (+ x 1))))
   ==> 16
+  (case1 '(4 5 6)
+    ((1 2 3) 'top)
+    ((4 5 6) 'middle)
+    ((7 8 9) 'bottom)
+    (else 'other))
+  ==> middle
 
   ! lambda
   ((lambda (x y) x) 5 6)                             ==> 5

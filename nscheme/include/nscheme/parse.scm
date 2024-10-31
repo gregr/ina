@@ -229,6 +229,21 @@
                     $x*))))
 (define ($append x* y) ($call $append.value x* y))
 
+(define ($literal-equal? d $x)
+  (let loop ((d d) ($x $x))
+    (cond
+      ((pair?   d) ($and ($pair? $x)
+                         ($let '(x.car) (list ($car $x)) (lambda ($x) (loop (car d) $x)))
+                         ($let '(x.cdr) (list ($cdr $x)) (lambda ($x) (loop (cdr d) $x)))))
+      ((vector? d) (apply $and ($vector? $x)
+                          ($= ($vector-length $x) ($quote (vector-length d)))
+                          (range-map
+                            (lambda (i)
+                              ($let '(x.i) (list ($vector-ref $x ($quote i)))
+                                    (lambda ($x) (loop (vector-ref d i) $x))))
+                            (vector-length d))))
+      (else        ($eqv? $x ($quote d))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Definition contexts ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
