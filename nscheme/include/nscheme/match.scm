@@ -113,7 +113,7 @@
   (define (P->linear-pattern&variable* P)
     (define id-set.empty            '())
     (define (id-set-add     id* id) (cons id id*))
-    (define (id-set-member? id* id) (memp (lambda (x) (bound-identifier=? id x)) id*))
+    (define (id-set-member? id* id) (memp (lambda (x) (identifier=? id x)) id*))
     (let loop ((P P) (id* id-set.empty))
       (let ((ann (P-annotation P)))
         (define (return P id*) (values ($p:annotated P ann) id*))

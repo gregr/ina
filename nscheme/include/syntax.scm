@@ -86,8 +86,7 @@
 
   (define (identifier?  s) (symbol? (syntax-peek s)))
   (define (identifier?! s) (unless (identifier? s) (error "not an identifier" s)))
-
-  (define (bound-identifier=? a b)
+  (define (identifier=? a b)
     (identifier?! a) (identifier?! b)
     (and (eq? (syntax-peek a) (syntax-peek b))
          (mark*=? (syntax-mark* a) (syntax-mark* b))))
@@ -213,10 +212,10 @@
       '(
         syntax-provenance syntax-provenance-set syntax-provenance-add
         syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
-        identifier? identifier?! bound-identifier=?
+        identifier? identifier?! identifier=?
         make-env env-freeze env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!)
       (list
         syntax-provenance syntax-provenance-set syntax-provenance-add
         syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
-        identifier? identifier?! bound-identifier=?
+        identifier? identifier?! identifier=?
         make-env env-freeze env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!))))

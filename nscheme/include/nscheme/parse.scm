@@ -106,7 +106,7 @@
   (let loop ((id* param*))
     (unless (null? id*)
       (let ((id.0 (car id*)))
-        (when (memp (lambda (id) (bound-identifier=? id id.0)) (cdr id*))
+        (when (memp (lambda (id) (identifier=? id id.0)) (cdr id*))
           (raise-parse-error "duplicate parameter name" (list id.0 param*)))
         (loop (cdr id*))))))
 
