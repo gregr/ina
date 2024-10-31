@@ -23,7 +23,7 @@
                    (cond ((null? m*) (cdr m*.inner))
                          (else       (cons m (loop (car m*) (cdr m*)))))))))
 
-   (define rtd.annotated  (make-rtd 'syntax:annotated #f #t '#(form provenance) #f))
+   (define rtd.annotated  (make-rtd #f 'syntax:annotated #f #t '#(form provenance) #f))
    (define annotated?     (record-predicate rtd.annotated))
    (define ann-form       (record-field-name-accessor rtd.annotated 'form))
    (define ann-provenance (record-field-name-accessor rtd.annotated 'provenance))
@@ -31,7 +31,7 @@
    (define (annotated-form       s) (if (annotated? s) (ann-form s) s))
    (define (annotated-provenance s) (and (annotated? s) (ann-provenance s)))
 
-   (define rtd.marked   (make-rtd 'syntax:marked #f #t '#(mark* form) #f))
+   (define rtd.marked   (make-rtd #f 'syntax:marked #f #t '#(mark* form) #f))
    (define marked?      (record-predicate rtd.marked))
    (define marked-mark* (record-field-name-accessor rtd.marked 'mark*))
    (define marked-form  (record-field-name-accessor rtd.marked 'form))
@@ -59,7 +59,7 @@
   (define (syntax-provenance-add s pv)
     (if pv
         (let ((pv2 (syntax-provenance s)))
-          (if (eq? pv pv2)
+          (if (equal? pv pv2)
               s
               (marked (syntax-mark* s) (annotated (syntax-peek s) (if pv2 (cons pv pv2) pv)))))
         s))
@@ -127,7 +127,7 @@
          (let ((kv (assq k kv*)))
            (if kv
                (let loop ((kv* kv*))
-                 (cond ((eq? (car kv*) kv) (cdr kv*))
+                 (cond ((eq? (car kv*) kv) (cdr kv*))  ; assumes mark=? is eq?
                        (else               (cons (car kv*) (loop (cdr kv*))))))
                kv*)))
        (define trie.empty '(() . ()))  ; trie : `(,sym=>x . ,mark=>trie)
@@ -142,7 +142,7 @@
            (if (null? m*)
                (cons (alist-set (car t) sym x) (cdr t))
                (cons (car t)
-                     (alist-set (cdr t) (car m*)
+                     (alist-set (cdr t) (car m*)  ; requires mark=? assumption in alist-remove
                                 (loop (or (alist-ref (cdr t) (car m*)) trie.empty) (cdr m*)))))))
        (define id-dict.empty trie.empty)
        (define (id-dict-key* id=>x)

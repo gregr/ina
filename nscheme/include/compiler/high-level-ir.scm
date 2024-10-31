@@ -1,6 +1,7 @@
 (define (make-address name annotation) (vector (mvector) name annotation))
 (define (address-name            addr) (vector-ref addr 1))
 (define (address-annotation      addr) (vector-ref addr 2))
+(define (address=?               a b)  (or (eq? a b) (eq? (vector-ref a 0) (vector-ref b 0))))
 (define (address->local-gensym/default name.default)
   (let ((gensym (make-local-gensym)))
     (lambda (addr)
@@ -51,7 +52,7 @@
   (if ann
       (let ((ann2 (E-annotation E)))
         (if ann2
-            (if (eq? ann ann2) E (E:annotated (E:annotated-E E) (cons ann ann2)))
+            (if (equal? ann ann2) E (E:annotated (E:annotated-E E) (cons ann ann2)))
             (E:annotated E ann)))
       E))
 
@@ -97,15 +98,16 @@
        (when (null? cenv.1) (error "unbound or out-of-phase reference" addr))
        (let ((rec? (caar cenv.1)) (param*~ (cdar cenv.1)) (cenv (cdr cenv.1)))
          (let find ((i 0) (a*~ param*~))
-           (cond ((pair? a*~)    (let ((a (car a*~)) (a*~ (cdr a*~)))
-                                   (if (eq? a addr)
-                                       (if rec?
-                                           (lambda (renv) (unbox (list-ref (list-ref renv j) i)))
-                                           (lambda (renv) (list-ref (list-ref renv j) i)))
-                                       (find (+ i 1) a*~))))
-                 ((eq? a*~ addr) (when rec? (error "recursive frame cannot be variadic" cenv.1))
-                                 (lambda (renv) (list-tail (list-ref renv j) i)))
-                 (else           (loop (+ j 1) cenv)))))))
+           (cond ((pair? a*~) (let ((a (car a*~)) (a*~ (cdr a*~)))
+                                (if (address=? a addr)
+                                    (if rec?
+                                        (lambda (renv) (unbox (list-ref (list-ref renv j) i)))
+                                        (lambda (renv) (list-ref (list-ref renv j) i)))
+                                    (find (+ i 1) a*~))))
+                 ((and (not (null? a*~)) (address=? a*~ addr))
+                  (when rec? (error "recursive frame cannot be variadic" cenv.1))
+                  (lambda (renv) (list-tail (list-ref renv j) i)))
+                 (else (loop (+ j 1) cenv)))))))
    (define (cenv-extend      cenv param*~)      (cenv-extend/rec? cenv param*~ #f))
    (define (cenv-extend-rec  cenv param*~)      (cenv-extend/rec? cenv param*~ #t))
    (define (cenv-extend/rec? cenv param*~ rec?) (cons (cons rec? param*~) cenv))

@@ -64,7 +64,7 @@
 (define (P-annotation-add P ann)
   (if ann
       (let ((ann2 (P-annotation P)))
-        (if (eq? ann ann2)
+        (if (equal? ann ann2)
             P
             (let ((parts (vector->list P)))
               (list->vector (cons (car parts) (cons (if ann2 (cons ann ann2) ann) (cddr parts)))))))
