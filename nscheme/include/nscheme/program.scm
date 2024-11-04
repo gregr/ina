@@ -19,7 +19,7 @@
 (define (program-parse-definition* p env stx*.def)
   (let ((env.d (make-env)))
     (program-parse-definition*/env.d p env.d env stx*.def)
-    (env-freeze env.d)))
+    (env-read-only env.d)))
 
 (define (eval-definition* env stx*.def)
   (let* ((p     (make-program))

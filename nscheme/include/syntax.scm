@@ -107,9 +107,9 @@
   ;;
   ;; In order for a better dictionary structure to help, env-conjoin would have to combine
   ;; sub-dictionaries.  But this is only possible if the sub-dictionaries are immutable, which is not
-  ;; the case for definition-style environments until they are frozen.
+  ;; the case for definition-style environments until they are read-only.
   ;;
-  ;; We could have env-conjoin recognize frozen children and combine their dictionaries when possible.
+  ;; We could have env-conjoin recognize read-only children and combine their dictionaries when possible.
 
   (define make-env
     (local
@@ -160,12 +160,12 @@
               ((set!)     (lambda (id x) (set! id=>x (id-dict-set id=>x id x))))
               (else       (error "invalid environment operation" method))))))))
 
-  (define (env-freeze env)
+  (define (env-read-only env)
     (lambda (method)
       (case method
-        ((describe) (list 'freeze (env 'describe)))
+        ((describe) (list 'read-only (env 'describe)))
         ((ref)      (env 'ref))
-        ((set!)     (lambda (id x) (error "set! with frozen environment" id x)))
+        ((set!)     (lambda (id x) (error "set! with read-only environment" id x)))
         (else       (error "invalid environment operation" method)))))
 
   (define (env-unmark env.m m)
@@ -213,9 +213,9 @@
         syntax-provenance syntax-provenance-set syntax-provenance-add
         syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
         identifier? identifier?! identifier=?
-        make-env env-freeze env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!)
+        make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!)
       (list
         syntax-provenance syntax-provenance-set syntax-provenance-add
         syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
         identifier? identifier?! identifier=?
-        make-env env-freeze env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!))))
+        make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!))))

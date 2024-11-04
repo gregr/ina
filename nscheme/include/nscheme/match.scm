@@ -507,4 +507,4 @@
                       (env-set!  env.scope id (vocab-dict-set v=>v vocab.pattern-operator op))
                       (env-bind! env.scope id vocab.pattern-operator op))))
               (map car b*.match-pattern-operator) (map cdr b*.match-pattern-operator))
-    (env-conjoin (env-freeze env.scope) env)))
+    (env-conjoin (env-read-only env.scope) env)))

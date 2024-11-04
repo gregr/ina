@@ -109,4 +109,4 @@
               (map car b*.def) (map cdr b*.def))
     (for-each (lambda (id op) (env-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
-    (env-freeze env)))
+    (env-read-only env)))

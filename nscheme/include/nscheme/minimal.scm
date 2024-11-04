@@ -110,7 +110,7 @@
                               (let ((E.boxed (parse-expression env.unboxed id)))
                                 (env-introduce-boxed! env.boxed id (lambda () E.boxed))))
                             param*)
-                  (parse-body (env-conjoin (env-freeze env.boxed) env.unboxed) stx*.body))))))
+                  (parse-body (env-conjoin (env-read-only env.boxed) env.unboxed) stx*.body))))))
 
 (define (parse-begin-expression env e . e*)
   (let loop ((e e) (e* e*))
@@ -373,4 +373,4 @@
               (map car b*.qqs-and-expr) (map cdr b*.qqs-and-expr))
     (for-each (lambda (id op) (env-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
-    (env-freeze env)))
+    (env-read-only env)))

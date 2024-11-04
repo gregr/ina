@@ -45,7 +45,7 @@
                  (for-each (lambda (id E) (env-bind! env.scope id vocab.expression
                                                      (parse/constant-expression E)))
                            param* E*)
-                 (env-freeze env.scope))
+                 (env-read-only env.scope))
                env))
 
 (define (env-introduce! env stx.id) (env-introduce*! env (list stx.id)))
@@ -71,7 +71,7 @@
 (define (package->env pkg)
   (let ((env (make-env)))
     (env-add-package! env pkg)
-    (env-freeze env)))
+    (env-read-only env)))
 
 (define (package-append* pkg*)   (cons (append* (map car pkg*)) (append* (map cdr pkg*))))
 (define (package-append  . pkg*) (package-append* pkg*))
@@ -328,7 +328,7 @@
 
 (define ($body env ^def)
   (let ((env.d (make-env)))
-    (D->E ($d:end-with-expression (^def env.d (env-conjoin (env-freeze env.d) env))))))
+    (D->E ($d:end-with-expression (^def env.d (env-conjoin (env-read-only env.d) env))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
