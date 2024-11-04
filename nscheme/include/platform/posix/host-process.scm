@@ -1,5 +1,3 @@
-(define (open-pipe) (open-pipe/k raise-io-error values))
-
 (define (host-process-in        p) (p 'in))
 (define (host-process-out       p) (p 'out))
 (define (host-process-err       p) (p 'err))
