@@ -81,19 +81,6 @@
                                       (parse-body env e*)
                                       (loop c*))))))))))))
 
-(define (parse-case1 env e clause . clause*)
-  (apply parse-case env e
-         (map (lambda (c)
-                (let ((x (syntax-unwrap c)))
-                  (unless (pair? x) (raise-parse-error "empty clause" c))
-                  (cons (let ((e.data (car x)))
-                          (if (or (expression-auxiliary? 'else env e.data)
-                                  (expression-auxiliary? '=>   env e.data))
-                              e.data
-                              (list e.data)))
-                        (cdr x))))
-              (cons clause clause*))))
-
 (define (parse-assert env . stx*.test)
   (apply $begin (map (lambda (stx.test)
                        ($unless (parse-expression env stx.test)
@@ -316,7 +303,6 @@
             (cons 'unless         (expression-operator-parser parse-unless       2 #f))
             (cons 'cond           (expression-operator-parser parse-cond         1 #f))
             (cons 'case           (expression-operator-parser parse-case         2 #f))
-            (cons 'case1          (expression-operator-parser parse-case1        2 #f))
             (cons 'assert         (expression-operator-parser parse-assert       1 #f))
             (cons 'apply/values   (expression-operator-parser parse-apply/values 2 2))
             (cons 'case-lambda    (expression-operator-parser parse-case-lambda  0 #f))

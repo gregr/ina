@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  apply/values case-values case case1 let-values assert mlet mdefine interruptible-lambda
+  apply/values case-values case let-values assert mlet mdefine interruptible-lambda
   ;; privileged primitives
   native-signal-handler
   ;; procedure-metadata returns a vector with this shape:
@@ -458,15 +458,6 @@
     ((_ x ((d ...) rhs ...) clause ...) (if (memv x '(d ...))
                                             (let () rhs ...)
                                             (case x clause ...)))))
-
-(define-syntax case1
-  (syntax-rules (else =>)
-    ((_ x)                        (values))
-    ((_ x (else rhs ...))         (let () rhs ...))
-    ((_ x (=> proc))              (proc x))
-    ((_ x (d rhs ...) clause ...) (if (eqv? x 'd)
-                                      (let () rhs ...)
-                                      (case1 x clause ...)))))
 
 ;; WARNING: this is only complete enough to run our bootstrapping process
 (define-syntax let-values

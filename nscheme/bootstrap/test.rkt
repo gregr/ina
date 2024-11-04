@@ -288,32 +288,6 @@
     (else 'other))
   ==> middle
 
-  ! case1
-  (case1 5
-    (2    'a)
-    (5    'b)
-    (8    'c)
-    (else 'd))
-  ==> b
-  (case1 15
-    (2    'a)
-    (5    'b)
-    (8    'c)
-    (else 'd))
-  ==> d
-  (case1 15
-    (2 'a)
-    (5 'b)
-    (8 'c)
-    (=> (lambda (x) (+ x 1))))
-  ==> 16
-  (case1 '(4 5 6)
-    ((1 2 3) 'top)
-    ((4 5 6) 'middle)
-    ((7 8 9) 'bottom)
-    (else 'other))
-  ==> middle
-
   ! lambda
   ((lambda (x y) x) 5 6)                             ==> 5
   ((lambda (x y) y) 5 6)                             ==> 6
