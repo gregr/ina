@@ -1,11 +1,11 @@
-(define (make-rtd identity? name parent final? field* extra)
+(define (make-rtd name parent final? field* extra)
   (when (and parent (rtd-final? parent))
     (error "rtd parent is final" name parent final? field*))
   (let ((ancestor* (let loop ((parent parent) (a* '()))
                      (cond (parent (loop (rtd-parent parent) (cons parent a*)))
                            (else   a*)))))
     (apply vector (+ (if parent (rtd-record-length parent) 0) (vector-length field*))
-           (or identity? (make-mvector 0 0)) name final? field* extra ancestor*)))
+           (make-mvector 0 0) name final? field* extra ancestor*)))
 
 (define rtd-base-length 6)
 (define (rtd-record-length  rtd) (vector-ref    rtd 0))

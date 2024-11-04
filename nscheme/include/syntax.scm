@@ -23,7 +23,7 @@
                    (cond ((null? m*) (cdr m*.inner))
                          (else       (cons m (loop (car m*) (cdr m*)))))))))
 
-   (define rtd.annotated  (make-rtd #f 'syntax:annotated #f #t '#(form provenance) #f))
+   (define rtd.annotated  (make-rtd 'syntax:annotated #f #t '#(form provenance) #f))
    (define annotated?     (record-predicate rtd.annotated))
    (define ann-form       (record-field-name-accessor rtd.annotated 'form))
    (define ann-provenance (record-field-name-accessor rtd.annotated 'provenance))
@@ -31,7 +31,7 @@
    (define (annotated-form       s) (if (annotated? s) (ann-form s) s))
    (define (annotated-provenance s) (and (annotated? s) (ann-provenance s)))
 
-   (define rtd.marked   (make-rtd #f 'syntax:marked #f #t '#(mark* form) #f))
+   (define rtd.marked   (make-rtd 'syntax:marked #f #t '#(mark* form) #f))
    (define marked?      (record-predicate rtd.marked))
    (define marked-mark* (record-field-name-accessor rtd.marked 'mark*))
    (define marked-form  (record-field-name-accessor rtd.marked 'form))
