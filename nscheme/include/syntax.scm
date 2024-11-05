@@ -23,13 +23,13 @@
                    (cond ((null? m*) (cdr m*.inner))
                          (else       (cons m (loop (car m*) (cdr m*)))))))))
 
-   (define rtd.annotated  (make-rtd 'syntax:annotated #f #t '#(form provenance) #f))
-   (define annotated?     (record-predicate rtd.annotated))
-   (define ann-form       (record-field-name-accessor rtd.annotated 'form))
-   (define ann-provenance (record-field-name-accessor rtd.annotated 'provenance))
-   (define (annotated form pv)      ((record-constructor rtd.annotated) form pv))
-   (define (annotated-form       s) (if (annotated? s) (ann-form s) s))
-   (define (annotated-provenance s) (and (annotated? s) (ann-provenance s)))
+   (define rtd.annotated (make-rtd 'syntax:annotated #f #t '#(form note*) #f))
+   (define annotated?    (record-predicate rtd.annotated))
+   (define ann-form      (record-field-name-accessor rtd.annotated 'form))
+   (define ann-note*     (record-field-name-accessor rtd.annotated 'note*))
+   (define (annotated form note*) ((record-constructor rtd.annotated) form note*))
+   (define (annotated-form s) (if (annotated? s) (ann-form s) s))
+   (define (annotated-note* s) (if (annotated? s) (ann-note* s) '()))
 
    (define rtd.marked   (make-rtd 'syntax:marked #f #t '#(mark* form) #f))
    (define marked?      (record-predicate rtd.marked))
@@ -38,7 +38,7 @@
    (define (marked mark* form) (if (null? mark*) form ((record-constructor rtd.marked) mark* form)))
 
    (define (syntax-mark* s) (if (marked? s) (marked-mark* s) '()))
-   (define (syntax-peek  s) (annotated-form (if (marked? s) (marked-form s) s)))
+   (define (syntax-form  s) (annotated-form (if (marked? s) (marked-form s) s)))
    (define (syntax-wrap s m*)
      (if (marked? s)
          (marked (marks-append m* (syntax-mark* s)) (marked-form s))
@@ -51,22 +51,20 @@
             (mark=? (car m*) m)
             (marked (cdr m*) (marked-form id))))))
 
-  (define (syntax-provenance s) (annotated-provenance (if (marked? s) (marked-form s) s)))
-  (define (syntax-provenance-set s pv)
-    (if (eq? pv (syntax-provenance s))
+  (define (syntax-note* s) (annotated-note* (if (marked? s) (marked-form s) s)))
+  (define (syntax-note*-set s note*)
+    (if (eq? (syntax-note* s) note*)
         s
-        (marked (syntax-mark* s) (if pv (annotated (syntax-peek s) pv) (syntax-peek s)))))
-  (define (syntax-provenance-add s pv)
-    (if pv
-        (let ((pv2 (syntax-provenance s)))
-          (if (equal? pv pv2)
-              s
-              (marked (syntax-mark* s) (annotated (syntax-peek s) (if pv2 (cons pv pv2) pv)))))
-        s))
+        (marked (syntax-mark* s)
+                (if (null? note*) (syntax-form s) (annotated (syntax-form s) note*)))))
+  (define (syntax-note*-add s note*)
+    (if (null? note*)
+        s
+        (marked (syntax-mark* s) (annotated (syntax-form s) (append note* (syntax-note* s))))))
 
   (define (syntax-unwrap s)
     (if (marked? s)
-        (let ((d (syntax-peek s)) (m* (syntax-mark* s)))
+        (let ((d (syntax-form s)) (m* (syntax-mark* s)))
           (define (wrap x) (syntax-wrap x m*))
           (cond ((pair?   d) (cons (wrap (car d)) (wrap (cdr d))))
                 ((vector? d) (vector-map wrap d))
@@ -79,24 +77,24 @@
 
   (define (syntax->datum s)
     (let loop ((s s))
-      (let ((x (syntax-peek s)))
+      (let ((x (syntax-form s)))
         (cond ((pair?   x) (cons (loop (car x)) (loop (cdr x))))
               ((vector? x) (vector-map loop x))
               (else        x)))))
 
-  (define (identifier?  s) (symbol? (syntax-peek s)))
+  (define (identifier?  s) (symbol? (syntax-form s)))
   (define (identifier?! s) (unless (identifier? s) (error "not an identifier" s)))
   (define (identifier=? a b)
     (identifier?! a) (identifier?! b)
-    (and (eq? (syntax-peek a) (syntax-peek b))
+    (and (eq? (syntax-form a) (syntax-form b))
          (mark*=? (syntax-mark* a) (syntax-mark* b))))
 
   (define (transcribe op m env stx)
     (let ((result (op (syntax-add-mark stx antimark))))
       (syntax-add-mark
-        (syntax-provenance-add
-          (if (procedure? result) (result (env-unmark env m)) result)
-          (syntax-provenance stx))
+        (let ((result (if (procedure? result) (result (env-unmark env m)) result))
+              (note*  (syntax-note* stx)))
+          (if (null? note*) result (syntax-note*-add result (list (cons 'transcribe note*)))))
         m)))
 
   ;;;;;;;;;;;;;;;;;;;;
@@ -147,10 +145,10 @@
                                  (cdr t))))))
        (define (id-dict-ref id=>x id)
          (identifier?! id)
-         (trie-ref id=>x (syntax-mark* id) (syntax-peek id)))
+         (trie-ref id=>x (syntax-mark* id) (syntax-form id)))
        (define (id-dict-set id=>x id x)
          (identifier?! id)
-         (trie-set id=>x (syntax-mark* id) (syntax-peek id) x)))
+         (trie-set id=>x (syntax-mark* id) (syntax-form id) x)))
       (lambda ()
         (mlet ((id=>x id-dict.empty))
           (lambda (method)
@@ -210,12 +208,12 @@
   (define package.syntax
     (cons
       '(
-        syntax-provenance syntax-provenance-set syntax-provenance-add
+        syntax-note* syntax-note*-set syntax-note*-add
         syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
         identifier? identifier?! identifier=?
         make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!)
       (list
-        syntax-provenance syntax-provenance-set syntax-provenance-add
+        syntax-note* syntax-note*-set syntax-note*-add
         syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
         identifier? identifier?! identifier=?
         make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!))))

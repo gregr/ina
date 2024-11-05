@@ -1,7 +1,7 @@
-(define (make-address name annotation) (vector (mvector) name annotation))
-(define (address-name            addr) (vector-ref addr 1))
-(define (address-annotation      addr) (vector-ref addr 2))
-(define (address=?               a b)  (or (eq? a b) (eq? (vector-ref a 0) (vector-ref b 0))))
+(define (make-address name note*) (vector (mvector) name note*))
+(define (address-name       addr) (vector-ref addr 1))
+(define (address-note*      addr) (vector-ref addr 2))
+(define (address=?           a b) (or (eq? a b) (eq? (vector-ref a 0) (vector-ref b 0))))
 (define (address->local-gensym/default name.default)
   (let ((gensym (make-local-gensym)))
     (lambda (addr)
@@ -11,7 +11,7 @@
 ;; TODO: support for lower-level language integration:
 ;; - E:unchecked-call, E:let with type info, E:case-lambda with type info, etc.
 ;; TODO: we may want to return to the embedded annotation model for simpler pattern matching.
-(define (E:annotated    E ann)          (vector 'E:annotated    E ann))
+(define (E:annotated    E note*)        (vector 'E:annotated    E note*))
 (define (E:quote        v)              (vector 'E:quote        v))
 (define (E:ref          address)        (vector 'E:ref          address))
 (define (E:if           c t f)          (vector 'E:if           c t f))
@@ -31,7 +31,7 @@
 (define (E:case-lambda?          E)     (E-tagged? E 'E:case-lambda))
 (define (E:letrec?               E)     (E-tagged? E 'E:letrec))
 (define (E:annotated-E           E)     (vector-ref E 1))
-(define (E:annotated-annotation  E)     (vector-ref E 2))
+(define (E:annotated-note*       E)     (vector-ref E 2))
 (define (E:quote-value           E)     (vector-ref E 1))
 (define (E:ref-address           E)     (vector-ref E 1))
 (define (E:if-condition          E)     (vector-ref E 1))
@@ -47,14 +47,11 @@
 (define (E:letrec-binding-right* E)     (vector-ref E 2))
 (define (E:letrec-body           E)     (vector-ref E 3))
 
-(define (E-annotation E) (and (E:annotated? E) (E:annotated-annotation E)))
-(define (E-annotation-add E ann)
-  (if ann
-      (let ((ann2 (E-annotation E)))
-        (if ann2
-            (if (equal? ann ann2) E (E:annotated (E:annotated-E E) (cons ann ann2)))
-            (E:annotated E ann)))
-      E))
+(define (E-note* E) (if (E:annotated? E) (E:annotated-note* E) '()))
+(define (E-note*-set E note*)
+  (cond ((eq? (E-note* E) note*) E)
+        ((null? note*)           (E:annotated-E E))
+        (else                    (E:annotated (if (E:annotated? E) (E:annotated-E E) E) note*))))
 
 (define (E-pretty E)
   (define address-pretty address-name)

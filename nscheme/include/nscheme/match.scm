@@ -4,22 +4,22 @@
 
 (define pattern-auxiliary? (auxiliary?/vocab vocab.pattern-auxiliary))
 
-(define P:any                  (vector 'P:any      #f))
-(define P:none                 (vector 'P:none     #f))
-(define (P:var      id)        (vector 'P:var      #f id))
-(define (P:quote    stx.value) (vector 'P:quote    #f stx.value))
-(define (P:?        $?)        (vector 'P:?        #f $?))
-(define (P:app      $proc P)   (vector 'P:app      #f $proc P))
-(define (P:and      P1 P2)     (vector 'P:and      #f P1 P2))
-(define (P:or       P1 P2)     (vector 'P:or       #f P1 P2))
-(define (P:not      P)         (vector 'P:not      #f P))
-(define (P:cons     P1 P2)     (vector 'P:cons     #f P1 P2))
-(define (P:vector   P*)        (vector 'P:vector   #f P*))
-(define (P:ellipsis P)         (vector 'P:ellipsis #f P))
+(define P:any                  (vector 'P:any      '()))
+(define P:none                 (vector 'P:none     '()))
+(define (P:var      id)        (vector 'P:var      '() id))
+(define (P:quote    stx.value) (vector 'P:quote    '() stx.value))
+(define (P:?        $?)        (vector 'P:?        '() $?))
+(define (P:app      $proc P)   (vector 'P:app      '() $proc P))
+(define (P:and      P1 P2)     (vector 'P:and      '() P1 P2))
+(define (P:or       P1 P2)     (vector 'P:or       '() P1 P2))
+(define (P:not      P)         (vector 'P:not      '() P))
+(define (P:cons     P1 P2)     (vector 'P:cons     '() P1 P2))
+(define (P:vector   P*)        (vector 'P:vector   '() P*))
+(define (P:ellipsis P)         (vector 'P:ellipsis '() P))
 (define (P:ellipsis-append P.ellipsis P.suffix length.suffix)
-  (vector 'P:ellipsis-append #f P.ellipsis P.suffix length.suffix))
+  (vector 'P:ellipsis-append '() P.ellipsis P.suffix length.suffix))
 (define (P:ellipsis-vector P*.prefix P.ellipsis P*.suffix)
-  (vector 'P:ellipsis-vector #f P*.prefix P.ellipsis P*.suffix))
+  (vector 'P:ellipsis-vector '() P*.prefix P.ellipsis P*.suffix))
 
 (splicing-local
   ((define (P-tag     P)     (vector-ref P 0))
@@ -60,18 +60,15 @@
 (define (P:ellipsis-vector-ellipsis      p) (vector-ref p 3))
 (define (P:ellipsis-vector-suffix        p) (vector-ref p 4))
 
-(define (P-annotation P) (vector-ref P 1))
-(define (P-annotation-add P ann)
-  (if ann
-      (let ((ann2 (P-annotation P)))
-        (if (equal? ann ann2)
-            P
-            (let ((parts (vector->list P)))
-              (list->vector (cons (car parts) (cons (if ann2 (cons ann ann2) ann) (cddr parts)))))))
-      P))
+(define (P-note* P) (vector-ref P 1))
+(define (P-note*-set P note*)
+  (if (eq? (P-note* P) note*)
+      P
+      (let ((parts (vector->list P)))
+        (list->vector (cons (car parts) (cons note* (cddr parts)))))))
 
-(define ($p:annotated  P ann) (P-annotation-add P ann))
-(define ($p:provenance P stx) ($p:annotated P (syntax-provenance stx)))
+(define ($p:annotate P note*) (if (null? note*) P (P-note*-set P note*)))
+(define ($p:source   P stx)   ($p:annotate P (syntax-note* stx)))
 (define $p:any                P:any)
 (define $p:none               P:none)
 (define ($p:var      id)      (P:var      id))
@@ -115,8 +112,8 @@
     (define (id-set-add     id* id) (cons id id*))
     (define (id-set-member? id* id) (memp (lambda (x) (identifier=? id x)) id*))
     (let loop ((P P) (id* id-set.empty))
-      (let ((ann (P-annotation P)))
-        (define (return P id*) (values ($p:annotated P ann) id*))
+      (let ((note* (P-note* P)))
+        (define (return P id*) (values ($p:annotate P note*) id*))
         (cond
           ((or (P:any? P) (P:none? P) (P:?? P)) (values P id*))
           ((P:var? P)
@@ -126,7 +123,7 @@
                (raise-parse-error "duplicate pattern variable" id))
              (values P (id-set-add id* id))))
           ((P:quote? P) (return (let ((stx.value (P:quote-value-syntax P)))
-                                  ($p:provenance ($$p:quote (syntax->datum stx.value)) stx.value))
+                                  ($p:source ($$p:quote (syntax->datum stx.value)) stx.value))
                                 id*))
           ((P:cons? P) (let ((P.a (P:cons-car P)) (P.d (P:cons-cdr P)))
                          (if (P:ellipsis? P.a)
@@ -201,7 +198,7 @@
                                        (append (P:ellipsis-vector-prefix P)
                                                (P:ellipsis-vector-suffix P))))
         (else                         id*))))
-  (define ((wrap ann ^E) . args) ($annotated (apply ^E args) ann))
+  (define ((wrap note* ^E) . args) ($annotate (apply ^E args) note*))
   (define (($$?   $?)    succeed fail $x env) ($if ($call $? $x) (succeed env) (fail env)))
   (define (($$and ^a ^b) succeed fail $x env) (^a (lambda (env) (^b succeed fail $x env))
                                                   fail $x env))
@@ -213,7 +210,7 @@
     (values
       (let loop ((P P))
         (wrap
-          (P-annotation P)
+          (P-note* P)
           (cond
             ((P:any?  P) (lambda (succeed fail $x env) (succeed env)))
             ((P:none? P) (lambda (succeed fail $x env) (fail    env)))
@@ -331,7 +328,7 @@
       (cond ((null? stx*) P)
             ((pattern-auxiliary? '... env (car stx*))
              (let ((stx* (cdr stx*))
-                   (P    ($p:provenance ($p:ellipsis P) (car stx*))))
+                   (P    ($p:source ($p:ellipsis P) (car stx*))))
                (if (null? stx*)
                    P
                    ($p:cons P (loop (car stx*) (cdr stx*))))))
@@ -359,12 +356,12 @@
           (cond ((null? stx*) (list P))
                 ((pattern-auxiliary? '... env (car stx*))
                  (let ((stx (car stx*)) (stx* (cdr stx*)))
-                   (cons ($p:provenance ($p:ellipsis P) stx)
+                   (cons ($p:source ($p:ellipsis P) stx)
                          (if (null? stx*) '() (loop (car stx*) (cdr stx*))))))
                 (else (cons P (loop (car stx*) (cdr stx*)))))))))
 
 (define (parse-pattern env stx)
-  ($p:provenance
+  ($p:source
     (let ((x (syntax-unwrap stx)))
       (cond
         ((identifier? stx) (let ((op (env-ref^ env stx vocab.pattern)))
@@ -398,7 +395,7 @@
             (cond ((null? stx*) (list P))
                   ((pattern-auxiliary? '... env (car stx*))
                    (let ((stx (car stx*)) (stx* (cdr stx*)))
-                     (cons ($p:provenance ($p:ellipsis P) stx)
+                     (cons ($p:source ($p:ellipsis P) stx)
                            (if (null? stx*) '() (pqq.loop (car stx*) (cdr stx*))))))
                   (else (cons P (pqq.loop (car stx*) (cdr stx*)))))))))
   (define (loop stx.qq level)
@@ -413,7 +410,7 @@
                                            (if (and (pair? qq.d)
                                                     (pattern-auxiliary? '... env (car qq.d)))
                                                ($p:cons
-                                                 ($p:provenance ($p:ellipsis $p:a) (car qq.d))
+                                                 ($p:source ($p:ellipsis $p:a) (car qq.d))
                                                  (loop (cdr qq.d) level))
                                                ($p:cons $p:a (loop (cdr qq) level)))))
             ((vector?    qq)             ($p:vector (pqq* (vector->list qq) level)))
@@ -459,7 +456,7 @@
                                                                 ($call $fail)))
                                                           (else (raise-parse-error "not a guard" (car body)))))))
                                               (lambda ($succeed)
-                                                ($provenance
+                                                ($source
                                                   (^pattern
                                                     (lambda (env) ($call* $succeed (parse-expression* env id*.P)))
                                                     (lambda (_) ($call $fail))
