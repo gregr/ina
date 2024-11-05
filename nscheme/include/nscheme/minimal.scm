@@ -287,11 +287,19 @@
   (let ((env (make-env))
         (b*.expr-aux '(=> else))
         (b*.def
-          (list (cons 'define        (definition-operator-parser parse-define        2 #f))
-                (cons 'mdefine       (definition-operator-parser parse-mdefine       2 2))
-                (cons 'define-values (definition-operator-parser parse-define-values 2 #f))
-                (cons 'define-alias  (definition-operator-parser parse-define-alias  2 2))
-                (cons 'introduce     (definition-operator-parser parse-introduce     0 #f))))
+          (list
+            (cons 'define                  (definition-operator-parser parse-define           2 #f))
+            (cons 'mdefine                 (definition-operator-parser parse-mdefine          2 2))
+            (cons 'define-values           (definition-operator-parser parse-define-values    2 #f))
+            (cons 'define-alias            (definition-operator-parser parse-define-alias     2 2))
+            (cons 'introduce               (definition-operator-parser parse-introduce        0 #f))
+            (cons 'splicing-local          (definition-operator-parser parse-splicing-local   2 #f))
+            (cons 'splicing-let            (definition-operator-parser parse-splicing-let     2 #f))
+            (cons 'splicing-let*           (definition-operator-parser parse-splicing-let*    2 #f))
+            (cons 'splicing-letrec*        (definition-operator-parser parse-splicing-letrec* 2 #f))
+            (cons 'splicing-let-values     (definition-operator-parser parse-splicing-let-values     2 #f))
+            (cons 'splicing-let*-values    (definition-operator-parser parse-splicing-let*-values    2 #f))
+            (cons 'splicing-letrec*-values (definition-operator-parser parse-splicing-letrec*-values 2 #f))))
         (b*.expr
           (list
             (cons 'quote          (expression-operator-parser parse-quote        1 1))
@@ -329,28 +337,7 @@
                   (expression-operator-parser parse-expression            1 1))
             (list 'begin
                   (definition-operator-parser parse-begin-definition 0 #f)
-                  (expression-operator-parser parse-begin-expression 1 #f))
-            (list 'splicing-local
-                  (definition-operator-parser parse-splicing-local 2 #f)
-                  (splicing-expression-operator-parser $splicing-local))
-            (list 'splicing-let
-                  (definition-operator-parser parse-splicing-let 2 #f)
-                  (splicing-expression-operator-parser $splicing-let))
-            (list 'splicing-let*
-                  (definition-operator-parser parse-splicing-let* 2 #f)
-                  (splicing-expression-operator-parser $splicing-let*))
-            (list 'splicing-letrec*
-                  (definition-operator-parser parse-splicing-letrec* 2 #f)
-                  (splicing-expression-operator-parser $splicing-letrec*))
-            (list 'splicing-let-values
-                  (definition-operator-parser parse-splicing-let-values 2 #f)
-                  (splicing-expression-operator-parser $splicing-let-values))
-            (list 'splicing-let*-values
-                  (definition-operator-parser parse-splicing-let*-values 2 #f)
-                  (splicing-expression-operator-parser $splicing-let*-values))
-            (list 'splicing-letrec*-values
-                  (definition-operator-parser parse-splicing-letrec*-values 2 #f)
-                  (splicing-expression-operator-parser $splicing-letrec*-values)))))
+                  (expression-operator-parser parse-begin-expression 1 #f)))))
     (for-each (lambda (id) (env-bind! env id vocab.expression-auxiliary (syntax->datum id)))
               b*.expr-aux)
     (for-each (lambda (id op) (env-bind! env id vocab.definition-operator op))

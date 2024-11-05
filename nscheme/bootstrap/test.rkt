@@ -511,42 +511,28 @@
              ((y 4))
              4)))
     x)
-  ==> 4
+  ==> error:parse
   (let ((x (begin
              (splicing-let
                ((y 44))
                44))))
     x)
-  ==> 44
+  ==> error:parse
   (let ((x (splicing-local
              ((define y 5))
              y)))
     x)
-  ==> 5
+  ==> error:parse
   (let ((x (begin
              (splicing-local
                ((define y 55))
                y))))
-    x)
-  ==> 55
-  (let ((x (begin
-             (splicing-let
-               ((y 6))
-               (define z y)
-               z))))
     x)
   ==> error:parse
   (let ((x (begin
              (splicing-local
                ((define y 7))
                y))))
-    x)
-  ==> 7
-  (let ((x (begin
-             (splicing-local
-               ((define y 7))
-               (define z y)
-               z))))
     x)
   ==> error:parse
 
