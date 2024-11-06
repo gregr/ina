@@ -2,9 +2,12 @@
 ;;; Parsing definitions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (parse-body env stx.body)
-  (let ((stx* (syntax->list stx.body)))
-    (define (^def env.d env) ($d:source (parse-begin-definition* env.d env stx*) stx.body))
-    ($source ($body env ^def) stx.body)))
+  ($source (let ((env.d (make-env)))
+             (D->E ($d:end/expression
+                     (parse-begin-definition* env.d (env-conjoin (env-read-only env.d) env)
+                                              (syntax->list stx.body))
+                     stx.body)))
+           stx.body))
 
 (define (parse-begin-definition* env.d env stx*)
   (apply $d:begin (map (lambda (stx) (parse-definition env.d env stx)) stx*)))

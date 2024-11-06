@@ -249,21 +249,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (splicing-local
-  ((define (D:source           D stx) (vector 'D:source     D stx))
-   (define (D:begin               D*) (vector 'D:begin      D*))
-   (define (D:definition id env ^rhs) (vector 'D:definition id env ^rhs))
-   (define (D:expression          ^E) (vector 'D:expression ^E))
-   (define (D:end-with-expression  D) (vector 'D:end-with-expression D))
+  ((define (D:begin          D*)          (vector 'D:begin          D*))
+   (define (D:definition     id env ^rhs) (vector 'D:definition     id env ^rhs))
+   (define (D:expression     ^E)          (vector 'D:expression     ^E))
+   (define (D:end/expression D stx)       (vector 'D:end/expression D stx))
 
    (define (D-tag                   D) (vector-ref D 0))
-   (define (D:source-D              D) (vector-ref D 1))
-   (define (D:source-syntax         D) (vector-ref D 2))
    (define (D:begin-D*              D) (vector-ref D 1))
    (define (D:definition-id         D) (vector-ref D 1))
    (define (D:definition-env        D) (vector-ref D 2))
    (define (D:definition-^rhs       D) (vector-ref D 3))
    (define (D:expression-^E         D) (vector-ref D 1))
-   (define (D:end-with-expression-D D) (vector-ref D 1))
+   (define (D:end/expression-D      D) (vector-ref D 1))
+   (define (D:end/expression-syntax D) (vector-ref D 2))
    (define (D-tagged? D tag) (eq? (D-tag D) tag))
 
    (define (env-set-variable! env id E)
@@ -287,14 +285,12 @@
                 (let ((^E   ^E.current)
                       (^E.D (D:expression-^E D)))
                   (set! ^E.current (if ^E (lambda () ($begin (^E) (^E.D))) ^E.D))))
-               ((D-tagged? D 'D:source) (loop! (D:source-D D)))
-               ((D-tagged? D 'D:end-with-expression)
-                (let ((D (D:end-with-expression-D D)))
-                  (loop! D)
-                  (unless ^E.current
-                    (raise-parse-error
-                      (if (null? rdef*) "no expression" "no expression after definitions")
-                      (and (D-tagged? D 'D:source) (D:source-syntax D))))))
+               ((D-tagged? D 'D:end/expression)
+                (loop! (D:end/expression-D D))
+                (unless ^E.current
+                  (raise-parse-error
+                    (if (null? rdef*) "no expression" "no expression after definitions")
+                    (D:end/expression-syntax D))))
                (else (error "not a definition" D))))
        (let ((def* (reverse rdef*)) (^E (or ^E.current $values)))
          (if (null? rdef*)
@@ -320,15 +316,10 @@
                               (values (map (lambda (^rhs) (^rhs)) ^rhs*) (^E))))))))))
   (define (D->E         D) (D-compile D #f))
   (define (D->E/publish D) (D-compile D #t))
-  (define ($d:source          D stx) (D:source D stx))
-  (define ($d:begin            . D*) (D:begin D*))
-  (define ($d:expression         ^E) (D:expression ^E))
+  (define ($d:begin . D*)            (D:begin D*))
+  (define ($d:expression ^E)         (D:expression ^E))
   (define ($d:define env.d lhs ^rhs) (env-introduce! env.d lhs) (D:definition lhs env.d ^rhs))
-  (define ($d:end-with-expression D) (D:end-with-expression D)))
-
-(define ($body env ^def)
-  (let ((env.d (make-env)))
-    (D->E ($d:end-with-expression (^def env.d (env-conjoin (env-read-only env.d) env))))))
+  (define ($d:end/expression D stx)  (D:end/expression D stx)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
