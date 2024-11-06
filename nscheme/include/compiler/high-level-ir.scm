@@ -46,12 +46,7 @@
 (define (E:letrec-binding-left*  E)     (vector-ref E 1))
 (define (E:letrec-binding-right* E)     (vector-ref E 2))
 (define (E:letrec-body           E)     (vector-ref E 3))
-
-(define (E-note* E) (if (E:annotated? E) (E:annotated-note* E) '()))
-(define (E-note*-set E note*)
-  (cond ((eq? (E-note* E) note*) E)
-        ((null? note*)           (E:annotated-E E))
-        (else                    (E:annotated (if (E:annotated? E) (E:annotated-E E) E) note*))))
+(define (E-note*                 E)     (if (E:annotated? E) (E:annotated-note* E) '()))
 
 (define (E-pretty E)
   (define address-pretty address-name)

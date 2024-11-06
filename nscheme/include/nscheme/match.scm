@@ -60,14 +60,13 @@
 (define (P:ellipsis-vector-ellipsis      p) (vector-ref p 3))
 (define (P:ellipsis-vector-suffix        p) (vector-ref p 4))
 
-(define (P-note* P) (vector-ref P 1))
-(define (P-note*-set P note*)
-  (if (eq? (P-note* P) note*)
-      P
-      (let ((parts (vector->list P)))
-        (list->vector (cons (car parts) (cons note* (cddr parts)))))))
+(define (P-note*     P)       (vector-ref P 1))
+(define (P-note*-set P note*) (let ((parts (vector->list P)))
+                                (list->vector (cons (car parts) (cons note* (cddr parts))))))
 
-(define ($p:annotate P note*) (if (null? note*) P (P-note*-set P note*)))
+(define ($p:annotate P note*) (if (or (null? note*) (not (null? (P-note* P))))
+                                  P
+                                  (P-note*-set P note*)))
 (define ($p:source   P stx)   ($p:annotate P (syntax-note* stx)))
 (define $p:any                P:any)
 (define $p:none               P:none)

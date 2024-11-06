@@ -1,4 +1,4 @@
-(define ($annotate     E note*)       (if (null? note*) E (E-note*-set E note*)))
+(define ($annotate     E note*)       (if (or (null? note*) (E:annotated? E)) E (E:annotated E note*)))
 (define ($quote        value)         (E:quote          value))
 (define ($ref          addr)          (E:ref            addr))
 (define ($if           c t f)         (E:if             c t f))
