@@ -497,15 +497,20 @@
   ==> 1
   (let ()
     (splicing-let
+      ((y 1)))
+    y)
+  ==> error:parse
+  (let ()
+    (splicing-let
       ((y 2))
-      (define z y)
-      z))
+      (define z y))
+    z)
   ==> 2
   (let ()
     (splicing-local
       ((define y 3))
-      (define z y)
-      z))
+      (define z y))
+    z)
   ==> 3
   (let ((x (splicing-let
              ((y 4))
@@ -614,6 +619,23 @@
     (set! x (+ x 1))
     x)
   ==> 201
+  (let ()
+    (splicing-mlet ((x 200))
+      x))
+  ==> 200
+  (let ()
+    (splicing-mlet ((x 200))
+      (set! x (+ x 1))
+      x))
+  ==> 201
+  (let ()
+    (splicing-mlet ((y 200))
+      (set! y (+ y 1))
+      (mdefine x y))
+    (set! x (+ x 1))
+    (define z x)
+    z)
+  ==> 202
 
   ! quasiquote
   `11                                 ==> 11
