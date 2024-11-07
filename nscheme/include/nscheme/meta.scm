@@ -15,18 +15,21 @@
 ;(define vocab.formula 'formula)
 ;(define vocab.term    'term)
 
-(define (parse-begin-meta-definition env.d env stx)
-  (let* ((D (parse-begin-definition* env.d env (syntax->list stx)))
+(define (parse-begin-meta-definition* env.d env stx*)
+  (let* ((D (parse-begin-definition* env.d env stx*))
          (E (apply/values $quote-values (E-eval (D->E/publish D)))))
     ($d:expression (lambda () E))))
+(define (parse-begin-meta-definition env.d env . stx*)
+  (parse-begin-meta-definition* env.d env stx*))
 
-(define (parse-begin-meta-expression env stx)
+(define (parse-begin-meta-expression* env stx*)
   (apply/values $quote-values
-                (E-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx))))
+                (E-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx*))))
+(define (parse-begin-meta-expression env . stx*) (parse-begin-meta-expression* env stx*))
 
 (define (parse-current-environment env) ($quote env))
 
-(define (parse-set-vocabulary-value env.d env id.lhs . stx*.vocab&rhs)
+(define (parse-set-vocabulary-value! env.d env id.lhs . stx*.vocab&rhs)
   (parse-identifier id.lhs)
   (let ((vocab=>v (env-ref env.d id.lhs)))
     (unless vocab=>v (raise-parse-error "cannot set unbound identifier" id.lhs))
@@ -37,7 +40,7 @@
 
 (define (parse-define-vocabulary-value env.d env id.lhs . stx*.vocab&rhs)
   (env-introduce! env.d id.lhs)
-  (apply parse-set-vocabulary-value env.d env id.lhs stx*.vocab&rhs))
+  (apply parse-set-vocabulary-value! env.d env id.lhs stx*.vocab&rhs))
 
 (define (parse-define-syntax env.d env.op stx.lhs . stx*.rhs)
   (define (finish id.lhs ^rhs)
@@ -89,8 +92,8 @@
   (let ((env (make-env))
         (b*.def
           (list
-            (cons 'set-vocabulary-value
-                  (definition-operator-parser parse-set-vocabulary-value 3 #f))
+            (cons 'set-vocabulary-value!
+                  (definition-operator-parser parse-set-vocabulary-value! 3 #f))
             (cons 'define-vocabulary-value
                   (definition-operator-parser parse-define-vocabulary-value 3 #f))
             (cons 'define-syntax (definition-operator-parser parse-define-syntax 2 #f))))
@@ -100,7 +103,9 @@
                   (expression-operator-parser parse-current-environment 0 0))))
         (b*.def-and-expr
           (list
-            (list 'begin-meta parse-begin-meta-definition parse-begin-meta-expression))))
+            (list 'begin-meta
+                  (definition-operator-parser parse-begin-meta-definition 0 #f)
+                  (expression-operator-parser parse-begin-meta-expression 1 #f)))))
     (for-each (lambda (id op.def op.expr) (env-bind! env id
                                                      vocab.definition-operator op.def
                                                      vocab.expression-operator op.expr))

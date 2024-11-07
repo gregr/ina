@@ -215,10 +215,11 @@
                             param*)
                   (parse-body (env-conjoin (env-read-only env.boxed) env.unboxed) stx*.body))))))
 
-(define (parse-begin-expression env e . e*)
+(define (parse-begin-expression* env e e*)
   (let loop ((e e) (e* e*))
     (cond ((null? e*) (parse-expression env e))
           (else       ($begin (parse-expression env e) (loop (car e*) (cdr e*)))))))
+(define (parse-begin-expression env e . e*) (parse-begin-expression* env e e*))
 
 (define ((parse-quasiquote-X vocab tag.enter tag.escape tag.escape-splicing parse-quote-X) env stx)
   (define (finish  result stx.original) (or result (parse-quote-X env stx.original)))
