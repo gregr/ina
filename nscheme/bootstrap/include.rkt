@@ -23,6 +23,7 @@
 (include "../include/base/port.scm")
 (include "../include/base/time.scm")
 (include "../include/base/io.scm")
+(include "../include/base/text.scm")
 
 (include "../include/text/terminal-control.scm")
 
@@ -80,7 +81,9 @@
      "../include/base/port.scm"
      "../include/base/time.scm"
      "../include/base/io.scm"
+     "../include/base/text.scm"
      )))
+
 (define def*.text
   (file-name*->stx*
    '("../include/text/terminal-control.scm"
