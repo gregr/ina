@@ -4,9 +4,7 @@
 (define (address=?           a b) (or (eq? a b) (eq? (vector-ref a 0) (vector-ref b 0))))
 (define (address->local-gensym/default name.default)
   (let ((gensym (make-local-gensym)))
-    (lambda (addr)
-      (let ((name (address-name addr)))
-        (gensym (symbol->string (if name name name.default)))))))
+    (lambda (addr) (gensym (or (address-name addr) name.default)))))
 
 ;; TODO: support for lower-level language integration:
 ;; - E:unchecked-call, E:let with type info, E:case-lambda with type info, etc.

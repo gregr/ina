@@ -305,6 +305,10 @@
 
 (define (make-local-gensym)
   (mlet ((count -1))
-    (lambda (str)
+    (lambda (name)
       (set! count (+ count 1))
-      (string->symbol (string-append str "." (number->string count))))))
+      (let ((name (cond ((bytevector? name) name)
+                        ((string?     name) (string->utf8 name))
+                        ((symbol?     name) (string->utf8 (symbol->string name)))
+                        (else               (error "not a symbol, string, or bytevector" name)))))
+        (string->symbol (utf8->string (bytevector-append name #"." (number->utf8 count))))))))
