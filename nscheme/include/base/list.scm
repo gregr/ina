@@ -68,6 +68,27 @@
                                  (else        (cons (cons (car kvs) (cadr kvs))
                                                     (plist->alist (cddr kvs))))))
 
+(define (atree-merge a b merge)
+  (let loop ((a a) (b b))
+    (cond ((pair? a) (if (null? b)
+                         a
+                         (append
+                           (map (lambda (kv.b)
+                                  (let* ((key (car kv.b)) (value (cdr kv.b)) (kv.a (assoc key a)))
+                                    (if kv.a (cons key (loop (cdr kv.a) value)) kv.b)))
+                                b)
+                           (filter (lambda (kv) (not (assoc (car kv) b))) a))))
+          ((null? a) b)
+          (else      (merge a b)))))
+(define (atree-replace a b) (atree-merge a b (lambda (_ b) b)))
+
+(define (atree-ref/default a key* default)
+  (let loop ((a a) (key* key*))
+    (if (null? key*)
+        a
+        (let ((kv (assoc (car key*) a)))
+          (if kv (loop (cdr kv) (cdr key*)) default)))))
+
 (define (iota n)
   (nonnegative-integer?! n)
   (let loop ((i 0))

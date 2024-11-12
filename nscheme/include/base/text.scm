@@ -64,6 +64,7 @@
 ;;       - below: #f or nonpositive integer
 ;;         - use scientific notation when (< 0 (abs value) (expt radix below))
 ;;         - #f is infinity
+(define style.empty '())
 (define style.default
   '((layout
       (margin   . #f)
@@ -92,17 +93,7 @@
                              (fraction? . #f)
                              (above     . #f)
                              (below     . -3))))))
+(define style.pretty         '((layout (width . 80) (compact? . #f))))
+(define style.pretty-compact '((layout (width . 80) (compact? . #t))))
 
-(define (style-override style style.override)
-  (let loop ((current* style) (override* style.override))
-    (append
-      (map (lambda (override)
-             (let* ((key (car override)) (value (cdr override)) (current (assq key current*)))
-               ;; assumes leaf option values are never pairs or null
-               (if (and current (pair? (cdr current)))
-                   (cond ((pair? value) (cons key (loop (cdr current) value)))
-                         ((null? value) current)
-                         (else          override))
-                   override)))
-           override*)
-      (filter (lambda (kv) (not (assq (car kv) override*))) current*))))
+(define (style-override style style.override) (atree-replace style style.override))
