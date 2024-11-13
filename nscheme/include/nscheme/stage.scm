@@ -10,7 +10,7 @@
   ((define (param->address stx)
      (let ((x (syntax-unwrap stx)))
        (unless (or (symbol? x) (not x)) (error "not a formal parameter" stx))
-       (make-address x (syntax-note* stx)))))
+       (make-address x stx))))
   (define ($case-lambda param*~* ^body*)
     (let* ((addr*~* (map (lambda (param) (improper-list-map param->address param)) param*~*))
            (body*   (map (lambda (addr*~ ^body)
