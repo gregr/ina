@@ -1,7 +1,7 @@
 (define (make-address name note*) (vector (mvector) name note*))
 (define (address-name       addr) (vector-ref addr 1))
 (define (address-note*      addr) (vector-ref addr 2))
-(define (address=?           a b) (or (eq? a b) (eq? (vector-ref a 0) (vector-ref b 0))))
+(define (address=?           a b) (eq? (vector-ref a 0) (vector-ref b 0)))
 (define (address->local-gensym/default name.default)
   (let ((gensym (make-local-gensym)))
     (lambda (addr) (gensym (or (address-name addr) name.default)))))
