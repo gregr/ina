@@ -137,7 +137,7 @@
 ;;; Expression construction ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define ($source E stx) ($annotate E (syntax-note* stx)))
+(define ($source E stx) ($annotate E stx))
 (splicing-local
   ((define (convert-body env param*~ env->body)
      (lambda arg* (env->body (env-extend env (improper-list->list param*~) arg*)))))

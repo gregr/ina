@@ -9,7 +9,7 @@
 ;; TODO: support for lower-level language integration:
 ;; - E:unchecked-call, E:let with type info, E:case-lambda with type info, etc.
 ;; TODO: we may want to return to the embedded annotation model for simpler pattern matching.
-(define (E:annotated    E note*)        (vector 'E:annotated    E note*))
+(define (E:annotated    E note)         (vector 'E:annotated    E note))
 (define (E:quote        v)              (vector 'E:quote        v))
 (define (E:ref          address)        (vector 'E:ref          address))
 (define (E:if           c t f)          (vector 'E:if           c t f))
@@ -29,7 +29,7 @@
 (define (E:case-lambda?          E)     (E-tagged? E 'E:case-lambda))
 (define (E:letrec?               E)     (E-tagged? E 'E:letrec))
 (define (E:annotated-E           E)     (vector-ref E 1))
-(define (E:annotated-note*       E)     (vector-ref E 2))
+(define (E:annotated-note        E)     (vector-ref E 2))
 (define (E:quote-value           E)     (vector-ref E 1))
 (define (E:ref-address           E)     (vector-ref E 1))
 (define (E:if-condition          E)     (vector-ref E 1))
@@ -44,7 +44,7 @@
 (define (E:letrec-binding-left*  E)     (vector-ref E 1))
 (define (E:letrec-binding-right* E)     (vector-ref E 2))
 (define (E:letrec-body           E)     (vector-ref E 3))
-(define (E-note*                 E)     (if (E:annotated? E) (E:annotated-note* E) '()))
+(define (E-note                  E)     (and (E:annotated? E) (E:annotated-note E)))
 
 (define (E-pretty E)
   (define address-pretty address-name)

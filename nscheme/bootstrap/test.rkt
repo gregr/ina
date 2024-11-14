@@ -1469,8 +1469,17 @@
         (map (lambda (r*) (map (lambda (r) (list (restart-name r) (restart-description r))) r*))
              (reverse restart-binding*))))))
   ==>
-  (#(E:call #(E:quote (REPLACED: foo)) (#(E:quote 1) #(E:quote 2)))
-   #(E:call #(E:quote (REPLACED: foo)) (#(E:quote (REPLACED: bar)) #(E:quote (REPLACED: baz))))
+  (#(E:annotated
+     #(E:call
+       #(E:annotated #(E:quote (REPLACED: foo)) foo)
+       (#(E:annotated #(E:quote 1) 1) #(E:annotated #(E:quote 2) 2)))
+     (foo 1 2))
+   #(E:annotated
+     #(E:call
+       #(E:annotated #(E:quote (REPLACED: foo)) foo)
+       (#(E:annotated #(E:quote (REPLACED: bar)) bar)
+        #(E:annotated #(E:quote (REPLACED: baz)) baz)))
+     (foo bar baz))
    final-alternative
    (foo foo bar baz)
    (#(not-ok) #(also-not-ok) #(still-not-ok))
