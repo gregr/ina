@@ -37,4 +37,4 @@
                              (let ((id* (map address->fresh-id lhs*)))
                                (let-values (((rhs* body) (apply ^rhs*&body id*)))
                                  (list 'letrec (map list id* rhs*) body)))))
-      (else                (error "not an expression" E)))))
+      (else                (error "not an E" E)))))

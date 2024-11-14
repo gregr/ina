@@ -17,9 +17,9 @@
 (define (P:vector   P*)        (vector 'P:vector   #f P*))
 (define (P:ellipsis P)         (vector 'P:ellipsis #f P))
 (define (P:ellipsis-append P.ellipsis P.suffix length.suffix)
-  (vector 'P:ellipsis-append '() P.ellipsis P.suffix length.suffix))
+  (vector 'P:ellipsis-append #f P.ellipsis P.suffix length.suffix))
 (define (P:ellipsis-vector P*.prefix P.ellipsis P*.suffix)
-  (vector 'P:ellipsis-vector '() P*.prefix P.ellipsis P*.suffix))
+  (vector 'P:ellipsis-vector #f P*.prefix P.ellipsis P*.suffix))
 
 (splicing-local
   ((define (P-tag     P)     (vector-ref P 0))
@@ -63,6 +63,7 @@
 (define (P-note     P)      (vector-ref P 1))
 (define (P-annotate P note) (let ((parts (vector->list P)))
                               (list->vector (cons (car parts) (cons note (cddr parts))))))
+(define (P-source P)        (P-note P))
 
 (define ($p:annotate P note)  (P-annotate P note))
 (define ($p:source   P stx)   ($p:annotate P stx))
@@ -125,7 +126,8 @@
                  (let ((len (let len+check ((P P.d) (len 0))
                               (if (P:cons? P)
                                   (if (P:ellipsis? (P:cons-car P))
-                                      (raise-parse-error "too many ellipses" (P:cons-car P))
+                                      (raise-parse-error "too many ellipses"
+                                                         (P-source (P:cons-car P)))
                                       (len+check (P:cons-cdr P) (+ len 1)))
                                   len))))
                    (let*-values (((P.a id*) (loop P.a id*))
@@ -138,7 +140,7 @@
          (let* ((P*  (P:vector-element* P))
                 (Pe* (filter P:ellipsis? P*)))
            (cond ((pair? Pe*)
-                  (when (pair? (cdr Pe*)) (raise-parse-error "too many ellipses" P))
+                  (when (pair? (cdr Pe*)) (raise-parse-error "too many ellipses" (P-source P)))
                   (let vloop ((P (car P*)) (P* (cdr P*)) (prefix* '()) (id* id*))
                     (if (P:ellipsis? P)
                         (let-values (((P id*) (loop (P:ellipsis-inner P) id*)))
@@ -174,7 +176,7 @@
                               (foldl (lambda (id id*) (id-set-add id* id)) id* id*.l))))
         ((P:not? P) (let-values (((P.inner _) (loop (P:not-inner P) #f)))
                       (return ($p:not P.inner) id*)))
-        (else       (raise-parse-error "unsupported pattern" P)))))
+        (else       (error "not a linear P" P)))))
   (define (linear-pattern-variables P)
     (let loop ((P P) (id* '()))
       (cond
@@ -188,7 +190,7 @@
                                        (loop (P:ellipsis-vector-ellipsis P) id*)
                                        (append (P:ellipsis-vector-prefix P)
                                                (P:ellipsis-vector-suffix P))))
-        (else                         id*))))
+        (else                   id*))))
   (define ((wrap note ^E) . args) ($annotate (apply ^E args) note))
   (define (($$?   $?)    succeed fail $x env) ($if ($call $? $x) (succeed env) (fail env)))
   (define (($$and ^a ^b) succeed fail $x env) (^a (lambda (env) (^b succeed fail $x env))
@@ -201,7 +203,7 @@
     (values
       (let loop ((P P))
         (wrap
-          (P-note P)
+          (P-source P)
           (cond
             ((P:any?  P) (lambda (succeed fail $x env) (succeed env)))
             ((P:none? P) (lambda (succeed fail $x env) (fail    env)))
@@ -303,7 +305,7 @@
                                         (fail env)
                                         (^pre succeed.pre fail $x env)))))
                         (fail env))))))
-            (else (raise-parse-error "unsupported pattern" P)))))
+            (else (error "not a compilable linear P" P)))))
       id*)))
 
 (define (parse-pattern-any    _ __)                $p:any)

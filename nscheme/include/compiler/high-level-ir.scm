@@ -6,9 +6,6 @@
   (let ((gensym (make-local-gensym)))
     (lambda (addr) (gensym (or (address-name addr) name.default)))))
 
-;; TODO: support for lower-level language integration:
-;; - E:unchecked-call, E:let with type info, E:case-lambda with type info, etc.
-;; TODO: we may want to return to the embedded annotation model for simpler pattern matching.
 (define (E:quote        note v)              (vector 'E:quote        note v))
 (define (E:ref          note address)        (vector 'E:ref          note address))
 (define (E:if           note c t f)          (vector 'E:if           note c t f))
@@ -64,7 +61,7 @@
       ((E:letrec?       E) (list 'letrec (map list (map address-pretty (E:letrec-binding-left* E))
                                               (map loop (E:letrec-binding-right* E)))
                                  (loop (E:letrec-body E))))
-      (else                (error "not an expression" E)))))
+      (else                (error "not an E" E)))))
 
 ;;; NOTE: this evaluator is only intended for testing until the compiler is finished.
 (splicing-local
@@ -141,5 +138,5 @@
                              (let ((renv (renv-extend renv loc*)))
                                (for-each (lambda (loc arg) (set-box! loc (arg renv))) loc* arg*))
                              (body (renv-extend renv (map unbox loc*)))))))
-         (else (error "not an expression" E))))))
+         (else (error "not an E" E))))))
   (define (E-eval E) ((E-stage E cenv.empty) renv.empty)))
