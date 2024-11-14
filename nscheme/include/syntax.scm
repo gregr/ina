@@ -23,14 +23,14 @@
                    (cond ((null? m*) (cdr m*.inner))
                          (else       (cons m (loop (car m*) (cdr m*)))))))))
 
-   (define rtd.annotated (make-rtd 'syntax:annotated #f #t '#(form note*) #f))
+   (define rtd.annotated (make-rtd 'syntax:annotated #f #t '#(form note) #f))
    (define annotated?    (record-predicate rtd.annotated))
    (define ann-form      (record-field-name-accessor rtd.annotated 'form))
-   (define ann-note*     (record-field-name-accessor rtd.annotated 'note*))
-   (define (annotated form note*)
-     (if (null? note*) form ((record-constructor rtd.annotated) form note*)))
-   (define (annotated-form  s) (if (annotated? s) (ann-form s) s))
-   (define (annotated-note* s) (if (annotated? s) (ann-note* s) '()))
+   (define ann-note      (record-field-name-accessor rtd.annotated 'note))
+   (define (annotated form note)
+     (if (null? note) form ((record-constructor rtd.annotated) form note)))
+   (define (annotated-form s) (if (annotated? s) (ann-form s) s))
+   (define (annotated-note s) (if (annotated? s) (ann-note s) '()))
 
    (define rtd.marked   (make-rtd 'syntax:marked #f #t '#(mark* form) #f))
    (define marked?      (record-predicate rtd.marked))
@@ -51,9 +51,9 @@
      (let ((m* (syntax-mark* id)))
        (and (pair? m*) (mark=? (car m*) m) (marked (cdr m*) (marked-form id))))))
 
-  (define (syntax-note*     s)       (annotated-note* (if (marked? s) (marked-form s) s)))
-  (define (syntax-note*-set s note*) (marked (syntax-mark* s) (annotated (syntax-form s) note*)))
-  (define (syntax-note*-add s note*) (syntax-note*-set s (atree-replace (syntax-note* s) note*)))
+  (define (syntax-note     s)       (annotated-note (if (marked? s) (marked-form s) s)))
+  (define (syntax-note-set s note) (marked (syntax-mark* s) (annotated (syntax-form s) note)))
+  (define (syntax-note-add s note) (syntax-note-set s (atree-replace (syntax-note s) note)))
 
   (define (syntax-unwrap s)
     (if (marked? s)
@@ -88,8 +88,8 @@
     (let ((result (op (syntax-add-mark stx antimark))))
       (syntax-add-mark
         (let ((result (if (procedure? result) (result (env-unmark env m)) result))
-              (note*  (syntax-note* stx)))
-          (if (null? note*) result (syntax-note*-add result (list (cons 'transcribe note*)))))
+              (note   (syntax-note stx)))
+          (if (null? note) result (syntax-note-add result (list (cons 'transcribe note)))))
         m)))
 
   ;;;;;;;;;;;;;;;;;;;;
@@ -203,12 +203,12 @@
   (define package.syntax
     (cons
       '(
-        syntax-note* syntax-note*-set syntax-note*-add
+        syntax-note syntax-note-set syntax-note-add
         syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
         identifier? identifier?! identifier=?
         make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!)
       (list
-        syntax-note* syntax-note*-set syntax-note*-add
+        syntax-note syntax-note-set syntax-note-add
         syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
         identifier? identifier?! identifier=?
         make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!))))
