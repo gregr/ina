@@ -86,11 +86,7 @@
 
   (define (transcribe op m env stx)
     (let ((result (op (syntax-add-mark stx antimark))))
-      (syntax-add-mark
-        (let ((result (if (procedure? result) (result (env-unmark env m)) result))
-              (note   (syntax-note stx)))
-          (if (null? note) result (syntax-note-add result (list (cons 'transcribe note)))))
-        m)))
+      (syntax-add-mark (if (procedure? result) (result (env-unmark env m)) result) m)))
 
   ;;;;;;;;;;;;;;;;;;;;
   ;;; Environments ;;;
