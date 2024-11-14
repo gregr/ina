@@ -9,7 +9,6 @@
   (let loop/env ((E E) (cenv global-addr=>id))
     (define (loop E) (loop/env E cenv))
     (cond
-      ((E:annotated?    E) (loop (E:annotated-E E)))
       ((E:quote?        E) (list 'quote (E:quote-value E)))
       ((E:ref?          E) (cenv-ref cenv (E:ref-address E)))
       ((E:if?           E) (list 'if (loop (E:if-condition E)) (loop (E:if-consequent E))
