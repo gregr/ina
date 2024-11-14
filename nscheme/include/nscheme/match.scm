@@ -64,7 +64,7 @@
 (define (P-annotate P note) (let ((parts (vector->list P)))
                               (list->vector (cons (car parts) (cons note (cddr parts))))))
 
-(define ($p:annotate P note)  (if (P-note P) P (P-annotate P note)))
+(define ($p:annotate P note)  (P-annotate P note))
 (define ($p:source   P stx)   ($p:annotate P stx))
 (define $p:any                P:any)
 (define $p:none               P:none)
