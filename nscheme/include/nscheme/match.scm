@@ -40,7 +40,7 @@
   (define (P:ellipsis-vector? P) (P-tagged? P 'P:ellipsis-vector)))
 
 (define (P:var-identifier                p) (vector-ref p 2))
-(define (P:quote-value-syntax            p) (vector-ref p 2))
+(define (P:quote-value                   p) (vector-ref p 2))
 (define (P:?-predicate                   p) (vector-ref p 2))
 (define (P:app-procedure                 p) (vector-ref p 2))
 (define (P:app-inner                     p) (vector-ref p 3))
@@ -117,9 +117,7 @@
                         (when (id-set-member? id* id)
                           (raise-parse-error "duplicate pattern variable" id))
                         (values P (id-set-add id* id))))
-        ((P:quote? P) (return (let ((stx.value (P:quote-value-syntax P)))
-                                ($p:source ($$p:quote (syntax->datum stx.value)) stx.value))
-                              id*))
+        ((P:quote? P) (return ($$p:quote (P:quote-value P)) id*))
         ((P:cons? P)
          (let ((P.a (P:cons-car P)) (P.d (P:cons-cdr P)))
            (if (P:ellipsis? P.a)
@@ -310,7 +308,7 @@
 
 (define (parse-pattern-any    _ __)                $p:any)
 (define (parse-pattern-var    _ stx.id)            ($p:var stx.id))
-(define (parse-pattern-quote  _ stx.value)         ($p:quote stx.value))
+(define (parse-pattern-quote  _ stx.value)         ($p:quote (syntax->datum stx.value)))
 (define (parse-pattern-vector env . stx*)          ($p:vector (parse-pattern* env stx*)))
 (define (parse-pattern-list   env . stx*)          (apply $p:list (parse-pattern* env stx*)))
 (define (parse-pattern-cons   env stx.car stx.cdr) ($p:cons (parse-pattern env stx.car)
