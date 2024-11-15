@@ -61,6 +61,9 @@
   racket/flonum racket/match racket/path racket/pretty racket/os racket/tcp racket/udp racket/vector
   (prefix-in rkt: racket/base))
 
+(read-decimal-as-inexact #f)
+(pretty-print-exact-as-decimal #t)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Control transfer and interrupts ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
