@@ -968,7 +968,7 @@
   (let ((host-env (current-environment-variables)))
     (map (lambda (name) (cons name (environment-variables-ref host-env name)))
          (environment-variables-names host-env))))
-(current-subprocess-custodian-mode #f)
+(current-subprocess-custodian-mode 'kill)
 (define (raw-host-process/k in out err path arg* env kf k)
   (define (fd->rkt-port fd name mode)
     (and fd (unless (exact-nonnegative-integer? fd) (panic #f "not a file descriptor" fd name))
