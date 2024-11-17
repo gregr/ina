@@ -348,10 +348,11 @@
                             (let loop ()
                               (let* ((req         (channel-get ch.request))
                                      (ch.reply    (car req))
-                                     (method&arg* (cdr req)))
-                                (current-panic-handler
-                                  (lambda x* (channel-put ch.reply (lambda () (apply panic x*))))
-                                  (lambda () (channel-put ch.reply (apply port method&arg*))))
+                                     (method&arg* (cdr req))
+                                     (result      (current-panic-handler
+                                                    (lambda x* (lambda () (apply panic x*)))
+                                                    (lambda () (apply port method&arg*)))))
+                                (thread (lambda () (channel-put ch.reply result)))
                                 (loop)))))))
        (lambda req (let ((ch.reply (make-channel)))
                      (thread-resume t (current-thread))
