@@ -341,7 +341,7 @@
       arg*)))
 
 (splicing-local
-  ((define (thread-safe-port-request port)
+  ((define (make-thread-safe-port-requester port)
      (let* ((ch.request (make-channel))
             (t          (thread/suspend-to-kill
                           (lambda ()
@@ -359,9 +359,9 @@
                      ((channel-get ch.reply)))))))
 
   (define (thread-safe-iport port)
-    (let ((description (list '(type  . thread-safe-iport)
+    (let ((description (list '(type . thread-safe-iport)
                              (cons 'sub-port (port-description port))))
-          (request     (thread-safe-port-request port)))
+          (request     (make-thread-safe-port-requester port)))
       (lambda (method . arg*)
         (apply
           (case method
@@ -399,9 +399,9 @@
           arg*))))
 
   (define (thread-safe-oport port)
-    (let ((description (list '(type  . thread-safe-oport)
+    (let ((description (list '(type . thread-safe-oport)
                              (cons 'sub-port (port-description port))))
-          (request     (thread-safe-port-request port)))
+          (request     (make-thread-safe-port-requester port)))
       (lambda (method . arg*)
         (apply
           (case method
