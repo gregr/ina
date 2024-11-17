@@ -5,7 +5,7 @@
       current-thread-group make-thread-group current-thread
       thread thread/suspend-to-kill thread-resume thread-wait thread-dead-evt
       sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
-      make-channel channel-get channel-put channel-get-evt channel-put-evt
+      make-channel channel-get channel-put channel-put-evt
       make-semaphore semaphore-post semaphore-wait
       current-time/type sleep-seconds-nanoseconds)
     (list
@@ -13,6 +13,6 @@
       current-thread-group make-thread-group current-thread
       thread thread/suspend-to-kill thread-resume thread-wait thread-dead-evt
       sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
-      make-channel channel-get channel-put channel-get-evt channel-put-evt
+      make-channel channel-get channel-put channel-put-evt
       make-semaphore semaphore-post semaphore-wait
       current-time/type sleep-seconds-nanoseconds)))
