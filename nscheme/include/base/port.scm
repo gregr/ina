@@ -341,9 +341,9 @@
       arg*)))
 
 (splicing-local
-  ((define (make-thread-safe-port-requester port)
+  ((define (make-thread-safe-port-requester description port)
      (let* ((ch.request (make-channel))
-            (t          (thread/suspend-to-kill
+            (t          (thread
                           (lambda ()
                             (let loop ()
                               (let* ((req         (channel-get ch.request))
@@ -353,16 +353,17 @@
                                                     (lambda x* (lambda () (apply panic x*)))
                                                     (lambda () (apply port method&arg*)))))
                                 (thread (lambda () (channel-put ch.reply result)))
-                                (loop)))))))
+                                (loop))))))
+            (dead       (handle-evt (thread-dead-evt t)
+                                    (lambda (_) (error "dead thread-safe-port" description)))))
        (lambda req (let ((ch.reply (make-channel)))
-                     (thread-resume t (current-thread))
-                     (channel-put ch.request (cons ch.reply req))
-                     ((channel-get ch.reply)))))))
+                     (sync (channel-put-evt ch.request (cons ch.reply req)) dead)
+                     ((sync ch.reply dead)))))))
 
   (define (thread-safe-iport port)
-    (let ((description (list '(type . thread-safe-iport)
-                             (cons 'sub-port (port-description port))))
-          (request     (make-thread-safe-port-requester port)))
+    (let* ((description (list '(type . thread-safe-iport)
+                              (cons 'sub-port (port-description port))))
+           (request     (make-thread-safe-port-requester description port)))
       (lambda (method . arg*)
         (apply
           (case method
@@ -400,9 +401,9 @@
           arg*))))
 
   (define (thread-safe-oport port)
-    (let ((description (list '(type . thread-safe-oport)
-                             (cons 'sub-port (port-description port))))
-          (request     (make-thread-safe-port-requester port)))
+    (let* ((description (list '(type . thread-safe-oport)
+                              (cons 'sub-port (port-description port))))
+           (request     (make-thread-safe-port-requester description port)))
       (lambda (method . arg*)
         (apply
           (case method

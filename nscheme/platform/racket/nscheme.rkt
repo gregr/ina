@@ -29,8 +29,7 @@
   standard-input-port standard-output-port standard-error-port
 
   make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
-  current-thread-group make-thread-group current-thread
-  thread thread/suspend-to-kill thread-resume thread-wait thread-dead-evt
+  current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
   sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
   make-channel channel-get channel-put channel-put-evt
   make-semaphore semaphore-post semaphore-wait
@@ -88,8 +87,6 @@
     ((new-value thunk) (parameterize ((rkt-param new-value)) (thunk)))))
 (define current-custodian    (rkt-parameter->parameter rkt:current-custodian))
 (define current-thread-group (rkt-parameter->parameter rkt:current-thread-group))
-
-(define (thread-resume t benefactor) (rkt:thread-resume t benefactor))
 
 (define-syntax-rule (define-global-parameter name default)
   (define name
