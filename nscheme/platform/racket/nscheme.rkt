@@ -89,6 +89,7 @@
 (define current-custodian    (rkt-parameter->parameter rkt:current-custodian))
 (define current-thread-group (rkt-parameter->parameter rkt:current-thread-group))
 
+(define (thread-resume t benefactor) (rkt:thread-resume t benefactor))
 
 (define-syntax-rule (define-global-parameter name default)
   (define name
