@@ -49,7 +49,6 @@
                                       (lambda ()
                                         (p 'wait)
                                         (custodian-shutdown-all cust)
-                                        (thread-wait t.in)
                                         (oport-close/k in.p handle-internal-error values))))))
                               in.p))))
             (k (if (null? fuse*)

@@ -11,9 +11,7 @@
 
 (define (with-escape on-escape proc)
   (let* ((ch     (make-channel))
-         (escape (lambda x*
-                   (channel-put ch (lambda () (apply on-escape x*)))
-                   (thread-wait (current-thread)))))
+         (escape (lambda x* (channel-put ch (lambda () (apply on-escape x*))) (sync never-evt))))
     ((with-local-custodian
        (lambda ()
          (thread (lambda () (let-values ((x* (proc escape)))

@@ -1,5 +1,5 @@
 (splicing-local
-  ((define current-coroutine-receive (make-parameter (lambda () (thread-wait (current-thread))))))
+  ((define current-coroutine-receive (make-parameter (lambda () (sync never-evt)))))
   (define (make-coroutine proc)
     (let* ((ch.in (make-channel))
            (t     (thread/suspend-to-kill
