@@ -240,9 +240,7 @@
         ((bv radix) (go bv radix))))))
 
 (define (string->utf8 s) (string->bytevector s))
-(define (utf8->string bv)
-  (unless (utf8? bv) (error "not UTF-8 encoded" bv))
-  (bytevector->string bv))
+(define (utf8->string bv) (utf8?! bv) (bytevector->string bv))
 
 (define (number->string . x*) (utf8->string (apply number->utf8 x*)))
 (define (string->number s . option*) (apply utf8->number (string->utf8 s) option*))
