@@ -25,7 +25,7 @@
                              (or (< #x7ff c #xd800) (< #xdfff c)))
                            (loop (+ i 3))))))
               ((= (bitwise-and b0 #b11111000) #b11110000)
-               (and (< b0 #xb11110101) (< (+ i 3) end)
+               (and (< (+ i 3) end)
                     (let ((b1 (bytevector-ref bv (+ i 1)))
                           (b2 (bytevector-ref bv (+ i 2)))
                           (b3 (bytevector-ref bv (+ i 3))))
