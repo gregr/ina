@@ -1,10 +1,11 @@
 (define (list->bytevector x*) (apply bytevector x*))
 
-(define (bytevector->list x)
-  (let ((len (bytevector-length x)))
+(define (bytevector-take x n)
+  (let ((len (min (bytevector-length x) n)))
     (let loop ((i 0))
-      (cond ((= i len) '())
-            (else      (cons (bytevector-ref x i) (loop (+ i 1))))))))
+      (if (< i len) (cons (bytevector-ref x i) (loop (+ i 1))) '()))))
+
+(define (bytevector->list x) (bytevector-take x (bytevector-length x)))
 
 (define (bytevector-append* x*)
   (let ((mbv (make-mbytevector
