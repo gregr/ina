@@ -14,6 +14,7 @@
 (include "../include/base/vector.scm")
 (include "../include/base/mbytevector.scm")
 (include "../include/base/bytevector.scm")
+(include "../include/base/unicode.scm")
 (include "../include/base/string.scm")
 (include "../include/base/record.scm")
 (include "../include/base/exception.scm")
@@ -72,6 +73,7 @@
      "../include/base/vector.scm"
      "../include/base/mbytevector.scm"
      "../include/base/bytevector.scm"
+     "../include/base/unicode.scm"
      "../include/base/string.scm"
      "../include/base/record.scm"
      "../include/base/exception.scm"
