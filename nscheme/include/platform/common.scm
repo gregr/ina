@@ -11,9 +11,8 @@
       bytevector bytevector-length bytevector-ref
       make-mbytevector mbytevector->bytevector mbytevector-slice
       mbytevector-length mbytevector-ref mbytevector-set!
-      bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
-      bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
-      numerator denominator = <= >= < > + - * /)
+      bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
+      integer-floor-divmod numerator denominator = <= >= < > + - * /)
     (list
       panic apply values
       eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
@@ -25,6 +24,5 @@
       bytevector bytevector-length bytevector-ref
       make-mbytevector mbytevector->bytevector mbytevector-slice
       mbytevector-length mbytevector-ref mbytevector-set!
-      bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
-      bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
-      numerator denominator = <= >= < > + - * /)))
+      bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
+      integer-floor-divmod numerator denominator = <= >= < > + - * /)))

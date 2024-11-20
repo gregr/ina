@@ -60,7 +60,7 @@
   (unless (integer? p) (error "not an integer" p))
   (let ((n (let loop ((b b) (p (abs p)))
              (cond ((< 1 p)
-                    (let ((n (loop (* b b) (bitwise-arithmetic-shift-right p 1))))
+                    (let ((n (loop (* b b) (bitwise-asr p 1))))
                       (if (= (bitwise-and p 1) 1)
                           (* n b)
                           n)))

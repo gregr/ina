@@ -45,9 +45,8 @@
   bytevector bytevector-length bytevector-ref
   make-mbytevector mbytevector->bytevector mbytevector-slice
   mbytevector-length mbytevector-ref mbytevector-set!
-  bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
-  bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
-  numerator denominator = <= >= < > + - * /
+  bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
+  integer-floor-divmod numerator denominator = <= >= < > + - * /
 
   ;f32->u32 u32->f32 f64->u64 u64->f64
   ;f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
@@ -298,9 +297,9 @@
 (define (f64* a b) (assert (f64? a) (f64? b)) (fl* a b))
 (define (f64/ a b) (assert (f64? a) (f64? b)) (fl/ a b))
 
-(define (bitwise-arithmetic-shift-left  n k) (rkt:arithmetic-shift n    k))
-(define (bitwise-arithmetic-shift-right n k) (rkt:arithmetic-shift n (- k)))
-(define (bitwise-length                 n)   (integer-length n))
+(define (bitwise-asl n k)  (rkt:arithmetic-shift n    k))
+(define (bitwise-asr n k)  (rkt:arithmetic-shift n (- k)))
+(define (bitwise-length n) (integer-length n))
 
 (define (integer-floor-divmod dividend divisor)
   (assert (integer? dividend) (integer? divisor))
@@ -434,9 +433,9 @@
   bytevector bytevector-length bytevector-ref
   make-mbytevector mbytevector->bytevector mbytevector-slice
   mbytevector-length mbytevector-ref mbytevector-set!
-  bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
-  bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
-  numerator denominator = <= >= < > + - * /
+  bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
+  integer-floor-divmod numerator denominator = <= >= < > + - * /
+
   f32->u32 u32->f32 f64->u64 u64->f64
   f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
   f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
