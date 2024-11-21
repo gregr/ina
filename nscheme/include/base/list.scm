@@ -82,12 +82,15 @@
           (else      (merge a b)))))
 (define (atree-replace a b) (atree-merge a b (lambda (_ b) b)))
 
-(define (atree-ref/default a key* default)
+(define (atree-ref/k a key* kf k)
   (let loop ((a a) (key* key*))
     (if (null? key*)
-        a
+        (k a)
         (let ((kv (assoc (car key*) a)))
-          (if kv (loop (cdr kv) (cdr key*)) default)))))
+          (if kv (loop (cdr kv) (cdr key*)) (kf))))))
+
+(define (atree-ref/default a key* default)
+  (atree-ref/k a key* (lambda () default) (lambda (v) v)))
 
 (define (iota n)
   (nonnegative-integer?! n)
