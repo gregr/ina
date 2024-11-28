@@ -75,6 +75,19 @@
         (set! separate? #t)))))
 (define (rereader:layout l) (rereader:layout/transform l (lambda (type datum text) text)))
 
+(define (rereader:layout/sgr l sgr.parent sgr.prefix sgr.dot sgr.bracket datum->sgr)
+  (rereader:layout/transform l (lambda (type datum text)
+                                 (bytevector-append
+                                   (case type
+                                     ((atom)          (datum->sgr datum))
+                                     ((prefix)        sgr.prefix)
+                                     ((dot)           sgr.dot)
+                                     ((left-bracket)  sgr.bracket)
+                                     ((right-bracket) sgr.bracket)
+                                     (else (error "not a rereader:layout/transform type" type)))
+                                   text
+                                   sgr.parent))))
+
 ;;;;;;;;;;;;;;;;
 ;;; Notation ;;;
 ;;;;;;;;;;;;;;;;
@@ -244,6 +257,37 @@
 ;                  (length-prefix? . #t)
 ;                  (bytevector-numeric? . #t)))
 ;   (rereader:layout (layout:simple (printer:port standard-output-port)))
+;   '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
+;  (oport-write-byte standard-output-port 10)
+;  (notate (rereader:layout/sgr (layout:simple (printer:port standard-output-port))
+;                               #"\e[0m"
+;                               #"\e[33;5m"
+;                               #"\e[31;5m"
+;                               #"\e[32m"
+;                               (lambda (datum)
+;                                 (cond ((symbol? datum)  #"\e[34m")
+;                                       ((number? datum)  #"\e[35m")
+;                                       ((boolean? datum) #"\e[33m")
+;                                       ((null? datum)    #"\e[32m")
+;                                       (else             #"\e[36m"))))
+;          '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
+;  (oport-write-byte standard-output-port 10)
+;  ((make-notate '((abbreviate-reader-macro? . #t)
+;                  (abbreviate-pair? . #f)
+;                  (bracket . #"[")
+;                  (length-prefix? . #t)
+;                  (bytevector-numeric? . #t)))
+;   (rereader:layout/sgr (layout:simple (printer:port standard-output-port))
+;                        #"\e[0m"
+;                        #"\e[33;5m"
+;                        #"\e[31;5m"
+;                        #"\e[32m"
+;                        (lambda (datum)
+;                          (cond ((symbol? datum)  #"\e[34m")
+;                                ((number? datum)  #"\e[35m")
+;                                ((boolean? datum) #"\e[33m")
+;                                ((null? datum)    #"\e[32m")
+;                                (else             #"\e[36m"))))
 ;   '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
 ;  (oport-write-byte standard-output-port 10)
 ;  )
