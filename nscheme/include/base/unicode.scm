@@ -50,7 +50,7 @@
                                       ((= (bitwise-and b0 #b11110000) #b11100000) 3)
                                       ((= (bitwise-and b0 #b11111000) #b11110000) 4)
                                       (else (error "not a utf8 starting byte" bv i b0))))))
-(define (utf8-count bv)
+(define (utf8-length bv)
   (let ((len (bytevector-length bv)))
     (let loop ((i 0) (count 0))
       (if (< i len) (loop (utf8-next bv i) (+ count 1)) count))))
