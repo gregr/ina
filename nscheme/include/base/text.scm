@@ -232,3 +232,18 @@
           ((procedure? x)   (atom #"#<procedure>"   x))
           (else             (atom #"#<unknown>"     x)))))))
 (define notate (make-notate notation.empty))
+
+;; TODO: move this example
+;(begin
+;  (notate (rereader:layout (layout:simple (printer:port standard-output-port)))
+;          '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
+;  (oport-write-byte standard-output-port 10)
+;  ((make-notate '((abbreviate-reader-macro? . #t)
+;                  (abbreviate-pair? . #f)
+;                  (bracket . #"[")
+;                  (length-prefix? . #t)
+;                  (bytevector-numeric? . #t)))
+;   (rereader:layout (layout:simple (printer:port standard-output-port)))
+;   '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
+;  (oport-write-byte standard-output-port 10)
+;  )
