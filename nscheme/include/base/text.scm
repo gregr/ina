@@ -47,7 +47,10 @@
 ;;; more operations than the reader interface, replacing type parameters, and making shape
 ;;; parameters unnecessary.
 ;;; While the reader interface includes a parameter for unstructured source location information
-;;; in all of its operations, the rereader interface replaces this with a text parameter.
+;;; in all of its operations, the rereader interface replaces this with a pair of text parameters.
+;;; The first text parameter contains the original, unadorned notation.  The second text parameter
+;;; is the same notation, but it may have been decorated with additional styling or markup to
+;;; improve the way it is displayed.
 ;;; - reader interface:
 ;;;   - (atom          location datum)
 ;;;   - (prefix        location type)
@@ -59,44 +62,42 @@
 ;;;   - (right-bracket location shape)
 (define (make-rereader atom prefix dot left-bracket right-bracket)
   (vector atom prefix dot left-bracket right-bracket))
-(define (rereader-atom          r text datum) ((vector-ref r 0) text datum))
-(define (rereader-prefix        r text datum) ((vector-ref r 1) text datum))
-(define (rereader-dot           r text)       ((vector-ref r 2) text))
-(define (rereader-left-bracket  r text datum) ((vector-ref r 3) text datum))
-(define (rereader-right-bracket r text)       ((vector-ref r 4) text))
+(define (rereader-atom          r text text.display datum) ((vector-ref r 0) text text.display datum))
+(define (rereader-prefix        r text text.display datum) ((vector-ref r 1) text text.display datum))
+(define (rereader-dot           r text text.display)       ((vector-ref r 2) text text.display))
+(define (rereader-left-bracket  r text text.display datum) ((vector-ref r 3) text text.display datum))
+(define (rereader-right-bracket r text text.display)       ((vector-ref r 4) text text.display))
 
-(define (rereader:layout/transform l transform)
+(define (rereader/sgr r sgr.reset sgr.prefix sgr.dot sgr.bracket atom->sgr)
+  (define (decorate text sgr) (bytevector-append sgr text sgr.reset))
+  (make-rereader
+    (lambda (t text.d x) (rereader-atom          r t (decorate text.d (atom->sgr x)) x))
+    (lambda (t text.d x) (rereader-prefix        r t (decorate text.d sgr.prefix)    x))
+    (lambda (t text.d)   (rereader-dot           r t (decorate text.d sgr.dot)))
+    (lambda (t text.d x) (rereader-left-bracket  r t (decorate text.d sgr.bracket)   x))
+    (lambda (t text.d)   (rereader-right-bracket r t (decorate text.d sgr.bracket)))))
+
+(define (rereader:layout l)
   (mlet ((separate? #f))
     (define (separate) (when separate? (layout-separate l)))
-    (define (text-place type datum t) (layout-place l t (transform type datum t)))
+    (define (place t t.d) (layout-place l t t.d))
     (make-rereader
-      (lambda (text datum) (separate) (text-place 'atom   datum text) (set! separate? #t))
-      (lambda (text datum) (separate) (text-place 'prefix datum text) (set! separate? #f))
-      (lambda (text)       (separate) (text-place 'dot    #f    text) (set! separate? #t))
-      (lambda (text datum)
+      (lambda (text text.display datum) (separate) (place text text.display) (set! separate? #t))
+      (lambda (text text.display datum) (separate) (place text text.display) (set! separate? #f))
+      (lambda (text text.display)       (separate) (place text text.display) (set! separate? #t))
+      (lambda (text text.display datum)
         (separate)
         (layout-begin-group l)
-        (layout-place l text (transform 'left-bracket datum text))
+        (place text text.display)
         (layout-indent l 0)
         (set! separate? #f))
-      (lambda (text)
-        (text-place 'right-bracket #f text)
+      (lambda (text text.display)
+        (place text text.display)
         (layout-end-group l)
         (set! separate? #t)))))
-(define (rereader:layout l) (rereader:layout/transform l (lambda (type datum text) text)))
 
-(define (rereader:layout/sgr l sgr.parent sgr.prefix sgr.dot sgr.bracket datum->sgr)
-  (rereader:layout/transform l (lambda (type datum text)
-                                 (bytevector-append
-                                   (case type
-                                     ((atom)          (datum->sgr datum))
-                                     ((prefix)        sgr.prefix)
-                                     ((dot)           sgr.dot)
-                                     ((left-bracket)  sgr.bracket)
-                                     ((right-bracket) sgr.bracket)
-                                     (else (error "not a rereader:layout/transform type" type)))
-                                   text
-                                   sgr.parent))))
+(define (rereader:layout/sgr l sgr.reset sgr.prefix sgr.dot sgr.bracket datum->sgr)
+  (rereader/sgr (rereader:layout l) sgr.reset sgr.prefix sgr.dot sgr.bracket datum->sgr))
 
 ;;;;;;;;;;;;;;;;
 ;;; Notation ;;;
@@ -162,11 +163,12 @@
          (text.null                (bytevector-append text.left-bracket text.right-bracket)))
     (lambda (rereader x)
       (let notate ((x x))
-        (define (atom         text datum) (rereader-atom          rereader text datum))
-        (define (prefix       text datum) (rereader-prefix        rereader text datum))
-        (define (dot)                     (rereader-dot           rereader #"."))
-        (define (left-bracket text datum) (rereader-left-bracket  rereader text datum))
-        (define (right-bracket)           (rereader-right-bracket rereader text.right-bracket))
+        (define (atom         text datum) (rereader-atom          rereader text text datum))
+        (define (prefix       text datum) (rereader-prefix        rereader text text datum))
+        (define (dot)                     (rereader-dot           rereader #"." #"."))
+        (define (left-bracket text datum) (rereader-left-bracket  rereader text text datum))
+        (define (right-bracket)           (rereader-right-bracket rereader text.right-bracket
+                                                                  text.right-bracket))
         (cond
           ((null? x)  (atom text.null x))
           ((not x)    (atom #"#f"     x))
