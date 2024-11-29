@@ -1,7 +1,11 @@
 ;;;;;;;;;;;;;;;;
 ;;; Printing ;;;
 ;;;;;;;;;;;;;;;;
-
+;;; To interoperate safely with printer targets that perform compositing, calls to printer-print
+;;; must emit text horizontally in a predictable manner.  This means that text passed to
+;;; printer-print must not contain control codes or markup that change vertical position or that
+;;; nonlocally transform text or other ambient state.  Vertical spacing should be requested by
+;;; calling printer-newline.
 (define (make-printer print newline) (vector print newline))
 (define (printer-print   p text) ((vector-ref p 0) text))
 (define (printer-newline p)      ((vector-ref p 1)))
@@ -13,20 +17,25 @@
 ;;;;;;;;;;;;;;
 ;;; Layout ;;;
 ;;;;;;;;;;;;;;
-
-(define (make-layout place begin-group end-group separate)
-  (vector place begin-group end-group separate))
+(define (make-layout place separate begin-group end-group indent horizontal vertical)
+  (vector place separate begin-group end-group indent horizontal vertical))
 (define (layout-place       l width text) ((vector-ref l 0) width text))
-(define (layout-begin-group l indent)     ((vector-ref l 1) indent))
-(define (layout-end-group   l)            ((vector-ref l 2)))
-(define (layout-separate    l)            ((vector-ref l 3)))
+(define (layout-separate    l)            ((vector-ref l 1)))
+(define (layout-begin-group l)            ((vector-ref l 2)))
+(define (layout-end-group   l)            ((vector-ref l 3)))
+(define (layout-indent      l offset)     ((vector-ref l 4) offset))
+(define (layout-horizontal  l)            ((vector-ref l 5)))
+(define (layout-vertical    l)            ((vector-ref l 6)))
 
-(define (layout:simple printer)
+(define (layout:single-line printer)
   (make-layout
     (lambda (width text) (printer-print printer text))
-    (lambda (indent)     (values))
+    (lambda ()           (printer-print printer #" "))
     (lambda ()           (values))
-    (lambda ()           (printer-print printer #" "))))
+    (lambda ()           (values))
+    (lambda (offset)     (values))
+    (lambda ()           (values))
+    (lambda ()           (values))))
 
 ;;;;;;;;;;;;;;;;;
 ;;; Rereading ;;;
@@ -64,11 +73,12 @@
       (lambda (text datum) (separate) (text-place 'atom   datum text) (set! separate? #t))
       (lambda (text datum) (separate) (text-place 'prefix datum text) (set! separate? #f))
       (lambda (text)       (separate) (text-place 'dot    #f    text) (set! separate? #t))
-      (lambda (text datum) (let ((len (utf8-length text)))
-                             (separate)
-                             (layout-begin-group l len)
-                             (layout-place       l len (transform 'left-bracket datum text))
-                             (set! separate? #f)))
+      (lambda (text datum)
+        (separate)
+        (layout-begin-group l)
+        (layout-place l (utf8-length text) (transform 'left-bracket datum text))
+        (layout-indent l 0)
+        (set! separate? #f))
       (lambda (text)
         (text-place 'right-bracket #f text)
         (layout-end-group l)
@@ -248,7 +258,7 @@
 
 ;; TODO: move this example
 ;(begin
-;  (notate (rereader:layout (layout:simple (printer:port standard-output-port)))
+;  (notate (rereader:layout (layout:single-line (printer:port standard-output-port)))
 ;          '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
 ;  (oport-write-byte standard-output-port 10)
 ;  ((make-notate '((abbreviate-reader-macro? . #t)
@@ -256,10 +266,10 @@
 ;                  (bracket . #"[")
 ;                  (length-prefix? . #t)
 ;                  (bytevector-numeric? . #t)))
-;   (rereader:layout (layout:simple (printer:port standard-output-port)))
+;   (rereader:layout (layout:single-line (printer:port standard-output-port)))
 ;   '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
 ;  (oport-write-byte standard-output-port 10)
-;  (notate (rereader:layout/sgr (layout:simple (printer:port standard-output-port))
+;  (notate (rereader:layout/sgr (layout:single-line (printer:port standard-output-port))
 ;                               #"\e[0m"
 ;                               #"\e[33;5m"
 ;                               #"\e[31;5m"
@@ -277,7 +287,7 @@
 ;                  (bracket . #"[")
 ;                  (length-prefix? . #t)
 ;                  (bytevector-numeric? . #t)))
-;   (rereader:layout/sgr (layout:simple (printer:port standard-output-port))
+;   (rereader:layout/sgr (layout:single-line (printer:port standard-output-port))
 ;                        #"\e[0m"
 ;                        #"\e[33;5m"
 ;                        #"\e[31;5m"
