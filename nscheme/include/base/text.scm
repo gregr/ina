@@ -17,6 +17,21 @@
 ;;;;;;;;;;;;;;
 ;;; Layout ;;;
 ;;;;;;;;;;;;;;
+;;; Layout commands express preferences, not guarantees.  The layout policy is responsible for
+;;; determining when and how preferences are realized.
+;;; - The layout-indent layout-horizontal and layout-vertical commands specify preferences that are
+;;;   specific to the current group.  This means the layout-end-group command will re-establish the
+;;;   parent group preferences.
+;;; - The layout-indent command sets the indentation column to the current placement position within
+;;;   the current group.  This means that if the next placement span would begin at column C, then
+;;;   the indentation column is set to (+ C offset).  The indentation column is used as the starting
+;;;   position whenever the layout policy decides to add vertical spacing.  The initial indentation
+;;;   column is 0, and each new group will begin with its indentation column set to the location
+;;;   of its first placement.
+;;; - The layout-horizontal and layout-vertical commands indicate the preferred direction to move in
+;;;   when layout-separate chooses to introduce spacing.  The layout policy is allowed to completely
+;;;   ignore this preference.  The initial preference is horizontal, and each new group will also
+;;;   begin with a horizontal preference.
 (define (make-layout place separate begin-group end-group indent horizontal vertical)
   (vector place separate begin-group end-group indent horizontal vertical))
 (define (layout-place       l text text.display) ((vector-ref l 0) text text.display))
