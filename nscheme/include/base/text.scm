@@ -1,3 +1,5 @@
+;;; Text values are assumed to be UTF-8-encoded.
+
 ;;;;;;;;;;;;;;;;
 ;;; Printing ;;;
 ;;;;;;;;;;;;;;;;
@@ -52,21 +54,21 @@
     (lambda ()                  (values))
     (lambda ()                  (values))))
 
-;;;;;;;;;;;;;;;;;
-;;; Rereading ;;;
-;;;;;;;;;;;;;;;;;
-;;; A rereader processes a stream of tokens coming from a structured data source.
+;;;;;;;;;;;;;;
+;;; Writer ;;;
+;;;;;;;;;;;;;;
+;;; A writer processes a stream of tokens coming from a structured data source.
 ;;; This is slightly different from a reader, which processes a stream of tokens coming from an
 ;;; unstructured data source, such as text.
-;;; The rereader interface benefits from the structured source by including a datum parameter in
+;;; The writer interface benefits from the structured source by including a datum parameter in
 ;;; more operations than the reader interface, replacing type parameters, and making shape
 ;;; parameters unnecessary.
 ;;; While the reader interface includes a parameter for unstructured source location information
-;;; in all of its operations, the rereader interface replaces this with a pair of text parameters.
+;;; in all of its operations, the writer interface replaces this with a pair of text parameters.
 ;;; The first text parameter contains the original, unadorned notation.  The second text parameter
 ;;; is the same notation, but it may have been decorated with additional styling or markup to
 ;;; improve the way it is displayed.
-;;; - reader interface:
+;;; - reader interface for comparison:
 ;;;   - (atom          location datum)
 ;;;   - (prefix        location type)
 ;;;     - type is the symbol that was abbreviated: quote quasiquote unquote etc.
@@ -75,28 +77,31 @@
 ;;;     - type is one of: list vector bytevector
 ;;;     - shape is one of: round square curly
 ;;;   - (right-bracket location shape)
-(define (make-rereader atom prefix dot left-bracket right-bracket)
+;;;   - (datum-comment location)
+;;;   - (eof           location)
+;;;   - (error         location exception)
+(define (make-writer atom prefix dot left-bracket right-bracket)
   (vector atom prefix dot left-bracket right-bracket))
-(define (rereader-atom          r text text.display datum) ((vector-ref r 0) text text.display datum))
-(define (rereader-prefix        r text text.display datum) ((vector-ref r 1) text text.display datum))
-(define (rereader-dot           r text text.display)       ((vector-ref r 2) text text.display))
-(define (rereader-left-bracket  r text text.display datum) ((vector-ref r 3) text text.display datum))
-(define (rereader-right-bracket r text text.display)       ((vector-ref r 4) text text.display))
+(define (writer-atom          w text text.display datum) ((vector-ref w 0) text text.display datum))
+(define (writer-prefix        w text text.display datum) ((vector-ref w 1) text text.display datum))
+(define (writer-dot           w text text.display)       ((vector-ref w 2) text text.display))
+(define (writer-left-bracket  w text text.display datum) ((vector-ref w 3) text text.display datum))
+(define (writer-right-bracket w text text.display)       ((vector-ref w 4) text text.display))
 
-(define (rereader/sgr r sgr.reset sgr.prefix sgr.dot sgr.bracket atom->sgr)
+(define (writer-decorate/sgr w sgr.reset sgr.prefix sgr.dot sgr.bracket atom->sgr)
   (define (decorate text sgr) (bytevector-append sgr text sgr.reset))
-  (make-rereader
-    (lambda (t text.d x) (rereader-atom          r t (decorate text.d (atom->sgr x)) x))
-    (lambda (t text.d x) (rereader-prefix        r t (decorate text.d sgr.prefix)    x))
-    (lambda (t text.d)   (rereader-dot           r t (decorate text.d sgr.dot)))
-    (lambda (t text.d x) (rereader-left-bracket  r t (decorate text.d sgr.bracket)   x))
-    (lambda (t text.d)   (rereader-right-bracket r t (decorate text.d sgr.bracket)))))
+  (make-writer
+    (lambda (t text.d x) (writer-atom          w t (decorate text.d (atom->sgr x)) x))
+    (lambda (t text.d x) (writer-prefix        w t (decorate text.d sgr.prefix)    x))
+    (lambda (t text.d)   (writer-dot           w t (decorate text.d sgr.dot)))
+    (lambda (t text.d x) (writer-left-bracket  w t (decorate text.d sgr.bracket)   x))
+    (lambda (t text.d)   (writer-right-bracket w t (decorate text.d sgr.bracket)))))
 
-(define (rereader:layout l)
+(define (writer:layout l)
   (mlet ((separate? #f))
     (define (separate) (when separate? (layout-separate l)))
     (define (place t t.d) (layout-place l t t.d))
-    (make-rereader
+    (make-writer
       (lambda (text text.display datum) (separate) (place text text.display) (set! separate? #t))
       (lambda (text text.display datum) (separate) (place text text.display) (set! separate? #f))
       (lambda (text text.display)       (separate) (place text text.display) (set! separate? #t))
@@ -111,8 +116,8 @@
         (layout-end-group l)
         (set! separate? #t)))))
 
-(define (rereader:layout/sgr l sgr.reset sgr.prefix sgr.dot sgr.bracket datum->sgr)
-  (rereader/sgr (rereader:layout l) sgr.reset sgr.prefix sgr.dot sgr.bracket datum->sgr))
+(define (writer:layout/sgr l sgr.reset sgr.prefix sgr.dot sgr.bracket datum->sgr)
+  (writer-decorate/sgr (writer:layout l) sgr.reset sgr.prefix sgr.dot sgr.bracket datum->sgr))
 
 ;;;;;;;;;;;;;;;;
 ;;; Notation ;;;
@@ -176,14 +181,14 @@
          (text.left-bracket        (vector-ref '#(#"(" #"[" #"{") bracket-index))
          (text.right-bracket       (vector-ref '#(#")" #"]" #"}") bracket-index))
          (text.null                (bytevector-append text.left-bracket text.right-bracket)))
-    (lambda (rereader x)
+    (lambda (writer x)
       (let notate ((x x))
-        (define (atom         text datum) (rereader-atom          rereader text text datum))
-        (define (prefix       text datum) (rereader-prefix        rereader text text datum))
-        (define (dot)                     (rereader-dot           rereader #"." #"."))
-        (define (left-bracket text datum) (rereader-left-bracket  rereader text text datum))
-        (define (right-bracket)           (rereader-right-bracket rereader text.right-bracket
-                                                                  text.right-bracket))
+        (define (atom         text datum) (writer-atom          writer text text datum))
+        (define (prefix       text datum) (writer-prefix        writer text text datum))
+        (define (dot)                     (writer-dot           writer #"." #"."))
+        (define (left-bracket text datum) (writer-left-bracket  writer text text datum))
+        (define (right-bracket)           (writer-right-bracket writer text.right-bracket
+                                                                text.right-bracket))
         (cond
           ((null? x)  (atom text.null x))
           ((not x)    (atom #"#f"     x))
@@ -274,47 +279,47 @@
 (define notate (make-notate notation.empty))
 
 ;; TODO: move this example
-;(begin
-;  (notate (rereader:layout (layout:single-line (printer:port standard-output-port)))
-;          '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
-;  (oport-write-byte standard-output-port 10)
-;  ((make-notate '((abbreviate-reader-macro? . #t)
-;                  (abbreviate-pair? . #f)
-;                  (bracket . #"[")
-;                  (length-prefix? . #t)
-;                  (bytevector-numeric? . #t)))
-;   (rereader:layout (layout:single-line (printer:port standard-output-port)))
-;   '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
-;  (oport-write-byte standard-output-port 10)
-;  (notate (rereader:layout/sgr (layout:single-line (printer:port standard-output-port))
-;                               #"\e[0m"
-;                               #"\e[33;5m"
-;                               #"\e[31;5m"
-;                               #"\e[32m"
-;                               (lambda (datum)
-;                                 (cond ((symbol? datum)  #"\e[34m")
-;                                       ((number? datum)  #"\e[35m")
-;                                       ((boolean? datum) #"\e[33m")
-;                                       ((null? datum)    #"\e[32m")
-;                                       (else             #"\e[36m"))))
-;          '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
-;  (oport-write-byte standard-output-port 10)
-;  ((make-notate '((abbreviate-reader-macro? . #t)
-;                  (abbreviate-pair? . #f)
-;                  (bracket . #"[")
-;                  (length-prefix? . #t)
-;                  (bytevector-numeric? . #t)))
-;   (rereader:layout/sgr (layout:single-line (printer:port standard-output-port))
-;                        #"\e[0m"
-;                        #"\e[33;5m"
-;                        #"\e[31;5m"
-;                        #"\e[32m"
-;                        (lambda (datum)
-;                          (cond ((symbol? datum)  #"\e[34m")
-;                                ((number? datum)  #"\e[35m")
-;                                ((boolean? datum) #"\e[33m")
-;                                ((null? datum)    #"\e[32m")
-;                                (else             #"\e[36m"))))
-;   '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
-;  (oport-write-byte standard-output-port 10)
-;  )
+#;(begin
+  (notate (writer:layout (layout:single-line (printer:port standard-output-port)))
+          '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
+  (oport-write-byte standard-output-port 10)
+  ((make-notate '((abbreviate-reader-macro? . #t)
+                  (abbreviate-pair? . #f)
+                  (bracket . #"[")
+                  (length-prefix? . #t)
+                  (bytevector-numeric? . #t)))
+   (writer:layout (layout:single-line (printer:port standard-output-port)))
+   '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
+  (oport-write-byte standard-output-port 10)
+  (notate (writer:layout/sgr (layout:single-line (printer:port standard-output-port))
+                             #"\e[0m"
+                             #"\e[33;5m"
+                             #"\e[31;5m"
+                             #"\e[32m"
+                             (lambda (datum)
+                               (cond ((symbol? datum)  #"\e[34m")
+                                     ((number? datum)  #"\e[35m")
+                                     ((boolean? datum) #"\e[33m")
+                                     ((null? datum)    #"\e[32m")
+                                     (else             #"\e[36m"))))
+          '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
+  (oport-write-byte standard-output-port 10)
+  ((make-notate '((abbreviate-reader-macro? . #t)
+                  (abbreviate-pair? . #f)
+                  (bracket . #"[")
+                  (length-prefix? . #t)
+                  (bytevector-numeric? . #t)))
+   (writer:layout/sgr (layout:single-line (printer:port standard-output-port))
+                      #"\e[0m"
+                      #"\e[33;5m"
+                      #"\e[31;5m"
+                      #"\e[32m"
+                      (lambda (datum)
+                        (cond ((symbol? datum)  #"\e[34m")
+                              ((number? datum)  #"\e[35m")
+                              ((boolean? datum) #"\e[33m")
+                              ((null? datum)    #"\e[32m")
+                              (else             #"\e[36m"))))
+   '(() (0) 1 '2 three "four" #"fiveeee" #(6 7 7 7) #t #f . 10))
+  (oport-write-byte standard-output-port 10)
+  )
