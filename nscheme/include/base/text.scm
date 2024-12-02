@@ -57,29 +57,11 @@
 ;;;;;;;;;;;;;;
 ;;; Writer ;;;
 ;;;;;;;;;;;;;;
-;;; A writer processes a stream of tokens coming from a structured data source.
-;;; This is slightly different from a reader, which processes a stream of tokens coming from an
-;;; unstructured data source, such as text.
-;;; The writer interface benefits from the structured source by including a datum parameter in
-;;; more operations than the reader interface, replacing type parameters, and making shape
-;;; parameters unnecessary.
-;;; While the reader interface includes a parameter for unstructured source location information
-;;; in all of its operations, the writer interface replaces this with a pair of text parameters.
-;;; The first text parameter contains the original, unadorned notation.  The second text parameter
-;;; is the same notation, but it may have been decorated with additional styling or markup to
-;;; improve the way it is displayed.
-;;; - reader interface for comparison:
-;;;   - (atom          location datum)
-;;;   - (prefix        location type)
-;;;     - type is the symbol that was abbreviated: quote quasiquote unquote etc.
-;;;   - (dot           location)
-;;;   - (left-bracket  location shape type)
-;;;     - type is one of: list vector bytevector
-;;;     - shape is one of: round square curly
-;;;   - (right-bracket location shape)
-;;;   - (datum-comment location)
-;;;   - (eof           location)
-;;;   - (error         location exception)
+;;; A writer consumes a stream of tokens coming from a structured data source.  Each writer
+;;; operation corresponds to a type of token, taking a pair of text parameters, followed by a source
+;;; datum parameter when applicable.  The first text parameter contains the original, unadorned
+;;; notation.  The second text parameter is the same notation, but it may have been decorated with
+;;; additional styling or markup to improve the way it is displayed.
 (define (make-writer atom prefix dot left-bracket right-bracket)
   (vector atom prefix dot left-bracket right-bracket))
 (define (writer-atom          w text text.display datum) ((vector-ref w 0) text text.display datum))
@@ -118,6 +100,24 @@
 
 (define (writer:layout/sgr l sgr.reset sgr.prefix sgr.dot sgr.bracket datum->sgr)
   (writer-decorate/sgr (writer:layout l) sgr.reset sgr.prefix sgr.dot sgr.bracket datum->sgr))
+
+;;;;;;;;;;;;;;
+;;; Reader ;;;
+;;;;;;;;;;;;;;
+;;; A reader consumes a stream of tokens coming from an unstructured data source, such as text.
+;;; Each reader operation corresponds to a type of token, taking a source location parameter
+;;; followed by parameters for any token-specific details, and returning a boolean indicating
+;;; whether its driver should continue sending tokens.
+(define (make-reader atom prefix dot left-bracket right-bracket datum-comment eof error)
+  (vector atom prefix dot left-bracket right-bracket datum-comment eof error))
+(define (reader-atom          r loc datum)      ((vector-ref r 0) loc datum))
+(define (reader-prefix        r loc type)       ((vector-ref r 1) loc type))
+(define (reader-dot           r loc)            ((vector-ref r 2) loc))
+(define (reader-left-bracket  r loc shape type) ((vector-ref r 3) loc shape type))
+(define (reader-right-bracket r loc shape)      ((vector-ref r 4) loc shape))
+(define (reader-datum-comment r loc)            ((vector-ref r 5) loc))
+(define (reader-eof           r loc)            ((vector-ref r 6) loc))
+(define (reader-error         r loc exception)  ((vector-ref r 7) loc exception))
 
 ;;;;;;;;;;;;;;;;
 ;;; Notation ;;;
