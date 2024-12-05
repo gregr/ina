@@ -23,38 +23,33 @@
 ;;;;;;;;;;;;;;
 ;;; Layout commands express preferences, not guarantees.  The layout policy is responsible for
 ;;; determining when and how preferences are realized.
-;;; - The layout-indent layout-horizontal and layout-vertical commands specify preferences that are
-;;;   specific to the current group.  This means the layout-end-group command will re-establish the
-;;;   parent group preferences.
-;;; - The layout-indent command sets the indentation column to the current placement position within
-;;;   the current group.  This means that if the next placement span would begin at column C, then
-;;;   the indentation column is set to (+ C offset).  The indentation column is used as the starting
-;;;   position whenever the layout policy decides to add vertical spacing.  The initial indentation
-;;;   column is 0, and each new group will begin with its indentation column set to the location
-;;;   of its first placement.
-;;; - The layout-horizontal and layout-vertical commands indicate the preferred direction to move in
-;;;   when layout-separate chooses to introduce spacing.  The layout policy is allowed to completely
-;;;   ignore this preference.  The initial preference is horizontal, and each new group will also
-;;;   begin with a horizontal preference.
-(define (make-layout place separate begin-group end-group indent horizontal vertical)
-  (vector place separate begin-group end-group indent horizontal vertical))
-(define (layout-place       l text text.display) ((vector-ref l 0) text text.display))
-(define (layout-separate    l)                   ((vector-ref l 1)))
-(define (layout-begin-group l)                   ((vector-ref l 2)))
-(define (layout-end-group   l)                   ((vector-ref l 3)))
-(define (layout-indent      l offset)            ((vector-ref l 4) offset))
-(define (layout-horizontal  l)                   ((vector-ref l 5)))
-(define (layout-vertical    l)                   ((vector-ref l 6)))
+;;; - The layout-place command requests that its first text value parameter be presented, with a
+;;;   preference that it have the appearance of the second text value parameter.  The first text
+;;;   parameter should contain unadorned text, while the second text parameter should be equivalent
+;;;   in textual meaning, but optionally decorated with additional styling or markup to improve the
+;;;   way it is displayed.
+;;; - The layout-space, layout-newline and layout-space^newline commands request separation, and
+;;;   respectively indicate a preference for spacing in the horizontal or vertical direction, or no
+;;;   preference at all for layout-space^newline.  Whether the preferred direction is used or not is
+;;;   decided by the layout policy.
+;;; - The layout-group-begin and layout-group-end commands form groups of aligned lines of text.  A
+;;;   new group is specified with an indentation amount that will be calculated relative to its
+;;;   first line, and that will be applied to subsequent lines.
+(define (make-layout place group-begin group-end space newline space^newline)
+  (vector place group-begin group-end space newline space^newline))
+(define (layout-place         l text text.display) ((vector-ref l 0) text text.display))
+(define (layout-group-begin   l indent)            ((vector-ref l 1) indent))
+(define (layout-group-end     l)                   ((vector-ref l 2)))
+(define (layout-space         l)                   ((vector-ref l 3)))
+(define (layout-newline       l)                   ((vector-ref l 4)))
+(define (layout-space^newline l)                   ((vector-ref l 5)))
 
 (define (layout:single-line printer)
-  (make-layout
-    (lambda (text text.display) (printer-print      printer text.display))
-    (lambda ()                  (printer-print-byte printer 32))
-    (lambda ()                  (values))
-    (lambda ()                  (values))
-    (lambda (offset)            (values))
-    (lambda ()                  (values))
-    (lambda ()                  (values))))
+  (define (space) (printer-print-byte printer 32))
+  (make-layout (lambda (text text.display) (printer-print printer text.display))
+               (lambda (indent)            (values))
+               (lambda ()                  (values))
+               space space space))
 
 ;;;;;;;;;;;;;;
 ;;; Writer ;;;
@@ -82,23 +77,31 @@
     (lambda (t text.d)   (writer-right-bracket w t (decorate text.d sgr.bracket)))))
 
 (define (writer:layout l)
-  (mlet ((separate? #f))
-    (define (separate) (when separate? (layout-separate l)))
+  (mlet ((depth 0) (separate? #f) (right-bracket-count 0))
+    (define (end-bracketed!)
+      (range-for-each (lambda (i) (layout-group-end l)) right-bracket-count)
+      (set! right-bracket-count 0)
+      (set! separate? #t))
+    (define (separate)
+      (when (< 0 right-bracket-count) (end-bracketed!))
+      (when separate? (layout-space^newline l))
+      (set! separate? #t))
     (define (place t t.d) (layout-place l t t.d))
     (make-writer
-      (lambda (text text.display datum) (separate) (place text text.display) (set! separate? #t))
+      (lambda (text text.display datum) (separate) (place text text.display))
       (lambda (text text.display datum) (separate) (place text text.display) (set! separate? #f))
-      (lambda (text text.display)       (separate) (place text text.display) (set! separate? #t))
+      (lambda (text text.display)       (separate) (place text text.display))
       (lambda (text text.display datum)
         (separate)
-        (layout-begin-group l)
         (place text text.display)
-        (layout-indent l 0)
-        (set! separate? #f))
+        (set! separate? #f)
+        (layout-group-begin l 0)
+        (set! depth (+ depth 1)))
       (lambda (text text.display)
         (place text text.display)
-        (layout-end-group l)
-        (set! separate? #t)))))
+        (set! depth (- depth 1))
+        (set! right-bracket-count (+ right-bracket-count 1))
+        (unless (< 0 depth) (end-bracketed!))))))
 
 (define (writer:layout/sgr l sgr.reset sgr.prefix sgr.dot sgr.bracket datum->sgr)
   (writer-decorate/sgr (writer:layout l) sgr.reset sgr.prefix sgr.dot sgr.bracket datum->sgr))
