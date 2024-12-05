@@ -8,13 +8,15 @@
 ;;; printer-print must not contain control codes or markup that change vertical position or that
 ;;; nonlocally transform text or other ambient state.  Vertical spacing should be requested by
 ;;; calling printer-newline.
-(define (make-printer print newline) (vector print newline))
-(define (printer-print   p text) ((vector-ref p 0) text))
-(define (printer-newline p)      ((vector-ref p 1)))
+(define (make-printer print print-byte newline) (vector print print-byte newline))
+(define (printer-print      p text) ((vector-ref p 0) text))
+(define (printer-print-byte p byte) ((vector-ref p 1) byte))
+(define (printer-newline    p)      ((vector-ref p 2)))
 
 (define (printer:port port)
-  (define (text-write t) (let ((len (bytevector-length t))) (oport-write port t 0 len len)))
-  (make-printer (lambda (text) (text-write text)) (lambda () (text-write #"\n"))))
+  (make-printer (lambda (t) (let ((len (bytevector-length t))) (oport-write port t 0 len len)))
+                (lambda (b) (oport-write-byte port b))
+                (lambda ()  (oport-write-byte port 10))))
 
 ;;;;;;;;;;;;;;
 ;;; Layout ;;;
@@ -46,8 +48,8 @@
 
 (define (layout:single-line printer)
   (make-layout
-    (lambda (text text.display) (printer-print printer text.display))
-    (lambda ()                  (printer-print printer #" "))
+    (lambda (text text.display) (printer-print      printer text.display))
+    (lambda ()                  (printer-print-byte printer 32))
     (lambda ()                  (values))
     (lambda ()                  (values))
     (lambda (offset)            (values))
