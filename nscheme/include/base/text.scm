@@ -8,14 +8,12 @@
 ;;; printer-print must not contain control codes or markup that change vertical position or that
 ;;; nonlocally transform text or other ambient state.  Vertical spacing should be requested by
 ;;; calling printer-newline.
-(define (make-printer print print-byte newline) (vector print print-byte newline))
-(define (printer-print      p text) ((vector-ref p 0) text))
-(define (printer-print-byte p byte) ((vector-ref p 1) byte))
-(define (printer-newline    p)      ((vector-ref p 2)))
+(define (make-printer print newline) (vector print newline))
+(define (printer-print   p text) ((vector-ref p 0) text))
+(define (printer-newline p)      ((vector-ref p 1)))
 
 (define (printer:port port)
   (make-printer (lambda (t) (let ((len (bytevector-length t))) (oport-write port t 0 len len)))
-                (lambda (b) (oport-write-byte port b))
                 (lambda ()  (oport-write-byte port 10))))
 
 ;;;;;;;;;;;;;;
@@ -54,7 +52,7 @@
 (define (layout-space^newline l)                   ((vector-ref l 5)))
 
 (define (layout:single-line printer)
-  (define (space) (printer-print-byte printer 32))
+  (define (space) (printer-print printer #" "))
   (make-layout (lambda (text text.display) (printer-print printer text.display))
                (lambda (indent)            (values))
                (lambda ()                  (values))
@@ -103,11 +101,9 @@
         (set! start* (cdr start*))
         (when (null? start*) (error "layout-group-end outside a group"))
         (set! single-line-group-depth (max (- single-line-group-depth 1) 0)))
-      (define (place size x)
+      (define (place size text)
         (set! pos.actual (+ pos.actual size))
-        (if (number? x)
-            (printer-print-byte printer x)
-            (printer-print      printer x)))
+        (printer-print printer text))
       (define (newline)
         (let* ((start (car start*))
                (text  (make-mbytevector (+ start 1) 32)))
@@ -129,7 +125,7 @@
                (size (+ 1 (foldl (lambda (t size) (if (gbnode? t) size (+ (placement-size t) size)))
                                  0 t*))))
           (if (and (<= (+ pos.actual size) width) (< 0 single-line-group-depth) (seg-complete? seg))
-              (place 1 32)
+              (place 1 #" ")
               (begin (set! pos.potential (- pos.potential 1))
                      (newline)))
           (for-each (lambda (t)
@@ -164,7 +160,7 @@
                   (gbnode-deactivate! last)
                   (unless prev (flush)))
                 (begin (flush) (group-pop)))))
-        (lambda () (push-placement 1 32))
+        (lambda () (push-placement 1 #" "))
         (lambda () (flush) (newline))
         (lambda ()
           (set! pos.potential (+ pos.potential 1))
