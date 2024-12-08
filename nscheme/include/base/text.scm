@@ -232,20 +232,22 @@
 ;;;;;;;;;;;;;;
 ;;; Reader ;;;
 ;;;;;;;;;;;;;;
-;;; A reader consumes a stream of tokens coming from an unstructured data source, such as text.
-;;; Each reader operation corresponds to a type of token, taking a source location parameter
-;;; followed by parameters for any token-specific details, and returning a boolean indicating
-;;; whether its driver should continue sending tokens.
-(define (make-reader atom prefix dot left-bracket right-bracket datum-comment eof error)
-  (vector atom prefix dot left-bracket right-bracket datum-comment eof error))
-(define (reader-atom          r loc datum)      ((vector-ref r 0) loc datum))
-(define (reader-prefix        r loc type)       ((vector-ref r 1) loc type))
-(define (reader-dot           r loc)            ((vector-ref r 2) loc))
-(define (reader-left-bracket  r loc shape type) ((vector-ref r 3) loc shape type))
-(define (reader-right-bracket r loc shape)      ((vector-ref r 4) loc shape))
-(define (reader-datum-comment r loc)            ((vector-ref r 5) loc))
-(define (reader-eof           r loc)            ((vector-ref r 6) loc))
-(define (reader-error         r loc exception)  ((vector-ref r 7) loc exception))
+;;; A reader consumes a stream of tokens coming from an unstructured data source such as text.
+;;; Each reader operation corresponds to a type of token, taking parameters for source position and
+;;; length, followed by parameters for any token-specific details, and returning a boolean
+;;; indicating whether its driver should continue sending tokens.
+(define (make-reader atom prefix dot left-bracket right-bracket datum-comment-prefix comment newline eof error)
+  (vector atom prefix dot left-bracket right-bracket datum-comment-prefix comment newline eof error))
+(define (reader-atom                 r pos size datum)          ((vector-ref r 0) pos size datum))
+(define (reader-prefix               r pos size type)           ((vector-ref r 1) pos size type))
+(define (reader-dot                  r pos size)                ((vector-ref r 2) pos size))
+(define (reader-left-bracket         r pos size shape type len) ((vector-ref r 3) pos size shape type len))
+(define (reader-right-bracket        r pos size shape)          ((vector-ref r 4) pos size shape))
+(define (reader-datum-comment-prefix r pos size)                ((vector-ref r 5) pos size))
+(define (reader-comment              r pos size)                ((vector-ref r 6) pos size))
+(define (reader-newline              r pos)                     ((vector-ref r 7) pos))
+(define (reader-eof                  r pos)                     ((vector-ref r 8) pos))
+(define (reader-error                r pos exception)           ((vector-ref r 9) pos exception))
 
 ;;;;;;;;;;;;;;;;
 ;;; Notation ;;;
