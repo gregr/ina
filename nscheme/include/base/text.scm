@@ -98,6 +98,7 @@
         (set! start* (cons (+ pos.actual indent) start*))
         (set! single-line-group-depth (+ single-line-group-depth 1)))
       (define (group-pop)
+        (flush)
         (set! start* (cdr start*))
         (when (null? start*) (error "layout-group-end outside a group"))
         (set! single-line-group-depth (max (- single-line-group-depth 1) 0)))
@@ -124,7 +125,7 @@
                (t*   (seg-t* seg))
                (size (+ 1 (foldl (lambda (t size) (if (gbnode? t) size (+ (placement-size t) size)))
                                  0 t*))))
-          (if (and (<= (+ pos.actual size) width) (< 0 single-line-group-depth) (seg-complete? seg))
+          (if (and (<= (+ pos.actual size) width) (seg-complete? seg))
               (place 1 #" ")
               (begin (set! pos.potential (- pos.potential 1))
                      (newline)))
@@ -159,17 +160,18 @@
                   (set! gbn.last prev)
                   (gbnode-deactivate! last)
                   (unless prev (flush)))
-                (begin (flush) (group-pop)))))
+                (group-pop))))
         (lambda () (push-placement 1 #" "))
         (lambda () (flush) (newline))
-        (lambda ()
-          (set! pos.potential (+ pos.potential 1))
-          (when rt*
-            (constrain-width)
-            (if gbn.last
-                (set! seg* (fifo-push seg* (make-seg (reverse rt*))))
-                (flush)))
-          (set! rt* '()))))))
+        (lambda () (if (< 0 single-line-group-depth)
+                       (begin (set! pos.potential (+ pos.potential 1))
+                              (when rt*
+                                (constrain-width)
+                                (if gbn.last
+                                    (set! seg* (fifo-push seg* (make-seg (reverse rt*))))
+                                    (flush)))
+                              (set! rt* '()))
+                       (begin (flush) (newline))))))))
 
 ;;;;;;;;;;;;;;
 ;;; Writer ;;;
