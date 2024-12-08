@@ -170,7 +170,8 @@
                                 (if gbn.last
                                     (set! seg* (fifo-push seg* (make-seg (reverse rt*))))
                                     (flush)))
-                              (set! rt* '()))
+                              (set! rt* '())
+                              (constrain-width))
                        (begin (flush) (newline))))))))
 
 ;;;;;;;;;;;;;;
