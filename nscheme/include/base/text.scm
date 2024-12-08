@@ -9,12 +9,12 @@
 ;;; nonlocally transform text or other ambient state.  Vertical spacing should be requested by
 ;;; calling printer-newline.
 (define (make-printer print newline) (vector print newline))
-(define (printer-print   p text) ((vector-ref p 0) text))
-(define (printer-newline p)      ((vector-ref p 1)))
+(define (printer-print   p text attr) ((vector-ref p 0) text attr))
+(define (printer-newline p)           ((vector-ref p 1)))
 
 (define (printer:port port)
-  (make-printer (lambda (t) (let ((len (bytevector-length t))) (oport-write port t 0 len len)))
-                (lambda ()  (oport-write-byte port 10))))
+  (make-printer (lambda (t _) (let ((len (bytevector-length t))) (oport-write port t 0 len len)))
+                (lambda ()    (oport-write-byte port 10))))
 
 ;;;;;;;;;;;;;;
 ;;; Layout ;;;
@@ -52,8 +52,8 @@
 (define (layout-space^newline l)                   ((vector-ref l 5)))
 
 (define (layout:single-line printer)
-  (define (space) (printer-print printer #" "))
-  (make-layout (lambda (text text.display) (printer-print printer text.display))
+  (define (space) (printer-print printer #" " #f))
+  (make-layout (lambda (text text.display) (printer-print printer text.display #f))
                (lambda (indent)            (values))
                (lambda ()                  (values))
                space space space))
@@ -104,12 +104,12 @@
         (set! single-line-group-depth (max (- single-line-group-depth 1) 0)))
       (define (place size text)
         (set! pos.actual (+ pos.actual size))
-        (printer-print printer text))
+        (printer-print printer text #f))
       (define (newline)
         (let* ((start (car start*))
                (text  (make-mbytevector (+ start 1) 32)))
           (mbytevector-set! text 0 10)
-          (printer-print printer (mbytevector->bytevector text))
+          (printer-print printer (mbytevector->bytevector text) #f)
           (set! pos.potential (- pos.potential (- pos.actual start)))
           (set! pos.actual start)
           (set! single-line-group-depth 1)))
