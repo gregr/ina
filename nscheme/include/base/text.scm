@@ -21,11 +21,9 @@
 ;;;;;;;;;;;;;;
 ;;; Layout commands express preferences, not guarantees.  The layout policy is responsible for
 ;;; determining when and how preferences are realized.
-;;; - The layout-place command requests that its first text value parameter be presented, with a
-;;;   preference that it have the appearance of the second text value parameter.  The first text
-;;;   parameter should contain unadorned text, while the second text parameter should be equivalent
-;;;   in textual meaning, but optionally decorated with additional styling or markup to improve the
-;;;   way it is displayed.
+;;; - The layout-place command requests that text be presented, optionally with an attribute that
+;;;   indicates preferences in how the text is displayed, including styling, coloring, markup, etc.
+;;;   The text value itself should be plain, and not embed any display attributes.
 ;;; - The layout-space, layout-newline and layout-space^newline commands request separation, and
 ;;;   respectively indicate a preference for spacing in the horizontal or vertical direction, or no
 ;;;   preference at all for layout-space^newline.  Whether the preferred direction is used or not is
@@ -44,18 +42,18 @@
 ;;;     - But layout effects preceding the layout-space^newline will be observed.
 (define (make-layout place group-begin group-end space newline space^newline)
   (vector place group-begin group-end space newline space^newline))
-(define (layout-place         l text text.display) ((vector-ref l 0) text text.display))
-(define (layout-group-begin   l indent)            ((vector-ref l 1) indent))
-(define (layout-group-end     l)                   ((vector-ref l 2)))
-(define (layout-space         l)                   ((vector-ref l 3)))
-(define (layout-newline       l)                   ((vector-ref l 4)))
-(define (layout-space^newline l)                   ((vector-ref l 5)))
+(define (layout-place         l text attr) ((vector-ref l 0) text attr))
+(define (layout-group-begin   l indent)    ((vector-ref l 1) indent))
+(define (layout-group-end     l)           ((vector-ref l 2)))
+(define (layout-space         l)           ((vector-ref l 3)))
+(define (layout-newline       l)           ((vector-ref l 4)))
+(define (layout-space^newline l)           ((vector-ref l 5)))
 
 (define (layout:single-line printer)
   (define (space) (printer-print printer #" " #f))
-  (make-layout (lambda (text text.display) (printer-print printer text.display #f))
-               (lambda (indent)            (values))
-               (lambda ()                  (values))
+  (make-layout (lambda (text attr) (printer-print printer text attr))
+               (lambda (indent)    (values))
+               (lambda ()          (values))
                space space space))
 
 (splicing-local
@@ -146,7 +144,7 @@
                    (constrain-width))
             (place size t)))
       (make-layout
-        (lambda (text text.display) (push-placement (utf8-length text) text.display))
+        (lambda (text attr) (push-placement (utf8-length text) text))
         (lambda (indent)
           (if rt*
               (let ((gbn (make-gbnode gbn.last indent)))
@@ -448,7 +446,7 @@
     (oport-write-byte standard-output-port 10)
     (oport-write-byte standard-output-port 10)
     (let* ((l      (layout:compact (printer:port standard-output-port) width))
-           (place  (lambda (t) (layout-place l t t)))
+           (place  (lambda (t) (layout-place l t #f)))
            (gbegin (lambda () (layout-group-begin l 0)))
            (gend   (lambda () (layout-group-end l)))
            (s^nl   (lambda () (layout-space^newline l)))
