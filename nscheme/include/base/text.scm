@@ -16,9 +16,14 @@
   (make-printer (lambda (t _) (let ((len (bytevector-length t))) (oport-write port t 0 len len)))
                 (lambda ()    (oport-write-byte port 10))))
 
-(define (printer-decorate/sgr p sgr.default)
+(define (printer-decorate/sgr p)
   (make-printer
-    (lambda (text sgr) (printer-print p (bytevector-append (or sgr sgr.default) text #"\e[0m") #f))
+    (lambda (text sgr) (printer-print p (if sgr (bytevector-append sgr text #"\e[0m") text) #f))
+    (lambda ()         (printer-newline p))))
+
+(define (printer-sgr-default p sgr.default)
+  (make-printer
+    (lambda (text sgr) (printer-print p text (or sgr sgr.default)))
     (lambda ()         (printer-newline p))))
 
 ;;;;;;;;;;;;;;
@@ -420,7 +425,9 @@
                                                        ((boolean? datum) #"\e[33m")
                                                        ((null? datum)    #"\e[32m")
                                                        (else             #"\e[36m"))))))
-      (example-printer/sgr (lambda () (printer-decorate/sgr (printer:port standard-output-port) #"\e[0m")))
+      (example-printer/sgr
+        (lambda () (printer-sgr-default (printer-decorate/sgr (printer:port standard-output-port))
+                                        #"\e[0m")))
       (verbose-notate (make-notate '((abbreviate-reader-macro? . #t)
                                      (abbreviate-pair? . #f)
                                      (bracket . #"[")
