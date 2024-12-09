@@ -26,6 +26,18 @@
     (lambda (text sgr) (printer-print p text (or sgr sgr.default)))
     (lambda ()         (printer-newline p))))
 
+(define (printer-fill p width text attr)
+  (mlet ((size 0))
+    (make-printer
+      (lambda (text attr)
+        (set! size (+ size (utf8-length text)))
+        (printer-print p text attr))
+      (lambda ()
+        (when (< size width) (range-for-each (lambda (i) (printer-print p text attr))
+                                             (- width size)))
+        (set! size 0)
+        (printer-newline p)))))
+
 ;;;;;;;;;;;;;;
 ;;; Layout ;;;
 ;;;;;;;;;;;;;;
@@ -416,47 +428,55 @@
 
 ;; TODO: move this example
 #;(let ((example
-        '(() (0) 1 #('2 three "four" #(100 101 102 103 104 105 106 107 108 109 110 111) #"fiveeee") #(6 7 7 7) #t #f . 10))
-      (example-writer/sgr (lambda (l)
-                            (writer:layout/sgr l #"\e[33;5m" #"\e[31;5m" #"\e[32m"
-                                               (lambda (datum)
-                                                 (cond ((symbol? datum)  #"\e[34m")
-                                                       ((number? datum)  #"\e[35m")
-                                                       ((boolean? datum) #"\e[33m")
-                                                       ((null? datum)    #"\e[32m")
-                                                       (else             #"\e[36m"))))))
-      (example-printer/sgr
-        (lambda () (printer-sgr-default (printer-decorate/sgr (printer:port standard-output-port))
-                                        #"\e[0m")))
-      (verbose-notate (make-notate '((abbreviate-reader-macro? . #t)
-                                     (abbreviate-pair? . #f)
-                                     (bracket . #"[")
-                                     (length-prefix? . #t)
-                                     (bytevector-numeric? . #t)))))
-  (notate (writer:layout (layout:single-line (printer:port standard-output-port))) example)
+         '(() (0) 1 #('2 three "four" #(100 101 102 103 104 105 106 107 108 109 110 111) #"fiveeee") #(6 7 7 7) #t #f . 10))
+       (example-writer/sgr (lambda (l)
+                             (writer:layout/sgr l #"\e[33;5m" #"\e[31;5m" #"\e[32m"
+                                                (lambda (datum)
+                                                  (cond ((symbol? datum)  #"\e[34m")
+                                                        ((number? datum)  #"\e[35m")
+                                                        ((boolean? datum) #"\e[33m")
+                                                        ((null? datum)    #"\e[32m")
+                                                        (else             #"\e[36m"))))))
+       (example-printer:stdout
+         (lambda () (printer:port standard-output-port)))
+       (example-printer-fill
+         (lambda (p) (printer-fill p 80 #"." #f)))
+       (example-printer
+         (lambda () (example-printer-fill (example-printer:stdout))))
+       (example-printer/sgr
+         (lambda ()
+           (example-printer-fill
+             (printer-sgr-default (printer-decorate/sgr (example-printer:stdout))
+                                  #"\e[41m"))))
+       (verbose-notate (make-notate '((abbreviate-reader-macro? . #t)
+                                      (abbreviate-pair? . #f)
+                                      (bracket . #"[")
+                                      (length-prefix? . #t)
+                                      (bytevector-numeric? . #t)))))
+  (notate (writer:layout (layout:single-line (example-printer))) example)
   (oport-write-byte standard-output-port 10)
   (notate (example-writer/sgr (layout:single-line (example-printer/sgr))) example)
   (oport-write-byte standard-output-port 10)
-  (verbose-notate (writer:layout (layout:single-line (printer:port standard-output-port))) example)
+  (verbose-notate (writer:layout (layout:single-line (example-printer))) example)
   (oport-write-byte standard-output-port 10)
   (verbose-notate (example-writer/sgr (layout:single-line (example-printer/sgr))) example)
   (oport-write-byte standard-output-port 10)
   (oport-write-byte standard-output-port 10)
   (let ((width 80))
-    (notate (writer:layout (layout:compact (printer:port standard-output-port) width)) example)
+    (notate (writer:layout (layout:compact (example-printer) width)) example)
     (oport-write-byte standard-output-port 10)
     (oport-write-byte standard-output-port 10)
     (notate (example-writer/sgr (layout:compact (example-printer/sgr) width)) example)
     (oport-write-byte standard-output-port 10)
     (oport-write-byte standard-output-port 10)
     (oport-write-byte standard-output-port 10)
-    (verbose-notate (writer:layout (layout:compact (printer:port standard-output-port) width)) example)
+    (verbose-notate (writer:layout (layout:compact (example-printer) width)) example)
     (oport-write-byte standard-output-port 10)
     (oport-write-byte standard-output-port 10)
     (verbose-notate (example-writer/sgr (layout:compact (example-printer/sgr) width)) example)
     (oport-write-byte standard-output-port 10)
     (oport-write-byte standard-output-port 10)
-    (let* ((l      (layout:compact (printer:port standard-output-port) width))
+    (let* ((l      (layout:compact (example-printer) width))
            (place  (lambda (t) (layout-place l t #f)))
            (gbegin (lambda () (layout-group-begin l 0)))
            (gend   (lambda () (layout-group-end l)))
