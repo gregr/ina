@@ -177,26 +177,24 @@
 ;;; Writer ;;;
 ;;;;;;;;;;;;;;
 ;;; A writer consumes a stream of tokens coming from a structured data source.  Each writer
-;;; operation corresponds to a type of token, taking a pair of text parameters, followed by a source
-;;; datum parameter when applicable.  The first text parameter contains the original, unadorned
-;;; notation.  The second text parameter is the same notation, but it may have been decorated with
-;;; additional styling or markup to improve the way it is displayed.
+;;; operation corresponds to a type of token, taking a text value, optional display attribute, and a
+;;; source datum parameter when applicable.
 (define (make-writer atom prefix dot left-bracket right-bracket)
   (vector atom prefix dot left-bracket right-bracket))
-(define (writer-atom          w text text.display datum) ((vector-ref w 0) text text.display datum))
-(define (writer-prefix        w text text.display datum) ((vector-ref w 1) text text.display datum))
-(define (writer-dot           w text text.display)       ((vector-ref w 2) text text.display))
-(define (writer-left-bracket  w text text.display datum) ((vector-ref w 3) text text.display datum))
-(define (writer-right-bracket w text text.display)       ((vector-ref w 4) text text.display))
+(define (writer-atom          w text attr datum) ((vector-ref w 0) text attr datum))
+(define (writer-prefix        w text attr datum) ((vector-ref w 1) text attr datum))
+(define (writer-dot           w text attr)       ((vector-ref w 2) text attr))
+(define (writer-left-bracket  w text attr datum) ((vector-ref w 3) text attr datum))
+(define (writer-right-bracket w text attr)       ((vector-ref w 4) text attr))
 
 (define (writer-decorate/sgr w sgr.reset sgr.prefix sgr.dot sgr.bracket atom->sgr)
-  (define (decorate text sgr) (bytevector-append sgr text sgr.reset))
+  (define (decorate attr sgr) (or attr sgr))
   (make-writer
-    (lambda (t text.d x) (writer-atom          w t (decorate text.d (atom->sgr x)) x))
-    (lambda (t text.d x) (writer-prefix        w t (decorate text.d sgr.prefix)    x))
-    (lambda (t text.d)   (writer-dot           w t (decorate text.d sgr.dot)))
-    (lambda (t text.d x) (writer-left-bracket  w t (decorate text.d sgr.bracket)   x))
-    (lambda (t text.d)   (writer-right-bracket w t (decorate text.d sgr.bracket)))))
+    (lambda (t attr x) (writer-atom          w t (decorate attr (atom->sgr x)) x))
+    (lambda (t attr x) (writer-prefix        w t (decorate attr sgr.prefix)    x))
+    (lambda (t attr)   (writer-dot           w t (decorate attr sgr.dot)))
+    (lambda (t attr x) (writer-left-bracket  w t (decorate attr sgr.bracket)   x))
+    (lambda (t attr)   (writer-right-bracket w t (decorate attr sgr.bracket)))))
 
 (define (writer:layout l)
   (mlet ((depth 0) (separate? #f) (right-bracket-count 0))
@@ -208,19 +206,19 @@
       (when (< 0 right-bracket-count) (end-bracketed!))
       (when separate? (layout-space^newline l))
       (set! separate? #t))
-    (define (place t t.d) (layout-place l t t.d))
+    (define (place t attr) (layout-place l t attr))
     (make-writer
-      (lambda (text text.display datum) (separate) (place text text.display))
-      (lambda (text text.display datum) (separate) (place text text.display) (set! separate? #f))
-      (lambda (text text.display)       (separate) (place text text.display))
-      (lambda (text text.display datum)
+      (lambda (text attr datum) (separate) (place text attr))
+      (lambda (text attr datum) (separate) (place text attr) (set! separate? #f))
+      (lambda (text attr)       (separate) (place text attr))
+      (lambda (text attr datum)
         (separate)
-        (place text text.display)
+        (place text attr)
         (set! separate? #f)
         (layout-group-begin l 0)
         (set! depth (+ depth 1)))
-      (lambda (text text.display)
-        (place text text.display)
+      (lambda (text attr)
+        (place text attr)
         (set! depth (- depth 1))
         (set! right-bracket-count (+ right-bracket-count 1))
         (unless (< 0 depth) (end-bracketed!))))))
@@ -312,12 +310,11 @@
          (text.null                (bytevector-append text.left-bracket text.right-bracket)))
     (lambda (writer x)
       (let notate ((x x))
-        (define (atom         text datum) (writer-atom          writer text text datum))
-        (define (prefix       text datum) (writer-prefix        writer text text datum))
-        (define (dot)                     (writer-dot           writer #"." #"."))
-        (define (left-bracket text datum) (writer-left-bracket  writer text text datum))
-        (define (right-bracket)           (writer-right-bracket writer text.right-bracket
-                                                                text.right-bracket))
+        (define (atom         text datum) (writer-atom          writer text               #f datum))
+        (define (prefix       text datum) (writer-prefix        writer text               #f datum))
+        (define (dot)                     (writer-dot           writer #"."               #f))
+        (define (left-bracket text datum) (writer-left-bracket  writer text               #f datum))
+        (define (right-bracket)           (writer-right-bracket writer text.right-bracket #f))
         (cond
           ((null? x)  (atom text.null x))
           ((not x)    (atom #"#f"     x))
