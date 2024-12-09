@@ -26,6 +26,11 @@
     (lambda (text sgr) (printer-print p text (or sgr sgr.default)))
     (lambda ()         (printer-newline p))))
 
+(define (printer-sgr-add p sgr.add)
+  (make-printer
+    (lambda (text sgr) (printer-print p text (if sgr (bytevector-append sgr sgr.add) sgr.add)))
+    (lambda ()         (printer-newline p))))
+
 (define (printer-fill p width text attr)
   (mlet ((size 0))
     (make-printer
@@ -446,8 +451,8 @@
        (example-printer/sgr
          (lambda ()
            (example-printer-fill
-             (printer-sgr-default (printer-decorate/sgr (example-printer:stdout))
-                                  #"\e[41m"))))
+             (printer-sgr-add (printer-decorate/sgr (example-printer:stdout))
+                              #"\e[47m"))))
        (verbose-notate (make-notate '((abbreviate-reader-macro? . #t)
                                       (abbreviate-pair? . #f)
                                       (bracket . #"[")
