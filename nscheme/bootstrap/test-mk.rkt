@@ -1,9 +1,10 @@
 #lang racket/base
 (require
   "../platform/racket/nscheme.rkt" "include.rkt"
-  racket/include racket/match racket/pretty racket/splicing)
+  racket/include racket/match racket/splicing
+  (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 (print-as-expression #f)
-(pretty-print-abbreviate-read-macros #f)
+(rkt:pretty-print-abbreviate-read-macros #f)
 
 (define env.base (env-conjoin/match (env-conjoin env.minimal env.common)))
 
@@ -199,11 +200,11 @@
 
 (define (test-mk* body)
   (let ((E (time (parse-body env.mk body))))
-    (pretty-write (time (ns-eval E)))))
+    (rkt:pretty-write (time (ns-eval E)))))
 
 (define (test-mk expr)
-  (newline)
-  (pretty-write expr)
+  (rkt:newline)
+  (rkt:pretty-write expr)
   (test-mk* (list expr)))
 
 (test-mk '(run 1 q (== 5 5)))
@@ -224,8 +225,8 @@
           (appendo z* y z*y))))))
 
 (define (test-appendo expr)
-  (newline)
-  (pretty-write expr)
+  (rkt:newline)
+  (rkt:pretty-write expr)
   (test-mk* (list def.appendo expr)))
 
 (test-appendo '(run 1 q (appendo '(1 2 3) '(4 5) q)))
@@ -283,8 +284,8 @@
     (define (evalo expr value) (eval-expo expr '() value))))
 
 (define (test-evalo expr)
-  (newline)
-  (pretty-write expr)
+  (rkt:newline)
+  (rkt:pretty-write expr)
   (test-mk* (append def*.evalo (list expr))))
 
 ;; ~2 seconds

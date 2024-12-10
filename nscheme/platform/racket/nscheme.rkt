@@ -56,11 +56,11 @@
   with-native-signal-handling)
 (require
   ffi/unsafe/port ffi/unsafe/vm
-  racket/flonum racket/match racket/path racket/pretty racket/os racket/tcp racket/udp racket/vector
-  (prefix-in rkt: racket/base))
+  racket/flonum racket/match racket/path racket/os racket/tcp racket/udp racket/vector
+  (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 
 (read-decimal-as-inexact #f)
-(pretty-print-exact-as-decimal #t)
+(rkt:pretty-print-exact-as-decimal #t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Control transfer and interrupts ;;;
@@ -106,7 +106,7 @@
 (define (panic . x*)
   (let ((handle (current-panic-handler))) (when handle (apply handle x*)))
   (displayln "unhandled panic:")
-  (pretty-write (cons 'panic x*))
+  (rkt:pretty-write (cons 'panic x*))
   (for-each (lambda (x) (when (exn? x) ((error-display-handler) (exn-message x) x))) x*)
   (exit 1))
 (uncaught-exception-handler (lambda (exn) (panic 'uncaught-exception exn)))

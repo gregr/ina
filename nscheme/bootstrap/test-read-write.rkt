@@ -1,8 +1,8 @@
 #lang racket/base
 (require
   "../platform/racket/nscheme.rkt" (for-syntax "../platform/racket/nscheme.rkt")
-  profile racket/function racket/include racket/list racket/match
-  racket/pretty racket/string
+  profile racket/function racket/include racket/list racket/match racket/string
+  (prefix-in rkt: racket/pretty)
   (for-syntax (except-in racket/base case eqv? integer? rational? append string-ref string-length
                          string-append string->list list->string number->string let-values)
               racket/list)
@@ -25,18 +25,18 @@
 (include "../include/read.scm")
 (include "../include/write.scm")
 (print-as-expression #f)
-(pretty-print-abbreviate-read-macros #f)
+(rkt:pretty-print-abbreviate-read-macros #f)
 
 (define-syntax-rule (test name e.test e.expected)
   (begin (printf "Testing ~s:\n" name)
          (let ((expected e.expected) (answer e.test))
            (unless (equal? answer expected)
-             (pretty-write 'e.test)
+             (rkt:pretty-write 'e.test)
              (printf "FAILED ~s:\n" name)
              (printf "  ANSWER:\n")
-             (pretty-write answer)
+             (rkt:pretty-write answer)
              (printf "  EXPECTED:\n")
-             (pretty-write expected)))))
+             (rkt:pretty-write expected)))))
 
 (define (read* in)
   (define datum (read in))
@@ -356,7 +356,7 @@
       (out 'string)))
   (define racket:s.written
     (string-trim
-      (with-output-to-string (thunk (pretty-write data.formatted-writing)))))
+      (with-output-to-string (thunk (rkt:pretty-write data.formatted-writing)))))
   ;(printf "formatted write:\n~a\n" s.written)
   ;(printf "Racket's formatted write:\n~a\n" racket:s.written)
   (test (list 'write/pretty)

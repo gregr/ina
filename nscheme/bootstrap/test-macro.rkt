@@ -1,26 +1,26 @@
 #lang racket/base
 (require
   "../platform/racket/nscheme.rkt" "include.rkt"
-  racket/include racket/match racket/pretty racket/splicing
-  (prefix-in rkt: racket/base))
+  racket/include racket/match racket/splicing
+  (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 (print-as-expression #f)
-(pretty-print-abbreviate-read-macros #f)
+(rkt:pretty-print-abbreviate-read-macros #f)
 
 (define env.test (env-conjoin/match env.large))
 
 (define (test stx)
   (newline)
   (displayln "INPUT:")
-  (pretty-write stx)
+  (rkt:pretty-write stx)
   (let ((E (parse-expression env.test stx)))
     (displayln "PARSED:")
-    (pretty-write E)
+    (rkt:pretty-write E)
     (displayln "PRETTY PARSED:")
-    (pretty-write (E-pretty E))
+    (rkt:pretty-write (E-pretty E))
     (displayln "EQUIVALENT RACKET CODE:")
-    (pretty-write (E-compile-rkt E '()))
+    (rkt:pretty-write (E-compile-rkt E '()))
     (displayln "VALUE:")
-    (pretty-write (E-eval E))))
+    (rkt:pretty-write (E-eval E))))
 
 ;; Examples for other metaprogramming facilities
 ;(test '(current-environment))

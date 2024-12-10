@@ -4,7 +4,8 @@
   ;; Toggle commenting on these two to turn on interrupt-aware lambdas.
   "../platform/racket/nscheme.rkt"
   ;(rename-in "../platform/racket/nscheme.rkt" (interruptible-lambda lambda))
-  racket/file racket/include racket/local racket/pretty racket/runtime-path racket/splicing)
+  racket/file racket/include racket/local racket/runtime-path racket/splicing
+  (prefix-in rkt: racket/pretty))
 
 (include "../include/base/misc.scm")
 (include "../include/base/pair.scm")
@@ -23,8 +24,8 @@
 (include "../include/base/generator.scm")
 (include "../include/base/port.scm")
 (include "../include/base/time.scm")
-(include "../include/base/io.scm")
 (include "../include/base/text.scm")
+(include "../include/base/io.scm")
 
 (include "../include/text/terminal-control.scm")
 
@@ -82,8 +83,8 @@
      "../include/base/generator.scm"
      "../include/base/port.scm"
      "../include/base/time.scm"
-     "../include/base/io.scm"
      "../include/base/text.scm"
+     "../include/base/io.scm"
      )))
 
 (define def*.text

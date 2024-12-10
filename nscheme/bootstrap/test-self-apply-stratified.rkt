@@ -1,7 +1,8 @@
 #lang racket/base
 (require
   "../platform/racket/nscheme.rkt" "include.rkt"
-  racket/file racket/include racket/pretty racket/runtime-path racket/splicing)
+  racket/file racket/include racket/runtime-path racket/splicing
+  (prefix-in rkt: racket/pretty))
 ;(require profile)
 
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an
@@ -27,7 +28,7 @@
   (define E.test (time (program->E program)))
   (displayln "evaluating test:")
   ;; ~5ms
-  (pretty-write (time (ns-eval E.test)))
+  (rkt:pretty-write (time (ns-eval E.test)))
   ;==>
   ;(3
   ; 15
@@ -68,7 +69,7 @@
 ;(define E.self-apply2 (profile (ns-eval E.self-apply1)))
 (displayln "evaluating self-apply2:")
 ;; ~5ms
-(pretty-write (time (ns-eval E.self-apply2)))
+(rkt:pretty-write (time (ns-eval E.self-apply2)))
 ;==>
 ;(3
 ; 15

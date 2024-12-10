@@ -1,11 +1,11 @@
 #lang racket/base
-(require "../platform/racket/nscheme.rkt" "include.rkt" racket/pretty)
+(require "../platform/racket/nscheme.rkt" "include.rkt" (prefix-in rkt: racket/pretty))
 (module nscm:base racket
   (provide (all-defined-out))
   (require "../platform/racket/nscheme.rkt" (for-syntax racket/list)))
 (require 'nscm:base (for-syntax 'nscm:base))
 (print-as-expression #f)
-(pretty-print-abbreviate-read-macros #f)
+(rkt:pretty-print-abbreviate-read-macros #f)
 
 ;; TODO: convert this entire test to nscheme
 (define tty
@@ -18,7 +18,7 @@
                           (host-process in out out
                                         (find-file/env host-environment path) arg* #f))
                          (iport-close in))))))
-        (pretty-write `(result: ,result))
+        (rkt:pretty-write `(result: ,result))
         result))
     (define (tput        x) (command "tput" x))
     (define (tput-number x) (utf8->number (bytevector-rtrim (tput x) 10)))
