@@ -1,17 +1,14 @@
 (define (make-program)
   (mlet ((D ($d:begin)))
-    (define (valid?!) (unless D (error "cannot use already-evaluated program")))
+    (define (build D->E) (let ((E (D->E D))) (set! D ($d:expression (lambda () E))) E))
     (lambda (method)
       (case method
-        ((add!)    (lambda (D.new) (valid?!) (set! D ($d:begin D D.new))))
-        ((compile) (lambda (publish-defined-values?)
-                     (valid?!)
-                     (let ((E ((if publish-defined-values? D->E/publish D->E) D)))
-                       (set! D #f)
-                       E)))))))
+        ((add!)         (lambda (D.new) (set! D ($d:begin D D.new))))
+        ((D->E)         (build D->E))
+        ((D->E/publish) (build D->E/publish))))))
 
-(define (program->E         p) ((p 'compile) #f))
-(define (program->E/publish p) ((p 'compile) #t))
+(define (program->E         p) (p 'D->E))
+(define (program->E/publish p) (p 'D->E/publish))
 
 (define (program-parse-definition*/env.d p env.d env stx*.def)
   ((p 'add!) (parse-begin-definition* env.d (env-conjoin env.d env) stx*.def)))
