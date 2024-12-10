@@ -49,8 +49,9 @@
 ;;; Layout commands express preferences, not guarantees.  The layout policy is responsible for
 ;;; determining when and how preferences are realized.
 ;;; - The layout-place command requests that text be presented, optionally with an attribute that
-;;;   indicates preferences in how the text is displayed, including styling, coloring, markup, etc.
-;;;   The text value itself should be plain, and not embed any display attributes.
+;;;   may contain metadata to be correlated with the text, or preferences in how the text is
+;;;   displayed, including styling, coloring, markup, etc.  The text value itself should be plain,
+;;;   and not embed any attributes.
 ;;; - The layout-space, layout-newline and layout-space^newline commands request separation, and
 ;;;   respectively indicate a preference for spacing in the horizontal or vertical direction, or no
 ;;;   preference at all for layout-space^newline.  Whether the preferred direction is used or not is
@@ -280,8 +281,8 @@
 ;;; Writer ;;;
 ;;;;;;;;;;;;;;
 ;;; A writer consumes a stream of tokens coming from a structured data source.  Each writer
-;;; operation corresponds to a type of token, taking a text value, optional display attribute, and a
-;;; source datum parameter when applicable.
+;;; operation corresponds to a type of token, taking a text value, optional attribute, and a source
+;;; datum parameter when applicable.
 (define (make-writer atom prefix dot left-bracket right-bracket)
   (vector atom prefix dot left-bracket right-bracket))
 (define (writer-atom          w text attr datum) ((vector-ref w 0) text attr datum))
