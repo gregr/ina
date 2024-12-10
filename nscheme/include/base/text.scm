@@ -48,6 +48,15 @@
         (set! size 0)
         (printer-newline p)))))
 
+(define (printer-correlate-location p correlate!)
+  (mlet ((line 0) (col 0))
+    (make-printer
+      (lambda (text attr) (let ((size (utf8-length text)))
+                            (correlate! text attr line col size)
+                            (set! col (+ col size))
+                            (printer-print p text attr)))
+      (lambda ()          (set! line (+ line 1)) (set! col 0) (printer-newline p)))))
+
 ;;;;;;;;;;;;;;
 ;;; Layout ;;;
 ;;;;;;;;;;;;;;
@@ -563,7 +572,10 @@
     (verbose-notate (example-writer/sgr (layout:compact (example-printer/sgr) width)) example)
     (oport-write-byte standard-output-port 10)
     (oport-write-byte standard-output-port 10)
-    (let* ((l      (layout:pretty (example-printer) width))
+    (mdefine correlation* '())
+    (define (correlate! text attr line col size)
+      (set! correlation* (cons (vector text attr line col size) correlation*)))
+    (let* ((l      (layout:pretty (printer-correlate-location (example-printer) correlate!) width))
            (place  (lambda (t) (layout-place l t #f)))
            (gbegin (lambda () (layout-group-begin l 0)))
            (gend   (lambda () (layout-group-end l)))
@@ -591,4 +603,6 @@
       (gend))
     (oport-write-byte standard-output-port 10)
     (oport-write-byte standard-output-port 10)
+    ;; TODO: pretty-write
+    ;(pretty-write (reverse correlation*))
     ))
