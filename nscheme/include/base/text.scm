@@ -16,20 +16,25 @@
   (make-printer (lambda (t _) (let ((len (bytevector-length t))) (oport-write port t 0 len len)))
                 (lambda ()    (oport-write-byte port 10))))
 
+(define (printer-map p f)
+  (make-printer
+    (lambda (text attr) (let-values (((text attr) (f text attr))) (printer-print p text attr)))
+    (lambda ()          (printer-newline p))))
+(define (printer-map-text/attribute p f)
+  (make-printer
+    (lambda (text attr) (printer-print p (f text attr) attr))
+    (lambda ()          (printer-newline p))))
+(define (printer-map-attribute p f)
+  (make-printer
+    (lambda (text attr) (printer-print p text (f attr)))
+    (lambda ()          (printer-newline p))))
+
 (define (printer-decorate/sgr p)
-  (make-printer
-    (lambda (text sgr) (printer-print p (if sgr (bytevector-append sgr text #"\e[0m") text) #f))
-    (lambda ()         (printer-newline p))))
-
+  (printer-map-text/attribute p (lambda (t sgr) (if sgr (bytevector-append sgr t #"\e[0m") t))))
 (define (printer-sgr-default p sgr.default)
-  (make-printer
-    (lambda (text sgr) (printer-print p text (or sgr sgr.default)))
-    (lambda ()         (printer-newline p))))
-
+  (printer-map-attribute p (lambda (sgr) (or sgr sgr.default))))
 (define (printer-sgr-add p sgr.add)
-  (make-printer
-    (lambda (text sgr) (printer-print p text (if sgr (bytevector-append sgr sgr.add) sgr.add)))
-    (lambda ()         (printer-newline p))))
+  (printer-map-attribute p (lambda (sgr) (if sgr (bytevector-append sgr sgr.add) sgr.add))))
 
 (define (printer-fill p width text attr)
   (mlet ((size 0))
