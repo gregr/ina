@@ -523,7 +523,7 @@
 (define notate (make-notate notation.empty))
 
 ;; TODO: move this example
-#;(let ((example
+#;(let* ((example
          '(() (0) 1 #('2 three "four" #(100 101 102 103 104 105 106 107 108 109 110 111) #"fiveeee") #(6 7 7 7) #t #f . 10))
        (example-writer/sgr (lambda (l)
                              (writer:layout/sgr l #"\e[33;5m" #"\e[31;5m" #"\e[32m"
