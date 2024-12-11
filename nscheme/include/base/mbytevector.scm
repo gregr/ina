@@ -9,10 +9,11 @@
   (let ((go (lambda (mbv v start count)
               (nonnegative-integer? start)
               (nonnegative-integer? count)
-              (unless (< (+ start count) (mbytevector-length mbv))
-                (error "mbytevector-fill! range out of bounds" start count
-                       (mbytevector-length mbv)))
-              (range-for-each (lambda (i) (mbytevector-set! mbv i v)) start count))))
+              (let ((end (+ start count)))
+                (unless (<= end (mbytevector-length mbv))
+                  (error "mbytevector-fill! range out of bounds" start count
+                         (mbytevector-length mbv)))
+                (range-for-each (lambda (i) (mbytevector-set! mbv i v)) start end)))))
   (case-lambda
     ((mbv v)             (go mbv v 0     (mbytevector-length mbv)))
     ((mbv v start)       (go mbv v start (- (mbytevector-length mbv) start)))
