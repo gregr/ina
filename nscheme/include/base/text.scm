@@ -368,7 +368,7 @@
 ;;; Notation ;;;
 ;;;;;;;;;;;;;;;;
 ;; structure:
-;; - abbreviate-reader-macro?
+;; - abbreviate-prefix?
 ;;   - for: quote quasiquote unquote unquote-splicing syntax quasisyntax unsyntax unsyntax-splicing
 ;; - abbreviate-pair?
 ;; - bracket: `( [ {`
@@ -394,7 +394,7 @@
 ;;       - #f is infinity
 (define notation.empty '())
 (define notation.default
-  '((abbreviate-reader-macro? . #f)
+  '((abbreviate-prefix? . #f)
     (abbreviate-pair? . #t)
     (bracket . 40)  ; "("
     (length-prefix? . #f)
@@ -407,25 +407,25 @@
 (define (notation-override notation notation.override) (atree-replace notation notation.override))
 
 (define (make-notate notation)
-  (let* ((notation                 (notation-override notation.default notation))
-         (abbreviate-reader-macro? (notation-ref notation '(abbreviate-reader-macro?)))
-         (abbreviate-pair?         (notation-ref notation '(abbreviate-pair?)))
-         (bracket-index            (case (notation-ref notation '(bracket))
-                                     ((40  #"(" "(" round)  0)
-                                     ((91  #"[" "[" square) 1)
-                                     ((123 #"{" "{" curly)  2)
-                                     (=> (lambda (b) "not a bracket" b))))
-         (length-prefix?           (notation-ref notation '(length-prefix?)))
-         (bytevector-numeric?      (notation-ref notation '(bytevector-numeric?)))
-         (implicit-radix           (notation-ref notation '(number implicit-radix)))
-         (radix                    (or (notation-ref notation '(number radix)) implicit-radix))
-         (capitalize-digits?       (notation-ref notation '(number capitalize-digits?)))
-         (fraction                 (notation-ref notation '(number fraction)))
-         (exponent-above           (notation-ref notation '(number exponent above)))
-         (exponent-below           (notation-ref notation '(number exponent below)))
-         (text.left-bracket        (vector-ref '#(#"(" #"[" #"{") bracket-index))
-         (text.right-bracket       (vector-ref '#(#")" #"]" #"}") bracket-index))
-         (text.null                (bytevector-append text.left-bracket text.right-bracket)))
+  (let* ((notation            (notation-override notation.default notation))
+         (abbreviate-prefix?  (notation-ref notation '(abbreviate-prefix?)))
+         (abbreviate-pair?    (notation-ref notation '(abbreviate-pair?)))
+         (bracket-index       (case (notation-ref notation '(bracket))
+                                ((40  #"(" "(" round)  0)
+                                ((91  #"[" "[" square) 1)
+                                ((123 #"{" "{" curly)  2)
+                                (=> (lambda (b) "not a bracket" b))))
+         (length-prefix?      (notation-ref notation '(length-prefix?)))
+         (bytevector-numeric? (notation-ref notation '(bytevector-numeric?)))
+         (implicit-radix      (notation-ref notation '(number implicit-radix)))
+         (radix               (or (notation-ref notation '(number radix)) implicit-radix))
+         (capitalize-digits?  (notation-ref notation '(number capitalize-digits?)))
+         (fraction            (notation-ref notation '(number fraction)))
+         (exponent-above      (notation-ref notation '(number exponent above)))
+         (exponent-below      (notation-ref notation '(number exponent below)))
+         (text.left-bracket   (vector-ref '#(#"(" #"[" #"{") bracket-index))
+         (text.right-bracket  (vector-ref '#(#")" #"]" #"}") bracket-index))
+         (text.null           (bytevector-append text.left-bracket text.right-bracket)))
     (lambda (writer x)
       (let notate ((x x))
         (define (atom         text datum) (writer-atom          writer text               #f datum))
@@ -437,7 +437,7 @@
           ((null? x)  (atom text.null x))
           ((not x)    (atom #"#f"     x))
           ((eq? x #t) (atom #"#t"     x))
-          ((pair? x)  (let ((abbrev (and abbreviate-reader-macro?
+          ((pair? x)  (let ((abbrev (and abbreviate-prefix?
                                          (symbol? (car x))
                                          (pair? (cdr x))
                                          (null? (cddr x))
@@ -544,7 +544,7 @@
            (example-printer-fill
              (printer-sgr-add (printer-decorate/sgr (example-printer:stdout))
                               #"\e[47m"))))
-       (verbose-notate (make-notate '((abbreviate-reader-macro? . #t)
+       (verbose-notate (make-notate '((abbreviate-prefix? . #t)
                                       (abbreviate-pair? . #f)
                                       (bracket . #"[")
                                       (length-prefix? . #t)
