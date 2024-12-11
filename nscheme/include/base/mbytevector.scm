@@ -19,7 +19,7 @@
     ((mbv v start)       (go mbv v start (- (mbytevector-length mbv) start)))
     ((mbv v start count) (go mbv v start count)))))
 
-(define (mbytevector-copy! src start.src dst start.dst count)
+(define (mbytevector-copy! dst start.dst src start.src count)
   (nonnegative-integer?! start.src)
   (nonnegative-integer?! start.dst)
   (nonnegative-integer?! count)
