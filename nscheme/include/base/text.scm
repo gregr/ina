@@ -420,7 +420,7 @@
    (define byte:r        114)
    (define byte:t        116)
    (define byte:v        118)
-   (define (digit16 h) (if (< h 9) (+ h byte:0) (+ h byte:A -10)))
+   (define (digit16 h) (if (< h 10) (+ h byte:0) (+ h byte:A -10)))
    (define (mbytevector-base16-encode-1! mbv i b) (mbytevector-set! mbv i (digit16 b)))
    (define (mbytevector-base16-encode-2! mbv i b)
      (mbytevector-set! mbv i       (digit16 (bitwise-asr b 4)))
