@@ -410,6 +410,7 @@
   ((define byte:dquote    34)
    (define byte:0         48)
    (define byte:semicolon 59)
+   (define byte:@         64)
    (define byte:A         65)
    (define byte:backslash 92)
    (define byte:a         97)
@@ -420,6 +421,8 @@
    (define byte:r        114)
    (define byte:t        116)
    (define byte:v        118)
+   (define byte:pipe     124)
+   (define (punctuation? c) (member c (bytevector->list #"\"#'(),;[]`{}")))
    (define (digit16-count n) (if (< 0 n) (+ (floor-log n 16) 1) 1))
    (define (digit16 h) (if (< h 10) (+ h byte:0) (+ h byte:A -10)))
    (define (mbytevector-base16-encode-1! mbv i b) (mbytevector-set! mbv i (digit16 b)))
@@ -629,13 +632,56 @@
                                                   (loop (+ i width) (+ j width))))))))
                              (atom (mbytevector->bytevector mbv) x))))))))
             ((symbol? x)
-             (atom (let* ((bv  (string->utf8 (symbol->string x)))
-                          (len (bytevector-length bv)))
-                     (cond
-                       ((= len 0)      #"||")
-                       ((eqv? bv #".") #"|.|")
-                       (else           #"TODO")))
-                   x))
+             (let* ((bv (string->utf8 (symbol->string x))) (len (bytevector-length bv)))
+               (cond
+                 ((= len 0)      (atom #"||"  x))
+                 ((eqv? bv #".") (atom #"|.|" x))
+                 (else
+                   (let loop ((i 0) (size 0) (pipe? #f))
+                     (if (< i len)
+                         (let* ((b0 (bytevector-ref bv i)) (width (utf8-decode-width b0)))
+                           (case (utf8-ref/b0&width bv i b0 width)
+                             ((7 8 9 10 11 12 13 27 92 124) (loop (+ i 1) (+ size 2) #t))
+                             (=> (lambda (c)
+                                   (cond ((or (unicode-control? c) (unicode-vspace? c))
+                                          (loop (+ i width) (+ size (digit16-count c) 3) #t))
+                                         ((or (unicode-hspace? c) (punctuation? c))
+                                          (loop (+ i width) (+ size width) #t))
+                                         (else (loop (+ i width) (+ size width) pipe?)))))))
+                         (let* ((pipe? (or pipe? (= (bytevector-ref bv 0) byte:@) (utf8->number bv)))
+                                (size  (if pipe? (+ size 2) size))
+                                (mbv   (make-mbytevector size 0)))
+                           (when pipe?
+                             (mbytevector-set! mbv 0          byte:pipe)
+                             (mbytevector-set! mbv (- size 1) byte:pipe))
+                           (let loop ((i 0) (j (if pipe? 1 0)))
+                             (define (slash-escape b)
+                               (mbytevector-set! mbv j byte:backslash)
+                               (mbytevector-set! mbv (+ j 1) b)
+                               (loop (+ i 1) (+ j 2)))
+                             (if (< i len)
+                                 (let* ((b0 (bytevector-ref bv i)) (width (utf8-decode-width b0)))
+                                   (case (utf8-ref/b0&width bv i b0 width)
+                                     ((7)   (slash-escape byte:a))
+                                     ((8)   (slash-escape byte:b))
+                                     ((9)   (slash-escape byte:t))
+                                     ((10)  (slash-escape byte:n))
+                                     ((11)  (slash-escape byte:v))
+                                     ((12)  (slash-escape byte:f))
+                                     ((13)  (slash-escape byte:r))
+                                     ((27)  (slash-escape byte:e))
+                                     ((92)  (slash-escape byte:backslash))
+                                     ((124) (slash-escape byte:pipe))
+                                     (=> (lambda (c)
+                                           (if (or (unicode-control? c) (unicode-vspace? c))
+                                               (let ((dcount (digit16-count c)))
+                                                 (mbytevector-copy! mbv j #"\\u" 0 2)
+                                                 (mbytevector-set! mbv (+ j dcount 2) byte:semicolon)
+                                                 (mbytevector-base16-encode! mbv (+ j 2) c dcount)
+                                                 (loop (+ i width) (+ j dcount 3)))
+                                               (begin (mbytevector-copy! mbv j bv i width)
+                                                      (loop (+ i width) (+ j width))))))))
+                                 (atom (mbytevector->bytevector mbv) x))))))))))
             ((number? x)      (atom
                                 ;; TODO: use notation options
                                 (number->utf8 x)
@@ -647,17 +693,18 @@
 (define notate (make-notate notation.empty))
 
 ;; TODO: move this example
-#;(let* ((example
-         (cons (utf8->string (bytevector 0 15 16 31 127
-                                         ;#x03BB
-                                         #b11001110 #b10111011
-                                         ;159
-                                         #b11000010 #b10011111
-                                         ;8192
-                                         #b11100010 #b10000000 #b10000000
-                                         ;8233
-                                         #b11100010 #b10000000 #b10101001))
-               '(() (0) 1 #('2 three "four" "\fou\r" #(100 101 102 103 104 105 106 107 108 109 110 111) #"\fi\ve" #"fiveeee") #(6 7 7 7) #t #f . 10)))
+(let* ((example
+         (append (list (utf8->string (bytevector 0 15 16 31 127
+                                                 ;#x03BB
+                                                 #b11001110 #b10111011
+                                                 ;159
+                                                 #b11000010 #b10011111
+                                                 ;8192
+                                                 #b11100010 #b10000000 #b10000000
+                                                 ;8233
+                                                 #b11100010 #b10000000 #b10101001))
+                       (string->symbol "ze\ro") (string->symbol "@zero") (string->symbol "ze#ro"))
+                 '(() (0) 1 #('2 three "four" "\fou\r" #(100 101 102 103 104 105 106 107 108 109 110 111) #"\fi\ve" #"fiveeee") #(6 7 7 7) #t #f . 10)))
        (example-writer/sgr (lambda (l)
                              (writer:layout/sgr l #"\e[33;5m" #"\e[31;5m" #"\e[32m"
                                                 (lambda (datum)
