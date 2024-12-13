@@ -1,5 +1,6 @@
 #lang racket/base
-(require "../platform/racket/nscheme.rkt" "include.rkt" (prefix-in rkt: racket/pretty))
+(require "../platform/racket/nscheme.rkt" "include.rkt"
+  (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 (module nscm:base racket
   (provide (all-defined-out))
   (require "../platform/racket/nscheme.rkt" (for-syntax racket/list)))
@@ -44,31 +45,31 @@
   (let ((settings (tty 'stty-ref)))
     (dynamic-wind
       (lambda ()
-        (display (string-append csi:cursor-save
-                                csi:display-save
-                                (csi:cursor-move-to 0 0)
-                                csi:display-clear-full))
+        (rkt:display (string-append csi:cursor-save
+                                    csi:display-save
+                                    (csi:cursor-move-to 0 0)
+                                    csi:display-clear-full))
         (flush-output))
       (lambda () body ...)
       (lambda ()
-        (display (string-append csi:display-restore
-                                csi:cursor-restore))
+        (rkt:display (string-append csi:display-restore
+                                    csi:cursor-restore))
         (flush-output)
         (tty 'stty-set settings)))))
 (define-syntax-rule (with-tty-cursor-hidden body ...)
   (dynamic-wind
-    (lambda () (display csi:cursor-hide))
+    (lambda () (rkt:display csi:cursor-hide))
     (lambda () body ...)
-    (lambda () (display csi:cursor-show))))
+    (lambda () (rkt:display csi:cursor-show))))
 
 (define (display/style style s)
-  (display (sgr->csi style))
-  (display s)
-  (display (sgr->csi (append sgr:reset))))
+  (rkt:display (sgr->csi style))
+  (rkt:display s)
+  (rkt:display (sgr->csi (append sgr:reset))))
 
 (define (displayln/style style s)
   (display/style style s)
-  (display "\r\n"))
+  (rkt:display "\r\n"))
 
 (with-tty-fresh
   (with-tty-cursor-hidden
@@ -96,7 +97,7 @@
                       sgr:blink+
                       sgr:underline+
                       ))
-    (display "\r\n")
+    (rkt:display "\r\n")
     (displayln/style '()     "testing (1 2 3)")
     (displayln/style style.0 "testing (1 2 3)")
     (displayln/style style.1 "testing (1 2 3)")

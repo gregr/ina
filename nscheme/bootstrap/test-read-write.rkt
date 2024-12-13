@@ -70,7 +70,7 @@
 (define separation "#i#d1@1#i#xf#t#f test#(#t#t#f (ok . 123) 5)")
 (define quotes "`(one ,two ,@(three 4 5) #(xxx ,'#(6 7)) #`(_ #,eight #,@splice _) #'nine . ten)")
 
-(displayln "These tests are known to diverge in behavior:")
+(rkt:displayln "These tests are known to diverge in behavior:")
 (for-each
   (lambda (name s)
     (test (list 'read/error name)
@@ -79,7 +79,7 @@
   '(    numbers/errors strings separation)
   (list numbers/errors strings separation))
 
-(displayln "\nThese tests should pass:")
+(rkt:displayln "\nThese tests should pass:")
 (for-each
   (lambda (name s)
     (define xs        (read*/string        s))

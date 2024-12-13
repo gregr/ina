@@ -2,7 +2,7 @@
 (require
   "../platform/racket/nscheme.rkt" "include.rkt"
   racket/file racket/include racket/runtime-path racket/splicing
-  (prefix-in rkt: racket/pretty))
+  (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 ;(require profile)
 
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an
@@ -21,10 +21,10 @@
                                        '(1 2) '(3 4 5) '(a b c))
                             (fold-right (lambda (acc x y) (cons (cons x y) acc))
                                         '(1 2) '(3 4 5) '(a b c)))))
-  (displayln "parsing test:")
+  (rkt:displayln "parsing test:")
   ;; ~0ms
   (define E.test (time (parse-body env.large stx*.test)))
-  (displayln "evaluating test:")
+  (rkt:displayln "evaluating test:")
   ;; ~0ms
   (rkt:pretty-write (time (ns-eval E.test)))
   ;==>
@@ -56,15 +56,15 @@
                                (fold-right (lambda (acc x y) (cons (cons x y) acc))
                                            '(1 2) '(3 4 5) '(a b c)))))
      (parse-body env.large stx*.test))))
-(displayln "parsing self-apply1:")
+(rkt:displayln "parsing self-apply1:")
 ;; ~2ms
 (define E.self-apply1 (time (parse-body env.large+posix+privileged stx*.self-apply1)))
 ;(define E.self-apply1 (profile (parse-body env.large+posix+privileged stx*.self-apply1)))
-(displayln "evaluating self-apply1 to parse self-apply2:")
+(rkt:displayln "evaluating self-apply1 to parse self-apply2:")
 ;; ~553ms
 (define E.self-apply2 (time (ns-eval E.self-apply1)))
 ;(define E.self-apply2 (profile (ns-eval E.self-apply1)))
-(displayln "evaluating self-apply2:")
+(rkt:displayln "evaluating self-apply2:")
 ;; ~1ms
 (rkt:pretty-write (time (ns-eval E.self-apply2)))
 ;==>

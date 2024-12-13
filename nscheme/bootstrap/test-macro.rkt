@@ -9,17 +9,17 @@
 (define env.test (env-conjoin/match env.large))
 
 (define (test stx)
-  (newline)
-  (displayln "INPUT:")
+  (rkt:newline)
+  (rkt:displayln "INPUT:")
   (rkt:pretty-write stx)
   (let ((E (parse-expression env.test stx)))
-    (displayln "PARSED:")
+    (rkt:displayln "PARSED:")
     (rkt:pretty-write E)
-    (displayln "PRETTY PARSED:")
+    (rkt:displayln "PRETTY PARSED:")
     (rkt:pretty-write (E-pretty E))
-    (displayln "EQUIVALENT RACKET CODE:")
+    (rkt:displayln "EQUIVALENT RACKET CODE:")
     (rkt:pretty-write (E-compile-rkt E '()))
-    (displayln "VALUE:")
+    (rkt:displayln "VALUE:")
     (rkt:pretty-write (E-eval E))))
 
 ;; Examples for other metaprogramming facilities

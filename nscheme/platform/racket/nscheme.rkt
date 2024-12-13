@@ -105,7 +105,7 @@
                     thunk)))))
 (define (panic . x*)
   (let ((handle (current-panic-handler))) (when handle (apply handle x*)))
-  (displayln "unhandled panic:")
+  (rkt:displayln "unhandled panic:")
   (rkt:pretty-write (cons 'panic x*))
   (for-each (lambda (x) (when (exn? x) ((error-display-handler) (exn-message x) x))) x*)
   (exit 1))
