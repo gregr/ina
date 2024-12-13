@@ -31,3 +31,20 @@
   (define writeln/notate       (make-write/notate layout:single-line                 #t))
   (define pretty-write/notate  (make-write/notate (lambda (p) (layout:pretty  p 78)) #t))
   (define compact-write/notate (make-write/notate (lambda (p) (layout:compact p 78)) #t)))
+
+(define display
+  (let ((go (lambda (x port)
+              (let ((go (lambda (x) (let ((len (bytevector-length x)))
+                                      (oport-write port x 0 len len)))))
+                (cond ((bytevector? x) (go x))
+                      ((string?     x) (go (string->utf8 x)))
+                      ((symbol?     x) (go (string->utf8 (symbol->string x))))
+                      (else            (write x port)))))))
+    (case-lambda
+      ((x)      (go x (current-output-port)))
+      ((x port) (go x port)))))
+(define displayln
+  (let ((go (lambda (x port) (display x port) (newline port))))
+    (case-lambda
+      ((x)      (go x (current-output-port)))
+      ((x port) (go x port)))))
