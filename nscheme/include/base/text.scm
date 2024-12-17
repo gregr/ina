@@ -693,7 +693,7 @@
 (define notate (make-notate notation.empty))
 
 ;; TODO: move this example
-(let* ((example
+#;(let* ((example
          (append (list (utf8->string (bytevector 0 15 16 31 127
                                                  ;#x03BB
                                                  #b11001110 #b10111011
@@ -782,7 +782,4 @@
       (place #"six")
       (gend))
     (oport-write-byte standard-output-port 10)
-    (oport-write-byte standard-output-port 10)
-    ;; TODO: pretty-write
-    ;(pretty-write (reverse correlation*))
-    ))
+    (oport-write-byte standard-output-port 10)))
