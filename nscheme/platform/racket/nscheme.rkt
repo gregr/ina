@@ -13,7 +13,7 @@
   ;; optimization), populating it based on a lower-level code/closure representation.
   procedure-metadata
   record? record record-type-descriptor record-ref
-  string->bytevector bytevector->string
+  utf8->string string->utf8
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
@@ -333,8 +333,8 @@
     ((mv)             (vector-copy (mvector-v mv)))
     ((mv start count) (vector-copy (mvector-v mv) start (+ start count)))))
 
-(define (bytevector->string bv) (bytes->string/utf-8 bv))
-(define (string->bytevector bv) (string->bytes/utf-8 bv))
+(define (utf8->string bv) (bytes->string/utf-8 bv))
+(define (string->utf8 bv) (string->bytes/utf-8 bv))
 
 (define (bytevector        . x*) (apply bytes x*))
 (define (bytevector?       x)    (bytes?       x))
@@ -418,7 +418,7 @@
   current-panic-handler native-signal-handler
   procedure-metadata
   record? record record-type-descriptor record-ref
-  string->bytevector bytevector->string
+  utf8->string string->utf8
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts

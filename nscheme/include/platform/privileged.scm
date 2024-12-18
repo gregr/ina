@@ -20,10 +20,8 @@
     '(
       native-signal-handler
       procedure-metadata
-      record? record record-type-descriptor record-ref
-      string->bytevector bytevector->string)
+      record? record record-type-descriptor record-ref)
     (list
       native-signal-handler
       procedure-metadata
-      record? record record-type-descriptor record-ref
-      string->bytevector bytevector->string)))
+      record? record record-type-descriptor record-ref)))
