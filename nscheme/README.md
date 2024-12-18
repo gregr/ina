@@ -92,6 +92,27 @@ and resuming snapshots of a running system.
   - code units (bytes) are not characters, but suffice for low-level string manipulation
   - code points are not characters, but suffice for some higher-level string manipulation
   - grapheme clusters (substrings) are the right notion of character for user interaction
+- Like Racket, bytevectors can be textually notated.  Unlike Racket, this textual notation always
+  corresponds to the sequence of bytes given by UTF-8 encoding, except that individual bytes can be
+  specified using the `\x` escape code.  For instance, `#"λ"`, `#"\u3BB;"`, `#"\xCE;\xBB;"`, and
+  `#vu8(206 187)` are all notations for the same length-2 bytevector.  Individually specified bytes
+  do not have to form a legal UTF-8 sequence.
+- Strings (and symbols) are intended to correspond to unicode text, but this correspondence is only
+  enforced if the platform chooses to do so.  `utf8->string` is defined to UTF-8 encode the
+  input bytevector, and any enforcement of unicode correspondence in the presence of illegal UTF-8,
+  whether through panic, replacement, removal, or some other strategy, will occur during this
+  conversion.  If a platform chooses not to enforce this correspondence, then a string corresponds
+  to the sequence of bytes given by UTF8-encoding its text notation body in the same way as for a
+  bytevector.  This includes support for specifying individual bytes using the `\x` escape code,
+  even when these bytes produce a sequence that is not legal UTF-8.
+- Racket-like dynamically-scoped parameters are provided.  Unlike in Racket, the values of these
+  parameters can only be modified through a parameterization, and the modification is only visible
+  within the body of that parameterization.  That is, parameters are otherwise immutable.  As in
+  Racket, parameterizations are inherited by threads such that a thread can be considered to be
+  evaluating within the body of all enclosing parameterizations at the time of its creation.
+  However, despite thread inheritence of parameters, limiting parameter modifications to
+  parameterizations should resolve the compositionality issues affecting Racket that are discussed
+  in: https://www.deinprogramm.de/sperber/papers/adding-threads.pdf
 - No primitive eof-object type: IO operations may return `#f` or `(values)` instead
 - Inspired by: https://www.deinprogramm.de/sperber/papers/numerical-tower.pdf
   - Inexact numbers are not s-expressions, and are not part of the base language.  But platforms
