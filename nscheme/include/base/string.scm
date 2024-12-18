@@ -245,11 +245,10 @@
 (define (number->string . x*) (utf8->string (apply number->utf8 x*)))
 (define (string->number s . option*) (apply utf8->number (string->utf8 s) option*))
 
-(define (string-append* x*) (bytevector->string (bytevector-append* (map string->bytevector x*))))
+(define (string-append* x*) (utf8->string (bytevector-append* (map string->utf8 x*))))
 (define (string-append . x*) (string-append* x*))
 (define (string-join* separator x*)
-  (bytevector->string
-    (bytevector-join* (string->bytevector separator) (map string->bytevector x*))))
+  (utf8->string (bytevector-join* (string->utf8 separator) (map string->utf8 x*))))
 (define (string-join separator . x*) (string-join* separator x*))
 
 (define (make-local-gensym)
