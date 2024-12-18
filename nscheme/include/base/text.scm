@@ -380,7 +380,6 @@
 ;;     - read should be given an impicit-radix to decide how to recognize unprefixed numbers
 ;;   - radix: #f 2 8 10 16
 ;;     - #f (the default) to use implicit-radix
-;;   - capitalize-digits?
 ;;   - fraction
 ;;     - ratio
 ;;     - decimal (falls back to ratio if there would be unallowed repetition)
@@ -399,8 +398,8 @@
     (bracket . 40)  ; "("
     (length-prefix? . #f)
     (bytevector-numeric? . #f)
-    (number (implicit-radix . 10) (radix . #f) (capitalize-digits? . #f) (fraction . ratio)
-            (exponent (above . #f) (below . -3)))))
+    (number (implicit-radix . 10) (radix . #f) (fraction . ratio) (exponent (above . #f)
+                                                                            (below . -3)))))
 
 (define (notation-ref notation key)
   (atree-ref/k notation key (lambda () (error "missing notation key" key notation)) (lambda (v) v)))
@@ -687,7 +686,6 @@
            (bytevector-numeric? (notation-ref notation '(bytevector-numeric?)))
            (implicit-radix      (notation-ref notation '(number implicit-radix)))
            (radix               (or (notation-ref notation '(number radix)) implicit-radix))
-           (capitalize-digits?  (notation-ref notation '(number capitalize-digits?)))
            (fraction            (notation-ref notation '(number fraction)))
            (exponent-above      (notation-ref notation '(number exponent above)))
            (exponent-below      (notation-ref notation '(number exponent below)))
