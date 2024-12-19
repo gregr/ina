@@ -375,7 +375,7 @@
 ;; - length-prefix?
 ;; - bytevector-numeric?
 ;; - number
-;;   - implicit-radix
+;;   - implicit-radix: 2 8 10 16
 ;;     - determines which radix does not need a prefix
 ;;     - read should be given an impicit-radix to decide how to recognize unprefixed numbers
 ;;   - radix: #f 2 8 10 16
@@ -391,16 +391,16 @@
 ;;     - below: #f or nonpositive integer
 ;;       - use scientific notation for decimal fractions when (< 0 (abs value) (expt radix below))
 ;;       - #f is infinity
+(define number-notation.default
+  '((implicit-radix . 10) (radix . #f) (fraction . ratio) (exponent (above . #f) (below . -3))))
 (define notation.empty '())
 (define notation.default
-  '((abbreviate-prefix? . #f)
+  `((abbreviate-prefix? . #f)
     (abbreviate-pair? . #t)
     (bracket . 40)  ; "("
     (length-prefix? . #f)
     (bytevector-numeric? . #f)
-    (number (implicit-radix . 10) (radix . #f) (fraction . ratio) (exponent (above . #f)
-                                                                            (below . -3)))))
-
+    (number . ,number-notation.default)))
 (define (notation-ref notation key)
   (atree-ref/k notation key (lambda () (error "missing notation key" key notation)) (lambda (v) v)))
 (define (notation-override notation notation.override) (atree-replace notation notation.override))
@@ -419,7 +419,7 @@
                                ((< d byte:a) (+ (- d byte:A) 10))
                                (else         (+ (- d byte:a) 10))))
    (define (digit16-count n) (if (< 0 n) (+ (floor-log n 16) 1) 1))
-   (define (radix?! r) (unless (and (integer? r) (<= 2 r 16)) (error "unsupported radix" r)))
+   (define (radix?! r) (unless (memv r '(2 8 10 16)) (error "radix not in (2 8 10 16)" r)))
    (define (set-nat-radix-digits! mbv start count n radix)
      (let loop ((i (+ start count -1)) (n n))
        (when (<= start i)
