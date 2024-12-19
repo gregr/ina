@@ -661,6 +661,7 @@
            (length-prefix?      (notation-ref notation '(length-prefix?)))
            (bytevector-numeric? (notation-ref notation '(bytevector-numeric?)))
            (number-notation     (notation-ref notation '(number)))
+           (n->utf8             (make-number->utf8 number-notation))
            (text.left-bracket   (vector-ref '#(#"(" #"[" #"{") bracket-index))
            (text.right-bracket  (vector-ref '#(#")" #"]" #"}") bracket-index))
            (text.null           (bytevector-append text.left-bracket text.right-bracket)))
@@ -806,10 +807,7 @@
                            (notate-text #"" byte:pipe (or (= (bytevector-ref bv 0) byte:@)
                                                           (utf8->number bv))
                                         bv (bytevector-length bv))))))
-            ((number? x)      (atom
-                                ;; TODO: use notation options
-                                (number->utf8 x)
-                                x))
+            ((number? x)      (atom (n->utf8 x)       x))
             ((mbytevector? x) (atom #"#<mbytevector>" x))
             ((mvector? x)     (atom #"#<mvector>"     x))
             ((procedure? x)   (atom #"#<procedure>"   x))
