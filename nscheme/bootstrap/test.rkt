@@ -1182,62 +1182,31 @@
   #"testing 5 6 7 8 9 10"
 
   ! string-writing
-  (number->string -1)
-  ==> "-1"
-  (number->string 9)
-  ==> "9"
-  (number->string 10)
-  ==> "10"
-  (number->string 11)
-  ==> "11"
-  (number->string 19)
-  ==> "19"
-  (number->string 100)
-  ==> "100"
-  (number->string 123)
-  ==> "123"
-  (number->string -1)
-  ==> "-1"
-  (number->string -123)
-  ==> "-123"
-  (number->string 123/456)
-  ==> "41/152"
-  (number->string -123/456)
-  ==> "-41/152"
-  (number->string 1/2000  10 '((use-exponent-below . 1/10000)))
-  ==>
-  "0.0005"
-  (number->string 1/20000 10 '((use-exponent-below . 1/10000)))
-  ==>
-  "5e-5"
-  (number->string 1/30000 10 '((use-exponent-below . 1/10000)))
-  ==>
-  "3.~3e-5"
-  (number->string 12 10 '((use-exponent-above . 100)))
-  ==>
-  "12"
-  (number->string 12345 10 '((use-exponent-above . 100)))
-  ==>
-  "1.2345e4"
-  (number->string 123456789123456789 10 '((use-exponent-above . 10000000000000)
-                                          (use-exponent-below . 1/10000)))
-  ==>
-  "1.23456789123456789e17"
-  (number->string 100/3 10 '((use-exponent-above . 10)))
-  ==>
-  "3.~3e1"
-  (number->string 100/7 10 '((use-exponent-above . 10)))
-  ==>
-  "1.~428571e1"
-  (number->string 1/43 10 '())
-  ==>
-  "0.~023255813953488372093"
-  (number->string 1/47 10 '())
-  ==>
-  "0.~0212765957446808510638297872340425531914893617"
-  (number->string 1/113 10 '())
-  ==>
-  "0.~0088495575221238938053097345132743362831858407079646017699115044247787610619469026548672566371681415929203539823"
+  (number->string -1)       ==> "-1"
+  (number->string 9)        ==> "9"
+  (number->string 10)       ==> "10"
+  (number->string 11)       ==> "11"
+  (number->string 19)       ==> "19"
+  (number->string 100)      ==> "100"
+  (number->string 123)      ==> "123"
+  (number->string -1)       ==> "-1"
+  (number->string -123)     ==> "-123"
+  (number->string 123/456)  ==> "41/152"
+  (number->string -123/456) ==> "-41/152"
+  (let ((n->s (make-number->string '((fraction . decimal/repeat) (exponent (below . -4))))))
+    (list (n->s 1/2000) (n->s 1/20000) (n->s 1/30000)))
+  ==> ("0.0005" "5e-5" "3.~3e-5")
+  (let ((n->s (make-number->string '((fraction . decimal) (exponent (above . 2))))))
+    (list (n->s 12) (n->s 12345)))
+  ==> ("12" "1.2345e4")
+  ((make-number->string '((fraction . decimal) (exponent (above . 13) (below . -4)))) 123456789123456789)
+  ==> "1.23456789123456789e17"
+  (let ((n->s (make-number->string '((fraction . decimal/repeat) (exponent (above . 1))))))
+    (list (n->s 100/3) (n->s 100/7)))
+  ==> ("3.~3e1" "1.~428571e1")
+  (number->string/decimal/repeat 1/43) ==> "0.~023255813953488372093"
+  (number->string/decimal/repeat 1/47) ==> "0.~0212765957446808510638297872340425531914893617"
+  (number->string/decimal/repeat 1/113) ==> "0.~0088495575221238938053097345132743362831858407079646017699115044247787610619469026548672566371681415929203539823"
 
   ! string-reading
   (string->number "0")
