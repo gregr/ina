@@ -50,7 +50,6 @@
 
 (define (printer-truncate p width)
   (mlet ((size 0))
-    (define (nl) (set! size 0) (printer-newline p))
     (make-printer
       (lambda (text attr)
         (let ((current-size size))
@@ -64,11 +63,10 @@
                     (mbytevector-copy! prefix 0 text 0 len)
                     (set! size width)
                     (printer-print p (mbytevector->bytevector prefix) attr)))))))
-      nl)))
+      (lambda () (set! size 0) (printer-newline p)))))
 
 (define (printer-line-wrap p width)
   (mlet ((size 0))
-    (define (nl) (set! size 0) (printer-newline p))
     (make-printer
       (lambda (text attr)
         (let* ((ulen (utf8-length text)) (new-size (+ size ulen)))
@@ -81,7 +79,7 @@
                          (lhs      (make-mbytevector len.lhs 0)))
                     (mbytevector-copy! lhs 0 text start len.lhs)
                     (printer-print p (mbytevector->bytevector lhs) attr)
-                    (nl)
+                    (printer-newline p)
                     (let ((start (+ start len.lhs)) (ulen ulen.rhs))
                       (if (<= ulen width)
                           (let* ((len.lhs (- len.full start)) (lhs (make-mbytevector len.lhs 0)))
@@ -89,7 +87,7 @@
                             (set! size ulen)
                             (printer-print p (mbytevector->bytevector lhs) attr))
                           (loop start ulen ulen)))))))))
-      nl)))
+      (lambda () (set! size 0) (printer-newline p)))))
 
 (define (printer-correlate-location p correlate!)
   (mlet ((line 0) (col 0))
