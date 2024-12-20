@@ -1462,6 +1462,62 @@ Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
   - symbol
     - the bytevector pointed to is both a valid string, and is the backing data for a symbol
 
+- 8-byte-aligned, 64-bit, non-interned symbols, immediate short symbol/string/bytevector, emphasizing avoiding indirection for eq? and eqv?:
+  - 000: fixnum
+  - 001: small immediate
+    - LLLtt001 short symbol, string, bytevector
+      - LLL is a 3-bit length, tt is a subtag, top 56 bits are used to store up to 7 bytes
+      - LLL00001: short symbol
+      - LLL01001: short string
+      - LLL10001: short bytevector
+    - tt11001: other immediates
+    - 0011001: null
+    - 0111001: boolean
+      - 00111001: #f
+      - 10111001: #t
+    - 1011001: small flonum
+    - 1111001: ???
+      - maybe use this as a shared empty vector?
+  - 010: pair: no need for a secondary header
+  - 011
+    - mbytevector
+      - can live in an immediate-content heap page (gc does not need to scan)
+      - secondary header is a fixnum with a tag that isn't 000, 001, or 011 (011 indicates a code-or-rtd, used as a secondary header)
+        - being on an immediate-content heap page makes this safe since the header won't be scanned by the gc
+    - vector: secondary header is a fixnum
+    - mvector: secondary header is a fixnum with a small-immediate tag (001 instead of 000)
+    - procedure-or-record
+      - procedures and records will be represented similarly
+        - we might allow some records to be callable, and they might answer `#t` to `procedure?`
+      - secondary header is a code-or-rtd
+      - but may be part of a strongly-connected-component closure object
+        - so scavenging might first require looking backwards for an SCC header
+      - might mix boxed and immediate-content, but its code-or-rtd header indicates how to avoid immediate-content
+    - code-or-rtd
+      - might mix boxed and immediate-content
+      - this might need to live in a special kind of heap page for unusual gc scanning to avoid immediate-content
+        - or we could teach the normal gc scanning how to recognize markers for immediate-content regions
+      - a secondary header is needed because gc won't know what this is while scanning
+        - during normal computation we always know what this is because it always appears as a secondary header itself
+        - need to figure out a safe tag for this header, or use some other technique to avoid misinterpreting it
+          - for instance, we could steal a bit from the fixnum/small-immediate tags used by vectors/mvectors
+            - then they would only have 60-bit lengths, which is probably fine
+  - eqv? must look inside these: easy to test for 1 in third bit
+    - except for ratnum, all of these can live in an immediate-content heap page (gc does not need to scan)
+      - ratnum doesn't make things much harder because it can safely be eagerly scavenged, since its
+        contents are guaranteed to be fixnums or bigints: no arbitrary recursion
+    - each of these includes a fixnum length as secondary header, though the fixnum tagging isn't
+      important because it won't be scanned by the gc due to being in an immediate-content heap page
+      - 100 symbol
+      - 101 string
+      - 110 bytevector
+    - it doesn't really matter which of the three above tags these live under, as long as they use a
+      non-fixnum-tagged (i.e., non-000) secondary header
+      - bigint: secondary header is a fixnum length, but with a non-fixnum tag
+      - ratnum: distinct but arbitrary secondary header
+      - flonum: distinct but arbitrary secondary header
+  - 111 reserved for gc forwarding address
+
 ## Ideas about control-transfer conventions
 
 ### Asymmetric returning and calling conventions with stack-based control contexts
