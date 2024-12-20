@@ -135,8 +135,9 @@
                               (if (< i len) (loop (utf8-next bv i) (+ count 1)) count))))
 (define (utf8-index bv n) (let ((len (bytevector-length bv)))
                             (let loop ((i 0) (count 0))
-                              (unless (< i len) (error "utf8-index count too large" bv n count))
-                              (if (< count n) (loop (utf8-next bv i) (+ count 1)) i))))
+                              (cond ((<= n count) i)
+                                    ((< i len) (loop (utf8-next bv i) (+ count 1)))
+                                    (else (error "utf8-index count too large" bv n count))))))
 
 (define (unicode-control? c) (or (<= 0 c 31) (<= 127 c 159)))
 (define (unicode-hspace? c) (case c ((9 11 12 32 160 8239 8287 12288) #t) (else (<= 8192 c 8202))))
