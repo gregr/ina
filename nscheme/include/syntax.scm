@@ -6,7 +6,7 @@
 
 (splicing-local
   ((define antimark #f)
-   (define mark=?   eq?)
+   (define mark=?   eqv?)
    (define (mark*=? a* b*)
      (let loop ((a* a*) (b* b*))
        (if (pair? a*)
@@ -81,7 +81,7 @@
   (define (identifier?! s) (unless (identifier? s) (error "not an identifier" s)))
   (define (identifier=? a b)
     (identifier?! a) (identifier?! b)
-    (and (eq? (syntax-form a) (syntax-form b))
+    (and (eqv? (syntax-form a) (syntax-form b))
          (mark*=? (syntax-mark* a) (syntax-mark* b))))
 
   (define (transcribe op m env stx)
@@ -108,8 +108,8 @@
          (let ((kv (assq k kv*)))
            (if kv
                (let loop ((kv* kv*))
-                 (cond ((eq? (car kv*) kv) (cdr kv*))  ; assumes mark=? is eq?
-                       (else               (cons (car kv*) (loop (cdr kv*))))))
+                 (cond ((eqv? (car kv*) kv) (cdr kv*))  ; assumes mark=? is eqv?
+                       (else                (cons (car kv*) (loop (cdr kv*))))))
                kv*)))
        (define trie.empty '(() . ()))  ; trie : `(,sym=>x . ,mark=>trie)
        (define (trie-ref t m* sym)

@@ -226,8 +226,8 @@
   (define (keyword stx)                 (and (identifier? stx) (env-ref^ env stx vocab)))
   (define (operand qq)                  (car (syntax-unwrap (cdr qq))))
   (define (operation? qq tag)
-    (and (eq? (keyword (car qq)) tag) (let ((qq.d (syntax-unwrap (cdr qq))))
-                                        (and (pair? qq.d) (null? (syntax-unwrap (cdr qq.d)))))))
+    (and (eqv? (keyword (car qq)) tag) (let ((qq.d (syntax-unwrap (cdr qq))))
+                                         (and (pair? qq.d) (null? (syntax-unwrap (cdr qq.d)))))))
   (finish
     (let loop ((stx.qq stx) (level 0))
       (let ((qq (syntax-unwrap stx.qq)))

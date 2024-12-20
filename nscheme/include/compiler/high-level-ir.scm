@@ -1,7 +1,7 @@
 (define (make-address name note) (vector (mvector) name note))
 (define (address-name addr)      (vector-ref addr 1))
 (define (address-note addr)      (vector-ref addr 2))
-(define (address=?    a b)       (eq? (vector-ref a 0) (vector-ref b 0)))
+(define (address=?    a b)       (eqv? (vector-ref a 0) (vector-ref b 0)))
 (define (address->local-gensym/default name.default)
   (let ((gensym (make-local-gensym)))
     (lambda (addr) (gensym (or (address-name addr) name.default)))))
@@ -15,7 +15,7 @@
 (define (E:letrec       note lhs* rhs* body) (vector 'E:letrec       note lhs* rhs* body))
 
 (define (E-tag                   E)     (vector-ref E 0))
-(define (E-tagged?               E tag) (eq? (E-tag E) tag))
+(define (E-tagged?               E tag) (eqv? (E-tag E) tag))
 (define (E:quote?                E)     (E-tagged? E 'E:quote))
 (define (E:ref?                  E)     (E-tagged? E 'E:ref))
 (define (E:if?                   E)     (E-tagged? E 'E:if))

@@ -262,7 +262,7 @@
    (define (D:expression-^E         D) (vector-ref D 1))
    (define (D:end/expression-D      D) (vector-ref D 1))
    (define (D:end/expression-syntax D) (vector-ref D 2))
-   (define (D-tagged? D tag) (eq? (D-tag D) tag))
+   (define (D-tagged? D tag) (eqv? (D-tag D) tag))
 
    (define (env-set-variable! env id E)
      (env-set^! env id vocab.expression (parse/constant-expression E)))
@@ -328,7 +328,7 @@
 (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
 
 (define ((auxiliary?/vocab vocab) a env stx.id)
-  (and (identifier? stx.id) (eq? (env-ref^ env stx.id vocab) a)))
+  (and (identifier? stx.id) (eqv? (env-ref^ env stx.id vocab) a)))
 (define expression-auxiliary? (auxiliary?/vocab vocab.expression-auxiliary))
 
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))

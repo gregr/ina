@@ -22,7 +22,7 @@
     (lambda (exn)
       (let ((kind (exception-kind exn)))
         (and (< offset (vector-length kind))
-             (eq? (vector-ref kind offset) tag))))))
+             (eqv? (vector-ref kind offset) tag))))))
 (define (exception-kind-new-field-accessor* kind)
   (let* ((offset (let ((superkind-len (- (vector-length kind) 2)))
                    (let loop ((i 1) (offset 0))

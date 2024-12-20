@@ -16,7 +16,7 @@
 (define (rtd-ancestor-index rtd) (vector-length rtd))
 (define (rtd-parent         rtd) (let ((len (vector-length rtd)))
                                    (and (< rtd-base-length len) (vector-ref rtd (- len 1)))))
-(define (rtd=?              a b) (or (eq? a b) (eq? (vector-ref a 1) (vector-ref b 1))))
+(define (rtd=?              a b) (or (eqv? a b) (eqv? (vector-ref a 1) (vector-ref b 1))))
 
 (define ((record-constructor rtd) . arg*) (apply record rtd arg*))
 

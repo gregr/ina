@@ -12,9 +12,7 @@
     (and x (let ((kv (assoc 'file-descriptor (port-description x))))
              (and kv (cdr kv)))))
   (raw-host-process/k
-    (x->fd in) (x->fd out) (if (and err (or (eqv? out err) (eq? err 'stdout)))
-                               'stdout
-                               (x->fd err))
+    (x->fd in) (x->fd out) (if (and err (or (eqv? out err) (eqv? err 'stdout))) 'stdout (x->fd err))
     path arg* env kf
     (lambda (p)
       (let ((in.p  (host-process-in  p))

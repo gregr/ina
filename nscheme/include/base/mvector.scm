@@ -27,7 +27,7 @@
   (define (go ref len.src)
     (unless (<= (+ start.src count) len.src)
       (error "mvector-copy! source range is out of bounds" start.src count len.src))
-    (if (and (eq? src dst) (< start.src start.dst))
+    (if (and (eqv? src dst) (< start.src start.dst))
         (range-for-each (lambda (i) (mvector-set! dst (+ start.dst i) (ref src (+ start.src i))))
                         (- count 1) -1 -1)
         (range-for-each (lambda (i) (mvector-set! dst (+ start.dst i) (ref src (+ start.src i))))

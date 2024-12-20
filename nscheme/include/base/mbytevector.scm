@@ -44,7 +44,7 @@
          0 count)))
     (lambda (dst start.dst src start.src count)
       (cond ((mbytevector? src) (bounds?! dst start.dst (mbytevector-length src) start.src count)
-                                (if (and (eq? dst src) (< start.src start.dst))
+                                (if (and (eqv? dst src) (< start.src start.dst))
                                     (copy-backward! dst start.dst src start.src count)
                                     (copy-forward!  dst start.dst src start.src count)))
             ((bytevector? src)  (bounds?! dst start.dst (bytevector-length src) start.src count)

@@ -23,7 +23,7 @@
 
 (splicing-local
   ((define (P-tag     P)     (vector-ref P 0))
-   (define (P-tagged? P tag) (eq? (P-tag P) tag)))
+   (define (P-tagged? P tag) (eqv? (P-tag P) tag)))
   (define (P:any?             P) (P-tagged? P 'P:any))
   (define (P:none?            P) (P-tagged? P 'P:none))
   (define (P:var?             P) (P-tagged? P 'P:var))
@@ -382,7 +382,7 @@
                 (let ((qq.dd (syntax-unwrap (cdr qq.d))))
                   (and (null? qq.dd)
                        (identifier? (car qq))
-                       (eq? (env-ref^ env (car qq) vocab.quasiquote) tag)))))))
+                       (eqv? (env-ref^ env (car qq) vocab.quasiquote) tag)))))))
   (define (tag tag-value P) ($p:list ($p:quote tag-value) P))
   (define (pqq* stx* level)
     (if (null? stx*)
