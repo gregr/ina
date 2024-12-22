@@ -247,10 +247,9 @@
           (else            (error "not an output-bytevector method" method)))
         arg*))))
 
-(define (call-with-input-bytevector bv k) (k (open-input-bytevector bv)))
-(define (call-with-output-bytevector   k) (let* ((out (open-output-bytevector)))
-                                            (k out)
-                                            (output-bytevector-current out)))
+(define (call-with-output-bytevector k) (let* ((out (open-output-bytevector)))
+                                          (k out)
+                                          (output-bytevector-current out)))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Other ports ;;;
