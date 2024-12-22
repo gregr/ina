@@ -29,7 +29,6 @@
          (cond ((? (car x*)) x*)
                (else         (loop (cdr x*)))))))
 (define ((mem/= =?) y x*) (memp (lambda (x) (=? x y)) x*))
-(define memq   (mem/= eq?))
 (define memv   (mem/= eqv?))
 (define member (mem/= equal?))
 
@@ -39,7 +38,6 @@
          (cond ((? (car x*)) x*)
                (else         (loop (cddr x*)))))))
 (define ((pmem/= =?) y x*) (pmemp (lambda (x) (=? x y)) x*))
-(define pmemq   (pmem/= eq?))
 (define pmemv   (pmem/= eqv?))
 (define pmember (pmem/= equal?))
 
@@ -49,7 +47,6 @@
           ((? (car x*)) (cdr x*))
           (else         (cons (car x*) (loop (cdr x*)))))))
 (define ((rem/= =?) y x*) (rem1p (lambda (x) (=? x y)) x*))
-(define remq1   (rem/= eq?))
 (define remv1   (rem/= eqv?))
 (define remove1 (rem/= equal?))
 
@@ -60,7 +57,6 @@
            (cond ((? (car kv)) kv)
                  (else         (loop (cdr alist))))))))
 (define ((assoc/= =?) key alist) (assp (lambda (k) (=? k key)) alist))
-(define assq  (assoc/= eq?))
 (define assv  (assoc/= eqv?))
 (define assoc (assoc/= equal?))
 

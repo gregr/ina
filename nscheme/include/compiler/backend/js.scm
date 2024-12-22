@@ -199,7 +199,7 @@
                                             (list 'letrec (map list id* rhs*) body))))
 
   (define cenv.empty '())
-  (define (cenv-ref    cenv addr)      (cdr (assq addr cenv)))
+  (define (cenv-ref    cenv addr)      (cdr (assv addr cenv)))
   (define (cenv-extend cenv addr* id*) (append (map cons addr* id*) cenv))
 
   (let loop/env ((E E) (env cenv.empty))

@@ -102,10 +102,10 @@
 
   (define make-env
     (local
-      ((define (alist-ref    kv* k)   (let ((kv (assq k kv*))) (and kv (cdr kv))))
+      ((define (alist-ref    kv* k)   (let ((kv (assv k kv*))) (and kv (cdr kv))))
        (define (alist-set    kv* k v) (cons (cons k v) (alist-remove kv* k)))
        (define (alist-remove kv* k)
-         (let ((kv (assq k kv*)))
+         (let ((kv (assv k kv*)))
            (if kv
                (let loop ((kv* kv*))
                  (cond ((eqv? (car kv*) kv) (cdr kv*))  ; assumes mark=? is eqv?

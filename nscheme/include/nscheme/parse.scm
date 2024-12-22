@@ -13,11 +13,11 @@
 (define vocab.set!-operator        'set!-operator)
 
 (define vocab-dict.empty '())
-(define (vocab-dict-ref    vocab=>x vocab)    (let ((vx (assq vocab vocab=>x))) (and vx (cdr vx))))
+(define (vocab-dict-ref    vocab=>x vocab)    (let ((vx (assv vocab vocab=>x))) (and vx (cdr vx))))
 (define (vocab-dict-remove vocab=>x . vocab*) (vocab-dict-remove* vocab=>x vocab*))
 
 (define (vocab-dict-remove* vocab=>x vocab*)
-  (filter-not (lambda (vx) (memq (car vx) vocab*)) vocab=>x))
+  (filter-not (lambda (vx) (memv (car vx) vocab*)) vocab=>x))
 
 (define (vocab-dict-set vocab=>x . vx*) (vocab-dict-set* vocab=>x vx*))
 (define (vocab-dict-set* vocab=>x vx*)
@@ -170,7 +170,6 @@
 (define ($when   c body . body*) ($if c (apply $begin body body*) ($values)))
 (define ($unless c body . body*) (apply $when ($not c) body body*))
 (define ($pcall     prim . args) ($call* ($quote prim) args))
-(define ($eq?               a b) ($pcall eq?     a b))
 (define ($eqv?              a b) ($pcall eqv?    a b))
 (define ($null?             x)   ($pcall null?   x))
 (define ($pair?             x)   ($pcall pair?   x))
