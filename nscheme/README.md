@@ -65,34 +65,32 @@ and resuming snapshots of a running system.
     types for implementing some variant of inheritance.  It could also be used to list field names
     for dynamic field lookup.
 - Equality and identity:
-  - Newly-constructed mvectors and mbytevectors, even empty ones, are guaranteed to have unique
-    identities that are observable via `eq?`.
-  - Structurally equal `()`, `#t`, `#f`, and symbols, are always `eq?`.
-  - No other immutable values are guaranteed to have a unique, or even stable, identity, according
-    to `eq?`.
-    - Any structurally equal, immutable values are allowed to share the same
-      (immediate or allocated) object, even if they are constructed at different times.
-    - And for such structurally equal values, the result of `eq?` may change at any time.
-      - For instance, though unlikely in a typical implementation, `(eq? x x)` could theoretically
-        return `#f` for such values.
-      - And `(list (eq? x x) (eq? x x))` for such values could theoretically return any of:
-        `(#t #t)` `(#f #f)` `(#t #f)` `(#f #t)`
-  - `eqv?` returns `#t` for structurally equal numbers, strings, and bytevectors, and in every case
-    that `eq?` returns `#t`.
-  - `equal?` returns `#t` for all structurally equal values of all s-expression types.  That is,
-    structurally equal, immutable, non-procedure, non-record values.  For all procedures, records,
-    mbytevectors, and mvectors, even empty ones, `equal?` returns the same result as `eqv?`, which
-    will also happen to be the same result as `eq?`.
-  - Procedures that have indistinguishable application behavior may share the same object, even
-    if they appear to close over distinct mutable values.  (An optimizer may recognize that a
-    closed-over mutable value does not impact the procedure's behavior.)
-- No primitive character type: a string is indivisible until it is decoded as a bytevector
+  - For any two values that are `()`, `#t`, `#f`, numbers, symbols, strings, or bytevectors, `eqv?`
+    returns `#t` if the two values are structurally equal, and `#f` if they are not.
+  - Each mvector and mbytevector value, including empty ones, is given a unique identity when it is
+    constructed.  For two values of these types, `eqv?` returns `#t` if the values have the same
+    identity, and `#f` if they do not.
+  - For two values of all other types, `eqv?` will always return `#f` if the two values are not
+    structurally equal, and may nondeterministically return `#t` when they are.  Even if a call to
+    `eqv?` returns `#t` once, the same call could return `#f` in the future.  Even `(eqv? x x)`
+    could theoretically return `#f` for such values.
+    - For instance, `(list (eq? x x) (eq? x x))` for such values could theoretically return any of:
+      `(#t #t)` `(#f #f)` `(#t #f)` `(#f #t)`
+  - For two values of all s-expression types, that is, immutable, non-procedure, and non-record,
+    `equal?` will return `#t` if they are structurally equal, and `#f` if they are not.  For all
+    other types, `equal?` behaves like `eqv?`.
+  - Procedures that have indistinguishable application behavior, that is, they are extensionally
+    equal, are considered structurally equal, even if they appear to close over distinct mutable
+    values.  (An optimizer may recognize that the mutable value does not impact the procedure's
+    behavior.)
+  - `eq?` is not provided.
+- There is no primitive character type: a string is indivisible until it is decoded as a bytevector
   - e.g., `string->utf8` and `utf8->string`
   - no `string-ref`, since basis of decomposition depends on context
   - code units (bytes) are not characters, but suffice for low-level string manipulation
   - code points are not characters, but suffice for some higher-level string manipulation
   - grapheme clusters (substrings) are the right notion of character for user interaction
-- Like Racket, bytevectors can be textually notated.  Unlike Racket, this textual notation always
+- Like Racket, bytevectors can be notated with a text body.  Unlike Racket, this text body always
   corresponds to the sequence of bytes given by UTF-8 encoding, except that individual bytes can be
   specified using the `\x` escape code.  For instance, `#"λ"`, `#"\u3BB;"`, `#"\xCE;\xBB;"`, and
   `#vu8(206 187)` are all notations for the same length-2 bytevector.  Individually specified bytes
@@ -102,9 +100,9 @@ and resuming snapshots of a running system.
   input bytevector, and any enforcement of unicode correspondence in the presence of illegal UTF-8,
   whether through panic, replacement, removal, or some other strategy, will occur during this
   conversion.  If a platform chooses not to enforce this correspondence, then a string corresponds
-  to the sequence of bytes given by UTF8-encoding its text notation body in the same way as for a
-  bytevector.  This includes support for specifying individual bytes using the `\x` escape code,
-  even when these bytes produce a sequence that is not legal UTF-8.
+  to the sequence of bytes given by UTF8-encoding its text body in the same way as for a bytevector.
+  This includes support for specifying individual bytes using the `\x` escape code, even when these
+  bytes produce a sequence that is not legal UTF-8.
 - Racket-like dynamically-scoped parameters are provided.  Unlike in Racket, the values of these
   parameters can only be modified through a parameterization, and the modification is only visible
   within the body of that parameterization.  That is, parameters are otherwise immutable.  As in
