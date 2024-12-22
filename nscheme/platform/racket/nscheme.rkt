@@ -807,7 +807,6 @@
                                     port pos kf
                                     (lambda () (write-bytes src port start (+ start count)) (k)))
                                    (panic #f "oport does not support pwrite" description)))))))
-       ((write-byte)    (lambda (b kf k)   (io-guard kf (write-byte b port) (k))))
        ((set-size!)     (lambda (new kf k) (io-guard kf (file-truncate port new) (k))))
        ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
        ((position)      (lambda (k)        (k (file-position* port))))

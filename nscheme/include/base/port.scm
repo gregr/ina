@@ -59,9 +59,6 @@
 ;;;;;;;;;;;;;;;;;;;;
 (define (oport-close/k p kf k) (p 'close kf k))
 (define (oport-close   p)      (oport-close/k p raise-io-error values))
-;; May return a failure indication.
-(define (oport-write-byte/k p byte kf k) (p 'write-byte byte kf k))
-(define (oport-write-byte   p byte)      (oport-write-byte/k p byte raise-io-error values))
 ;; Returns the amount written, or a failure indication.
 ;; Blocks until at least min-count bytes are written.
 ;; Failure may occur after a partial write.
@@ -69,6 +66,8 @@
   (p 'write src start min-count count kf k))
 (define (oport-write   p src start min-count count)
   (oport-write/k p src start min-count count raise-io-error values))
+(define (oport-write-byte/k p byte kf k) (oport-write/k p (bytevector byte) 0 1 1 kf k))
+(define (oport-write-byte   p byte)      (oport-write-byte/k p byte raise-io-error values))
 ;; Returns #f if port does not have a position.
 (define (oport-position p) (p 'position values))
 
@@ -162,12 +161,6 @@
                              (do-write #f pos src start count count
                                        (lambda () (full-error kf pos.st 'pwrite pos start count))
                                        k)))
-          ((write-byte)    (lambda (byte kf k) (let ((i pos.st))
-                                                 (if (< i (mbytevector-length buf))
-                                                     (begin (mbytevector-set! buf i byte)
-                                                            (set! pos.st (+ i 1))
-                                                            (k))
-                                                     (full-error kf i 'write-byte byte)))))
           ((set-size!)     (lambda (new kf k)
                              (nonnegative-integer?! new)
                              (let ((pos pos.st))
@@ -219,10 +212,6 @@
                              (do-write/src #t pos.st src start min-count count k)))
           ((pwrite)        (lambda (pos src start count kf k)
                              (do-write/src #f pos src start count count k)))
-          ((write-byte)    (lambda (b kf k)
-                             (let ((i pos.st))
-                               (do-write/copy! #t i 1 (lambda (buf)
-                                                        (mbytevector-set! buf i b)) k))))
           ((set-size!)     (lambda (new kf k)
                              (nonnegative-integer?! new)
                              (let* ((buf buf.st)
@@ -261,7 +250,6 @@
                                 (buffer-range?! src start min-count count)
                                 (k count)))
              ((pwrite)        (lambda (pos src start count kf k) (k)))
-             ((write-byte)    (lambda (b kf k)                   (k)))
              ((set-position!) (lambda (new kf k)                 (k)))
              ((set-size!)     (lambda (new kf k)                 (k)))
              ((position)      (lambda (k)                        (k 0)))
@@ -284,7 +272,6 @@
                                 (if (< 0 count)
                                     (full-error kf 'pwrite pos start count)
                                     (k))))
-             ((write-byte)    (lambda (b kf k) (full-error kf 'write-byte b)))
              ((set-size!)     (lambda (new kf k)
                                 (nonnegative-integer?! new)
                                 (if (< 0 new) (full-error kf 'set-size! new) (k))))
@@ -412,10 +399,6 @@
                                         (lambda (amount) (lambda () (k amount))))))
             ((pwrite)        (lambda (pos src start count kf k)
                                (request 'pwrite pos src start count
-                                        (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
-            ((write-byte)    (lambda (b kf k)
-                               (request 'write-byte b
                                         (lambda (t ctx) (lambda () (kf t ctx)))
                                         (lambda ()      (lambda () (k))))))
             ((set-size!)     (lambda (new kf k)
@@ -682,23 +665,7 @@
 
   (define (oport-buffer-write-byte p byte) (oport-buffer-write-byte/k p byte raise-io-error values))
   (define (oport-buffer-write-byte/k p byte kf k)
-    (let* ((buf       (oport-buffer-buffer p))
-           (len       (mbytevector-length buf))
-           (pos       (oport-buffer-pos p))
-           (available (- len pos)))
-      (cond
-        ((= len 0)       (oport-write-byte/k (oport-buffer-port p) byte kf k))
-        ((= available 0) (case-values (oport-write/k (oport-buffer-port p)
-                                                     buf 0 1 len values values)
-                           ((amount) (let ((pos (- len amount)))
-                                       (mbytevector-copy! buf 0 buf amount pos)
-                                       (mbytevector-set! buf pos byte)
-                                       (oport-buffer-set-pos! p (+ pos 1))
-                                       (k)))
-                           ((tag x) (kf tag (cons (vector 'oport-buffer-write-byte byte) x)))))
-        (else            (mbytevector-set! buf pos byte)
-                         (oport-buffer-set-pos! p (+ pos 1))
-                         (k)))))
+    (oport-buffer-write/k p (bytevector byte) 0 1 1 kf k))
 
   ;; Returns the "amount" written.  Block until at least min-count bytes are written.
   (define (oport-buffer-write p src start min-count count)
