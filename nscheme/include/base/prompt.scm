@@ -9,7 +9,7 @@
       (custodian-shutdown-all cust)
       (apply values x*))))
 
-(define (with-escape on-escape proc)
+(define (call-with-escape on-escape proc)
   (let* ((ch     (make-channel))
          (escape (lambda x* (channel-put ch (lambda () (apply on-escape x*))) (sync))))
     ((with-local-custodian
@@ -17,9 +17,10 @@
          (thread (lambda () (let-values ((x* (proc escape)))
                               (channel-put ch (lambda () (apply values x*))))))
          (channel-get ch))))))
+(define call/escape call-with-escape)
 
 (define (with-isolation on-panic thunk)
-  (with-escape
+  (call/escape
     on-panic
     (lambda (escape)
       (current-panic-handler
@@ -49,9 +50,9 @@
                           thunk)))
 
 (define (with-restart name desc effector thunk)
-  (with-escape effector (lambda (escape) (with-raw-restart name desc escape thunk))))
+  (call/escape effector (lambda (escape) (with-raw-restart name desc escape thunk))))
 (define (with-restart* nde* thunk)
-  (with-escape
+  (call/escape
     (lambda (effector) (effector))
     (lambda (escape)
       (with-raw-restart*
@@ -112,11 +113,11 @@
 (define (raise/continue x) (with-continue 'raise/continue (lambda () (raise x))))
 
 (define (with-catch catch? handle thunk)
-  (with-escape handle (lambda (escape)
+  (call/escape handle (lambda (escape)
                         (with-raise-handler (lambda (exn) (when (catch? exn) (escape exn)))
                                             thunk))))
 (define (with-catch* catch?handle* thunk)
-  (with-escape
+  (call/escape
     (lambda (handle-exn) (handle-exn))
     (lambda (escape)
       (with-raise-handler*

@@ -16,7 +16,7 @@
 
 (define (test-eval env stx)
   (define (work-safely work)
-    (with-escape
+    (call/escape
      (lambda x* (rkt:raise (apply vector 'panic x*)))
      (lambda (escape) (current-panic-handler escape work))))
   (when (< 0 verbosity)
