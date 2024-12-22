@@ -2,7 +2,7 @@
   (cons
     '(
       panic apply values
-      eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
+      eqv? null? boolean? procedure? symbol? string? rational? integer?
       pair? vector? mvector? bytevector? mbytevector?
       utf8->string string->utf8 string->symbol symbol->string
       cons car cdr
@@ -15,7 +15,7 @@
       integer-floor-divmod numerator denominator = <= >= < > + - * /)
     (list
       panic apply values
-      eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
+      eqv? null? boolean? procedure? symbol? string? rational? integer?
       pair? vector? mvector? bytevector? mbytevector?
       utf8->string string->utf8 string->symbol symbol->string
       cons car cdr

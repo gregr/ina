@@ -35,7 +35,7 @@
   current-time/type sleep-seconds-nanoseconds
 
   panic apply values
-  eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
+  eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
   pair? vector? mvector? bytevector? mbytevector?
   string->symbol symbol->string
   cons car cdr
@@ -423,7 +423,7 @@
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
   panic apply values
-  eq? eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
+  eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
   pair? vector? mvector? bytevector? mbytevector?
   string->symbol symbol->string
   cons car cdr

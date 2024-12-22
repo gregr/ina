@@ -18,7 +18,7 @@
   (name*->addr-package
     '(
       panic apply values
-      eq? eqv? null? boolean? procedure? symbol? string? rational? integer?
+      eqv? null? boolean? procedure? symbol? string? rational? integer?
       pair? vector? mvector? bytevector? mbytevector?
       string->symbol symbol->string
       cons car cdr
