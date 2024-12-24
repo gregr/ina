@@ -25,9 +25,6 @@
 ;;;;;;;;;;;;;;;;;;;
 (define (iport-close/k p kf k) (p 'close kf k))
 (define (iport-close   p)      (iport-close/k p raise-io-error values))
-;; Returns EOF, the byte read, or a failure indication.
-(define (iport-read-byte/k p kf keof k) (p 'read-byte kf keof k))
-(define (iport-read-byte   p)           (iport-read-byte/k p raise-io-error values values))
 ;; Returns EOF, the amount read, or a failure indication.
 ;; Blocks until at least (min min-count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
@@ -35,6 +32,11 @@
   (p 'read dst start min-count count kf keof k))
 (define (iport-read p dst start min-count count)
   (iport-read/k p dst start min-count count raise-io-error values values))
+;; Returns EOF, the byte read, or a failure indication.
+(define (iport-read-byte/k p kf keof k)
+  (let ((dst (make-mbytevector 1 0)))
+    (iport-read/k p dst 0 1 1 kf keof (lambda (amount) (k (mbytevector-ref dst 0))))))
+(define (iport-read-byte p) (iport-read-byte/k p raise-io-error values values))
 ;; Reverts the most recent read of count bytes, provided by the mbytevector src.
 ;; It is an error to unread different bytes from those that were originally read, but the particular
 ;; port implementation decides whether to enforce this.
@@ -111,13 +113,6 @@
                                (do-read #t pos dst start min-count count kf keof k)))
             ((pread)         (lambda (pos dst start count kf keof k)
                                (do-read #f pos dst start count count kf keof k)))
-            ((read-byte)     (lambda (kf keof k) (let ((i pos))
-                                                   (if (< i len)
-                                                       (begin (set! pos (+ i 1))
-                                                              (if (mbytevector? src)
-                                                                  (k (mbytevector-ref src i))
-                                                                  (k (bytevector-ref src i))))
-                                                       (keof)))))
             ((unread)        (lambda (src start count kf k)
                                (buffer-range?! src start count count)
                                (let ((i pos))
@@ -292,7 +287,6 @@
         ((pread)         (lambda (pos dst start count kf keof k)
                            (buffer-range?! dst start count count)
                            (if (< 0 count) (keof) (k 0))))
-        ((read-byte)     (lambda (kf keof k) (keof)))
         ((unread)        (lambda (src start count kf k)
                            (buffer-range?! src start count count)
                            (error "too many bytes unread" count 'empty-iport)))
@@ -317,7 +311,6 @@
                            (if (< 0 count)
                                (begin (mbytevector-fill! dst byte start count) (k count))
                                (k 0))))
-        ((read-byte)     (lambda (kf keof k) (k byte)))
         ((unread)        (lambda (src start count kf k) (buffer-range?! src start count count) (k)))
         ((set-position!) (lambda (new kf k) (k)))
         ((position)      (lambda (k)        (k 0)))
@@ -363,11 +356,6 @@
                                         (lambda (t ctx)  (lambda () (kf t ctx)))
                                         (lambda ()       keof)
                                         (lambda (amount) (lambda () (k amount))))))
-            ((read-byte)     (lambda (kf keof k)
-                               (request 'read-byte
-                                        (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      keof)
-                                        (lambda (byte)  (lambda () (k byte))))))
             ((unread)        (lambda (src start count kf k)
                                (request 'unread src start count
                                         (lambda (t ctx) (lambda () (kf t ctx)))
@@ -543,18 +531,8 @@
   ;; Returns (values) on EOF or amount read.
   (define (iport-buffer-read-byte   p) (iport-buffer-read-byte/k p raise-io-error values values))
   (define (iport-buffer-read-byte/k p kf keof k)
-    (let ((buf (iport-buffer-buffer p)) (pos (iport-buffer-pos p)) (end (iport-buffer-end p)))
-      (cond
-        ((< pos end)           (iport-buffer-set-pos! p (+ pos 1)) (k (mbytevector-ref buf pos)))
-        ((iport-buffer-eof? p) (iport-buffer-set-eof?! p #f) (keof))
-        (else (let ((buf (iport-buffer-buffer/refresh p)))
-                (case-values (iport-read/k (iport-buffer-port p) buf 0 1 (mbytevector-length buf)
-                                           values values values)
-                  (()       (keof))
-                  ((amount) (iport-buffer-set-pos! p 1)
-                            (iport-buffer-set-end! p amount)
-                            (k (mbytevector-ref buf 0)))
-                  ((tag x)  (kf tag (cons 'iport-buffer-read-byte x)))))))))
+    (let ((dst (make-mbytevector 1 0)))
+      (iport-buffer-read/k p dst 0 1 1 kf keof (lambda (amount) (k (mbytevector-ref dst 0))))))
 
   ;; Returns (values) on EOF or amount read.
   (define (iport-buffer-read p dst start min-count count)

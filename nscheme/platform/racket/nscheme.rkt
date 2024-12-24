@@ -749,13 +749,6 @@
                                        port pos.current kf
                                        (if (eof-object? amount) keof (lambda () (k amount)))))))
                                  (panic #f "iport does not support pread" description))))))
-       ((read-byte)     (lambda (kf keof k)
-                          (if (< 0 (bytes-length unread*))
-                              (let ((b (bytes-ref unread* 0)))
-                                (set! unread* (subbytes unread* 1))
-                                (k b))
-                              (io-guard kf (let ((b (read-byte port)))
-                                             (if (eof-object? b) (keof) (k b)))))))
        ((unread)        (lambda (src start count kf k)
                           (buffer-range?! src start count count)
                           (let ((pos (file-position* port)))
