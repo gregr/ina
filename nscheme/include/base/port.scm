@@ -18,7 +18,7 @@
 ;;; - failed operation details
 
 (define (port? x) (procedure? x))
-(define (port-description p) (p 'description))
+(define (port-describe p) (p 'describe))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Input ports ;;;
@@ -128,7 +128,7 @@
                                (k)))
             ((position)      (lambda (k)    (k pos)))
             ((close)         (lambda (kf k) (k)))
-            ((description)   (lambda ()     '((type . input-bytevector))))
+            ((describe)      (lambda ()     '((type . input-bytevector))))
             (else            (error "not an input-bytevector method" method)))
           arg*)))))
 
@@ -172,7 +172,7 @@
                              (k)))
           ((position)      (lambda (k)    (k pos.st)))
           ((close)         (lambda (kf k) (k)))
-          ((description)   (lambda ()     '((type . output-mbytevector))))
+          ((describe)      (lambda ()     '((type . output-mbytevector))))
           (else            (error "not an output-mbytevector method" method)))
         arg*))))
 
@@ -227,7 +227,7 @@
           ((position)      (lambda (k)    (k pos.st)))
           ((close)         (lambda (kf k) (k)))
           ((current)       (lambda ()     (mbytevector->bytevector buf.st 0 end.st)))
-          ((description)   (lambda ()     '((type . output-bytevector))))
+          ((describe)      (lambda ()     '((type . output-bytevector))))
           (else            (error "not an output-bytevector method" method)))
         arg*))))
 
@@ -249,7 +249,7 @@
              ((set-size!)     (lambda (new kf k)                 (k)))
              ((position)      (lambda (k)                        (k 0)))
              ((close)         (lambda (kf k)                     (k)))
-             ((description)   (lambda () '((type . null-oport))))
+             ((describe)      (lambda () '((type . null-oport))))
              (else            (error "not a null-oport method" method)))
            arg*)))
 
@@ -273,7 +273,7 @@
              ((set-position!) (lambda (new kf k) (k)))
              ((position)      (lambda (k)        (k 0)))
              ((close)         (lambda (kf k)     (k)))
-             ((description)   (lambda () '((type . full-oport))))
+             ((describe)      (lambda () '((type . full-oport))))
              (else            (error "not a full-oport method" method)))
            arg*)))
 
@@ -293,7 +293,7 @@
         ((set-position!) (lambda (new kf k) (k)))
         ((position)      (lambda (k)        (k 0)))
         ((close)         (lambda (kf k)     (k)))
-        ((description)   (lambda () '((type . empty-iport))))
+        ((describe)      (lambda () '((type . empty-iport))))
         (else            (error "not an empty-iport method" method)))
       arg*)))
 
@@ -315,7 +315,7 @@
         ((set-position!) (lambda (new kf k) (k)))
         ((position)      (lambda (k)        (k 0)))
         ((close)         (lambda (kf k)     (k)))
-        ((description)   (lambda () '((type . constant-iport))))
+        ((describe)      (lambda () '((type . constant-iport))))
         (else            (error "not a constant-iport method" method)))
       arg*)))
 
@@ -340,8 +340,7 @@
                      ((sync ch.reply dead)))))))
 
   (define (thread-safe-iport port)
-    (let* ((description (list '(type . thread-safe-iport)
-                              (cons 'sub-port (port-description port))))
+    (let* ((description (list '(type . thread-safe-iport) (cons 'sub-port (port-describe port))))
            (request     (make-thread-safe-port-requester description port)))
       (lambda (method . arg*)
         (apply
@@ -370,13 +369,12 @@
                                (request 'close
                                         (lambda (t ctx) (lambda () (kf t ctx)))
                                         (lambda ()      (lambda () (k))))))
-            ((description)   (lambda () description))
+            ((describe)      (lambda () description))
             (else            (error "not a thread-safe-iport method" method)))
           arg*))))
 
   (define (thread-safe-oport port)
-    (let* ((description (list '(type . thread-safe-oport)
-                              (cons 'sub-port (port-description port))))
+    (let* ((description (list '(type . thread-safe-oport) (cons 'sub-port (port-describe port))))
            (request     (make-thread-safe-port-requester description port)))
       (lambda (method . arg*)
         (apply
@@ -403,7 +401,7 @@
                                (request 'close
                                         (lambda (t ctx) (lambda () (kf t ctx)))
                                         (lambda ()      (lambda () (k))))))
-            ((description)   (lambda () description))
+            ((describe)      (lambda () description))
             (else            (error "not a thread-safe-oport method" method)))
           arg*)))))
 

@@ -34,9 +34,9 @@
 ;;; Restarts ;;;
 ;;;;;;;;;;;;;;;;
 (define (make-restart name desc effector) (vector name desc effector))
-(define (restart-name        r) (vector-ref r 0))
-(define (restart-description r) (vector-ref r 1))
-(define (restart-effector    r) (vector-ref r 2))
+(define (restart-name     r) (vector-ref r 0))
+(define (restart-describe r) (vector-ref r 1))
+(define (restart-effector r) (vector-ref r 2))
 
 (splicing-local
   ((define raw-current-restart* (make-parameter '())))

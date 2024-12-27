@@ -9,7 +9,7 @@
   (host-process/k in out err path arg* env raise-io-error raise-io-error values))
 (define (host-process/k in out err path arg* env handle-internal-error kf k)
   (define (x->fd x)
-    (and x (let ((kv (assoc 'file-descriptor (port-description x))))
+    (and x (let ((kv (assoc 'file-descriptor (port-describe x))))
              (and kv (cdr kv)))))
   (raw-host-process/k
     (x->fd in) (x->fd out) (if (and err (or (eqv? out err) (eqv? err 'stdout))) 'stdout (x->fd err))

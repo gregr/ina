@@ -1427,7 +1427,7 @@
          (lambda () 'final-alternative))
         (reverse missing)
         (reverse mistake*)
-        (map (lambda (r*) (map (lambda (r) (list (restart-name r) (restart-description r))) r*))
+        (map (lambda (r*) (map (lambda (r) (list (restart-name r) (restart-describe r))) r*))
              (reverse restart-binding*))))))
   ==>
   (#(E:call
@@ -1663,7 +1663,7 @@
                                        (find-file/env host-environment "echo") '("pipe test") #f
                                        panic values))
            (in1    (host-process-out p1))
-           (fd.in1 (cdr (assoc 'file-descriptor (port-description in1))))
+           (fd.in1 (cdr (assoc 'file-descriptor (port-describe in1))))
            (p2     (raw-host-process/k fd.in1 #f 'stdout
                                        (find-file/env host-environment "cat") '() #f
                                        panic values))

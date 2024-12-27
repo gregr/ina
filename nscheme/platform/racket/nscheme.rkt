@@ -763,7 +763,7 @@
        ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
        ((position)      (lambda (k)        (k (file-position* port))))
        ((close)         (lambda (kf k)     (io-guard kf (close-input-port port) (k))))
-       ((description)   (lambda ()         description))
+       ((describe)      (lambda ()         description))
        (else            (error "not an iport method" method)))
      arg*)))
 
@@ -804,7 +804,7 @@
        ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
        ((position)      (lambda (k)        (k (file-position* port))))
        ((close)         (lambda (kf k)     (io-guard kf (close-output-port port) (k))))
-       ((description)   (lambda ()         description))
+       ((describe)      (lambda ()         description))
        (else            (error "not an oport method" method)))
      arg*)))
 
