@@ -6,8 +6,8 @@
     (unless (<= (+ start min-count) (+ start desired-count) len)
       (error "buffer range out of bounds" start min-count desired-count len))))
 
-;;; Improper use of a port operation will panic.  Proper use of a port operation may still fail,
-;;; indicated by returning two values:
+;;; Improper use of an iomemory or port operation will panic.  Proper use of an iomemory or
+;;; port operation may still fail, indicated by returning two values:
 ;;; - failure tag, typically a symbol, #f, or an integer code
 ;;;   - #f        ; failure is not categorized
 ;;;   - <integer> ; e.g., an errno value
@@ -16,9 +16,47 @@
 ;;;   - no-space
 ;;;   - no-position
 ;;; - failed operation details
-
+(define (iomemory-describe iom) (iom 'describe))
 (define (port? x) (procedure? x))
 (define (port-describe p) (p 'describe))
+
+;;;;;;;;;;;;;;;;;;;;
+;;; Input memory ;;;
+;;;;;;;;;;;;;;;;;;;;
+(define (imemory-close/k im kf k) (im 'close kf k))
+(define (imemory-close   im)      (imemory-close/k im raise-io-error values))
+(define (imemory-size/k  im kf k) (im 'size kf k))
+(define (imemory-size    im)      (imemory-size/k im raise-io-error values))
+;; Returns EOF, the amount read, or a failure indication.
+;; Blocks until at least (min count remaining-bytes) bytes are read.
+;; Failure may occur after a partial read.
+(define (imemory-read/k im pos dst start count kf keof k) (im 'read pos dst start count kf keof k))
+(define (imemory-read im pos dst start count)
+  (imemory-read/k im pos dst start count raise-io-error values values))
+;; Returns EOF, the byte read, or a failure indication.
+(define (imemory-read-byte/k im pos kf keof k)
+  (let ((dst (make-mbytevector 1 0)))
+    (imemory-read/k im pos dst 0 1 1 kf keof (lambda (amount) (k (mbytevector-ref dst 0))))))
+(define (imemory-read-byte im pos) (imemory-read-byte/k im pos raise-io-error values values))
+
+;;;;;;;;;;;;;;;;;;;;;
+;;; Output memory ;;;
+;;;;;;;;;;;;;;;;;;;;;
+(define (omemory-close/k   om kf k)      (om 'close kf k))
+(define (omemory-close     om)           (omemory-close/k om raise-io-error values))
+(define (omemory-size/k    om kf k)      (om 'size kf k))
+(define (omemory-size      om)           (omemory-size/k om raise-io-error values))
+(define (omemory-resize!/k om size kf k) (om 'resize! size kf k))
+(define (omemory-resize!   om size)      (omemory-resize!/k om size raise-io-error values))
+;; May return a failure indication.
+;; Blocks until count bytes are written.
+;; Failure may occur after a partial write.
+(define (omemory-write/k om pos src start count kf k) (om 'write pos src start count kf k))
+(define (omemory-write om pos src start count)
+  (omemory-write/k om pos src start count raise-io-error values))
+(define (omemory-write-byte/k om pos byte kf k)
+  (omemory-write/k om pos (bytevector byte) 0 1 1 kf k))
+(define (omemory-write-byte om pos byte) (omemory-write-byte/k om pos byte raise-io-error values))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Input ports ;;;
