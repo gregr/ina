@@ -214,7 +214,6 @@
           (else            (error "not an output-mbytevector method" method)))
         arg*))))
 
-(define (output-bytevector-current p) (p 'current))
 (define (open-output-bytevector) (open-output-bytevector/buffer-size 64))
 (define (open-output-bytevector/buffer-size buffer-size)
   (positive-integer?! buffer-size)
@@ -238,40 +237,39 @@
       (do-write/copy! update-pos? pos.0 count
                       (lambda (buf) (mbytevector-copy! buf pos.0 src start count))
                       k))
-    (lambda (method . arg*)
-      (apply
-        (case method
-          ((write)         (lambda (src start min-count count kf k)
-                             (do-write/src #t pos.st src start min-count count k)))
-          ((pwrite)        (lambda (pos src start count kf k)
-                             (do-write/src #f pos src start count count k)))
-          ((set-size!)     (lambda (new kf k)
-                             (nonnegative-integer?! new)
-                             (let* ((buf buf.st)
-                                    (len (mbytevector-length buf))
-                                    (end end.st))
-                               (cond
-                                 ((<= new end) (when (< new pos.st) (set! pos.st new)))
-                                 ((<= new len) (mbytevector-fill! buf 0 end (- new end)))
-                                 (else         (grow buf len end new))))
-                             (set! end.st new)
-                             (k)))
-          ((set-position!) (lambda (new kf k)
-                             (set! pos.st (if new
-                                              (begin (nonnegative-integer?! new)
-                                                     (min end.st new))
-                                              end.st))
-                             (k)))
-          ((position)      (lambda (k)    (k pos.st)))
-          ((close)         (lambda (kf k) (k)))
-          ((current)       (lambda ()     (mbytevector->bytevector buf.st 0 end.st)))
-          ((describe)      (lambda ()     '((type . output-bytevector))))
-          (else            (error "not an output-bytevector method" method)))
-        arg*))))
+    (values (lambda (method . arg*)
+              (apply
+                (case method
+                  ((write)         (lambda (src start min-count count kf k)
+                                     (do-write/src #t pos.st src start min-count count k)))
+                  ((pwrite)        (lambda (pos src start count kf k)
+                                     (do-write/src #f pos src start count count k)))
+                  ((set-size!)     (lambda (new kf k)
+                                     (nonnegative-integer?! new)
+                                     (let* ((buf buf.st)
+                                            (len (mbytevector-length buf))
+                                            (end end.st))
+                                       (cond
+                                         ((<= new end) (when (< new pos.st) (set! pos.st new)))
+                                         ((<= new len) (mbytevector-fill! buf 0 end (- new end)))
+                                         (else         (grow buf len end new))))
+                                     (set! end.st new)
+                                     (k)))
+                  ((set-position!) (lambda (new kf k)
+                                     (set! pos.st (if new
+                                                      (begin (nonnegative-integer?! new)
+                                                             (min end.st new))
+                                                      end.st))
+                                     (k)))
+                  ((position)      (lambda (k)    (k pos.st)))
+                  ((close)         (lambda (kf k) (k)))
+                  ((describe)      (lambda ()     '((type . output-bytevector))))
+                  (else            (error "not an output-bytevector method" method)))
+                arg*))
+            (lambda () (mbytevector->bytevector buf.st 0 end.st)))))
 
-(define (call-with-output-bytevector k) (let* ((out (open-output-bytevector)))
-                                          (k out)
-                                          (output-bytevector-current out)))
+(define (call-with-output-bytevector k)
+  (let-values (((out current) (open-output-bytevector))) (k out) (current)))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Other ports ;;;

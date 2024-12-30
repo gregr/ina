@@ -1623,10 +1623,10 @@
           ((b) (oport-write-byte out b) (loop)))))))
  ==>
  #"hello world\n0"
- (let* ((out (open-output-bytevector))
-        (p   (host-process empty-iport out 'stdout
-                           (find-file/env host-environment "echo") '("hello world") #f)))
-   (values (host-process-wait p) (output-bytevector-current out)))
+ (let-values (((out current) (open-output-bytevector)))
+   (let ((p (host-process empty-iport out 'stdout
+                          (find-file/env host-environment "echo") '("hello world") #f)))
+     (values (host-process-wait p) (current))))
  ==>
  (values 0 #"hello world\n")
 
@@ -1648,10 +1648,10 @@
           ((b) (oport-write-byte out b) (loop)))))))
  ==>
  #"another example0"
- (let* ((out (open-output-bytevector))
-        (in  (open-input-bytevector #"another example"))
-        (p   (host-process in out 'stdout (find-file/env host-environment "cat") '() #f)))
-   (values (host-process-wait p) (output-bytevector-current out)))
+ (let-values (((out current) (open-output-bytevector)))
+   (let* ((in (open-input-bytevector #"another example"))
+          (p  (host-process in out 'stdout (find-file/env host-environment "cat") '() #f)))
+     (values (host-process-wait p) (current))))
  ==>
  (values 0 #"another example")
 
@@ -1674,12 +1674,12 @@
                (oport-write-byte result (+ (host-process-wait p2) 48)))
           ((b) (oport-write-byte result b) (loop)))))))
  ==> #"pipe test\n00"
- (let* ((result (open-output-bytevector))
-        (p1     (host-process empty-iport #f 'stdout
-                              (find-file/env host-environment "echo") '("pipe test") #f))
-        (p2     (host-process (host-process-out p1) result 'stdout
-                              (find-file/env host-environment "cat") '() #f)))
-   (values (host-process-wait p1) (host-process-wait p2) (output-bytevector-current result)))
+ (let-values (((result current) (open-output-bytevector)))
+   (let* ((p1 (host-process empty-iport #f 'stdout
+                            (find-file/env host-environment "echo") '("pipe test") #f))
+          (p2 (host-process (host-process-out p1) result 'stdout
+                            (find-file/env host-environment "cat") '() #f)))
+     (values (host-process-wait p1) (host-process-wait p2) (current))))
  ==>
  (values 0 0 #"pipe test\n")
  )
