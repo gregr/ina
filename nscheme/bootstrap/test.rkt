@@ -1051,9 +1051,9 @@
   env.test.large
 
   ! bytevector-port-buffers
-  (call-with-output-bytevector
+  (call/oport:bytevector
    (lambda (out)
-     (let ((in (open-input-bytevector #"testing 1 2 3")))
+     (let ((in (iport:bytevector #"testing 1 2 3")))
        (let* ((in    (iport->iport-buffer in))
               (out   (oport->oport-buffer out))
               (buf   (make-mbytevector 18 0))
@@ -1066,9 +1066,9 @@
          (oport-buffer-flush out)))))
   ==>
   #"ABCDEtesting 1 2QR"
-  (call-with-output-bytevector
+  (call/oport:bytevector
    (lambda (out)
-     (let ((in (open-input-bytevector #"testing")))
+     (let ((in (iport:bytevector #"testing")))
        (let* ((in          (iport->iport-buffer in))
               (out         (oport->oport-buffer out))
               (buf         (make-mbytevector 20 0))
@@ -1083,7 +1083,7 @@
   ==>
   #"ABCtestingKLMNOPQRST"
   (let* ((buf   (make-mbytevector 20 0))
-         (out   (oport->oport-buffer (open-output-mbytevector buf)))
+         (out   (oport->oport-buffer (oport:mbytevector buf)))
          (src   #"testing 4 5 6 7 8 9 10 11")
          (count (- (bytevector-length src) 10)))
     (oport-buffer-write out src 0 8 8)
@@ -1101,7 +1101,7 @@
   ;     (oport-buffer-flush
   ;      #(#(output-mbytevector 0 20) write (0 23 23))))))))
   (let* ((buf    (make-mbytevector 20 0))
-         (out    (oport->oport-buffer (open-output-mbytevector buf)))
+         (out    (oport->oport-buffer (oport:mbytevector buf)))
          (src    #"testing 4 5 6 7 8 9 10 11")
          (amount (oport-buffer-write out src 0 8 8))
          (count  (min (- (bytevector-length src) 10)
@@ -1113,9 +1113,9 @@
   #"testing 5 6 7 8 9 10"
 
   ! thread-safe-ports
-  (call-with-output-bytevector
+  (call/oport:bytevector
    (lambda (out)
-     (let ((in (open-input-bytevector #"testing 1 2 3")))
+     (let ((in (iport:bytevector #"testing 1 2 3")))
        (let* ((in    (thread-safe-iport in))
               (out   (thread-safe-oport out))
               (buf   (make-mbytevector 18 0))
@@ -1127,9 +1127,9 @@
          (oport-write out buf 3 count count)))))
   ==>
   #"ABCDEtesting 1 2QR"
-  (call-with-output-bytevector
+  (call/oport:bytevector
    (lambda (out)
-     (let ((in (open-input-bytevector #"testing")))
+     (let ((in (iport:bytevector #"testing")))
        (let* ((in          (thread-safe-iport in))
               (out         (thread-safe-oport out))
               (buf         (make-mbytevector 20 0))
@@ -1143,8 +1143,7 @@
   ==>
   #"ABCtestingKLMNOPQRST"
   (let* ((buf (make-mbytevector 20 0))
-         (out (thread-safe-oport (open-output-mbytevector buf)))
-         (out (open-output-mbytevector buf))
+         (out (thread-safe-oport (oport:mbytevector buf)))
          (src   #"testing 4 5 6 7 8 9 10 11")
          (count (- (bytevector-length src) 10)))
     (oport-write out src 0 8 8)
@@ -1160,8 +1159,7 @@
   ;     no-space
   ;     (#(#(output-mbytevector 8 20) write (10 15 15))))))))
   (let* ((buf    (make-mbytevector 20 0))
-         (out    (thread-safe-oport (open-output-mbytevector buf)))
-         (out    (open-output-mbytevector buf))
+         (out    (thread-safe-oport (oport:mbytevector buf)))
          (src    #"testing 4 5 6 7 8 9 10 11")
          (amount (oport-write out src 0 8 8))
          (count  (min (- (bytevector-length src) 10)
@@ -1609,7 +1607,7 @@
  ==> (values (server #"ABC") (client #"abc"))
 
  ! host-processes
- (call-with-output-bytevector
+ (call/oport:bytevector
   (lambda (out)
     (let* ((p (raw-host-process/k #f #f 'stdout
                                   (find-file/env host-environment "echo") '("hello world") #f
@@ -1623,21 +1621,21 @@
           ((b) (oport-write-byte out b) (loop)))))))
  ==>
  #"hello world\n0"
- (let-values (((out current) (open-output-bytevector)))
+ (let-values (((out current) (oport:bytevector&current)))
    (let ((p (host-process empty-iport out 'stdout
                           (find-file/env host-environment "echo") '("hello world") #f)))
      (values (host-process-wait p) (current))))
  ==>
  (values 0 #"hello world\n")
 
- (call-with-output-bytevector
+ (call/oport:bytevector
   (lambda (out)
     (let* ((p (raw-host-process/k #f #f 'stdout (find-file/env host-environment "cat") '() #f
                                   panic values))
            (in.p.in   (host-process-in p))
            (out.p.out (host-process-out p)))
       (thread (lambda ()
-                (let ((in (open-input-bytevector #"another example")))
+                (let ((in (iport:bytevector #"another example")))
                   (let loop ()
                     (case-values (iport-read-byte in)
                       (()  (oport-close in.p.in))
@@ -1648,14 +1646,14 @@
           ((b) (oport-write-byte out b) (loop)))))))
  ==>
  #"another example0"
- (let-values (((out current) (open-output-bytevector)))
-   (let* ((in (open-input-bytevector #"another example"))
+ (let-values (((out current) (oport:bytevector&current)))
+   (let* ((in (iport:bytevector #"another example"))
           (p  (host-process in out 'stdout (find-file/env host-environment "cat") '() #f)))
      (values (host-process-wait p) (current))))
  ==>
  (values 0 #"another example")
 
- (call-with-output-bytevector
+ (call/oport:bytevector
   (lambda (result)
     (let* ((p1     (raw-host-process/k #f #f 'stdout
                                        (find-file/env host-environment "echo") '("pipe test") #f
@@ -1674,7 +1672,7 @@
                (oport-write-byte result (+ (host-process-wait p2) 48)))
           ((b) (oport-write-byte result b) (loop)))))))
  ==> #"pipe test\n00"
- (let-values (((result current) (open-output-bytevector)))
+ (let-values (((result current) (oport:bytevector&current)))
    (let* ((p1 (host-process empty-iport #f 'stdout
                             (find-file/env host-environment "echo") '("pipe test") #f))
           (p2 (host-process (host-process-out p1) result 'stdout

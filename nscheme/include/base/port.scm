@@ -130,8 +130,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; These bytevector port definitions are not safe for concurrent access unless synchronization is
 ;;; provided by the user.
-(define (open-input-mbytevector src) (open-input-bytevector src))
-(define (open-input-bytevector src)
+(define (iport:mbytevector src) (iport:bytevector src))
+(define (iport:bytevector src)
   (let ((len (if (mbytevector? src) (mbytevector-length src) (bytevector-length src))))
     (mlet ((pos 0))
       (define (do-read update-pos? i dst start min-count count kf keof k)
@@ -170,7 +170,7 @@
             (else            (error "not an input-bytevector method" method)))
           arg*)))))
 
-(define (open-output-mbytevector buf)
+(define (oport:mbytevector buf)
   (mlet ((pos.st 0))
     (define (full-error kf pos.current name . x*)
       (kf 'no-space (list (vector (vector 'output-mbytevector pos.current (mbytevector-length buf))
@@ -214,8 +214,8 @@
           (else            (error "not an output-mbytevector method" method)))
         arg*))))
 
-(define (open-output-bytevector) (open-output-bytevector/buffer-size 64))
-(define (open-output-bytevector/buffer-size buffer-size)
+(define (oport:bytevector&current) (oport:bytevector&current/buffer-size 64))
+(define (oport:bytevector&current/buffer-size buffer-size)
   (positive-integer?! buffer-size)
   (mlet ((buf.st (make-mbytevector buffer-size 0)) (pos.st 0) (end.st 0))
     (define (grow buf len end.copy end.min)
@@ -268,8 +268,9 @@
                 arg*))
             (lambda () (mbytevector->bytevector buf.st 0 end.st)))))
 
-(define (call-with-output-bytevector k)
-  (let-values (((out current) (open-output-bytevector))) (k out) (current)))
+(define (call-with-oport:bytevector k)
+  (let-values (((out current) (oport:bytevector&current))) (k out) (current)))
+(define call/oport:bytevector call-with-oport:bytevector)
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Other ports ;;;
