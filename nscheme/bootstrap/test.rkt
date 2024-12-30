@@ -1584,20 +1584,20 @@
    (define (oport-write-bv out bv)
      (let ((len (bytevector-length bv)))
        (oport-write out bv 0 len len)))
-   (open-tcp-listener/k
+   (tcp-listen/k
     (gethostname) 8765 #t 5 raise-io-error
-    (lambda (listener)
+    (lambda (accept/k close/k)
       (thread
        (lambda ()
-         (open-tcp-connection/k
+         (tcp-connect/k
           (gethostname) 8765 #f #f raise-io-error
           (lambda (in out)
             (oport-write-bv out #"ABC")
             (oport-close out)
             (channel-put ch.client (iport->bv in))
             (iport-close in)))))
-      (listener
-       'accept/k raise-io-error
+      (accept/k
+       raise-io-error
        (lambda (in out)
          (let ((result (iport->bv in)))
            (iport-close in)

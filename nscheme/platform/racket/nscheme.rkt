@@ -24,7 +24,7 @@
   delete-directory/k delete-file/k move-file/k imemory:file/k omemory:file/k
   file-type/k file-size/k file-permissions/k file-modified-seconds/k
   set-file-permissions!/k set-file-modified-seconds!/k
-  gethostname open-tcp-listener/k open-tcp-connection/k open-udp-socket/k
+  gethostname tcp-listen/k tcp-connect/k udp-open/k
 
   standard-input-port standard-output-port standard-error-port
 
@@ -875,7 +875,6 @@
 ;;;;;;;;;;;;;;;;;;
 ;;; Network IO ;;;
 ;;;;;;;;;;;;;;;;;;
-
 (define (make-socket-ports/k in out k)
   (define (tcp-address-description p)
     (let-values (((local-host local-port remote-host remote-port) (tcp-addresses p #t)))
@@ -886,25 +885,16 @@
                                       (cons 'port remote-port)))))))
   (k (rkt:iport (list '(type . iport:tcp) (tcp-address-description in))  in)
      (rkt:oport (list '(type . oport:tcp) (tcp-address-description out)) out)))
-
-(define (open-tcp-listener/k hostname port reuse? max-backlog kf k)
-  (io-guard
-   kf (let ((listener (tcp-listen port max-backlog reuse? hostname)))
-        (k (lambda (method . arg*)
-             (apply
-              (case method
-                ((accept/k) (lambda (kf k)
-                              (io-guard kf (let-values (((in out) (tcp-accept listener)))
-                                             (make-socket-ports/k in out k)))))
-                ((close/k)  (lambda (kf k) (io-guard kf (tcp-close listener) (k))))
-                (else       (panic #f "not a listener method" method)))
-              arg*))))))
-
-(define (open-tcp-connection/k host port local-host local-port kf k)
+(define (tcp-listen/k hostname port reuse? max-backlog kf k)
+  (io-guard kf (let ((listener (tcp-listen port max-backlog reuse? hostname)))
+                 (k (lambda (kf k) (io-guard kf (let-values (((in out) (tcp-accept listener)))
+                                                  (make-socket-ports/k in out k))))
+                    (lambda (kf k) (io-guard kf (tcp-close listener) (k)))))))
+(define (tcp-connect/k host port local-host local-port kf k)
   (io-guard kf (let-values (((in out) (tcp-connect host port local-host local-port)))
                  (make-socket-ports/k in out k))))
 
-(define (open-udp-socket/k family-host family-port kf k)
+(define (udp-open/k family-host family-port kf k)
   (io-guard
    kf (k (let ((socket (udp-open-socket family-host family-port)))
            (define (receive-from/k dst start count kf k)
