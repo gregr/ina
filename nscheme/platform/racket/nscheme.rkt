@@ -21,8 +21,7 @@
   host-pid host-argument* host-environment raw-host-process/k
   change-directory filesystem-change-evt filesystem-change-evt-cancel
   directory-file*/k make-symbolic-link/k make-directory/k
-  delete-directory/k delete-file/k move-file/k
-  imemory:file/k omemory:file/k open-input-file/k open-output-file/k
+  delete-directory/k delete-file/k move-file/k imemory:file/k omemory:file/k
   file-type/k file-size/k file-permissions/k file-modified-seconds/k
   set-file-permissions!/k set-file-modified-seconds!/k
   gethostname open-tcp-listener/k open-tcp-connection/k open-udp-socket/k
@@ -664,10 +663,6 @@
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; IO primitives ;;;
 ;;;;;;;;;;;;;;;;;;;;;
-(define (rkt-port-set-position!/k port new kf k)
-  (with-handlers ((exn:fail:filesystem? (lambda (e) (kf 'no-position (list (exn-message e))))))
-    (file-position port (or new eof))
-    (k)))
 (define (with-io-guard kfail thunk)
   (with-handlers ((exn:fail:filesystem:exists? (lambda (e) (kfail 'exists (list (exn-message e)))))
                   (exn:fail:filesystem:errno?  (lambda (e) (kfail (exn:fail:filesystem:errno-errno e)
@@ -715,7 +710,6 @@
                                                   (let ((size (file-position port)))
                                                     (set! pos.cached size)
                                                     (k size)))))
-
              ((close)    (lambda (kf k) (io-guard kf (close-input-port port) (k))))
              ((describe) (lambda () description))
              (else       (error "not an imemory method" method)))
@@ -757,75 +751,51 @@
                              partial-description))
   (define unread* (make-bytes 0))
   (lambda (method . arg*)
-    (apply
-     (case method
-       ((read)          (lambda (dst start min-count count kf keof k)
-                          (buffer-range?! dst start min-count count)
-                          (let* ((dst    (mbytevector-bv dst))
-                                 (len    (bytes-length unread*))
-                                 (amount (min count len))
-                                 (k      (lambda (additional)
-                                           (cond
-                                             (additional   (k (+ amount additional)))
-                                             ((< 0 amount) (k amount))
-                                             (else         (keof))))))
-                            (bytes-copy! dst start unread* 0 amount)
-                            (set! unread* (subbytes unread* amount))
-                            (let ((start     (+ start amount))
-                                  (min-count (max (- min-count amount) 0))
-                                  (count     (max (- count     amount) 0)))
-                              (io-guard
-                               kf
-                               (cond
-                                 ((= count 0) (k 0))
-                                 ((= min-count count)
-                                  (let ((amount (read-bytes! dst port start (+ start count))))
-                                    (if (eof-object? amount) (k #f) (k amount))))
-                                 ((= min-count 0)
-                                  (let ((amount (read-bytes-avail!*
-                                                 dst port start (+ start count))))
-                                    (if (eof-object? amount) (k #f) (k amount))))
-                                 (else (let loop ((total 0))
-                                         (let ((amount (read-bytes-avail!
-                                                        dst port (+ start total) (+ start count))))
-                                           (if (eof-object? amount)
-                                               (if (= total 0) (k #f) (k total))
-                                               (let ((total (+ total amount)))
-                                                 (if (< total min-count)
-                                                     (loop total)
-                                                     (k total)))))))))))))
-       ((pread)         (lambda (pos dst start count kf keof k)
-                          (buffer-range?! dst start count count)
-                          (io-guard
-                           kf
-                           (let ((pos.current (file-position* port)))
-                             (if pos.current
-                                 (rkt-port-set-position!/k
-                                  port pos kf
-                                  (lambda ()
-                                    (let ((amount (read-bytes! (mbytevector-bv dst) port start
-                                                               (+ start count))))
-                                      (rkt-port-set-position!/k
-                                       port pos.current kf
-                                       (if (eof-object? amount) keof (lambda () (k amount)))))))
-                                 (panic #f "iport does not support pread" description))))))
-       ((unread)        (lambda (src start count kf k)
-                          (buffer-range?! src start count count)
-                          (let ((pos (file-position* port)))
-                            (cond
-                              ((not pos)
-                               (set! unread* (bytes-append
-                                              (subbytes (mbytevector-bv src) start (+ start count))
-                                              unread*)))
-                              ((< pos count) (panic #f "too many bytes unread" count
-                                                    (vector 'rkt:iport pos)))
-                              (else (rkt-port-set-position!/k port (- pos count) kf k))))))
-       ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
-       ((position)      (lambda (k)        (k (file-position* port))))
-       ((close)         (lambda (kf k)     (io-guard kf (close-input-port port) (k))))
-       ((describe)      (lambda ()         description))
-       (else            (error "not an iport method" method)))
-     arg*)))
+    (apply (case method
+             ((read)     (lambda (dst start min-count count kf keof k)
+                           (buffer-range?! dst start min-count count)
+                           (let* ((dst    (mbytevector-bv dst))
+                                  (len    (bytes-length unread*))
+                                  (amount (min count len))
+                                  (k      (lambda (additional)
+                                            (cond
+                                              (additional   (k (+ amount additional)))
+                                              ((< 0 amount) (k amount))
+                                              (else         (keof))))))
+                             (bytes-copy! dst start unread* 0 amount)
+                             (set! unread* (subbytes unread* amount))
+                             (let ((start     (+ start amount))
+                                   (min-count (max (- min-count amount) 0))
+                                   (count     (max (- count     amount) 0)))
+                               (io-guard
+                                kf
+                                (cond
+                                  ((= count 0) (k 0))
+                                  ((= min-count count)
+                                   (let ((amount (read-bytes! dst port start (+ start count))))
+                                     (if (eof-object? amount) (k #f) (k amount))))
+                                  ((= min-count 0)
+                                   (let ((amount (read-bytes-avail!*
+                                                  dst port start (+ start count))))
+                                     (if (eof-object? amount) (k #f) (k amount))))
+                                  (else (let loop ((total 0))
+                                          (let ((amount (read-bytes-avail!
+                                                         dst port (+ start total) (+ start count))))
+                                            (if (eof-object? amount)
+                                                (if (= total 0) (k #f) (k total))
+                                                (let ((total (+ total amount)))
+                                                  (if (< total min-count)
+                                                      (loop total)
+                                                      (k total)))))))))))))
+             ((unread)   (lambda (src start count kf k)
+                           (buffer-range?! src start count count)
+                           (set! unread* (bytes-append
+                                          (subbytes (mbytevector-bv src) start (+ start count))
+                                          unread*))))
+             ((close)    (lambda (kf k)     (io-guard kf (close-input-port port) (k))))
+             ((describe) (lambda ()         description))
+             (else       (error "not an iport method" method)))
+           arg*)))
 
 (define (rkt:oport partial-description port)
   (file-stream-buffer-mode port 'none)
@@ -833,40 +803,25 @@
                              (cons 'file-descriptor (unsafe-port->file-descriptor port))
                              partial-description))
   (lambda (method . arg*)
-    (apply
-     (case method
-       ((write)         (lambda (src start min-count count kf k)
-                          (buffer-range?! src start min-count count)
-                          (let ((src (if (mbytevector? src) (mbytevector-bv src) src))
-                                (end (+ start count)))
-                            (io-guard
-                             kf
-                             (cond
-                               ((= min-count count) (k (write-bytes src port start end)))
-                               ((= min-count 0) (k (or (write-bytes-avail* src port start end) 0)))
-                               (else (let loop ((total 0))
-                                       (let* ((amount (write-bytes-avail src port (+ start total)
-                                                                         end))
-                                              (total  (+ total amount)))
-                                         (if (< total min-count) (loop total) (k total))))))))))
-       ((pwrite)        (lambda (pos src start count kf k)
-                          (buffer-range?! src start count count)
-                          (let ((src (if (mbytevector? src) (mbytevector-bv src) src)))
-                            (io-guard
-                             kf
-                             (let ((pos.current (file-position* port)))
-                               (if pos.current
-                                   (rkt-port-set-position!/k
-                                    port pos kf
-                                    (lambda () (write-bytes src port start (+ start count)) (k)))
-                                   (panic #f "oport does not support pwrite" description)))))))
-       ((set-size!)     (lambda (new kf k) (io-guard kf (file-truncate port new) (k))))
-       ((set-position!) (lambda (new kf k) (rkt-port-set-position!/k port new kf k)))
-       ((position)      (lambda (k)        (k (file-position* port))))
-       ((close)         (lambda (kf k)     (io-guard kf (close-output-port port) (k))))
-       ((describe)      (lambda ()         description))
-       (else            (error "not an oport method" method)))
-     arg*)))
+    (apply (case method
+             ((write)    (lambda (src start min-count count kf k)
+                           (buffer-range?! src start min-count count)
+                           (let ((src (if (mbytevector? src) (mbytevector-bv src) src))
+                                 (end (+ start count)))
+                             (io-guard
+                              kf
+                              (cond
+                                ((= min-count count) (k (write-bytes src port start end)))
+                                ((= min-count 0) (k (or (write-bytes-avail* src port start end) 0)))
+                                (else (let loop ((total 0))
+                                        (let* ((amount (write-bytes-avail src port (+ start total)
+                                                                          end))
+                                               (total  (+ total amount)))
+                                          (if (< total min-count) (loop total) (k total))))))))))
+             ((close)    (lambda (kf k)     (io-guard kf (close-output-port port) (k))))
+             ((describe) (lambda ()         description))
+             (else       (error "not an oport method" method)))
+           arg*)))
 
 ;;;;;;;;;;;;;;;;;;
 ;; Standard IO ;;;
@@ -916,13 +871,6 @@
   (open-rkt-output-file/k
    path restriction kf (lambda (path port)
                          (k (rkt:omemory (list '(type . file-omemory) (cons 'path path)) port)))))
-(define (open-input-file/k path kf k)
-  (open-rkt-input-file/k
-   path kf (lambda (path port) (k (rkt:iport (list '(type . file-iport) (cons 'path path)) port)))))
-(define (open-output-file/k path restriction kf k)
-  (open-rkt-output-file/k
-   path restriction kf (lambda (path port)
-                         (k (rkt:oport (list '(type . file-oport) (cons 'path path)) port)))))
 
 ;;;;;;;;;;;;;;;;;;
 ;;; Network IO ;;;
