@@ -6,8 +6,15 @@
     (unless (<= (+ start min-count) (+ start desired-count) len)
       (error "buffer range out of bounds" start min-count desired-count len))))
 
-;;; Improper use of an iomemory or port operation will panic.  Proper use of an iomemory or
-;;; port operation may still fail, indicated by returning two values:
+(define (iomemory-describe iom) (iom 'describe))
+(define (port? x) (procedure? x))
+(define (port-describe p) (p 'describe))
+
+;;;;;;;;;;;;;;;;;
+;;; IO Errors ;;;
+;;;;;;;;;;;;;;;;;
+;;; Improper use of an iomemory, port, or port-buffer operation will panic.  Proper use may still
+;;; fail, indicated by two error description values:
 ;;; - failure tag, typically a symbol, #f, or an integer code
 ;;;   - #f        ; failure is not categorized
 ;;;   - <integer> ; e.g., an errno value
@@ -15,9 +22,13 @@
 ;;;   - not-open
 ;;;   - no-space
 ;;; - failed operation details
-(define (iomemory-describe iom) (iom 'describe))
-(define (port? x) (procedure? x))
-(define (port-describe p) (p 'describe))
+;;; Depending on the operation variant, these two values are either:
+;;; - returned to a failure continuation for /k operations
+;;; - raised as an io-error otherwise
+(define-values (io-error:kind io-error? io-error-tag io-error-context)
+  (make-exception-kind-etc error:kind 'io-error '#(tag context)))
+(define (make-io-error  desc tag context) (make-exception io-error:kind (vector desc tag context)))
+(define (raise-io-error tag context) (raise (make-io-error "IO error" tag context)))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Input memory ;;;
@@ -240,21 +251,21 @@
 
 (splicing-local
   ((define (make-thread-safe-memory-requester description mem)
-     (let* ((ch.req (make-channel))
-            (t      (thread (lambda ()
-                              (let loop ()
-                                (let* ((req         (channel-get ch.req))
-                                       (ch.reply    (car req))
-                                       (method&arg* (cdr req))
-                                       (result      (current-panic-handler
-                                                      (lambda x* (lambda () (apply panic x*)))
-                                                      (lambda () (apply mem method&arg*)))))
-                                  (thread (lambda () (channel-put ch.reply result)))
-                                  (loop))))))
-            (dead   (handle-evt (thread-dead-evt t)
-                                (lambda (_) (error "dead thread-safe-memory" description)))))
+     (let* ((ch.request (make-channel))
+            (t          (thread (lambda ()
+                                  (let loop ()
+                                    (let* ((req         (channel-get ch.request))
+                                           (ch.reply    (car req))
+                                           (method&arg* (cdr req))
+                                           (result      (current-panic-handler
+                                                          (lambda x* (lambda () (apply panic x*)))
+                                                          (lambda () (apply mem method&arg*)))))
+                                      (thread (lambda () (channel-put ch.reply result)))
+                                      (loop))))))
+            (dead       (handle-evt (thread-dead-evt t)
+                                    (lambda (_) (error "dead thread-safe-memory" description)))))
        (lambda req (let ((ch.reply (make-channel)))
-                     (sync (channel-put-evt ch.req (cons ch.reply req)) dead)
+                     (sync (channel-put-evt ch.request (cons ch.reply req)) dead)
                      ((sync ch.reply dead)))))))
   (define (thread-safe-imemory im)
     (let* ((description (cons '(type . thread-safe-imemory) (iomemory-describe im)))
@@ -486,17 +497,16 @@
 (splicing-local
   ((define (make-thread-safe-port-requester description port)
      (let* ((ch.request (make-channel))
-            (t          (thread
-                          (lambda ()
-                            (let loop ()
-                              (let* ((req         (channel-get ch.request))
-                                     (ch.reply    (car req))
-                                     (method&arg* (cdr req))
-                                     (result      (current-panic-handler
-                                                    (lambda x* (lambda () (apply panic x*)))
-                                                    (lambda () (apply port method&arg*)))))
-                                (thread (lambda () (channel-put ch.reply result)))
-                                (loop))))))
+            (t          (thread (lambda ()
+                                  (let loop ()
+                                    (let* ((req         (channel-get ch.request))
+                                           (ch.reply    (car req))
+                                           (method&arg* (cdr req))
+                                           (result      (current-panic-handler
+                                                          (lambda x* (lambda () (apply panic x*)))
+                                                          (lambda () (apply port method&arg*)))))
+                                      (thread (lambda () (channel-put ch.reply result)))
+                                      (loop))))))
             (dead       (handle-evt (thread-dead-evt t)
                                     (lambda (_) (error "dead thread-safe-port" description)))))
        (lambda req (let ((ch.reply (make-channel)))
@@ -541,16 +551,6 @@
             ((describe) (lambda () description))
             (else       (error "not a thread-safe-oport method" method)))
           arg*)))))
-
-;;;;;;;;;;;;;;;;;
-;;; IO Errors ;;;
-;;;;;;;;;;;;;;;;;
-;;; Improper use of a port-buffer operation will panic.  Proper use of a port-buffer operation may
-;;; still fail by raising an io-error, which will include a failure tag and any additional context.
-(define-values (io-error:kind io-error? io-error-tag io-error-context)
-  (make-exception-kind-etc error:kind 'io-error '#(tag context)))
-(define (make-io-error  desc tag context) (make-exception io-error:kind (vector desc tag context)))
-(define (raise-io-error tag context) (raise (make-io-error "IO error" tag context)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Input port-buffers ;;;
