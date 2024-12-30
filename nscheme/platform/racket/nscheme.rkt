@@ -826,9 +826,9 @@
 ;;;;;;;;;;;;;;;;;;
 ;; Standard IO ;;;
 ;;;;;;;;;;;;;;;;;;
-(define standard-input-port  (rkt:iport '((type . stdin))  (current-input-port)))
-(define standard-output-port (rkt:oport '((type . stdout)) (current-output-port)))
-(define standard-error-port  (rkt:oport '((type . stderr)) (current-error-port)))
+(define standard-input-port  (rkt:iport '((type . iport:stdin))  (current-input-port)))
+(define standard-output-port (rkt:oport '((type . oport:stdout)) (current-output-port)))
+(define standard-error-port  (rkt:oport '((type . oport:stderr)) (current-error-port)))
 
 ;;;;;;;;;;;;;;;
 ;;; File IO ;;;
@@ -866,11 +866,11 @@
 (define (imemory:file/k path kf k)
   (open-rkt-input-file/k
    path kf (lambda (path port)
-             (k (rkt:imemory (list '(type . file-imemory) (cons 'path path)) port)))))
+             (k (rkt:imemory (list '(type . imemory:file) (cons 'path path)) port)))))
 (define (omemory:file/k path restriction kf k)
   (open-rkt-output-file/k
    path restriction kf (lambda (path port)
-                         (k (rkt:omemory (list '(type . file-omemory) (cons 'path path)) port)))))
+                         (k (rkt:omemory (list '(type . omemory:file) (cons 'path path)) port)))))
 
 ;;;;;;;;;;;;;;;;;;
 ;;; Network IO ;;;
@@ -884,8 +884,8 @@
                                       (cons 'port local-port)))
                   (cons 'remote (list (cons 'host remote-host)
                                       (cons 'port remote-port)))))))
-  (k (rkt:iport (list '(type . tcp-iport) (tcp-address-description in))  in)
-     (rkt:oport (list '(type . tcp-oport) (tcp-address-description out)) out)))
+  (k (rkt:iport (list '(type . iport:tcp) (tcp-address-description in))  in)
+     (rkt:oport (list '(type . oport:tcp) (tcp-address-description out)) out)))
 
 (define (open-tcp-listener/k hostname port reuse? max-backlog kf k)
   (io-guard
@@ -998,9 +998,9 @@
                                           (cons (caar env) (cons (cdar env) (loop (cdr env)))))))
                              (current-environment-variables))))
            (apply subprocess out in err #f path arg*)))))
-     (let ((in  (and in  (rkt:oport '((type . pipe-oport)) in)))
-           (out (and out (rkt:iport '((type . pipe-iport)) out)))
-           (err (and err (rkt:iport '((type . pipe-iport)) err))))
+     (let ((in  (and in  (rkt:oport '((type . oport:pipe)) in)))
+           (out (and out (rkt:iport '((type . iport:pipe)) out)))
+           (err (and err (rkt:iport '((type . iport:pipe)) err))))
        (k (lambda (method)
             (case method
               ((in)        in)
