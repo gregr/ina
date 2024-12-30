@@ -12,9 +12,9 @@
 (define tty
   (let ()
     (define (command path . arg*)
-      (let ((result (call-with-output-bytevector
+      (let ((result (call/oport:bytevector
                      (lambda (out)
-                       (let ((in (open-input-file "/dev/tty")))
+                       (let ((in (iport:file "/dev/tty")))
                          (host-process-wait
                           (host-process in out out
                                         (find-file/env host-environment path) arg* #f))
