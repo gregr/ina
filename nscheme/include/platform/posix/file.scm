@@ -1,3 +1,5 @@
+(define (imemory:file path)             (imemory:file/k path             raise-io-error values))
+(define (omemory:file path restriction) (omemory:file/k path restriction raise-io-error values))
 (define (open-input-file path) (open-input-file/k path raise-io-error values))
 (define (open-output-file path restriction)
   (open-output-file/k path restriction raise-io-error values))

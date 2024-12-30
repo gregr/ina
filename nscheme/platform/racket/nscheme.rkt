@@ -21,7 +21,8 @@
   host-pid host-argument* host-environment raw-host-process/k
   change-directory filesystem-change-evt filesystem-change-evt-cancel
   directory-file*/k make-symbolic-link/k make-directory/k
-  delete-directory/k delete-file/k move-file/k open-input-file/k open-output-file/k
+  delete-directory/k delete-file/k move-file/k
+  imemory:file/k omemory:file/k open-input-file/k open-output-file/k
   file-type/k file-size/k file-permissions/k file-modified-seconds/k
   set-file-permissions!/k set-file-modified-seconds!/k
   gethostname open-tcp-listener/k open-tcp-connection/k open-udp-socket/k
@@ -690,6 +691,65 @@
     (unless (<= (+ start min-count) (+ start desired-count) len)
       (panic #f "buffer range out of bounds" start min-count desired-count len))))
 
+(define (rkt:imemory partial-description port)
+  (file-stream-buffer-mode port 'none)
+  (define description (list* (cons 'terminal?       (terminal-port? port))
+                             (cons 'file-descriptor (unsafe-port->file-descriptor port))
+                             partial-description))
+  (define pos.cached #f)
+  (lambda (method . arg*)
+    (apply (case method
+             ((read)     (lambda (pos dst start count kf keof k)
+                           (buffer-range?! dst start count count)
+                           (io-guard kf
+                                     (unless (eqv? pos.cached pos) (file-position port pos))
+                                     (let ((amount (read-bytes! (mbytevector-bv dst) port start
+                                                                (+ start count))))
+                                       (if (eof-object? amount)
+                                           (keof)
+                                           (begin
+                                             (set! pos.cached (+ pos amount))
+                                             (k amount)))))))
+             ((size)     (lambda (kf k) (io-guard kf
+                                                  (file-position port eof)
+                                                  (let ((size (file-position port)))
+                                                    (set! pos.cached size)
+                                                    (k size)))))
+
+             ((close)    (lambda (kf k) (io-guard kf (close-input-port port) (k))))
+             ((describe) (lambda () description))
+             (else       (error "not an imemory method" method)))
+           arg*)))
+(define (rkt:omemory partial-description port)
+  (file-stream-buffer-mode port 'none)
+  (define description (list* (cons 'terminal?       (terminal-port? port))
+                             (cons 'file-descriptor (unsafe-port->file-descriptor port))
+                             partial-description))
+  (define pos.cached #f)
+  (lambda (method . arg*)
+    (apply (case method
+             ((write)    (lambda (pos src start count kf k)
+                           (buffer-range?! src start count count)
+                           (io-guard kf
+                                     (unless (eqv? pos.cached pos) (file-position port pos))
+                                     (write-bytes (if (mbytevector? src) (mbytevector-bv src) src)
+                                                  port start (+ start count))
+                                     (set! pos.cached (+ pos count))
+                                     (k))))
+             ((size)     (lambda (kf k) (io-guard kf
+                                                  (file-position port eof)
+                                                  (let ((size (file-position port)))
+                                                    (set! pos.cached size)
+                                                    (k size)))))
+             ((resize!)  (lambda (new kf k) (io-guard kf
+                                                      (set! pos.cached #f)
+                                                      (file-truncate port new)
+                                                      (k))))
+             ((close)    (lambda (kf k) (io-guard kf (close-output-port port) (k))))
+             ((describe) (lambda () description))
+             (else       (error "not an omemory method" method)))
+           arg*)))
+
 (define (rkt:iport partial-description port)
   (file-stream-buffer-mode port 'none)
   (define description (list* (cons 'terminal?       (terminal-port? port))
@@ -838,19 +898,31 @@
 (define (set-file-modified-seconds!/k path seconds kf k)
   (nonnegative-integer?! seconds)
   (io-guard kf (file-or-directory-modify-seconds path seconds) (k)))
-(define (open-input-file/k path kf k)
-  (let ((path        (normalize-path path)))
-    (io-guard kf (k (rkt:iport (list '(type . file-iport) (cons 'path path))
-                               (open-input-file path))))))
-(define (open-output-file/k path restriction kf k)
+(define (open-rkt-input-file/k path kf k) (let ((path (normalize-path path)))
+                                            (io-guard kf (k path (open-input-file path)))))
+(define (open-rkt-output-file/k path restriction kf k)
   (let ((path        (normalize-path path))
         (exists-flag (case restriction
                        ((create) 'error)
                        ((update) 'udpate)
                        ((#f)     'can-update)
-                       (else     (panic #f "not an open-output-file restriction" restriction)))))
-    (io-guard kf (k (rkt:oport (list '(type . file-oport) (cons 'path path))
-                               (open-output-file path #:exists exists-flag))))))
+                       (else     (panic #f "not an output-file restriction" restriction)))))
+    (io-guard kf (k path (open-output-file path #:exists exists-flag)))))
+(define (imemory:file/k path kf k)
+  (open-rkt-input-file/k
+   path kf (lambda (path port)
+             (k (rkt:imemory (list '(type . file-imemory) (cons 'path path)) port)))))
+(define (omemory:file/k path restriction kf k)
+  (open-rkt-output-file/k
+   path restriction kf (lambda (path port)
+                         (k (rkt:omemory (list '(type . file-omemory) (cons 'path path)) port)))))
+(define (open-input-file/k path kf k)
+  (open-rkt-input-file/k
+   path kf (lambda (path port) (k (rkt:iport (list '(type . file-iport) (cons 'path path)) port)))))
+(define (open-output-file/k path restriction kf k)
+  (open-rkt-output-file/k
+   path restriction kf (lambda (path port)
+                         (k (rkt:oport (list '(type . file-oport) (cons 'path path)) port)))))
 
 ;;;;;;;;;;;;;;;;;;
 ;;; Network IO ;;;
