@@ -14,7 +14,6 @@
 ;;;   - exists
 ;;;   - not-open
 ;;;   - no-space
-;;;   - no-position
 ;;; - failed operation details
 (define (iomemory-describe iom) (iom 'describe))
 (define (port? x) (procedure? x))
@@ -80,19 +79,6 @@
 ;; port implementation decides whether to enforce this.
 (define (iport-unread/k p src start count kf k) (p 'unread src start count kf k))
 (define (iport-unread p src start count) (iport-unread/k p src start count raise-io-error values))
-;; Returns #f if port does not have a position.
-(define (iport-position p) (p 'position values))
-
-;;; Input ports with a position
-;; When pos is #f, set position to EOF.  May return a failure indication.
-(define (iport-set-position!/k p pos kf k) (p 'set-position! pos kf k))
-(define (iport-set-position!   p pos)      (iport-set-position!/k p pos raise-io-error values))
-;; Returns EOF, the amount read, or a failure indication.
-;; Blocks until at least (min count remaining-bytes) bytes are read.
-;; Failure may occur after a partial read.
-(define (iport-pread/k p pos dst start count kf keof k) (p 'pread pos dst start count kf keof k))
-(define (iport-pread   p pos dst start count)
-  (iport-pread/k p pos dst start count raise-io-error values values))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Output ports ;;;
@@ -108,22 +94,6 @@
   (oport-write/k p src start min-count count raise-io-error values))
 (define (oport-write-byte/k p byte kf k) (oport-write/k p (bytevector byte) 0 1 1 kf k))
 (define (oport-write-byte   p byte)      (oport-write-byte/k p byte raise-io-error values))
-;; Returns #f if port does not have a position.
-(define (oport-position p) (p 'position values))
-
-;;; Output ports with a position
-;; When pos is #f, set position to EOF.  May return a failure indication.
-(define (oport-set-position!/k p pos kf k) (p 'set-position! pos kf k))
-(define (oport-set-position!   p pos)      (oport-set-position!/k p pos raise-io-error values))
-;; May return a failure indication.
-(define (oport-set-size!/k p size kf k) (p 'set-size! size kf k))
-(define (oport-set-size!   p size)      (oport-set-size!/k p size raise-io-error values))
-;; May return a failure indication.
-;; Blocks until count bytes are written.
-;; Failure may occur after a partial write.
-(define (oport-pwrite/k p pos src start count kf k) (p 'pwrite pos src start count kf k))
-(define (oport-pwrite p pos src start count)
-  (oport-pwrite/k p pos src start count raise-io-error values))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Bytevector memory ;;;
@@ -385,8 +355,6 @@
           (case method
             ((read)          (lambda (dst start min-count count kf keof k)
                                (do-read #t pos dst start min-count count kf keof k)))
-            ((pread)         (lambda (pos dst start count kf keof k)
-                               (do-read #f pos dst start count count kf keof k)))
             ((unread)        (lambda (src start count kf k)
                                (buffer-range?! src start count count)
                                (let ((i pos))
@@ -394,18 +362,10 @@
                                                           (vector 'input-bytevector i len)))
                                  (set! pos (- i count))
                                  (k))))
-            ((set-position!) (lambda (new kf k)
-                               (set! pos (if new
-                                             (begin (nonnegative-integer?! new)
-                                                    (min len new))
-                                             len))
-                               (k)))
-            ((position)      (lambda (k)    (k pos)))
             ((close)         (lambda (kf k) (k)))
             ((describe)      (lambda ()     '((type . input-bytevector))))
             (else            (error "not an input-bytevector method" method)))
           arg*)))))
-
 (define (oport:mbytevector buf)
   (mlet ((pos.st 0))
     (define (full-error kf pos.current name . x*)
@@ -426,30 +386,10 @@
                                        (lambda ()
                                          (full-error kf pos.st 'write start min-count count))
                                        k)))
-          ((pwrite)        (lambda (pos src start count kf k)
-                             (do-write #f pos src start count count
-                                       (lambda () (full-error kf pos.st 'pwrite pos start count))
-                                       k)))
-          ((set-size!)     (lambda (new kf k)
-                             (nonnegative-integer?! new)
-                             (let ((pos pos.st))
-                               (if (< new pos)
-                                   (set! pos.st new)
-                                   (if (< (mbytevector-length buf) new)
-                                       (full-error kf pos 'set-size! new)
-                                       (k))))))
-          ((set-position!) (lambda (new kf k)
-                             (set! pos.st (if new
-                                              (begin (nonnegative-integer?! new)
-                                                     (min (mbytevector-length buf) new))
-                                              (mbytevector-length buf)))
-                             (k)))
-          ((position)      (lambda (k)    (k pos.st)))
           ((close)         (lambda (kf k) (k)))
           ((describe)      (lambda ()     '((type . output-mbytevector))))
           (else            (error "not an output-mbytevector method" method)))
         arg*))))
-
 (define (oport:bytevector&current) (oport:bytevector&current/buffer-size 64))
 (define (oport:bytevector&current/buffer-size buffer-size)
   (positive-integer?! buffer-size)
@@ -478,26 +418,6 @@
                 (case method
                   ((write)         (lambda (src start min-count count kf k)
                                      (do-write/src #t pos.st src start min-count count k)))
-                  ((pwrite)        (lambda (pos src start count kf k)
-                                     (do-write/src #f pos src start count count k)))
-                  ((set-size!)     (lambda (new kf k)
-                                     (nonnegative-integer?! new)
-                                     (let* ((buf buf.st)
-                                            (len (mbytevector-length buf))
-                                            (end end.st))
-                                       (cond
-                                         ((<= new end) (when (< new pos.st) (set! pos.st new)))
-                                         ((<= new len) (mbytevector-fill! buf 0 end (- new end)))
-                                         (else         (grow buf len end new))))
-                                     (set! end.st new)
-                                     (k)))
-                  ((set-position!) (lambda (new kf k)
-                                     (set! pos.st (if new
-                                                      (begin (nonnegative-integer?! new)
-                                                             (min end.st new))
-                                                      end.st))
-                                     (k)))
-                  ((position)      (lambda (k)    (k pos.st)))
                   ((close)         (lambda (kf k) (k)))
                   ((describe)      (lambda ()     '((type . output-bytevector))))
                   (else            (error "not an output-bytevector method" method)))
@@ -517,15 +437,10 @@
              ((write)         (lambda (src start min-count count kf k)
                                 (buffer-range?! src start min-count count)
                                 (k count)))
-             ((pwrite)        (lambda (pos src start count kf k) (k)))
-             ((set-position!) (lambda (new kf k)                 (k)))
-             ((set-size!)     (lambda (new kf k)                 (k)))
-             ((position)      (lambda (k)                        (k 0)))
              ((close)         (lambda (kf k)                     (k)))
              ((describe)      (lambda () '((type . null-oport))))
              (else            (error "not a null-oport method" method)))
            arg*)))
-
 (define full-oport
   (lambda (method . arg*)
     (define (full-error kf name . x*) (kf 'no-space (list (vector 'full-oport name x*))))
@@ -535,21 +450,10 @@
                                 (if (< 0 min-count)
                                     (full-error kf 'write start min-count count)
                                     (k 0))))
-             ((pwrite)        (lambda (pos src start count kf k)
-                                (buffer-range?! src start count count)
-                                (if (< 0 count)
-                                    (full-error kf 'pwrite pos start count)
-                                    (k))))
-             ((set-size!)     (lambda (new kf k)
-                                (nonnegative-integer?! new)
-                                (if (< 0 new) (full-error kf 'set-size! new) (k))))
-             ((set-position!) (lambda (new kf k) (k)))
-             ((position)      (lambda (k)        (k 0)))
              ((close)         (lambda (kf k)     (k)))
              ((describe)      (lambda () '((type . full-oport))))
              (else            (error "not a full-oport method" method)))
            arg*)))
-
 (define empty-iport
   (lambda (method . arg*)
     (apply
@@ -557,19 +461,13 @@
         ((read)          (lambda (dst start min-count count kf keof k)
                            (buffer-range?! dst start min-count count)
                            (if (< 0 count) (keof) (k 0))))
-        ((pread)         (lambda (pos dst start count kf keof k)
-                           (buffer-range?! dst start count count)
-                           (if (< 0 count) (keof) (k 0))))
         ((unread)        (lambda (src start count kf k)
                            (buffer-range?! src start count count)
                            (error "too many bytes unread" count 'empty-iport)))
-        ((set-position!) (lambda (new kf k) (k)))
-        ((position)      (lambda (k)        (k 0)))
         ((close)         (lambda (kf k)     (k)))
         ((describe)      (lambda () '((type . empty-iport))))
         (else            (error "not an empty-iport method" method)))
       arg*)))
-
 (define (iport:constant byte)
   (lambda (method . arg*)
     (apply
@@ -579,14 +477,7 @@
                            (if (< 0 count)
                                (begin (mbytevector-fill! dst byte start count) (k count))
                                (k 0))))
-        ((pread)         (lambda (pos dst start count kf keof k)
-                           (buffer-range?! dst start count count)
-                           (if (< 0 count)
-                               (begin (mbytevector-fill! dst byte start count) (k count))
-                               (k 0))))
         ((unread)        (lambda (src start count kf k) (buffer-range?! src start count count) (k)))
-        ((set-position!) (lambda (new kf k) (k)))
-        ((position)      (lambda (k)        (k 0)))
         ((close)         (lambda (kf k)     (k)))
         ((describe)      (lambda () '((type . constant-iport))))
         (else            (error "not a constant-iport method" method)))
@@ -611,71 +502,44 @@
        (lambda req (let ((ch.reply (make-channel)))
                      (sync (channel-put-evt ch.request (cons ch.reply req)) dead)
                      ((sync ch.reply dead)))))))
-
   (define (thread-safe-iport port)
     (let* ((description (list '(type . thread-safe-iport) (cons 'sub-port (port-describe port))))
            (request     (make-thread-safe-port-requester description port)))
       (lambda (method . arg*)
         (apply
           (case method
-            ((read)          (lambda (dst start min-count count kf keof k)
-                               (request 'read dst start min-count count
-                                        (lambda (t ctx)  (lambda () (kf t ctx)))
-                                        (lambda ()       keof)
-                                        (lambda (amount) (lambda () (k amount))))))
-            ((pread)         (lambda (pos dst start count kf keof k)
-                               (request 'pread pos dst start count
-                                        (lambda (t ctx)  (lambda () (kf t ctx)))
-                                        (lambda ()       keof)
-                                        (lambda (amount) (lambda () (k amount))))))
-            ((unread)        (lambda (src start count kf k)
-                               (request 'unread src start count
-                                        (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
-            ((set-position!) (lambda (new kf k)
-                               (request 'set-position! new
-                                        (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
-            ((position)      (lambda (k)
-                               (request 'position (lambda (pos) (lambda () (k pos))))))
-            ((close)         (lambda (kf k)
-                               (request 'close
-                                        (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
-            ((describe)      (lambda () description))
-            (else            (error "not a thread-safe-iport method" method)))
+            ((read)     (lambda (dst start min-count count kf keof k)
+                          (request 'read dst start min-count count
+                                   (lambda (t ctx)  (lambda () (kf t ctx)))
+                                   (lambda ()       keof)
+                                   (lambda (amount) (lambda () (k amount))))))
+            ((unread)   (lambda (src start count kf k)
+                          (request 'unread src start count
+                                   (lambda (t ctx) (lambda () (kf t ctx)))
+                                   (lambda ()      (lambda () (k))))))
+            ((close)    (lambda (kf k)
+                          (request 'close
+                                   (lambda (t ctx) (lambda () (kf t ctx)))
+                                   (lambda ()      (lambda () (k))))))
+            ((describe) (lambda () description))
+            (else       (error "not a thread-safe-iport method" method)))
           arg*))))
-
   (define (thread-safe-oport port)
     (let* ((description (list '(type . thread-safe-oport) (cons 'sub-port (port-describe port))))
            (request     (make-thread-safe-port-requester description port)))
       (lambda (method . arg*)
         (apply
           (case method
-            ((write)         (lambda (src start min-count count kf k)
-                               (request 'write src start min-count count
-                                        (lambda (t ctx)  (lambda () (kf t ctx)))
-                                        (lambda (amount) (lambda () (k amount))))))
-            ((pwrite)        (lambda (pos src start count kf k)
-                               (request 'pwrite pos src start count
-                                        (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
-            ((set-size!)     (lambda (new kf k)
-                               (request 'set-size! new
-                                        (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
-            ((set-position!) (lambda (new kf k)
-                               (request 'set-position! new
-                                        (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
-            ((position)      (lambda (k)
-                               (request 'position (lambda (pos) (lambda () (k pos))))))
-            ((close)         (lambda (kf k)
-                               (request 'close
-                                        (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
-            ((describe)      (lambda () description))
-            (else            (error "not a thread-safe-oport method" method)))
+            ((write)    (lambda (src start min-count count kf k)
+                          (request 'write src start min-count count
+                                   (lambda (t ctx)  (lambda () (kf t ctx)))
+                                   (lambda (amount) (lambda () (k amount))))))
+            ((close)    (lambda (kf k)
+                          (request 'close
+                                   (lambda (t ctx) (lambda () (kf t ctx)))
+                                   (lambda ()      (lambda () (k))))))
+            ((describe) (lambda () description))
+            (else       (error "not a thread-safe-oport method" method)))
           arg*)))))
 
 ;;;;;;;;;;;;;;;;;
@@ -840,28 +704,7 @@
                                      port dst start min-count count values values values)
                         (()       (if (< 0 available) (k available) (keof)))
                         ((amount) (k (+ available amount)))
-                        ((tag x)  (fail tag x))))))))))
-
-  ;; returns #f if port has no position
-  (define (iport-buffer-position p)
-    (let ((pos (iport-position (iport-buffer-port p))))
-      (and pos (+ (- pos (iport-buffer-end p)) (iport-buffer-pos p)))))
-
-  ;;; Input port-buffers with a position
-  ;; When pos is #f, set position to EOF
-  (define (iport-buffer-set-position!   p pos)
-    (iport-buffer-set-position!/k p pos raise-io-error values))
-  (define (iport-buffer-set-position!/k p pos kf k)
-    (iport-buffer-buffer/refresh p)
-    (case-values (iport-set-position!/k (iport-buffer-port p) pos values values)
-      ((tag x) (kf tag (cons (vector 'iport-buffer-set-position! pos) x)))
-      (_       (iport-buffer-set-pos! p 0) (iport-buffer-set-end! p 0) (k))))
-
-  ;; returns (values) on EOF or amount read.
-  (define (iport-buffer-pread p pos dst start count)
-    (iport-buffer-pread/k p pos dst start count raise-io-error values values))
-  (define (iport-buffer-pread/k p pos dst start count kf keof k)
-    (iport-pread/k (iport-buffer-port p) pos dst start count kf keof k)))
+                        ((tag x)  (fail tag x)))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Output port-buffers ;;;
@@ -949,30 +792,4 @@
                        (drain/k min-count kf (lambda (pos) (fill pos (- len pos) start count)))
                        (begin (oport-buffer-flush/k
                                 p kf (lambda () (do-write/k src start min-count count kf k))))))
-                 (k available))))))
-
-  ;; returns #f if port has no position
-  (define (oport-buffer-position p)
-    (let ((pos (oport-position (oport-buffer-port p))))
-      (and pos (+ pos (oport-buffer-pos p)))))
-
-  ;;; Output port-buffers with a position
-  ;; When pos is #f, set position to EOF
-  (define (oport-buffer-set-position! p pos)
-    (oport-buffer-set-position!/k p pos raise-io-error values))
-  (define (oport-buffer-set-position!/k p pos kf k)
-    (oport-buffer-flush/k
-      p kf (lambda ()
-             (case-values (oport-set-position!/k (oport-buffer-port p) pos values values)
-               ((tag x) (kf tag (cons (vector 'oport-buffer-set-position! pos) x)))
-               (_       (oport-buffer-set-pos! p 0) (k))))))
-
-  (define (oport-buffer-set-size! p size) (oport-buffer-set-size!/k p size raise-io-error values))
-  (define (oport-buffer-set-size!/k p size kf k)
-    (oport-buffer-flush/k p kf (lambda () (oport-set-size!/k (oport-buffer-port p) size kf k))))
-
-  (define (oport-buffer-pwrite p pos src start count)
-    (oport-buffer-pwrite/k p pos src start count raise-io-error values))
-  (define (oport-buffer-pwrite/k p pos src start count kf k)
-    (oport-buffer-flush/k
-      p kf (lambda () (oport-pwrite/k (oport-buffer-port p) pos src start count kf k)))))
+                 (k available)))))))
