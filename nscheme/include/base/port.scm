@@ -324,6 +324,43 @@
                  (else       (error "not a thread-safe-oport method" method)))
                arg*)))))
 
+;;;;;;;;;;;;;;;;;;;;
+;;; Memory ports ;;;
+;;;;;;;;;;;;;;;;;;;;
+(define (iport:memory im pos close?)
+  (let ((description (cons '(type . iport:memory) (iomemory-describe im))))
+    (mlet ((pos pos))
+      (lambda (method . arg*)
+        (apply (case method
+                 ((read)     (lambda (dst start min-count count kf keof k)
+                               (let ((i pos))
+                                 (imemory-read/k im pos dst start count kf keof
+                                                 (lambda (n) (set! pos (+ i n)) (k n))))))
+                 ((unread)   (lambda (src start count kf k)
+                               (let ((i pos))
+                                 (when (< i count)
+                                   (error "too many bytes unread" count (cons 'position i)
+                                          description))
+                                 (set! pos (- i count))
+                                 (k))))
+                 ((close)    (lambda (kf k) (if close? (imemory-close/k im kf k) (k))))
+                 ((describe) (lambda () description))
+                 (else       (error "not a iport:memory method" method description)))
+               arg*)))))
+(define (oport:memory om pos close?)
+  (let ((description (cons '(type . oport:memory) (iomemory-describe om))))
+    (mlet ((pos pos))
+      (lambda (method . arg*)
+        (apply (case method
+                 ((write)    (lambda (src start min-count count kf k)
+                               (let ((i pos))
+                                 (omemory-write/k om i src start count kf
+                                                  (lambda () (set! pos (+ i count)) (k count))))))
+                 ((close)    (lambda (kf k) (if close? (omemory-close/k om kf k) (k))))
+                 ((describe) (lambda () description))
+                 (else       (error "not a oport:memory method" method description)))
+               arg*)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Bytevector ports ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
