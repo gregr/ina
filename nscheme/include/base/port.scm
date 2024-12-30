@@ -334,7 +334,7 @@
         (else            (error "not an empty-iport method" method)))
       arg*)))
 
-(define (open-constant-iport byte)
+(define (iport:constant byte)
   (lambda (method . arg*)
     (apply
       (case method
