@@ -385,7 +385,7 @@
                      (sync (channel-put-evt ch.request (cons ch.reply req)) dead)
                      ((sync ch.reply dead)))))))
   (define (thread-safe-iport port)
-    (let* ((description (list '(type . thread-safe-iport) (cons 'sub-port (port-describe port))))
+    (let* ((description (cons '(type . thread-safe-iport) (port-describe port)))
            (request     (make-thread-safe-port-requester description port)))
       (lambda (method . arg*)
         (apply
@@ -407,7 +407,7 @@
             (else       (error "not a thread-safe-iport method" method)))
           arg*))))
   (define (thread-safe-oport port)
-    (let* ((description (list '(type . thread-safe-oport) (cons 'sub-port (port-describe port))))
+    (let* ((description (cons '(type . thread-safe-oport) (port-describe port)))
            (request     (make-thread-safe-port-requester description port)))
       (lambda (method . arg*)
         (apply
