@@ -302,7 +302,7 @@
                                                      (lambda (t ctx) (lambda () (kf t ctx)))
                                                      (lambda ()      (lambda () (k))))))
                  ((describe) (lambda () description))
-                 (else       (error "not a thread-safe-oport method" method)))
+                 (else       (error "not a thread-safe-oport method" method description)))
                arg*)))))
 
 ;;;;;;;;;;;;;;;;;;;;
@@ -404,7 +404,7 @@
                                    (lambda (t ctx) (lambda () (kf t ctx)))
                                    (lambda ()      (lambda () (k))))))
             ((describe) (lambda () description))
-            (else       (error "not a thread-safe-iport method" method)))
+            (else       (error "not a thread-safe-iport method" method description)))
           arg*))))
   (define (thread-safe-oport port)
     (let* ((description (cons '(type . thread-safe-oport) (port-describe port)))
@@ -421,7 +421,7 @@
                                    (lambda (t ctx) (lambda () (kf t ctx)))
                                    (lambda ()      (lambda () (k))))))
             ((describe) (lambda () description))
-            (else       (error "not a thread-safe-oport method" method)))
+            (else       (error "not a thread-safe-oport method" method description)))
           arg*)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
