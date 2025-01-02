@@ -25,7 +25,7 @@
                 (let* ((buffer-size 4096) (buffer (make-mbytevector buffer-size 0)))
                   (let loop ()
                     (iport-read/k
-                      in buffer 0 1 buffer-size handle-internal-error close!
+                      in buffer 0 buffer-size handle-internal-error close!
                       (lambda (amount)
                         (oport-write/k out buffer 0 amount handle-internal-error loop))))))))
           (define (fuse*-push t) (set! fuse* (cons t fuse*)) #f)
