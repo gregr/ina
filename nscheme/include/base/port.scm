@@ -74,7 +74,7 @@
 ;; Returns EOF, the amount read, or a failure indication.
 ;; Blocks until at least (min count (max 1 available-bytes)) bytes are read.
 ;; Failure may occur after a partial read.
-(define (iport-read/k p dst start count kf keof k) (p 'read dst start 1 count kf keof k))
+(define (iport-read/k p dst start count kf keof k) (p 'read dst start count kf keof k))
 (define (iport-read p dst start count)
   (iport-read/k p dst start count raise-io-error values values))
 ;; Returns EOF, the byte read, or a failure indication.
@@ -250,7 +250,7 @@
     (mlet ((pos pos))
       (lambda (method . arg*)
         (apply (case method
-                 ((read)     (lambda (dst start min-count count kf keof k)
+                 ((read)     (lambda (dst start count kf keof k)
                                (let ((i pos))
                                  (imemory-read/k im pos dst start count kf keof
                                                  (lambda (n) (set! pos (+ i n)) (k n))))))
@@ -326,8 +326,8 @@
            (request     (make-thread-safe-port-requester description port)))
       (lambda (method . arg*)
         (apply (case method
-                 ((read)     (lambda (dst start min-count count kf keof k)
-                               (request 'read dst start min-count count
+                 ((read)     (lambda (dst start count kf keof k)
+                               (request 'read dst start count
                                         (lambda (t ctx)  (lambda () (kf t ctx)))
                                         (lambda ()       keof)
                                         (lambda (amount) (lambda () (k amount))))))

@@ -678,13 +678,11 @@
 
 (define (nonnegative-integer?! x) (unless (exact-nonnegative-integer? x)
                                     (panic #f "not a nonnegative integer" x)))
-(define (buffer-range?! buf start min-count desired-count)
+(define (buffer-range?! buf start count)
   (nonnegative-integer?! start)
-  (nonnegative-integer?! min-count)
-  (nonnegative-integer?! desired-count)
+  (nonnegative-integer?! count)
   (let ((len (if (mbytevector? buf) (mbytevector-length buf) (bytevector-length buf))))
-    (unless (<= (+ start min-count) (+ start desired-count) len)
-      (panic #f "buffer range out of bounds" start min-count desired-count len))))
+    (unless (<= (+ start count) len) (panic #f "buffer range out of bounds" start count len))))
 
 (define (rkt:imemory partial-description port)
   (file-stream-buffer-mode port 'none)
@@ -695,7 +693,7 @@
   (lambda (method . arg*)
     (apply (case method
              ((read)     (lambda (pos dst start count kf keof k)
-                           (buffer-range?! dst start count count)
+                           (buffer-range?! dst start count)
                            (io-guard kf
                                      (unless (eqv? pos.cached pos) (file-position port pos))
                                      (let ((amount (read-bytes! (mbytevector-bv dst) port start
@@ -723,7 +721,7 @@
   (lambda (method . arg*)
     (apply (case method
              ((write)    (lambda (pos src start count kf k)
-                           (buffer-range?! src start count count)
+                           (buffer-range?! src start count)
                            (io-guard kf
                                      (unless (eqv? pos.cached pos) (file-position port pos))
                                      (write-bytes (if (mbytevector? src) (mbytevector-bv src) src)
@@ -752,43 +750,28 @@
   (define unread* (make-bytes 0))
   (lambda (method . arg*)
     (apply (case method
-             ((read)     (lambda (dst start min-count count kf keof k)
-                           (buffer-range?! dst start min-count count)
-                           (let* ((dst    (mbytevector-bv dst))
-                                  (len    (bytes-length unread*))
-                                  (amount (min count len))
-                                  (k      (lambda (additional)
-                                            (cond
-                                              (additional   (k (+ amount additional)))
-                                              ((< 0 amount) (k amount))
-                                              (else         (keof))))))
-                             (bytes-copy! dst start unread* 0 amount)
-                             (set! unread* (subbytes unread* amount))
-                             (let ((start     (+ start amount))
-                                   (min-count (max (- min-count amount) 0))
-                                   (count     (max (- count     amount) 0)))
-                               (io-guard
-                                kf
-                                (cond
-                                  ((= count 0) (k 0))
-                                  ((= min-count count)
-                                   (let ((amount (read-bytes! dst port start (+ start count))))
-                                     (if (eof-object? amount) (k #f) (k amount))))
-                                  ((= min-count 0)
-                                   (let ((amount (read-bytes-avail!*
-                                                  dst port start (+ start count))))
-                                     (if (eof-object? amount) (k #f) (k amount))))
-                                  (else (let loop ((total 0))
-                                          (let ((amount (read-bytes-avail!
-                                                         dst port (+ start total) (+ start count))))
-                                            (if (eof-object? amount)
-                                                (if (= total 0) (k #f) (k total))
-                                                (let ((total (+ total amount)))
-                                                  (if (< total min-count)
-                                                      (loop total)
-                                                      (k total)))))))))))))
+             ((read)     (lambda (dst start count kf keof k)
+                           (buffer-range?! dst start count)
+                           (if (= count 0)
+                               (k 0)
+                               (let ((dst (mbytevector-bv dst)) (len (bytes-length unread*)))
+                                 (io-guard
+                                  kf
+                                  (if (< 0 len)
+                                      (k (let ((amount (min count len)))
+                                           (bytes-copy! dst start unread* 0 amount)
+                                           (set! unread* (subbytes unread* amount))
+                                           (if (< amount count)
+                                               (let ((more (read-bytes-avail!*
+                                                            dst port (+ start amount)
+                                                            (+ start count))))
+                                                 (if (eof-object? more) amount (+ amount more)))
+                                               amount)))
+                                      (let ((amount (read-bytes-avail! dst port start
+                                                                       (+ start count))))
+                                        (if (eof-object? amount) (keof) (k amount)))))))))
              ((unread)   (lambda (src start count kf k)
-                           (buffer-range?! src start count count)
+                           (buffer-range?! src start count)
                            (set! unread* (bytes-append
                                           (subbytes (mbytevector-bv src) start (+ start count))
                                           unread*))))
@@ -796,7 +779,6 @@
              ((describe) (lambda ()         description))
              (else       (error "not an iport method" method description)))
            arg*)))
-
 (define (rkt:oport partial-description port)
   (file-stream-buffer-mode port 'none)
   (define description (list* (cons 'terminal?       (terminal-port? port))
@@ -805,7 +787,7 @@
   (lambda (method . arg*)
     (apply (case method
              ((write)    (lambda (src start count kf k)
-                           (buffer-range?! src start count count)
+                           (buffer-range?! src start count)
                            (let ((src (if (mbytevector? src) (mbytevector-bv src) src))
                                  (end (+ start count)))
                              (io-guard kf (write-bytes src port start end) (k)))))
@@ -889,7 +871,7 @@
   (io-guard
    kf (k (let ((socket (udp-open-socket family-host family-port)))
            (define (receive-from/k dst start count kf k)
-             (buffer-range?! dst start count count)
+             (buffer-range?! dst start count)
              (io-guard kf (let-values (((amount host port)
                                         (udp-receive! socket dst start (+ start count))))
                             (k amount host port))))
@@ -902,12 +884,12 @@
                    (receive-from/k dst start count kf (lambda (amount host port) (k amount)))))
                 ((send-to/k)
                  (lambda (host port src start count kf k)
-                   (buffer-range?! src start count count)
+                   (buffer-range?! src start count)
                    (let ((src (if (mbytevector? src) (mbytevector-bv src) src)))
                      (io-guard kf (udp-send-to socket host port src start (+ start count)) (k)))))
                 ((send/k)
                  (lambda (          src start count kf k)
-                   (buffer-range?! src start count count)
+                   (buffer-range?! src start count)
                    (let ((src (if (mbytevector? src) (mbytevector-bv src) src)))
                      (io-guard kf (udp-send    socket           src start (+ start count)) (k)))))
                 ((address*/k)
