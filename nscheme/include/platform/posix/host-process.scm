@@ -26,9 +26,8 @@
                   (let loop ()
                     (iport-read/k
                       in buffer 0 1 buffer-size handle-internal-error close!
-                      (lambda (amount)
-                        (oport-write/k out buffer 0 amount amount handle-internal-error
-                                       (lambda (amount) (loop))))))))))
+                      (lambda (amount) (oport-write/k out buffer 0 amount handle-internal-error
+                                                      (lambda (amount) (loop))))))))))
           (define (fuse*-push t) (set! fuse* (cons t fuse*)) #f)
           (define (fuse-input in out)
             (fuse-io in out (lambda () (oport-close/k out handle-internal-error values))))

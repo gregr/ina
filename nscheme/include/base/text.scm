@@ -13,7 +13,7 @@
 (define (printer-newline p)           ((vector-ref p 1)))
 
 (define (printer:port port)
-  (make-printer (lambda (t _) (let ((len (bytevector-length t))) (oport-write port t 0 len len)))
+  (make-printer (lambda (t _) (oport-write port t 0 (bytevector-length t)))
                 (lambda ()    (oport-write-byte port 10))))
 
 (define (printer-map p f)

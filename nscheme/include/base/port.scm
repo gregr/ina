@@ -97,13 +97,11 @@
 (define (oport-close/k p kf k) (p 'close kf k))
 (define (oport-close   p)      (oport-close/k p raise-io-error values))
 ;; Returns the amount written, or a failure indication.
-;; Blocks until at least min-count bytes are written.
+;; Blocks until all bytes are written.
 ;; Failure may occur after a partial write.
-(define (oport-write/k p src start min-count count kf k)
-  (p 'write src start min-count count kf k))
-(define (oport-write   p src start min-count count)
-  (oport-write/k p src start min-count count raise-io-error values))
-(define (oport-write-byte/k p byte kf k) (oport-write/k p (bytevector byte) 0 1 1 kf k))
+(define (oport-write/k p src start count kf k) (p 'write src start count count kf k))
+(define (oport-write   p src start count) (oport-write/k p src start count raise-io-error values))
+(define (oport-write-byte/k p byte kf k) (oport-write/k p (bytevector byte) 0 1 kf k))
 (define (oport-write-byte   p byte)      (oport-write-byte/k p byte raise-io-error values))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;

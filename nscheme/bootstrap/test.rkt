@@ -1059,8 +1059,8 @@
          (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
          (iport-read in buf 5 6 6)
          (iport-read in buf 11 5 5)
-         (oport-write out buf 0 3 3)
-         (oport-write out buf 3 count count)))))
+         (oport-write out buf 0 3)
+         (oport-write out buf 3 count)))))
   ==>
   #"ABCDEtesting 1 2QR"
   (call/oport:bytevector
@@ -1072,16 +1072,16 @@
          (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
          (iport-read in buf 3 2 2)
          (iport-read in buf 5 count.read count.read)
-         (oport-write out buf 0 3 3)
-         (oport-write out buf 3 count.write count.write)))))
+         (oport-write out buf 0 3)
+         (oport-write out buf 3 count.write)))))
   ==>
   #"ABCtestingKLMNOPQRST"
   (let* ((buf   (make-mbytevector 20 0))
          (out   (oport:mbytevector buf))
          (src   #"testing 4 5 6 7 8 9 10 11")
          (count (- (bytevector-length src) 10)))
-    (oport-write out src 0 8 8)
-    (oport-write out src 10 count count)
+    (oport-write out src 0 8)
+    (oport-write out src 10 count)
     (mbytevector->bytevector buf))
   ==>
   error:eval
@@ -1093,10 +1093,10 @@
   (let* ((buf    (make-mbytevector 20 0))
          (out    (oport:mbytevector buf))
          (src    #"testing 4 5 6 7 8 9 10 11")
-         (amount (oport-write out src 0 8 8))
+         (amount (oport-write out src 0 8))
          (count  (min (- (bytevector-length src) 10)
                       (- (mbytevector-length buf) amount))))
-    (oport-write out src 10 count count)
+    (oport-write out src 10 count)
     (mbytevector->bytevector buf))
   ==>
   #"testing 5 6 7 8 9 10"
@@ -1112,8 +1112,8 @@
          (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
          (iport-read in buf 5 6 6)
          (iport-read in buf 11 5 5)
-         (oport-write out buf 0 3 3)
-         (oport-write out buf 3 count count)))))
+         (oport-write out buf 0 3)
+         (oport-write out buf 3 count)))))
   ==>
   #"ABCDEtesting 1 2QR"
   (call/oport:bytevector
@@ -1127,16 +1127,16 @@
          (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
          (iport-read in buf 3 2 2)
          (iport-read in buf 5 count.read count.read)
-         (oport-write out buf 0 3 3)
-         (oport-write out buf 3 count.write count.write)))))
+         (oport-write out buf 0 3)
+         (oport-write out buf 3 count.write)))))
   ==>
   #"ABCtestingKLMNOPQRST"
   (let* ((buf   (make-mbytevector 20 0))
          (out   (thread-safe-oport (oport:mbytevector buf)))
          (src   #"testing 4 5 6 7 8 9 10 11")
          (count (- (bytevector-length src) 10)))
-    (oport-write out src 0 8 8)
-    (oport-write out src 10 count count)
+    (oport-write out src 0 8)
+    (oport-write out src 10 count)
     (mbytevector->bytevector buf))
   ==>
   error:eval
@@ -1150,10 +1150,10 @@
   (let* ((buf    (make-mbytevector 20 0))
          (out    (thread-safe-oport (oport:mbytevector buf)))
          (src    #"testing 4 5 6 7 8 9 10 11")
-         (amount (oport-write out src 0 8 8))
+         (amount (oport-write out src 0 8))
          (count  (min (- (bytevector-length src) 10)
                       (- (mbytevector-length buf) amount))))
-    (oport-write out src 10 count count)
+    (oport-write out src 10 count)
     (mbytevector->bytevector buf))
   ==>
   #"testing 5 6 7 8 9 10"
@@ -1485,7 +1485,7 @@
  ;==> (values)
  ;(let* ((message #"Type 'x' and hit enter: ")
  ;       (len (bytevector-length message)))
- ;  (oport-write standard-error-port message 0 len len)
+ ;  (oport-write standard-error-port message 0 len)
  ;  (iport-read-byte standard-input-port))
  ;==> 120
 
@@ -1502,7 +1502,7 @@
                    (case-values (oport:file/k fname 'create values values)
                      ((out) out)
                      ((tag d) (panic #f "oport:file failed" tag d))))))
-   (case-values (oport-write/k out message 0 len len values values)
+   (case-values (oport-write/k out message 0 len values values)
      ((amount) (values))
      ((tag d)  (panic #f "oport-write failed" tag d)))
    (oport-close out)
@@ -1541,7 +1541,7 @@
         (message #"Hello world!")
         (len     (bytevector-length message))
         (out     (begin (make-directory dir) (oport:file fname 'create))))
-   (oport-write out message 0 len len)
+   (oport-write out message 0 len)
    (oport-close out)
    (let* ((size   (file-size fname))
           (dperm  (file-permissions dir))
@@ -1572,7 +1572,7 @@
                 ((b) (cons b (loop)))))))
    (define (oport-write-bv out bv)
      (let ((len (bytevector-length bv)))
-       (oport-write out bv 0 len len)))
+       (oport-write out bv 0 len)))
    (tcp-listen/k
     (gethostname) 8765 #t 5 raise-io-error
     (lambda (accept/k close/k)
