@@ -1,10 +1,8 @@
-(define (buffer-range?! buf start min-count desired-count)
+(define (buffer-range?! buf start count)
   (nonnegative-integer?! start)
-  (nonnegative-integer?! min-count)
-  (nonnegative-integer?! desired-count)
+  (nonnegative-integer?! count)
   (let ((len (if (mbytevector? buf) (mbytevector-length buf) (bytevector-length buf))))
-    (unless (<= (+ start min-count) (+ start desired-count) len)
-      (error "buffer range out of bounds" start min-count desired-count len))))
+    (unless (<= (+ start count) len) (error "buffer range out of bounds" start count len))))
 
 (define (iomemory-describe iom) (iom 'describe))
 (define (port? x) (procedure? x))
@@ -117,7 +115,7 @@
         (case method
           ((read)     (lambda (pos dst start count kf keof k)
                         (nonnegative-integer?! pos)
-                        (buffer-range?! dst start count count)
+                        (buffer-range?! dst start count)
                         (if (< 0 count)
                             (let* ((end (min (+ pos count) len)) (count (- end pos)))
                               (if (< 0 count)
@@ -137,7 +135,7 @@
       (apply (case method
                ((write)    (lambda (pos src start count kf k)
                              (nonnegative-integer?! pos)
-                             (buffer-range?! src start count count)
+                             (buffer-range?! src start count)
                              (let ((available (- (mbytevector-length buf) pos)))
                                (if (< available count)
                                    (full-error kf 'write pos start count)
@@ -170,7 +168,7 @@
         (apply (case method
                  ((write)    (lambda (pos src start count kf k)
                                (nonnegative-integer?! pos)
-                               (buffer-range?! src start count count)
+                               (buffer-range?! src start count)
                                (let* ((buf buf.st)
                                       (end end.st)
                                       (len (mbytevector-length buf))
@@ -199,13 +197,11 @@
 (define null-omemory
   (lambda (method . arg*)
     (apply (case method
-             ((write)    (lambda (pos src start count kf k)
-                           (buffer-range?! src start count count)
-                           (k)))
-             ((size)     (lambda (kf k)     (k)))
-             ((resize!)  (lambda (new kf k) (k)))
-             ((close)    (lambda (kf k)     (k)))
-             ((describe) (lambda ()         '((type . null-omemory))))
+             ((write)    (lambda (pos src start count kf k) (buffer-range?! src start count) (k)))
+             ((size)     (lambda (kf k)                     (k)))
+             ((resize!)  (lambda (new kf k)                 (k)))
+             ((close)    (lambda (kf k)                     (k)))
+             ((describe) (lambda ()                         '((type . null-omemory))))
              (else       (error "not a null-omemory method" method)))
            arg*)))
 (define full-omemory
@@ -213,7 +209,7 @@
     (define (full-error kf name . x*) (kf 'no-space (list (vector 'full-omemory name x*))))
     (apply (case method
              ((write)    (lambda (pos src start count kf k)
-                           (buffer-range?! src start count count)
+                           (buffer-range?! src start count)
                            (if (< 0 count) (full-error kf 'write pos start count) (k))))
              ((size)     (lambda (kf k) (k 0)))
              ((resize!)  (lambda (new kf k)
@@ -227,7 +223,7 @@
   (lambda (method . arg*)
     (apply (case method
              ((read)     (lambda (pos dst start count kf keof k)
-                           (buffer-range?! dst start count count)
+                           (buffer-range?! dst start count)
                            (if (< 0 count) (keof) (k 0))))
              ((size)     (lambda (kf k) (k 0)))
              ((close)    (lambda (kf k) (k)))
@@ -238,7 +234,7 @@
   (lambda (method . arg*)
     (apply (case method
              ((read)     (lambda (pos dst start count kf keof k)
-                           (buffer-range?! dst start count count)
+                           (buffer-range?! dst start count)
                            (if (< 0 count)
                                (begin (mbytevector-fill! dst byte start count) (k count))
                                (k 0))))
