@@ -99,7 +99,7 @@
 ;; Returns the amount written, or a failure indication.
 ;; Blocks until all bytes are written.
 ;; Failure may occur after a partial write.
-(define (oport-write/k p src start count kf k) (p 'write src start count count kf k))
+(define (oport-write/k p src start count kf k) (p 'write src start count kf k))
 (define (oport-write   p src start count) (oport-write/k p src start count raise-io-error values))
 (define (oport-write-byte/k p byte kf k) (oport-write/k p (bytevector byte) 0 1 kf k))
 (define (oport-write-byte   p byte)      (oport-write-byte/k p byte raise-io-error values))
@@ -331,7 +331,7 @@
     (mlet ((pos pos))
       (lambda (method . arg*)
         (apply (case method
-                 ((write)    (lambda (src start min-count count kf k)
+                 ((write)    (lambda (src start count kf k)
                                (let ((i pos))
                                  (omemory-write/k om i src start count kf
                                                   (lambda () (set! pos (+ i count)) (k count))))))
@@ -386,38 +386,36 @@
     (let* ((description (cons '(type . thread-safe-iport) (port-describe port)))
            (request     (make-thread-safe-port-requester description port)))
       (lambda (method . arg*)
-        (apply
-          (case method
-            ((read)     (lambda (dst start min-count count kf keof k)
-                          (request 'read dst start min-count count
-                                   (lambda (t ctx)  (lambda () (kf t ctx)))
-                                   (lambda ()       keof)
-                                   (lambda (amount) (lambda () (k amount))))))
-            ((unread)   (lambda (src start count kf k)
-                          (request 'unread src start count
-                                   (lambda (t ctx) (lambda () (kf t ctx)))
-                                   (lambda ()      (lambda () (k))))))
-            ((close)    (lambda (kf k)
-                          (request 'close
-                                   (lambda (t ctx) (lambda () (kf t ctx)))
-                                   (lambda ()      (lambda () (k))))))
-            ((describe) (lambda () description))
-            (else       (error "not a thread-safe-iport method" method description)))
-          arg*))))
+        (apply (case method
+                 ((read)     (lambda (dst start min-count count kf keof k)
+                               (request 'read dst start min-count count
+                                        (lambda (t ctx)  (lambda () (kf t ctx)))
+                                        (lambda ()       keof)
+                                        (lambda (amount) (lambda () (k amount))))))
+                 ((unread)   (lambda (src start count kf k)
+                               (request 'unread src start count
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      (lambda () (k))))))
+                 ((close)    (lambda (kf k)
+                               (request 'close
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      (lambda () (k))))))
+                 ((describe) (lambda () description))
+                 (else       (error "not a thread-safe-iport method" method description)))
+               arg*))))
   (define (thread-safe-oport port)
     (let* ((description (cons '(type . thread-safe-oport) (port-describe port)))
            (request     (make-thread-safe-port-requester description port)))
       (lambda (method . arg*)
-        (apply
-          (case method
-            ((write)    (lambda (src start min-count count kf k)
-                          (request 'write src start min-count count
-                                   (lambda (t ctx)  (lambda () (kf t ctx)))
-                                   (lambda (amount) (lambda () (k amount))))))
-            ((close)    (lambda (kf k)
-                          (request 'close
-                                   (lambda (t ctx) (lambda () (kf t ctx)))
-                                   (lambda ()      (lambda () (k))))))
-            ((describe) (lambda () description))
-            (else       (error "not a thread-safe-oport method" method description)))
-          arg*)))))
+        (apply (case method
+                 ((write)    (lambda (src start count kf k)
+                               (request 'write src start count
+                                        (lambda (t ctx)  (lambda () (kf t ctx)))
+                                        (lambda (amount) (lambda () (k amount))))))
+                 ((close)    (lambda (kf k)
+                               (request 'close
+                                        (lambda (t ctx) (lambda () (kf t ctx)))
+                                        (lambda ()      (lambda () (k))))))
+                 ((describe) (lambda () description))
+                 (else       (error "not a thread-safe-oport method" method description)))
+               arg*)))))

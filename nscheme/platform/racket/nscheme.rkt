@@ -794,7 +794,7 @@
                                           unread*))))
              ((close)    (lambda (kf k)     (io-guard kf (close-input-port port) (k))))
              ((describe) (lambda ()         description))
-             (else       (error "not an iport method" method)))
+             (else       (error "not an iport method" method description)))
            arg*)))
 
 (define (rkt:oport partial-description port)
@@ -804,23 +804,14 @@
                              partial-description))
   (lambda (method . arg*)
     (apply (case method
-             ((write)    (lambda (src start min-count count kf k)
-                           (buffer-range?! src start min-count count)
+             ((write)    (lambda (src start count kf k)
+                           (buffer-range?! src start count count)
                            (let ((src (if (mbytevector? src) (mbytevector-bv src) src))
                                  (end (+ start count)))
-                             (io-guard
-                              kf
-                              (cond
-                                ((= min-count count) (k (write-bytes src port start end)))
-                                ((= min-count 0) (k (or (write-bytes-avail* src port start end) 0)))
-                                (else (let loop ((total 0))
-                                        (let* ((amount (write-bytes-avail src port (+ start total)
-                                                                          end))
-                                               (total  (+ total amount)))
-                                          (if (< total min-count) (loop total) (k total))))))))))
+                             (io-guard kf (k (write-bytes src port start end))))))
              ((close)    (lambda (kf k)     (io-guard kf (close-output-port port) (k))))
              ((describe) (lambda ()         description))
-             (else       (error "not an oport method" method)))
+             (else       (error "not an oport method" method description)))
            arg*)))
 
 ;;;;;;;;;;;;;;;;;;
