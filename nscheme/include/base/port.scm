@@ -247,62 +247,6 @@
              (else       (error "not a constant-imemory method" method)))
            arg*)))
 
-(splicing-local
-  ((define (make-thread-safe-memory-requester description mem)
-     (let* ((ch.request (make-channel))
-            (t          (thread (lambda ()
-                                  (let loop ()
-                                    (let* ((req         (channel-get ch.request))
-                                           (ch.reply    (car req))
-                                           (method&arg* (cdr req))
-                                           (result      (current-panic-handler
-                                                          (lambda x* (lambda () (apply panic x*)))
-                                                          (lambda () (apply mem method&arg*)))))
-                                      (thread (lambda () (channel-put ch.reply result)))
-                                      (loop))))))
-            (dead       (handle-evt (thread-dead-evt t)
-                                    (lambda (_) (error "dead thread-safe-memory" description)))))
-       (lambda req (let ((ch.reply (make-channel)))
-                     (sync (channel-put-evt ch.request (cons ch.reply req)) dead)
-                     ((sync ch.reply dead)))))))
-  (define (thread-safe-imemory im)
-    (let* ((description (cons '(type . thread-safe-imemory) (iomemory-describe im)))
-           (request     (make-thread-safe-memory-requester description im)))
-      (lambda (method . arg*)
-        (apply (case method
-                 ((read)     (lambda (pos dst start count kf keof k)
-                               (request 'read pos dst start count
-                                        (lambda (t ctx)  (lambda () (kf t ctx)))
-                                        (lambda ()       keof)
-                                        (lambda (amount) (lambda () (k amount))))))
-                 ((close)    (lambda (kf k) (request 'close
-                                                     (lambda (t ctx) (lambda () (kf t ctx)))
-                                                     (lambda ()      (lambda () (k))))))
-                 ((describe) (lambda () description))
-                 (else       (error "not a thread-safe-imemory method" method description)))
-               arg*))))
-  (define (thread-safe-omemory om)
-    (let* ((description (cons '(type . thread-safe-omemory) (iomemory-describe om)))
-           (request     (make-thread-safe-memory-requester description om)))
-      (lambda (method . arg*)
-        (apply (case method
-                 ((write)    (lambda (pos src start count kf k)
-                               (request 'write pos src start count
-                                        (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
-                 ((size)     (lambda (kf k) (request 'size
-                                                     (lambda (t ctx) (lambda () (kf t ctx)))
-                                                     (lambda ()      (lambda () (k))))))
-                 ((resize!)  (lambda (new kf k) (request 'resize! new
-                                                         (lambda (t ctx) (lambda () (kf t ctx)))
-                                                         (lambda ()      (lambda () (k))))))
-                 ((close)    (lambda (kf k) (request 'close
-                                                     (lambda (t ctx) (lambda () (kf t ctx)))
-                                                     (lambda ()      (lambda () (k))))))
-                 ((describe) (lambda () description))
-                 (else       (error "not a thread-safe-oport method" method description)))
-               arg*)))))
-
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Memory ports ;;;
 ;;;;;;;;;;;;;;;;;;;;
