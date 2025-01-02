@@ -1050,45 +1050,38 @@
 (run-evaluation-tests
   env.test.large
 
-  ! bytevector-port-buffers
+  ! bytevector-ports
   (call/oport:bytevector
    (lambda (out)
      (let ((in (iport:bytevector #"testing 1 2 3")))
-       (let* ((in    (iport->iport-buffer in))
-              (out   (oport->oport-buffer out))
-              (buf   (make-mbytevector 18 0))
+       (let* ((buf   (make-mbytevector 18 0))
               (count (- (mbytevector-length buf) 3)))
          (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
-         (iport-buffer-read in buf 5 6 6)
-         (iport-buffer-read in buf 11 5 5)
-         (oport-buffer-write out buf 0 3 3)
-         (oport-buffer-write out buf 3 count count)
-         (oport-buffer-flush out)))))
+         (iport-read in buf 5 6 6)
+         (iport-read in buf 11 5 5)
+         (oport-write out buf 0 3 3)
+         (oport-write out buf 3 count count)))))
   ==>
   #"ABCDEtesting 1 2QR"
   (call/oport:bytevector
    (lambda (out)
      (let ((in (iport:bytevector #"testing")))
-       (let* ((in          (iport->iport-buffer in))
-              (out         (oport->oport-buffer out))
-              (buf         (make-mbytevector 20 0))
+       (let* ((buf         (make-mbytevector 20 0))
               (count.read  (- (mbytevector-length buf) 5))
               (count.write (- (mbytevector-length buf) 3)))
          (range-for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (mbytevector-length buf))
-         (iport-buffer-read in buf 3 2 2)
-         (iport-buffer-read in buf 5 count.read count.read)
-         (oport-buffer-write out buf 0 3 3)
-         (oport-buffer-write out buf 3 count.write count.write)
-         (oport-buffer-flush out)))))
+         (iport-read in buf 3 2 2)
+         (iport-read in buf 5 count.read count.read)
+         (oport-write out buf 0 3 3)
+         (oport-write out buf 3 count.write count.write)))))
   ==>
   #"ABCtestingKLMNOPQRST"
   (let* ((buf   (make-mbytevector 20 0))
-         (out   (oport->oport-buffer (oport:mbytevector buf)))
+         (out   (oport:mbytevector buf))
          (src   #"testing 4 5 6 7 8 9 10 11")
          (count (- (bytevector-length src) 10)))
-    (oport-buffer-write out src 0 8 8)
-    (oport-buffer-write out src 10 count count)
-    (oport-buffer-flush out)
+    (oport-write out src 0 8 8)
+    (oport-write out src 10 count count)
     (mbytevector->bytevector buf))
   ==>
   error:eval
@@ -1096,18 +1089,14 @@
   ;  raise
   ;  (#(error #(description) io-error #(tag context))
   ;   .
-  ;   #("IO error"
-  ;     no-space
-  ;     (oport-buffer-flush
-  ;      #(#(output-mbytevector 0 20) write (0 23 23))))))))
+  ;   #("IO error" no-space (#(#(omemory:mbytevector 20) write (8 10 15))))))
   (let* ((buf    (make-mbytevector 20 0))
-         (out    (oport->oport-buffer (oport:mbytevector buf)))
+         (out    (oport:mbytevector buf))
          (src    #"testing 4 5 6 7 8 9 10 11")
-         (amount (oport-buffer-write out src 0 8 8))
+         (amount (oport-write out src 0 8 8))
          (count  (min (- (bytevector-length src) 10)
                       (- (mbytevector-length buf) amount))))
-    (oport-buffer-write out src 10 count count)
-    (oport-buffer-flush out)
+    (oport-write out src 10 count count)
     (mbytevector->bytevector buf))
   ==>
   #"testing 5 6 7 8 9 10"
@@ -1142,8 +1131,8 @@
          (oport-write out buf 3 count.write count.write)))))
   ==>
   #"ABCtestingKLMNOPQRST"
-  (let* ((buf (make-mbytevector 20 0))
-         (out (thread-safe-oport (oport:mbytevector buf)))
+  (let* ((buf   (make-mbytevector 20 0))
+         (out   (thread-safe-oport (oport:mbytevector buf)))
          (src   #"testing 4 5 6 7 8 9 10 11")
          (count (- (bytevector-length src) 10)))
     (oport-write out src 0 8 8)
@@ -1157,7 +1146,7 @@
   ;   .
   ;   #("IO error"
   ;     no-space
-  ;     (#(#(output-mbytevector 8 20) write (10 15 15))))))))
+  ;     (#(#(omemory:mbytevector 20) write (8 10 15))))))
   (let* ((buf    (make-mbytevector 20 0))
          (out    (thread-safe-oport (oport:mbytevector buf)))
          (src    #"testing 4 5 6 7 8 9 10 11")
