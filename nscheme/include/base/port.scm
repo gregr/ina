@@ -94,8 +94,8 @@
 ;;;;;;;;;;;;;;;;;;;;
 (define (oport-close/k p kf k) (p 'close kf k))
 (define (oport-close   p)      (oport-close/k p raise-io-error values))
-;; Returns the amount written, or a failure indication.
-;; Blocks until all bytes are written.
+;; May return a failure indication.
+;; Blocks until count bytes are written.
 ;; Failure may occur after a partial write.
 (define (oport-write/k p src start count kf k) (p 'write src start count kf k))
 (define (oport-write   p src start count) (oport-write/k p src start count raise-io-error values))
@@ -274,7 +274,7 @@
                  ((write)    (lambda (src start count kf k)
                                (let ((i pos))
                                  (omemory-write/k om i src start count kf
-                                                  (lambda () (set! pos (+ i count)) (k count))))))
+                                                  (lambda () (set! pos (+ i count)) (k))))))
                  ((close)    (lambda (kf k) (if close? (omemory-close/k om kf k) (k))))
                  ((describe) (lambda () description))
                  (else       (error "not a oport:memory method" method description)))
@@ -335,11 +335,11 @@
                  ((unread)   (lambda (src start count kf k)
                                (request 'unread src start count
                                         (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
+                                        (lambda ()      k))))
                  ((close)    (lambda (kf k)
                                (request 'close
                                         (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
+                                        (lambda ()      k))))
                  ((describe) (lambda () description))
                  (else       (error "not a thread-safe-iport method" method description)))
                arg*))))
@@ -351,11 +351,11 @@
                  ((write)    (lambda (src start count kf k)
                                (request 'write src start count
                                         (lambda (t ctx)  (lambda () (kf t ctx)))
-                                        (lambda (amount) (lambda () (k amount))))))
+                                        (lambda ()       k))))
                  ((close)    (lambda (kf k)
                                (request 'close
                                         (lambda (t ctx) (lambda () (kf t ctx)))
-                                        (lambda ()      (lambda () (k))))))
+                                        (lambda ()      k))))
                  ((describe) (lambda () description))
                  (else       (error "not a thread-safe-oport method" method description)))
                arg*)))))

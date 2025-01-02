@@ -808,7 +808,7 @@
                            (buffer-range?! src start count count)
                            (let ((src (if (mbytevector? src) (mbytevector-bv src) src))
                                  (end (+ start count)))
-                             (io-guard kf (k (write-bytes src port start end))))))
+                             (io-guard kf (write-bytes src port start end) (k)))))
              ((close)    (lambda (kf k)     (io-guard kf (close-output-port port) (k))))
              ((describe) (lambda ()         description))
              (else       (error "not an oport method" method description)))
