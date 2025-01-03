@@ -36,15 +36,14 @@
 (define (printer-sgr-add p sgr.add)
   (printer-map-attribute p (lambda (sgr) (if sgr (bytevector-append sgr sgr.add) sgr.add))))
 
-(define (printer-fill p width text attr)
+(define (printer-fill p width byte attr)
   (mlet ((size 0))
     (make-printer
       (lambda (text attr)
         (set! size (+ size (utf8-length text)))
         (printer-print p text attr))
       (lambda ()
-        (when (< size width) (range-for-each (lambda (i) (printer-print p text attr))
-                                             (- width size)))
+        (when (< size width) (printer-print p (make-bytevector (- width size) byte) attr))
         (set! size 0)
         (printer-newline p)))))
 
@@ -905,7 +904,7 @@
                                                         ((null? datum)    #"\e[32m")
                                                         (else             #"\e[36m"))))))
        (example-printer/out  (lambda () (printer:port out)))
-       (example-printer-fill (lambda (p) (printer-fill p 80 #"." #f)))
+       (example-printer-fill (lambda (p) (printer-fill p 80 (bytevector-ref #"." 0) #f)))
        (example-printer      (lambda () (example-printer-fill (example-printer/out))))
        (example-printer/sgr
          (lambda ()
