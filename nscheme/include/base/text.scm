@@ -883,6 +883,10 @@
 ;; TODO: move this example
 #;(let* ((out standard-output-port)
        ;(out (thread-safe-oport standard-output-port))
+       ;(out (buffered-oport standard-output-port))
+       ;(out (buffered-oport (thread-safe-oport standard-output-port)))
+       ;(out (buffered-oport/buffer-size standard-output-port 100000))
+       ;(out (buffered-oport/buffer-size (thread-safe-oport standard-output-port) 100000))
        (example
          (append (list (utf8->string (bytevector 0 15 16 31 127
                                                  ;#x03BB
@@ -988,4 +992,6 @@
       (place #"six")
       (gend))
     (oport-write-byte out 10)
-    (oport-write-byte out 10)))
+    (oport-write-byte out 10)
+    ;(oport-close out)
+    ))
