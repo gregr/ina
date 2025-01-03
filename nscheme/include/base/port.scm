@@ -295,6 +295,11 @@
 (define (call-with-oport:bytevector k)
   (let-values (((out current) (oport:bytevector&current))) (k out) (current)))
 (define call/oport:bytevector call-with-oport:bytevector)
+(define (call-with-batched-oport p k)
+  (let*-values (((out current) (oport:bytevector&current)) (x* (k out)))
+    (let ((b* (current))) (oport-write p b* 0 (bytevector-length b*)))
+    (apply values x*)))
+(define call/batched-oport call-with-batched-oport)
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Other ports ;;;
