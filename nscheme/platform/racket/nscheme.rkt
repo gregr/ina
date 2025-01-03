@@ -747,34 +747,41 @@
   (define description (list* (cons 'terminal?       (terminal-port? port))
                              (cons 'file-descriptor (unsafe-port->file-descriptor port))
                              partial-description))
-  (define unread* (make-bytes 0))
+  (define buf.unread #f) (define pos.unread 0)
   (lambda (method . arg*)
     (apply (case method
-             ((read)     (lambda (dst start count kf keof k)
-                           (buffer-range?! dst start count)
-                           (if (= count 0)
-                               (k 0)
-                               (let ((dst (mbytevector-bv dst)) (len (bytes-length unread*)))
-                                 (io-guard
-                                  kf
-                                  (if (< 0 len)
-                                      (k (let ((amount (min count len)))
-                                           (bytes-copy! dst start unread* 0 amount)
-                                           (set! unread* (subbytes unread* amount))
-                                           (if (< amount count)
-                                               (let ((more (read-bytes-avail!*
-                                                            dst port (+ start amount)
-                                                            (+ start count))))
-                                                 (if (eof-object? more) amount (+ amount more)))
-                                               amount)))
-                                      (let ((amount (read-bytes-avail! dst port start
-                                                                       (+ start count))))
-                                        (if (eof-object? amount) (keof) (k amount)))))))))
-             ((unread)   (lambda (src start count kf k)
-                           (buffer-range?! src start count)
-                           (set! unread* (bytes-append
-                                          (subbytes (mbytevector-bv src) start (+ start count))
-                                          unread*))))
+             ((read)
+              (lambda (dst start count kf keof k)
+                (buffer-range?! dst start count)
+                (if (< 0 count)
+                    (let ((dst (mbytevector-bv dst)))
+                      (io-guard
+                       kf
+                       (if buf.unread
+                           (k (let* ((len    (bytes-length buf.unread))
+                                     (amount (min count (- len pos.unread)))
+                                     (end    (+ pos.unread amount)))
+                                (bytes-copy! dst start buf.unread pos.unread end)
+                                (if (< end len) (set! pos.unread end) (set! buf.unread #f))
+                                (if (< amount count)
+                                    (let ((more (read-bytes-avail!* dst port (+ start amount)
+                                                                    (+ start count))))
+                                      (if (eof-object? more) amount (+ amount more)))
+                                    amount)))
+                           (let ((amount (read-bytes-avail! dst port start (+ start count))))
+                             (if (eof-object? amount) (keof) (k amount))))))
+                    (k 0))))
+             ((unread)
+              (lambda (src start count kf k)
+                (buffer-range?! src start count)
+                (if buf.unread
+                    (let ((pos (- pos.unread count)))
+                      (when (< pos 0) (error "too many bytes unread" count
+                                             (cons 'position pos.unread) description))
+                      (set! pos.unread pos))
+                    (begin
+                      (set! buf.unread (subbytes (mbytevector-bv src) start (+ start count)))
+                      (set! pos.unread 0)))))
              ((close)    (lambda (kf k)     (io-guard kf (close-input-port port) (k))))
              ((describe) (lambda ()         description))
              (else       (error "not an iport method" method description)))

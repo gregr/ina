@@ -82,9 +82,10 @@
   (let ((dst (make-mbytevector 1 0)))
     (iport-read/k p dst 0 1 kf keof (lambda (amount) (k (mbytevector-ref dst 0))))))
 (define (iport-read-byte p) (iport-read-byte/k p raise-io-error values values))
-;; Reverts the most recent read of count bytes, provided by the mbytevector src.
-;; It is an error to unread different bytes from those that were originally read, but the particular
-;; port implementation decides whether to enforce this.
+;; Reverts the most recent read(s) of count bytes, provided by the mbytevector src.
+;; It is an error to unread different bytes from those that were originally read.
+;; It is an error to unread more bytes than have been read since the last unread.
+;; Each port implementation decides whether to enforce these constraints.
 (define (iport-unread/k p src start count kf k) (p 'unread src start count kf k))
 (define (iport-unread p src start count) (iport-unread/k p src start count raise-io-error values))
 
