@@ -1,12 +1,13 @@
+(define (make-bytevector n b) (mbytevector->bytevector (make-mbytevector n b)))
 (define (list->bytevector x*) (apply bytevector x*))
 
+(define (bytevector->list x) (bytevector-take x (bytevector-length x)))
 (define (bytevector-take x n)
   (let ((len (min (bytevector-length x) n)))
     (let loop ((i 0))
       (if (< i len) (cons (bytevector-ref x i) (loop (+ i 1))) '()))))
 
-(define (bytevector->list x) (bytevector-take x (bytevector-length x)))
-
+(define (bytevector-append . x*) (bytevector-append* x*))
 (define (bytevector-append* x*)
   (let ((mbv (make-mbytevector
                (let loop ((x* x*) (len 0))
@@ -21,8 +22,7 @@
             (mbytevector-copy! mbv i bv 0 len)
             (loop (cdr x*) (+ i len)))))))
 
-(define (bytevector-append . x*) (bytevector-append* x*))
-
+(define (bytevector-join separator . x*) (bytevector-join* separator x*))
 (define (bytevector-join* separator x*)
   (if (null? x*)
       #""
@@ -42,8 +42,6 @@
                 (let ((i (+ i len)))
                   (mbytevector-copy! mbv i separator 0 len.sep)
                   (loop (+ i len.sep) (car x*) (cdr x*)))))))))
-
-(define (bytevector-join separator . x*) (bytevector-join* separator x*))
 
 (define (bytevector-split bv separator)
   (let ((len (bytevector-length bv)))
