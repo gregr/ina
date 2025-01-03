@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  apply/values case-values case let-values assert mlet mdefine interruptible-lambda
+  apply/values case-values case let-values let*-values assert mlet mdefine interruptible-lambda
   ;; privileged primitives
   native-signal-handler
   ;; procedure-metadata returns a vector with this shape:
@@ -457,13 +457,20 @@
                                             (let () rhs ...)
                                             (case x clause ...)))))
 
-;; WARNING: this is only complete enough to run our bootstrapping process
+;; WARNING: these are only complete enough to run our bootstrapping process
 (define-syntax let-values
   (syntax-rules ()
     ((_ (((param ...) rhs) ...) body ...)
      (rkt:let-values (((param ...) rhs) ...) body ...))
     ((_ ((param rhs)) body ...)
      (apply/values (lambda param body ...) rhs))))
+(define-syntax let*-values
+  (syntax-rules ()
+    ((_ (((param ...) rhs) bpair* ...) body ...)
+     (let-values (((param ...) rhs)) (let*-values (bpair* ...) body ...)))
+    ((_ ((param rhs) bpair* ...) body ...)
+     (apply/values (lambda param (let*-values (bpair* ...) body ...)) rhs))
+    ((_ () body ...) (let () body ...))))
 
 (define-syntax-rule (mlet . body) (let . body))
 (define-syntax-rule (mdefine . body) (define . body))
