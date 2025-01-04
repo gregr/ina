@@ -34,7 +34,7 @@
 
 (define display
   (let ((go (lambda (x port)
-              (let ((go (lambda (x) (oport-write port x 0 (bytevector-length x)))))
+              (let ((go (lambda (x) (oport-write-bytevector port x))))
                 (cond ((bytevector? x) (go x))
                       ((string?     x) (go (string->utf8 x)))
                       ((symbol?     x) (go (string->utf8 (symbol->string x))))

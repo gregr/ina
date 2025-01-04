@@ -12,9 +12,8 @@
 (define (printer-print   p text attr) ((vector-ref p 0) text attr))
 (define (printer-newline p)           ((vector-ref p 1)))
 
-(define (printer:port port)
-  (make-printer (lambda (t _) (oport-write port t 0 (bytevector-length t)))
-                (lambda ()    (oport-write-byte port 10))))
+(define (printer:port port) (make-printer (lambda (t _) (oport-write-bytevector port t))
+                                          (lambda ()    (oport-write-byte port 10))))
 
 (define (printer-map p f)
   (make-printer

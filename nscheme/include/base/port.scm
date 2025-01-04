@@ -46,6 +46,16 @@
   (let ((dst (make-mbytevector 1 0)))
     (imemory-read/k im pos dst 0 1 1 kf keof (lambda (amount) (k (mbytevector-ref dst 0))))))
 (define (imemory-read-byte im pos) (imemory-read-byte/k im pos raise-io-error values values))
+;; Returns EOF, the bytevector read, or a failure indication.
+;; Blocks until at least (min count remaining-bytes) bytes are read.
+;; Failure may occur after a partial read.
+(define (imemory-read-bytevector/k im pos count kf keof k)
+  (let ((dst (make-mbytevector count 0)))
+    (imemory-read/k im pos dst 0 count kf keof
+                    (lambda (amount)
+                      (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
+(define (imemory-read-bytevector im pos count)
+  (imemory-read-bytevector/k im pos count raise-io-error values values))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Output memory ;;;
@@ -62,9 +72,19 @@
 (define (omemory-write/k om pos src start count kf k) (om 'write pos src start count kf k))
 (define (omemory-write om pos src start count)
   (omemory-write/k om pos src start count raise-io-error values))
+;; May return a failure indication.
+;; Blocks until the byte is written.
 (define (omemory-write-byte/k om pos byte kf k)
   (omemory-write/k om pos (bytevector byte) 0 1 1 kf k))
 (define (omemory-write-byte om pos byte) (omemory-write-byte/k om pos byte raise-io-error values))
+;; May return a failure indication.
+;; Blocks until the entire bytevector is written.
+;; Failure may occur after a partial write.
+(define (omemory-write-bytevector/k om pos src kf k)
+  (let ((count (if (mbytevector? src) (mbytevector-length src) (bytevector-length src))))
+    (omemory-write/k om pos src 0 count kf k)))
+(define (omemory-write-bytevector om pos src)
+  (omemory-write-bytevector/k om pos src raise-io-error values))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Input ports ;;;
@@ -82,6 +102,16 @@
   (let ((dst (make-mbytevector 1 0)))
     (iport-read/k p dst 0 1 kf keof (lambda (amount) (k (mbytevector-ref dst 0))))))
 (define (iport-read-byte p) (iport-read-byte/k p raise-io-error values values))
+;; Returns EOF, the bytevector read, or a failure indication.
+;; Blocks until at least (min count (max 1 available-bytes)) bytes are read.
+;; Failure may occur after a partial read.
+(define (iport-read-bytevector/k p count kf keof k)
+  (let ((dst (make-mbytevector count 0)))
+    (iport-read/k p dst 0 count kf keof
+                  (lambda (amount)
+                    (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
+(define (iport-read-bytevector p count)
+  (iport-read-bytevector/k p count raise-io-error values values))
 ;; Reverts the most recent read(s) of count bytes, provided by the mbytevector src.
 ;; It is an error to unread different bytes from those that were originally read.
 ;; It is an error to unread more bytes than have been read since the last unread.
@@ -99,8 +129,17 @@
 ;; Failure may occur after a partial write.
 (define (oport-write/k p src start count kf k) (p 'write src start count kf k))
 (define (oport-write   p src start count) (oport-write/k p src start count raise-io-error values))
+;; May return a failure indication.
+;; Blocks until the byte is written.
 (define (oport-write-byte/k p byte kf k) (oport-write/k p (bytevector byte) 0 1 kf k))
 (define (oport-write-byte   p byte)      (oport-write-byte/k p byte raise-io-error values))
+;; May return a failure indication.
+;; Blocks until the entire bytevector is written.
+;; Failure may occur after a partial write.
+(define (oport-write-bytevector/k p src kf k)
+  (let ((count (if (mbytevector? src) (mbytevector-length src) (bytevector-length src))))
+    (oport-write/k p src 0 count kf k)))
+(define (oport-write-bytevector p src) (oport-write-bytevector/k p src raise-io-error values))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Bytevector memory ;;;
