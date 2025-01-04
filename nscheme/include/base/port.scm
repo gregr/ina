@@ -25,8 +25,8 @@
 ;;; - raised as an io-error otherwise
 (define-values (io-error:kind io-error? io-error-tag io-error-context)
   (make-exception-kind-etc error:kind 'io-error '#(tag context)))
-(define (make-io-error  desc tag context) (make-exception io-error:kind (vector desc tag context)))
-(define (raise-io-error tag context) (raise (make-io-error "IO error" tag context)))
+(define (make-io-error  tag context) (make-exception io-error:kind (vector "IO error" tag context)))
+(define (raise-io-error tag context) (raise (make-io-error tag context)))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Input memory ;;;
