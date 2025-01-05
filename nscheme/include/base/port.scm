@@ -112,6 +112,30 @@
                     (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
 (define (iport-read-bytevector p count)
   (iport-read-bytevector/k p count raise-io-error values values))
+;; Returns EOF, the amount read, or a failure indication.
+;; Blocks until at least (min count remaining-bytes) bytes are read.
+;; Failure may occur after a partial read.
+(define (iport-read*/k p dst start count kf keof k)
+  (iport-read/k p dst start count kf keof
+                (lambda (amount)
+                  (let loop ((total amount))
+                    (if (< total count)
+                        (iport-read/k p dst (+ start total) (- count total) kf
+                                      (lambda ()       (k total))
+                                      (lambda (amount) (loop (+ total amount))))
+                        (k total))))))
+(define (iport-read* p dst start count)
+  (iport-read*/k p dst start count raise-io-error values values))
+;; Returns EOF, the bytevector read, or a failure indication.
+;; Blocks until at least (min count remaining-bytes) bytes are read.
+;; Failure may occur after a partial read.
+(define (iport-read*-bytevector/k p count kf keof k)
+  (let ((dst (make-mbytevector count 0)))
+    (iport-read*/k p dst 0 count kf keof
+                   (lambda (amount)
+                     (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
+(define (iport-read*-bytevector p count)
+  (iport-read*-bytevector/k p count raise-io-error values values))
 ;; Reverts the most recent read(s) of count bytes, provided by the mbytevector src.
 ;; It is an error to unread different bytes from those that were originally read.
 ;; It is an error to unread more bytes than have been read since the last unread.
