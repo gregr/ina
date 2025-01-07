@@ -626,7 +626,7 @@
         (define (RadixSign radix i k)
           (Radix radix i (lambda (radix i b) (Sign i b (lambda (sign i b)
                                                          (k radix sign i b))))))
-        (define (Digit* radix i b k.more k.end)
+        (define (Digit*1 radix i b k.more k.end)
           (let loop ((n 0) (digit-count 0) (i i) (b b))
             (let ((x (undigit16 b)))
               (if (< -1 x radix)
@@ -635,37 +635,37 @@
                         (loop n digit-count i (bytevector-ref bv i))
                         (k.end n digit-count)))
                   (k.more n digit-count i b)))))
-        (define (Digit+ radix i k.more k.end)
+        (define (Digit* radix i k.more k.end)
           (if (< i len)
-              (Digit* radix i (bytevector-ref bv i) k.more k.end)
+              (Digit*1 radix i (bytevector-ref bv i) k.more k.end)
               (k.end 0 0)))
         (define (Exp n radix i b)
           (and (or (= b byte:e) (= b byte:E) (= b byte:p) (= b byte:P))
                (RadixSign radix (+ i 1)
                           (lambda (radix sign i b)
-                            (Digit* radix i b
-                                    (lambda (x digit-count i b) #f)
-                                    (lambda (x digit-count)
-                                      (and (< 0 digit-count)
-                                           (* n (expt radix (* sign x))))))))))
+                            (Digit*1 radix i b
+                                     (lambda (x digit-count i b) #f)
+                                     (lambda (x digit-count)
+                                       (and (< 0 digit-count)
+                                            (* n (expt radix (* sign x))))))))))
         (RadixSign
           radix 0
           (lambda (radix sign i b)
             (define (decimal lhs lhs-digit-count rhs rhs-digit-count rep rep-digit-count)
-              (and (or (< 0 lhs-digit-count) (< 0 rhs-digit-count))
+              (and (or (< 0 lhs-digit-count) (< 0 rhs-digit-count) (< 0 rep-digit-count))
                    (let ((rhs (if (< 0 rep-digit-count)
                                   (+ rhs (/ rep (- (expt radix rep-digit-count) 1)))
                                   rhs)))
                      (* sign (+ lhs (/ rhs (expt radix rhs-digit-count)))))))
-            (Digit*
+            (Digit*1
               radix i b
               (lambda (n digit-count i b)
                 (if (= b byte:.)
-                    (Digit+
+                    (Digit*
                       radix (+ i 1)
                       (lambda (rhs rhs-digit-count i b)
                         (if (= b byte:~)
-                            (Digit+
+                            (Digit*
                               radix (+ i 1)
                               (lambda (repeating repeating-digit-count i b)
                                 (and (< 0 repeating-digit-count)
@@ -683,7 +683,7 @@
                         (decimal n digit-count rhs rhs-digit-count 0 0)))
                     (and (< 0 digit-count)
                          (if (= b byte:/)
-                             (Digit+ radix (+ i 1)
+                             (Digit* radix (+ i 1)
                                      (lambda (d digit-count i b) #f)
                                      (lambda (d digit-count)
                                        (and (< 0 digit-count)
