@@ -401,7 +401,13 @@
 (define (reader-comment              r pos size)                ((vector-ref r 6) pos size))
 (define (reader-newline              r pos)                     ((vector-ref r 7) pos))
 (define (reader-eof                  r pos)                     ((vector-ref r 8) pos))
-(define (reader-error                r pos exception)           ((vector-ref r 9) pos exception))
+(define (reader-error                r pos offset blame desc)   ((vector-ref r 9) pos offset blame desc))
+(define-values (read-error:kind
+                 read-error? read-error-source read-error-start read-error-end read-error-blame)
+  (make-exception-kind-etc error:kind 'read-error '#(source start end blame)))
+(define (make-read-error desc source start end blame)
+  (make-exception read-error:kind (vector desc source start end blame)))
+(define (raise-read-error . x*) (raise (apply make-read-error x*)))
 
 ;;;;;;;;;;;;;;;;
 ;;; Notation ;;;
