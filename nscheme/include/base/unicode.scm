@@ -140,6 +140,7 @@
             ((< i len)    (loop (utf8-next bv i) (+ count 1)))
             (else         (error "utf8-index out of bounds" bv start n count))))))
 
+(define (unicode? c) (and (<= 0 c #x10ffff) (not (<= #xd800 c #xdfff))))
 (define (unicode-control? c) (or (<= 0 c 31) (<= 127 c 159)))
 (define (unicode-hspace? c) (case c ((9 11 12 32 160 8239 8287 12288) #t) (else (<= 8192 c 8202))))
 (define (unicode-vspace? c) (case c ((10 13 133 8232 8233) #t) (else #f)))
