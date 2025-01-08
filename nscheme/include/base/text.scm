@@ -387,21 +387,22 @@
 ;;; Reader ;;;
 ;;;;;;;;;;;;;;
 ;;; A reader consumes a stream of tokens coming from an unstructured data source such as text.
-;;; Each reader operation corresponds to a type of token, taking parameters for source position and
-;;; length, followed by parameters for any token-specific details, and returning a boolean
-;;; indicating whether its driver should continue sending tokens.
-(define (make-reader atom prefix dot left-bracket right-bracket datum-comment-prefix comment newline eof error)
-  (vector atom prefix dot left-bracket right-bracket datum-comment-prefix comment newline eof error))
-(define (reader-atom                 r pos size datum)          ((vector-ref r 0) pos size datum))
-(define (reader-prefix               r pos size type)           ((vector-ref r 1) pos size type))
-(define (reader-dot                  r pos size)                ((vector-ref r 2) pos size))
-(define (reader-left-bracket         r pos size shape type len) ((vector-ref r 3) pos size shape type len))
-(define (reader-right-bracket        r pos size shape)          ((vector-ref r 4) pos size shape))
-(define (reader-datum-comment-prefix r pos size)                ((vector-ref r 5) pos size))
-(define (reader-comment              r pos size)                ((vector-ref r 6) pos size))
-(define (reader-newline              r pos)                     ((vector-ref r 7) pos))
-(define (reader-eof                  r pos)                     ((vector-ref r 8) pos))
-(define (reader-error                r pos offset blame desc)   ((vector-ref r 9) pos offset blame desc))
+;;; Aside from reader-state, every operation corresponds to a type of token, taking parameters for
+;;; source position and size, followed by parameters for any token-specific details, and returning a
+;;; boolean indicating whether its driver should continue sending tokens.
+(define (make-reader state atom prefix dot left-bracket right-bracket datum-comment-prefix comment newline eof error)
+  (vector state atom prefix dot left-bracket right-bracket datum-comment-prefix comment newline eof error))
+(define (reader-state                r)                         ((vector-ref r 0)))
+(define (reader-atom                 r pos size datum)          ((vector-ref r 1)  pos size datum))
+(define (reader-prefix               r pos size type)           ((vector-ref r 2)  pos size type))
+(define (reader-dot                  r pos size)                ((vector-ref r 3)  pos size))
+(define (reader-left-bracket         r pos size shape type len) ((vector-ref r 4)  pos size shape type len))
+(define (reader-right-bracket        r pos size shape)          ((vector-ref r 5)  pos size shape))
+(define (reader-datum-comment-prefix r pos size)                ((vector-ref r 6)  pos size))
+(define (reader-comment              r pos size)                ((vector-ref r 7)  pos size))
+(define (reader-newline              r pos)                     ((vector-ref r 8)  pos))
+(define (reader-eof                  r pos)                     ((vector-ref r 9)  pos))
+(define (reader-error                r pos offset blame desc)   ((vector-ref r 10) pos offset blame desc))
 (define-values (read-error:kind
                  read-error? read-error-source read-error-location read-error-blame)
   (make-exception-kind-etc error:kind 'read-error '#(source location blame)))
@@ -1305,6 +1306,7 @@
                           #t))
          (example-reader
            (make-reader
+             (lambda ()                        #f)
              (lambda (pos size datum)          (example-write (vector 'atom:                 (list pos size datum))))
              (lambda (pos size type)           (example-write (vector 'prefix:               (list pos size type))))
              (lambda (pos size)                (example-write (vector 'dot:                  (list pos size))))
