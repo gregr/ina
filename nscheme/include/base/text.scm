@@ -1277,4 +1277,46 @@
     (oport-write-byte out 10)
     (oport-write-byte out 10)
     ;(oport-close out)
-    ))
+    )
+  (let* ((x->write (lambda (x)
+                     (lambda (out)
+                       (let ((p (printer:port out)))
+                         (notate (writer:layout (layout:single-line p)) x)
+                         (printer-newline p)))))
+         (example-write (lambda (x)
+                          ((x->write x) standard-output-port)
+                          ;(sleep 1/10)
+                          #t))
+         (example-reader
+           (make-reader
+             (lambda (pos size datum)          (example-write (vector 'atom:                 (list pos size datum))))
+             (lambda (pos size type)           (example-write (vector 'prefix:               (list pos size type))))
+             (lambda (pos size)                (example-write (vector 'dot:                  (list pos size))))
+             (lambda (pos size shape type len) (example-write (vector 'left-bracket:         (list pos size shape type len))))
+             (lambda (pos size shape)          (example-write (vector 'right-bracket:        (list pos size shape))))
+             (lambda (pos size)                (example-write (vector 'datum-comment-prefix: (list pos size))))
+             (lambda (pos size)                (example-write (vector 'comment:              (list pos size))))
+             (lambda (pos)                     (example-write (vector 'newline:              (list pos))))
+             (lambda (pos)                     (example-write (vector 'eof:                  (list pos))) #f)
+             (lambda (pos offset blame desc)   (example-write (vector 'error:                (list pos offset blame desc))))))
+         (text.example (call/oport:bytevector (x->write example)))
+         (text.another-example
+           #"[#4{1 2} #vu8(50 51) #5vu8(100 110 120) #6\"abc\"
+           #\"\\u03bb;\"
+           #\"\\xce;\\xbb;\"
+           'quoted `qquoted ,unquoted ,@spliced #'squoted #`sqquoted #,sunquoted #,@sspliced
+           ;; binary numbers:\n #b00 #b01 #b10 #b11 #;other-radixes: #xff #d256 #|fra#|ction|#s: |# .5 1/3 .~3 0.~1 #b.~1 #o.3~7 1e-3 #x1p3 #b1e11
+           \"split
+           by newline\"
+           \"not split\
+           by newline\"
+           ;#!eof
+           |after eof|]")
+         (go (lambda (name text)
+               (example-write name)
+               (example-write text)
+               (example-write 'denotating:)
+               (denotate example-reader (iport:bytevector text))
+               (oport-write-byte standard-output-port 10))))
+    (go 'example: text.example)
+    (go 'another-example: text.another-example)))
