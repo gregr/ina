@@ -723,8 +723,9 @@
             (let loop ((i 0) (size 0) (delim? delim?))
               (if (< i len)
                   (let* ((b0 (bytevector-ref bv i))
-                         (kf (lambda _ (loop (+ i 1) (+ (digit16-count b0)
-                                                        (bytevector-length #"\\x;"))))))
+                         (kf (lambda _
+                               (loop (+ i 1) (+ (digit16-count b0) (bytevector-length #"\\x;") size)
+                                     #t))))
                     (utf8-decode-width/k
                       b0 kf
                       (lambda (width)
