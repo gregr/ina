@@ -388,26 +388,25 @@
 ;;;;;;;;;;;;;;
 ;;; A reader consumes a stream of tokens coming from an unstructured data source such as text.
 ;;; Aside from reader-state, every operation corresponds to a type of token, taking parameters for
-;;; source position and text, followed by parameters for any token-specific details, and returning a
+;;; source location and text, followed by parameters for any token-specific details, and returning a
 ;;; boolean indicating whether its driver should continue sending tokens.
 (define (make-reader state atom prefix dot left-bracket right-bracket datum-comment-prefix comment newline eof error)
   (vector state atom prefix dot left-bracket right-bracket datum-comment-prefix comment newline eof error))
 (define (reader-state                r)                         ((vector-ref r 0)))
-(define (reader-atom                 r pos text datum)          ((vector-ref r 1)  pos text datum))
-(define (reader-prefix               r pos text type)           ((vector-ref r 2)  pos text type))
-(define (reader-dot                  r pos text)                ((vector-ref r 3)  pos text))
-(define (reader-left-bracket         r pos text shape type len) ((vector-ref r 4)  pos text shape type len))
-(define (reader-right-bracket        r pos text shape)          ((vector-ref r 5)  pos text shape))
-(define (reader-datum-comment-prefix r pos text)                ((vector-ref r 6)  pos text))
-(define (reader-comment              r pos text)                ((vector-ref r 7)  pos text))
-(define (reader-newline              r pos)                     ((vector-ref r 8)  pos))
-(define (reader-eof                  r pos)                     ((vector-ref r 9)  pos))
-(define (reader-error                r pos text desc)           ((vector-ref r 10) pos text desc))
-(define-values (read-error:kind
-                 read-error? read-error-source read-error-location read-error-text)
-  (make-exception-kind-etc error:kind 'read-error '#(source location text)))
-(define (make-read-error desc source location text)
-  (make-exception read-error:kind (vector desc source location text)))
+(define (reader-atom                 r loc text datum)          ((vector-ref r 1)  loc text datum))
+(define (reader-prefix               r loc text type)           ((vector-ref r 2)  loc text type))
+(define (reader-dot                  r loc text)                ((vector-ref r 3)  loc text))
+(define (reader-left-bracket         r loc text shape type len) ((vector-ref r 4)  loc text shape type len))
+(define (reader-right-bracket        r loc text shape)          ((vector-ref r 5)  loc text shape))
+(define (reader-datum-comment-prefix r loc text)                ((vector-ref r 6)  loc text))
+(define (reader-comment              r loc text)                ((vector-ref r 7)  loc text))
+(define (reader-newline              r loc)                     ((vector-ref r 8)  loc))
+(define (reader-eof                  r loc)                     ((vector-ref r 9)  loc))
+(define (reader-error                r loc text desc)           ((vector-ref r 10) loc text desc))
+(define-values (read-error:kind read-error? read-error-location read-error-text)
+  (make-exception-kind-etc error:kind 'read-error '#(location text)))
+(define (make-read-error desc location text)
+  (make-exception read-error:kind (vector desc location text)))
 (define (raise-read-error . x*) (raise (apply make-read-error x*)))
 
 ;;;;;;;;;;;;;;;;
@@ -1310,16 +1309,16 @@
          (example-reader
            (make-reader
              (lambda ()                        #f)
-             (lambda (pos text datum)          (example-write (vector 'atom:                 (list pos text datum))))
-             (lambda (pos text type)           (example-write (vector 'prefix:               (list pos text type))))
-             (lambda (pos text)                (example-write (vector 'dot:                  (list pos text))))
-             (lambda (pos text shape type len) (example-write (vector 'left-bracket:         (list pos text shape type len))))
-             (lambda (pos text shape)          (example-write (vector 'right-bracket:        (list pos text shape))))
-             (lambda (pos text)                (example-write (vector 'datum-comment-prefix: (list pos text))))
-             (lambda (pos text)                (example-write (vector 'comment:              (list pos text))))
-             (lambda (pos)                     (example-write (vector 'newline:              (list pos))))
-             (lambda (pos)                     (example-write (vector 'eof:                  (list pos))) #f)
-             (lambda (pos text desc)           (example-write (vector 'error:                (list pos text desc))))))
+             (lambda (loc text datum)          (example-write (vector 'atom:                 (list loc text datum))))
+             (lambda (loc text type)           (example-write (vector 'prefix:               (list loc text type))))
+             (lambda (loc text)                (example-write (vector 'dot:                  (list loc text))))
+             (lambda (loc text shape type len) (example-write (vector 'left-bracket:         (list loc text shape type len))))
+             (lambda (loc text shape)          (example-write (vector 'right-bracket:        (list loc text shape))))
+             (lambda (loc text)                (example-write (vector 'datum-comment-prefix: (list loc text))))
+             (lambda (loc text)                (example-write (vector 'comment:              (list loc text))))
+             (lambda (loc)                     (example-write (vector 'newline:              (list loc))))
+             (lambda (loc)                     (example-write (vector 'eof:                  (list loc))) #f)
+             (lambda (loc text desc)           (example-write (vector 'error:                (list loc text desc))))))
          (text.example (call/oport:bytevector (x->write example)))
          (text.another-example
            #"[#4{1 2} #vu8(50 51) #5vu8(100 110 120) #6\"abc\"
