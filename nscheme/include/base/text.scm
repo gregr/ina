@@ -971,7 +971,7 @@
             ((mvector? x)     (atom #"#<mvector>"     x))
             ((procedure? x)   (atom #"#<procedure>"   x))
             (else             (atom #"#<unknown>"     x)))))))
-  (define (separator? c) (or (not c) (unicode-space? c) (punctuation? c)))
+  (define (separator? c) (or (not c) (unicode-space? c) (unicode-control? c) (punctuation? c)))
   (define (make-denotate notation)
     (let ((utf8->n (make-utf8->number
                      (notation-ref (notation-override notation.default notation) '(number)))))
@@ -1251,6 +1251,8 @@
                                                                (if (eqv? c byte:@)
                                                                    (prefix 2 'unquote-splicing)
                                                                    (prefix 1 'unquote)))))
+                            ((unicode-control? c)    (fail 0 (buf-span+1 0)
+                                                           "misplaced control codepoint" c))
                             (else                    (Number^Symbol))))))
           (let loop () (if (Any) (loop) (unread-buffer))))))))
 (define notate   (make-notate   notation.empty))
