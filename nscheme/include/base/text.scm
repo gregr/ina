@@ -1171,8 +1171,14 @@
                                            len)))
                                 (else (k text)))))
                       (lambda (next text k) (k text)))))
-          (define (String)      (Text 1 byte:dquote (lambda (n text k) (k (utf8->string text)))))
-          (define (Symbol/pipe) (Text 1 byte:pipe   (lambda (n text k) (k (utf8->symbol text)))))
+          (define (UnicodeText byte:delim utf8->datum)
+            (Text 1 byte:delim
+                  (lambda (next text k)
+                    (utf8?/k text (lambda x* (apply fail next (buf-span next)
+                                                    "escaped bytes are not valid utf8" x*))
+                             (lambda () (k (utf8->datum text)))))))
+          (define (String)      (UnicodeText byte:dquote utf8->string))
+          (define (Symbol/pipe) (UnicodeText byte:pipe   utf8->symbol))
           (define (Number^Symbol)
             (next-separator-pos 1 (lambda (i.sep)
                                     (let ((text (buf-span i.sep)))
@@ -1438,6 +1444,7 @@
            #"[#4{1 2} #vu8(50 51) #5vu8(100 110 120) #6\"abc\"
            #\"\\u03bb;\"
            #\"\\xce;\\xbb;\"
+           \"\\xce;\\xbb;\"
            'quoted `qquoted ,unquoted ,@spliced #'squoted #`sqquoted #,sunquoted #,@sspliced
            ;; binary numbers:\n #b00 #b01 #b10 #b11 #;other-radixes: #xff #d256 #|fra#|ction|#s: |# .5 1/3 .~3 0.~1 #b.~1 #o.3~7 1e-3 #x1p3 #b1e11
            \"split
@@ -1449,6 +1456,7 @@
          (text.failure-example
            #"[#true #False #g @foo #4{1 2} #vu8(50 51) #5\"\" #6x\"abc\" #6\"abcdefg\"
            #\"\\u03gb;\\u03bb:;\\uffffffff;\\u;\"
+           \"\\xce; \\xbb;\"
            #\"\\xcg;\\xbbb;\"
            ;; binary numbers:\n #b00 #b01 #b02 #;other-radixes: #xfg #d25a
            \"\\a\\b\\c unfinished")
