@@ -406,6 +406,8 @@
   (make-exception-kind-etc error:kind 'read-error '#(location text)))
 (define (make-read-error desc location text)
   (make-exception read-error:kind (vector desc location text)))
+(define ((make-read-error-location-update f) e)
+  (make-read-error (error-description e) (f (read-error-location e)) (read-error-text e)))
 (define (raise-read-error . x*) (raise (apply make-read-error x*)))
 
 (define ((reader:data/annotate annotate) yf yeof yield)
@@ -521,9 +523,13 @@
       fail)))
 (define reader:data (reader:data/annotate (lambda (loc text x) x)))
 
+(define (make-line-location pos line line-pos) (vector pos line line-pos))
+(define (line-location-absolute-position loc) (vector-ref loc 0))
+(define (line-location-line              loc) (vector-ref loc 1))
+(define (line-location-line-position     loc) (vector-ref loc 2))
 (define (reader-track-line r)
   (mlet ((prev-line-start* '()) (line-start 0) (line-count 0))
-    (define (make-loc line start pos) (vector pos line (- pos start)))
+    (define (make-loc line start pos) (make-line-location pos line (- pos start)))
     (define (translate pos)
       (if (null? prev-line-start*)
           (make-loc line-count line-start pos)
@@ -1513,7 +1519,17 @@
                  (oport-write-byte standard-output-port 10)))
            (example-read-write
              (lambda (text)
-               (example-write ((read/reader:data/k reader:data) (iport:bytevector text) raise error values)))))
+               (example-write
+                 ((read/reader:data/k (compose reader-track-line reader:data))
+                  (iport:bytevector text)
+                  (compose raise
+                           (make-read-error-location-update
+                             (lambda (loc)
+                               (vector 'location
+                                       (cons 'absolute-position (line-location-absolute-position loc))
+                                       (cons 'line              (line-location-line              loc))
+                                       (cons 'line-position     (line-location-line-position     loc))))))
+                  error values)))))
     (go 'example: text.example)
     (go 'another-example: text.another-example)
     (go 'failure-example: text.failure-example)
