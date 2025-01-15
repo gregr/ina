@@ -57,7 +57,7 @@
     (build-path path.here fname)
     (lambda (in)
       (let loop ()
-        (let ((x (read in)))
+        (let ((x (rkt:read in)))
           (cond ((eof-object? x) '())
                 (else            (cons x (loop)))))))))
 
