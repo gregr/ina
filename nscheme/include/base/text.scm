@@ -525,6 +525,33 @@
       (lambda (loc)      (if (null? frame*) (halt 'eof) (fail loc #"" "unexpected EOF")))
       fail)))
 
+(define (reader-track-line r)
+  (mlet ((prev-line-start* '()) (line-start 0) (line-count 0))
+    (define (make-loc line start pos) (vector pos line (- pos start)))
+    (define (translate pos)
+      (if (null? prev-line-start*)
+          (make-loc line-count line-start pos)
+          (let loop ((i 0) (next line-start) (pos* prev-line-start*))
+            (if (or (<= next pos) (null? pos*))
+                (begin (set! prev-line-start* '()) (make-loc (- line-count i) next pos))
+                (loop (+ i 1) (car pos*) (cdr pos*))))))
+    (make-reader
+      (lambda ()                        (reader-state                r))
+      (lambda (pos text datum)          (reader-atom                 r (translate pos) text datum))
+      (lambda (pos text type)           (reader-prefix               r (translate pos) text type))
+      (lambda (pos text)                (reader-dot                  r (translate pos) text))
+      (lambda (pos text shape type len) (reader-left-bracket         r (translate pos) text shape type len))
+      (lambda (pos text shape)          (reader-right-bracket        r (translate pos) text shape))
+      (lambda (pos text)                (reader-datum-comment-prefix r (translate pos) text))
+      (lambda (pos text)                (reader-comment              r (translate pos) text))
+      (lambda (pos c)                   (let ((start line-start) (current line-count))
+                                          (set! prev-line-start* (cons start prev-line-start*))
+                                          (set! line-start (+ pos 1))
+                                          (set! line-count (+ current 1))
+                                          (reader-newline r (make-loc current start pos) c)))
+      (lambda (pos)                     (reader-eof                  r (translate pos)))
+      (lambda (pos text desc)           (reader-error                r (translate pos) text desc)))))
+
 ;;;;;;;;;;;;;;;;
 ;;; Notation ;;;
 ;;;;;;;;;;;;;;;;
@@ -1438,19 +1465,21 @@
                           ((x->write x) standard-output-port)
                           ;(sleep 1/10)
                           #t))
-         (example-reader
-           (make-reader
-             (lambda ()                        #f)
-             (lambda (loc text datum)          (example-write (vector 'atom:                 (list loc text datum))))
-             (lambda (loc text type)           (example-write (vector 'prefix:               (list loc text type))))
-             (lambda (loc text)                (example-write (vector 'dot:                  (list loc text))))
-             (lambda (loc text shape type len) (example-write (vector 'left-bracket:         (list loc text shape type len))))
-             (lambda (loc text shape)          (example-write (vector 'right-bracket:        (list loc text shape))))
-             (lambda (loc text)                (example-write (vector 'datum-comment-prefix: (list loc text))))
-             (lambda (loc text)                (example-write (vector 'comment:              (list loc text))))
-             (lambda (loc c)                   (example-write (vector 'newline:              (list loc c))))
-             (lambda (loc)                     (example-write (vector 'eof:                  (list loc))) #f)
-             (lambda (loc text desc)           (example-write (vector 'error:                (list loc text desc))))))
+         (make-example-reader
+           (lambda ()
+             (reader-track-line
+               (make-reader
+                 (lambda ()                        #f)
+                 (lambda (loc text datum)          (example-write (vector 'atom:                 (list loc text datum))))
+                 (lambda (loc text type)           (example-write (vector 'prefix:               (list loc text type))))
+                 (lambda (loc text)                (example-write (vector 'dot:                  (list loc text))))
+                 (lambda (loc text shape type len) (example-write (vector 'left-bracket:         (list loc text shape type len))))
+                 (lambda (loc text shape)          (example-write (vector 'right-bracket:        (list loc text shape))))
+                 (lambda (loc text)                (example-write (vector 'datum-comment-prefix: (list loc text))))
+                 (lambda (loc text)                (example-write (vector 'comment:              (list loc text))))
+                 (lambda (loc c)                   (example-write (vector 'newline:              (list loc c))))
+                 (lambda (loc)                     (example-write (vector 'eof:                  (list loc))) #f)
+                 (lambda (loc text desc)           (example-write (vector 'error:                (list loc text desc))))))))
          (text.example (call/oport:bytevector (x->write example)))
          (text.another-example
            #"[#4{1 2} #vu8(50 51) #5vu8(100 110 120) #6\"abc\"
@@ -1459,7 +1488,10 @@
            \"\\xce;\\xbb;\"
            'quoted `qquoted ,unquoted ,@spliced #'squoted #`sqquoted #,sunquoted #,@sspliced
            ;; binary numbers:\n #b00 #b01 #b10 #b11 #;other-radixes: #xff #d256 #|fra#|ction|#s: |# .5 1/3 .~3 0.~1 #b.~1 #o.3~7 1e-3 #x1p3 #b1e11
-           \"split
+           #|a
+           multi-line
+           block
+           comment|#\"split
            by newline\"
            \"not split\
            by newline\"
@@ -1476,7 +1508,7 @@
                (example-write name)
                (example-write text)
                (example-write 'denotating:)
-               (denotate example-reader (iport:bytevector text))
+               (denotate (make-example-reader) (iport:bytevector text))
                (oport-write-byte standard-output-port 10))))
     (go 'example: text.example)
     (go 'another-example: text.another-example)
