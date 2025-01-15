@@ -23,3 +23,10 @@
                                       (and (equal? (vector-ref a i) (vector-ref b i))
                                            (loop (+ i 1))))))))
             (else        #f))))
+
+(define compose (case-lambda
+                  ((f)        f)
+                  ((f g . h*) (let loop ((f f) (g g) (h* h*))
+                                (if (null? h*)
+                                    (lambda x* (f (apply g x*)))
+                                    (loop (lambda (x) (f (g x))) (car h*) (cdr h*)))))))
