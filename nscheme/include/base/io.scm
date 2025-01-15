@@ -11,14 +11,14 @@
 (splicing-local
   ((define (make-write printer->layout newline?)
      (define (go x port) (let ((p (printer:port port)))
-                           (notate (writer:layout (printer->layout p)) x)
+                           (notate x (writer:layout (printer->layout p)))
                            (when newline? (printer-newline p))))
      (case-lambda
        ((x)      (go x (current-output-port)))
        ((x port) (go x port))))
    (define (make-write/notate printer->layout newline?)
      (define (go notate x port) (let ((p (printer:port port)))
-                                  (notate (writer:layout (printer->layout p)) x)
+                                  (notate x (writer:layout (printer->layout p)))
                                   (when newline? (printer-newline p))))
      (case-lambda
        ((notate x)      (go notate x (current-output-port)))
