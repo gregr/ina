@@ -47,3 +47,14 @@
     (case-lambda
       ((x)      (go x (current-output-port)))
       ((x port) (go x port)))))
+
+(define read/reader
+  (let ((go (lambda (r port) (read/reader/port/k r port raise values values))))
+    (case-lambda
+      ((r)      (go r (current-input-port)))
+      ((r port) (go r port)))))
+(define read
+  (let ((go (lambda (port) (read/reader (reader-track-line (reader:datum)) port))))
+    (case-lambda
+      (()     (go (current-input-port)))
+      ((port) (go port)))))
