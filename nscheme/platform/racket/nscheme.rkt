@@ -788,7 +788,8 @@
                       (set! pos.unread pos))
                     (begin
                       (set! buf.unread (subbytes (mbytevector-bv src) start (+ start count)))
-                      (set! pos.unread 0)))))
+                      (set! pos.unread 0)))
+                (k)))
              ((close)    (lambda (kf k)     (io-guard kf (close-input-port port) (k))))
              ((describe) (lambda ()         description))
              (else       (error "not an iport method" method description)))
