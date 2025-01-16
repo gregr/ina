@@ -36,8 +36,8 @@
   (let ((go (lambda (x port)
               (let ((go (lambda (x) (oport-write-bytevector port x))))
                 (cond ((bytevector? x) (go x))
-                      ((string?     x) (go (string->utf8 x)))
-                      ((symbol?     x) (go (string->utf8 (symbol->string x))))
+                      ((string?     x) (go (string->bytevector x)))
+                      ((symbol?     x) (go (string->bytevector (symbol->string x))))
                       (else            (write x port)))))))
     (case-lambda
       ((x)      (go x (current-output-port)))

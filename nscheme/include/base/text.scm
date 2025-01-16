@@ -990,12 +990,12 @@
                             (range-for-each (lambda (i) (notate (bytevector-ref x i))) len)
                             (right-bracket))
                      (notate-text t.prefix byte:dquote #t x len))))
-              ((string? x) (let ((bv (string->utf8 x)))
+              ((string? x) (let ((bv (string->bytevector x)))
                              (notate-text #"" byte:dquote #t bv (bytevector-length bv))))
               ((symbol? x)
                (cond ((eqv? x '||) (atom #"||"))
                      ((eqv? x '|.|) (atom #"|.|"))
-                     (else (let ((bv (string->utf8 (symbol->string x))))
+                     (else (let ((bv (symbol->bytevector x)))
                              (notate-text #"" byte:pipe (or (= (bytevector-ref bv 0) byte:@)
                                                             (utf8->n bv))
                                           bv (bytevector-length bv))))))
@@ -1204,20 +1204,20 @@
                                            len)))
                                 (else (k text)))))
                       (lambda (next text k) (k text)))))
-          (define (UnicodeText byte:delim utf8->datum)
+          (define (UnicodeText byte:delim bytevector->datum)
             (Text 1 byte:delim
                   (lambda (next text k)
                     (utf8?/k text (lambda x* (apply fail next (buf-span next)
                                                     "escaped bytes are not valid utf8" x*))
-                             (lambda () (k (utf8->datum text)))))))
-          (define (String)      (UnicodeText byte:dquote utf8->string))
-          (define (Symbol/pipe) (UnicodeText byte:pipe   utf8->symbol))
+                             (lambda () (k (bytevector->datum text)))))))
+          (define (String)      (UnicodeText byte:dquote bytevector->string))
+          (define (Symbol/pipe) (UnicodeText byte:pipe   bytevector->symbol))
           (define (Number^Symbol)
             (next-separator-pos 1 (lambda (i.sep)
                                     (let ((text (buf-span i.sep)))
                                       (if (eqv? (bytevector-ref text 0) byte:@)
                                           (fail i.sep text "symbol cannot begin with @")
-                                          (atom i.sep (or (utf8->n text) (utf8->symbol text))))))))
+                                          (atom i.sep (or (utf8->n text) (bytevector->symbol text))))))))
           (define (Number)
             (next-separator-pos 2 (lambda (i.sep)
                                     (let* ((text (buf-span i.sep)) (n (utf8->n text)))
@@ -1313,23 +1313,23 @@
       (return))))
 
 (define (make-number->string   notation) (let ((n->utf8 (make-number->utf8 notation)))
-                                           (lambda (n) (utf8->string (n->utf8 n)))))
+                                           (lambda (n) (bytevector->string (n->utf8 n)))))
 (define (radix->number->string r)        (let ((n->utf8 (radix->number->utf8 r)))
-                                           (lambda (n) (utf8->string (n->utf8 n)))))
-(define (number->string                n) (utf8->string (number->utf8                n)))
-(define (number->string/decimal        n) (utf8->string (number->utf8/decimal        n)))
-(define (number->string/decimal/repeat n) (utf8->string (number->utf8/decimal/repeat n)))
+                                           (lambda (n) (bytevector->string (n->utf8 n)))))
+(define (number->string                n) (bytevector->string (number->utf8                n)))
+(define (number->string/decimal        n) (bytevector->string (number->utf8/decimal        n)))
+(define (number->string/decimal/repeat n) (bytevector->string (number->utf8/decimal/repeat n)))
 
 (define (make-string->number   notation) (let ((utf8->n (make-utf8->number notation)))
-                                           (lambda (s) (utf8->n (string->utf8 s)))))
+                                           (lambda (s) (utf8->n (string->bytevector s)))))
 (define (radix->string->number r)        (let ((utf8->n (radix->utf8->number r)))
-                                           (lambda (s) (utf8->n (string->utf8 s)))))
-(define (string->number s)               (utf8->number (string->utf8 s)))
+                                           (lambda (s) (utf8->n (string->bytevector s)))))
+(define (string->number s)               (utf8->number (string->bytevector s)))
 
-(define (string-append* x*) (utf8->string (bytevector-append* (map string->utf8 x*))))
+(define (string-append* x*) (bytevector->string (bytevector-append* (map string->bytevector x*))))
 (define (string-append . x*) (string-append* x*))
 (define (string-join* separator x*)
-  (utf8->string (bytevector-join* (string->utf8 separator) (map string->utf8 x*))))
+  (bytevector->string (bytevector-join* (string->bytevector separator) (map string->bytevector x*))))
 (define (string-join separator . x*) (string-join* separator x*))
 
 (define (make-local-gensym)
@@ -1337,10 +1337,10 @@
     (lambda (name)
       (set! count (+ count 1))
       (let ((name (cond ((bytevector? name) name)
-                        ((string?     name) (string->utf8 name))
-                        ((symbol?     name) (string->utf8 (symbol->string name)))
+                        ((string?     name) (string->bytevector name))
+                        ((symbol?     name) (string->bytevector (symbol->string name)))
                         (else               (error "not a symbol, string, or bytevector" name)))))
-        (string->symbol (utf8->string (bytevector-append name #"." (number->utf8 count))))))))
+        (string->symbol (bytevector->string (bytevector-append name #"." (number->utf8 count))))))))
 
 ;; TODO: move this example
 #;(let* ((out standard-output-port)
@@ -1350,15 +1350,15 @@
        ;(out (buffered-oport/buffer-size standard-output-port 100000))
        ;(out (buffered-oport/buffer-size (thread-safe-oport standard-output-port) 100000))
        (example
-         (append (list (utf8->string (bytevector 0 15 16 31 127
-                                                 ;#x03BB
-                                                 #b11001110 #b10111011
-                                                 ;159
-                                                 #b11000010 #b10011111
-                                                 ;8192
-                                                 #b11100010 #b10000000 #b10000000
-                                                 ;8233
-                                                 #b11100010 #b10000000 #b10101001))
+         (append (list (bytevector->string (bytevector 0 15 16 31 127
+                                                       ;#x03BB
+                                                       #b11001110 #b10111011
+                                                       ;159
+                                                       #b11000010 #b10011111
+                                                       ;8192
+                                                       #b11100010 #b10000000 #b10000000
+                                                       ;8233
+                                                       #b11100010 #b10000000 #b10101001))
                        (string->symbol "ze\ro") (string->symbol "@zero") (string->symbol "ze#ro"))
                  '(() (0) 1 #('2 three "four" "\fou\r" #(100 101 102 103 104 105 106 107 108 109 110 111) #"\fi\ve" #"fiveeee") #(6 7 7 7) #t #f . 10)))
        (example-writer/sgr (lambda (l)

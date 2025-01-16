@@ -4,7 +4,7 @@
       panic apply values
       eqv? null? boolean? procedure? symbol? string? rational? integer?
       pair? vector? mvector? bytevector? mbytevector?
-      utf8->string string->utf8 string->symbol symbol->string
+      bytevector->string string->bytevector string->symbol symbol->string
       cons car cdr
       vector vector-length vector-ref
       make-mvector mvector->vector mvector-slice mvector-length mvector-ref mvector-set!
@@ -17,7 +17,7 @@
       panic apply values
       eqv? null? boolean? procedure? symbol? string? rational? integer?
       pair? vector? mvector? bytevector? mbytevector?
-      utf8->string string->utf8 string->symbol symbol->string
+      bytevector->string string->bytevector string->symbol symbol->string
       cons car cdr
       vector vector-length vector-ref
       make-mvector mvector->vector mvector-slice mvector-length mvector-ref mvector-set!

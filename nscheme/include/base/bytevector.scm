@@ -1,5 +1,5 @@
-(define (utf8->symbol x) (string->symbol (utf8->string x)))
-(define (symbol->utf8 x) (string->utf8 (symbol->string x)))
+(define (bytevector->symbol x) (string->symbol (bytevector->string x)))
+(define (symbol->bytevector x) (string->bytevector (symbol->string x)))
 (define (make-bytevector n b) (mbytevector->bytevector (make-mbytevector n b)))
 (define (list->bytevector x*) (apply bytevector x*))
 

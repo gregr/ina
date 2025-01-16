@@ -13,7 +13,7 @@
   ;; optimization), populating it based on a lower-level code/closure representation.
   procedure-metadata
   record? record record-type-descriptor record-ref
-  utf8->string string->utf8
+  bytevector->string string->bytevector
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
@@ -254,12 +254,12 @@
     ((rkt:symbol?      x) (rkt:symbol->string x))
     ((non-utf8-symbol? x) (non-utf8-string (non-utf8-symbol-bv x)))
     (else                 (panic #f "not a symbol" x))))
-(define (string->utf8 x)
+(define (string->bytevector x)
   (cond
     ((rkt:string?      x) (string->bytes/utf-8 x))
     ((non-utf8-string? x) (non-utf8-string-bv x))
     (else                 (panic #f "not a string" x))))
-(define (utf8->string x)
+(define (bytevector->string x)
   (unless (bytes? x) (panic #f "not a bytevector" x))
   (with-handlers ((exn:fail:contract? (lambda (e) (non-utf8-string x)))) (bytes->string/utf-8 x)))
 
@@ -442,7 +442,7 @@
   current-panic-handler native-signal-handler
   procedure-metadata
   record? record record-type-descriptor record-ref
-  utf8->string string->utf8
+  bytevector->string string->bytevector
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
