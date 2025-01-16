@@ -527,8 +527,8 @@
 (define (line-location-absolute-position loc) (vector-ref loc 0))
 (define (line-location-line              loc) (vector-ref loc 1))
 (define (line-location-line-position     loc) (vector-ref loc 2))
-(define (reader-track-line r)
-  (mlet ((prev-line-start* '()) (line-start 0) (line-count 0))
+(define ((reader-track-line/start line-start) r)
+  (mlet ((prev-line-start* '()) (line-start line-start) (line-count 0))
     (define (make-loc line start pos) (make-line-location pos line (- pos start)))
     (define (translate pos)
       (if (null? prev-line-start*)
@@ -1471,7 +1471,7 @@
                           #t))
          (make-example-reader
            (lambda ()
-             (reader-track-line
+             ((reader-track-line/start 0)
                (make-reader
                  (lambda (loc text datum)          (example-write (vector 'atom:                 (list loc text datum))))
                  (lambda (loc text type)           (example-write (vector 'prefix:               (list loc text type))))
@@ -1516,7 +1516,7 @@
            (example-read-write
              (lambda (text)
                (example-write
-                 ((read/reader:data/k (compose reader-track-line reader:data))
+                 ((read/reader:data/k (compose (reader-track-line/start 0) reader:data))
                   (iport:bytevector text)
                   (compose raise
                            (make-read-error-location-update
