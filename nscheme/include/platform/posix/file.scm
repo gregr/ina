@@ -7,6 +7,7 @@
 (define (iport:file path)             (iport:file/k path             raise-io-error values))
 (define (oport:file path restriction) (oport:file/k path restriction raise-io-error values))
 
+(define (change-directory      path) (change-directory/k      path raise-io-error values))
 (define (directory-file*       path) (directory-file*/k       path raise-io-error values))
 (define (make-symbolic-link to path) (make-symbolic-link/k to path raise-io-error values))
 (define (make-directory        path) (make-directory/k        path raise-io-error values))

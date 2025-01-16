@@ -19,8 +19,8 @@
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
   host-pid host-argument* host-environment raw-host-process/k
-  change-directory filesystem-change-evt filesystem-change-evt-cancel
-  directory-file*/k make-symbolic-link/k make-directory/k
+  filesystem-change-evt filesystem-change-evt-cancel
+  change-directory/k directory-file*/k make-symbolic-link/k make-directory/k
   delete-directory/k delete-file/k move-file/k imemory:file/k omemory:file/k
   file-type/k file-size/k file-permissions/k file-modified-seconds/k
   set-file-permissions!/k set-file-modified-seconds!/k
@@ -821,7 +821,7 @@
 ;;;;;;;;;;;;;;;
 ;;; File IO ;;;
 ;;;;;;;;;;;;;;;
-(define (change-directory        path)      (rkt:current-directory path) (values))
+(define (change-directory/k      path kf k) (io-guard kf (rkt:current-directory path) (k)))
 (define (directory-file*/k       path kf k) (io-guard kf (k (map path->string (rkt:directory-list path)))))
 (define (make-symbolic-link/k to path kf k) (io-guard kf (make-file-or-directory-link to path) (k)))
 (define (make-directory/k        path kf k) (io-guard kf (rkt:make-directory path) (k)))
