@@ -65,12 +65,6 @@
 ;;; Control transfer and interrupts ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (eqv? a b)
-  (or (rkt:eqv? a b)
-      (if (string? a)
-          (and (string? b) (string=? a b))
-          (and (bytevector? a) (bytevector? b) (bytes=? a b)))))
-
 (define (sync/default handle-default . evt*) (apply sync/timeout handle-default evt*))
 
 (define (make-parameter default)
@@ -246,6 +240,40 @@
 ;;   - primitive
 ;;   - closure
 
+(struct non-utf8-string (bv) #:prefab)
+(struct non-utf8-symbol (bv) #:prefab)
+(define (string? x) (or (rkt:string? x) (non-utf8-string? x)))
+(define (symbol? x) (or (rkt:symbol? x) (non-utf8-symbol? x)))
+(define (string->symbol x)
+  (cond
+    ((rkt:string?      x) (rkt:string->symbol x))
+    ((non-utf8-string? x) (non-utf8-symbol (non-utf8-string-bv x)))
+    (else                 (panic #f "not a string" x))))
+(define (symbol->string x)
+  (cond
+    ((rkt:symbol?      x) (rkt:symbol->string x))
+    ((non-utf8-symbol? x) (non-utf8-string (non-utf8-symbol-bv x)))
+    (else                 (panic #f "not a symbol" x))))
+(define (string->utf8 x)
+  (cond
+    ((rkt:string?      x) (string->bytes/utf-8 x))
+    ((non-utf8-string? x) (non-utf8-string-bv x))
+    (else                 (panic #f "not a string" x))))
+(define (utf8->string x)
+  (unless (bytes? x) (panic #f "not a bytevector" x))
+  (with-handlers ((exn:fail:contract? (lambda (e) (non-utf8-string x)))) (bytes->string/utf-8 x)))
+
+(define (eqv? a b)
+  (or (rkt:eqv? a b)
+      (cond
+        ((bytevector?      a) (and (bytevector?      b) (bytes=? a b)))
+        ((rkt:string?      a) (and (rkt:string?      b) (string=? a b)))
+        ((non-utf8-string? a) (and (non-utf8-string? b) (bytes=? (non-utf8-string-bv a)
+                                                                 (non-utf8-string-bv b))))
+        ((non-utf8-symbol? a) (and (non-utf8-symbol? b) (bytes=? (non-utf8-symbol-bv a)
+                                                                 (non-utf8-symbol-bv b))))
+        (else                 #f))))
+
 (define (rational? x) (and (rkt:rational? x) (exact? x)))
 (define (integer?  x) (rkt:exact-integer? x))
 (define (f32?      x) (single-flonum? x))
@@ -331,9 +359,6 @@
   (case-lambda
     ((mv)             (vector-copy (mvector-v mv)))
     ((mv start count) (vector-copy (mvector-v mv) start (+ start count)))))
-
-(define (utf8->string bv) (bytes->string/utf-8 bv))
-(define (string->utf8 bv) (string->bytes/utf-8 bv))
 
 (define (bytevector        . x*) (apply bytes x*))
 (define (bytevector?       x)    (bytes?       x))
