@@ -870,25 +870,19 @@
 (define (set-file-modified-seconds!/k path seconds kf k)
   (nonnegative-integer?! seconds)
   (io-guard kf (file-or-directory-modify-seconds (make-path path) seconds) (k)))
-(define (open-rkt-input-file/k path kf k)
+(define (imemory:file/k path kf k)
   (let ((path (normalize-path (make-path path))))
-    (io-guard kf (k (path->bytes path) (open-input-file path)))))
-(define (open-rkt-output-file/k path restriction kf k)
+    (io-guard kf (k (rkt:imemory (list '(type . imemory:file) (cons 'path (path->bytes path)))
+                                 (open-input-file path))))))
+(define (omemory:file/k path restriction kf k)
   (let ((path        (normalize-path (make-path path)))
         (exists-flag (case restriction
                        ((create) 'error)
                        ((update) 'udpate)
                        ((#f)     'can-update)
                        (else     (panic #f "not an output-file restriction" restriction)))))
-    (io-guard kf (k (path->bytes path) (open-output-file path #:exists exists-flag)))))
-(define (imemory:file/k path kf k)
-  (open-rkt-input-file/k
-   path kf
-   (lambda (path port) (k (rkt:imemory (list '(type . imemory:file) (cons 'path path)) port)))))
-(define (omemory:file/k path restriction kf k)
-  (open-rkt-output-file/k
-   path restriction kf
-   (lambda (path port) (k (rkt:omemory (list '(type . omemory:file) (cons 'path path)) port)))))
+    (io-guard kf (k (rkt:omemory (list '(type . omemory:file) (cons 'path (path->bytes path)))
+                                 (open-output-file path #:exists exists-flag))))))
 
 ;;;;;;;;;;;;;;;;;;
 ;;; Network IO ;;;
