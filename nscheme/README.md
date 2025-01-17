@@ -85,7 +85,7 @@ and resuming snapshots of a running system.
     behavior.)
   - `eq?` is not provided.
 - There is no primitive character type: a string is indivisible until it is decoded as a bytevector
-  - e.g., `string->utf8` and `utf8->string`
+  - e.g., `string->bytevector` and `bytevector->string`
   - no `string-ref`, since basis of decomposition depends on context
   - code units (bytes) are not characters, but suffice for low-level string manipulation
   - code points are not characters, but suffice for some higher-level string manipulation
@@ -95,14 +95,13 @@ and resuming snapshots of a running system.
   specified using the `\x` escape code.  For instance, `#"λ"`, `#"\u3BB;"`, `#"\xCE;\xBB;"`, and
   `#vu8(206 187)` are all notations for the same length-2 bytevector.  Individually specified bytes
   do not have to form a legal UTF-8 sequence.
-- Strings (and symbols) are intended to correspond to unicode text, but this correspondence is only
-  enforced if the platform chooses to do so.  `utf8->string` is defined to UTF-8 encode the
-  input bytevector, and any enforcement of unicode correspondence in the presence of illegal UTF-8,
-  whether through panic, replacement, removal, or some other strategy, will occur during this
-  conversion.  If a platform chooses not to enforce this correspondence, then a string corresponds
-  to the sequence of bytes given by UTF8-encoding its text body in the same way as for a bytevector.
-  This includes support for specifying individual bytes using the `\x` escape code, even when these
-  bytes produce a sequence that is not legal UTF-8.
+- As a convention, strings and symbols are intended to correspond to unicode text, but this
+  correspondence is not enforced.  `bytevector->string` is defined as a UTF-8 encoding of the input
+  bytevector when possible, but will always succeed even in the presence of non-UTF-8 byte
+  sequences.  The string losslessly retains the sequence of bytes given by the bytevector, which can
+  be recovered using `string->bytevector`.  Like bytevector notation, both string and pipe-delimited
+  symbol notation also allow individual bytes to be specified using the `\x` escape code, even when
+  those bytes form a sequence that is not legal UTF-8.
 - Racket-like dynamically-scoped parameters are provided.  Unlike in Racket, the values of these
   parameters can only be modified through a parameterization, and the modification is only visible
   within the body of that parameterization.  That is, parameters are otherwise immutable.  As in
