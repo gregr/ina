@@ -1332,7 +1332,7 @@
       (set! count (+ count 1))
       (let ((name (cond ((bytevector? name) name)
                         ((string?     name) (string->bytevector name))
-                        ((symbol?     name) (string->bytevector (symbol->string name)))
+                        ((symbol?     name) (symbol->bytevector name))
                         (else               (error "not a symbol, string, or bytevector" name)))))
         (string->symbol (bytevector->string (bytevector-append name #"." (number->utf8 count))))))))
 
