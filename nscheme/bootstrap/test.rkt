@@ -1470,7 +1470,7 @@
  env.test.posix
 
  ! cmdline
- host-argument* ==> #("bootstrap/test.rkt")
+ host-argument* ==> #(#"bootstrap/test.rkt")
 
  ;! stdio
  ;(begin
