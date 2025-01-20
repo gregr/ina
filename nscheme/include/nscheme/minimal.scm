@@ -12,8 +12,6 @@
   (apply $d:begin (map (lambda (stx) (parse-definition env.d env stx)) stx*)))
 (define (parse-begin-definition env.d env . stx*) (parse-begin-definition* env.d env stx*))
 
-(define (parse-introduce env.d env . stx*) (env-introduce*! env.d stx*) ($d:begin))
-
 (define (parse-define-alias env.d env id.lhs id.rhs)
   (parse-undefined-identifier env.d id.lhs)
   (parse-identifier id.rhs)
@@ -280,7 +278,6 @@
             (cons 'mdefine                 (definition-operator-parser parse-mdefine          2 2))
             (cons 'define-values           (definition-operator-parser parse-define-values    2 #f))
             (cons 'define-alias            (definition-operator-parser parse-define-alias     2 2))
-            (cons 'introduce               (definition-operator-parser parse-introduce        0 #f))
             (cons 'splicing-local          (definition-operator-parser parse-splicing-local   2 #f))
             (cons 'splicing-let            (definition-operator-parser parse-splicing-let     2 #f))
             (cons 'splicing-mlet           (definition-operator-parser parse-splicing-mlet    2 #f))
