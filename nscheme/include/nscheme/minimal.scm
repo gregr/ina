@@ -212,7 +212,7 @@
                               (let ((E.boxed (parse-expression env.unboxed id)))
                                 (env-introduce-boxed! env.boxed id (lambda () E.boxed))))
                             param*)
-                  (parse-body (env-conjoin (env-read-only env.boxed) env.unboxed) stx*.body))))))
+                  (parse-body (env-conjoin (env-read-only env.boxed) env) stx*.body))))))
 
 (define (parse-begin-expression* env e e*)
   (let loop ((e e) (e* e*))
