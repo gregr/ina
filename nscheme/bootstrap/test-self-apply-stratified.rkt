@@ -1,8 +1,7 @@
 #lang racket/base
 (require
   "../platform/racket/nscheme.rkt" "include.rkt"
-  racket/file racket/include racket/runtime-path racket/splicing
-  (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
+  racket/include (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 ;(require profile)
 
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an

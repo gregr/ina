@@ -1,7 +1,6 @@
 #lang racket/base
 (require
   "../platform/racket/nscheme.rkt" "include.rkt"
-  racket/file racket/include racket/runtime-path racket/splicing
   (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 ;(require profile)
 
