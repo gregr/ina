@@ -315,10 +315,16 @@
                               (values (map (lambda (^rhs) (^rhs)) ^rhs*) (^E))))))))))
   (define (D->E         D) (D-compile D #f))
   (define (D->E/publish D) (D-compile D #t))
-  (define ($d:begin . D*)            (D:begin D*))
-  (define ($d:expression ^E)         (D:expression ^E))
-  (define ($d:define env.d lhs ^rhs) (env-introduce! env.d lhs) (D:definition lhs env.d ^rhs))
-  (define ($d:end/expression D stx)  (D:end/expression D stx)))
+  (define ($d:begin . D*)           (D:begin D*))
+  (define ($d:end/expression D stx) (D:end/expression D stx))
+  (define ($d:expression ^E)        (D:expression ^E))
+  (define ($d:define env.d lhs ^rhs)
+    (env-introduce! env.d lhs)
+    (env-set^! env.d lhs vocab.expression
+               (lambda (env stx)
+                 (raise-parse-error
+                   "parsed variable reference before completing its definition" stx)))
+    (D:definition lhs env.d ^rhs)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
