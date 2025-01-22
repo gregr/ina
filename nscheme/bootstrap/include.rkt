@@ -49,6 +49,7 @@
 (include "../include/platform/posix/common.scm")
 (include "../include/platform/posix/file.scm")
 (include "../include/platform/posix/host-process.scm")
+(include "../include/platform/posix/terminal/text.scm")
 
 (define-runtime-path path.here ".")
 
@@ -118,6 +119,7 @@
   (file-name*->stx*
    '("../include/platform/posix/file.scm"
      "../include/platform/posix/host-process.scm"
+     "../include/platform/posix/terminal/text.scm"
      )))
 
 (include "../include/platform/bootstrap.scm")

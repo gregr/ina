@@ -28,13 +28,6 @@
     (lambda (text attr) (printer-print p text (f attr)))
     (lambda ()          (printer-newline p))))
 
-(define (printer-decorate/sgr p)
-  (printer-map-text/attribute p (lambda (t sgr) (if sgr (bytevector-append sgr t #"\e[0m") t))))
-(define (printer-sgr-default p sgr.default)
-  (printer-map-attribute p (lambda (sgr) (or sgr sgr.default))))
-(define (printer-sgr-add p sgr.add)
-  (printer-map-attribute p (lambda (sgr) (if sgr (bytevector-append sgr sgr.add) sgr.add))))
-
 (define (printer-fill p width byte attr)
   (mlet ((size 0))
     (make-printer
@@ -344,15 +337,6 @@
 (define (writer-left-bracket  w text attr datum) ((vector-ref w 3) text attr datum))
 (define (writer-right-bracket w text attr)       ((vector-ref w 4) text attr))
 
-(define (writer-decorate/sgr w sgr.prefix sgr.dot sgr.bracket atom->sgr)
-  (define (decorate attr sgr) (or attr sgr))
-  (make-writer
-    (lambda (t attr x) (writer-atom          w t (decorate attr (atom->sgr x)) x))
-    (lambda (t attr x) (writer-prefix        w t (decorate attr sgr.prefix)    x))
-    (lambda (t attr)   (writer-dot           w t (decorate attr sgr.dot)))
-    (lambda (t attr x) (writer-left-bracket  w t (decorate attr sgr.bracket)   x))
-    (lambda (t attr)   (writer-right-bracket w t (decorate attr sgr.bracket)))))
-
 (define (writer:layout l)
   (mlet ((depth 0) (separate? #f) (right-bracket-count 0))
     (define (end-bracketed!)
@@ -379,9 +363,6 @@
         (set! depth (- depth 1))
         (set! right-bracket-count (+ right-bracket-count 1))
         (unless (< 0 depth) (end-bracketed!))))))
-
-(define (writer:layout/sgr l sgr.prefix sgr.dot sgr.bracket datum->sgr)
-  (writer-decorate/sgr (writer:layout l) sgr.prefix sgr.dot sgr.bracket datum->sgr))
 
 ;;;;;;;;;;;;;;
 ;;; Reader ;;;
