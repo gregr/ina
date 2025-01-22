@@ -1,4 +1,4 @@
-;;; Select Graphic Rendition (SGR) escapes and attributes
+;;; Select Graphic Rendition (SGR) escapes and attributes (SGR is a type of CSI)
 (define (make-sgr . sgra*) (sgra*->sgr sgra*))
 (define (sgra*->sgr sgra*) (if (null? sgra*) #"" (bytevector-append
                                                    #"\e[" (bytevector-join* #";" sgra*) #"m")))

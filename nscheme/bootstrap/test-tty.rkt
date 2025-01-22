@@ -30,12 +30,6 @@
          ;; NOTE: ec:display-size can report these, but reading the report may be inconvenient
          ((lines)       (lambda ()  (tput-number "lines")))
          ((columns)     (lambda ()  (tput-number "cols")))
-         ;; NOTE: these don't seem necessary due to existing escape codes
-         ;((clear)       (lambda ()  (command "clear"))) ; \e[2J
-         ;((save)        (lambda ()  (tput "smcup")))    ; \e[?47h
-         ;((restore)     (lambda ()  (tput "rmcup")))    ; \e[?47l
-         ;((cursor-show) (lambda ()  (tput "cnorm")))    ; \e[?25h
-         ;((cursor-hide) (lambda ()  (tput "civis")))    ; \e[?25l
          ((stty-ref)    (lambda ()  (stty "-g")))
          ((stty-set)    (lambda (s) (stty s)))
          ((stty-raw)    (lambda ()  (stty "raw"))))
@@ -45,15 +39,14 @@
   (let ((settings (tty 'stty-ref)))
     (dynamic-wind
       (lambda ()
-        (rkt:display (string-append csi:cursor-save
-                                    csi:display-save
-                                    (csi:cursor-move-to 0 0)
-                                    csi:display-clear-full))
+        (rkt:display (bytevector-append csi:cursor-save
+                                        csi:display-save
+                                        (csi:cursor-move 1 1)
+                                        csi:display-clear-screen))
         (flush-output))
       (lambda () body ...)
       (lambda ()
-        (rkt:display (string-append csi:display-restore
-                                    csi:cursor-restore))
+        (rkt:display (bytevector-append csi:display-restore csi:cursor-restore))
         (flush-output)
         (tty 'stty-set settings)))))
 (define-syntax-rule (with-tty-cursor-hidden body ...)
