@@ -62,47 +62,48 @@
     (lambda () body ...)
     (lambda () (rkt:display csi:cursor-show))))
 
-(define (display/style style s)
-  (rkt:display (sgr->csi style))
+(define (display/sgr sgr s)
+  (rkt:display sgr)
   (rkt:display s)
-  (rkt:display (sgr->csi (append sgr:reset))))
+  (rkt:display sgr:reset))
 
-(define (displayln/style style s)
-  (display/style style s)
+(define (displayln/sgr sgr s)
+  (display/sgr sgr s)
   (rkt:display "\r\n"))
 
 (with-tty-fresh
   (with-tty-cursor-hidden
     (tty 'stty-raw)
-    (define style.0 (append
-                      sgr:color-fg:magenta
-                      sgr:color-bg:yellow
-                      sgr:bold+
-                      sgr:blink+
-                      ))
-    (define style.1 (append
-                      sgr:color-fg:green
-                      sgr:color-bg:red
-                      sgr:underline+
-                      sgr:invert+
-                      ))
-    (define style.2 (append
-                      (sgr:color-rgb6-fg 3 4 5)
-                      (sgr:color-gray-bg 7)
-                      ))
-    (define style.3 (append
-                      (sgr:color-rgb6-fg 0 0 3)
-                      (sgr:color-rgb6-bg 2 2 0)
-                      sgr:invert+
-                      sgr:blink+
-                      sgr:underline+
-                      ))
+    (define sgr.0 (make-sgr))
+    (define sgr.1 (make-sgr
+                   sgra:color-simple-fg:magenta
+                   sgra:color-simple-bg:yellow
+                   sgra:bold+
+                   sgra:blink+
+                   ))
+    (define sgr.2 (make-sgr
+                   sgra:color-simple-fg:green
+                   sgra:color-simple-bg:red
+                   sgra:underline+
+                   sgra:invert+
+                   ))
+    (define sgr.3 (make-sgr
+                   (sgra:color-6cube-fg 3 4 5)
+                   (sgra:color-24gray-bg 7)
+                   ))
+    (define sgr.4 (make-sgr
+                   (sgra:color-6cube-fg 0 0 3)
+                   (sgra:color-6cube-bg 2 2 0)
+                   sgra:invert+
+                   sgra:blink+
+                   sgra:underline+
+                   ))
     (rkt:display "\r\n")
-    (displayln/style '()     "testing (1 2 3)")
-    (displayln/style style.0 "testing (1 2 3)")
-    (displayln/style style.1 "testing (1 2 3)")
-    (displayln/style style.2 "testing (1 2 3)")
-    (displayln/style style.3 "testing (1 2 3)")
-    (displayln/style '()     "testing (1 2 3)")
-    (displayln/style '() "\r\nHit any key...")
+    (displayln/sgr sgr.0 "testing (1 2 3)")
+    (displayln/sgr sgr.1 "testing (1 2 3)")
+    (displayln/sgr sgr.2 "testing (1 2 3)")
+    (displayln/sgr sgr.3 "testing (1 2 3)")
+    (displayln/sgr sgr.4 "testing (1 2 3)")
+    (displayln/sgr sgr.0 "testing (1 2 3)")
+    (displayln/sgr sgr.0 "\r\nHit any key...")
     (read-byte)))
