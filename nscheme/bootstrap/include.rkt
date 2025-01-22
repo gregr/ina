@@ -50,6 +50,7 @@
 (include "../include/platform/posix/terminal/osc.scm")
 (include "../include/platform/posix/terminal/csi.scm")
 (include "../include/platform/posix/terminal/sgr.scm")
+(include "../include/platform/posix/terminal/tty.scm")
 (include "../include/platform/posix/terminal/text.scm")
 
 (define-runtime-path path.here ".")
@@ -119,6 +120,7 @@
      "../include/platform/posix/terminal/osc.scm"
      "../include/platform/posix/terminal/csi.scm"
      "../include/platform/posix/terminal/sgr.scm"
+     "../include/platform/posix/terminal/tty.scm"
      "../include/platform/posix/terminal/text.scm"
      )))
 

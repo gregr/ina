@@ -9,46 +9,20 @@
 (rkt:pretty-print-abbreviate-read-macros #f)
 
 ;; TODO: convert this entire test to nscheme
-(define tty
-  (let ()
-    (define (command path . arg*)
-      (let ((result (call/oport:bytevector
-                     (lambda (out)
-                       (let ((in (iport:file "/dev/tty")))
-                         (host-process-wait
-                          (host-process in out out
-                                        (find-file/env host-environment path) arg* #f))
-                         (iport-close in))))))
-        (rkt:pretty-write `(result: ,result))
-        result))
-    (define (tput        x) (command "tput" x))
-    (define (tput-number x) (utf8->number (bytevector-rtrim (tput x) 10)))
-    (define (stty     . x*) (apply command "stty" x*))
-    (lambda (method . arg*)
-      (apply
-       (case method
-         ;; NOTE: ec:display-size can report these, but reading the report may be inconvenient
-         ((lines)       (lambda ()  (tput-number "lines")))
-         ((columns)     (lambda ()  (tput-number "cols")))
-         ((stty-ref)    (lambda ()  (stty "-g")))
-         ((stty-set)    (lambda (s) (stty s)))
-         ((stty-raw)    (lambda ()  (stty "raw"))))
-       arg*))))
-
 (define-syntax-rule (with-tty-fresh body ...)
-  (let ((settings (tty 'stty-ref)))
+  (let ((settings (stty-ref)))
     (dynamic-wind
-      (lambda ()
-        (rkt:display (bytevector-append csi:cursor-save
-                                        csi:display-save
-                                        (csi:cursor-move 1 1)
-                                        csi:display-clear-screen))
-        (flush-output))
-      (lambda () body ...)
-      (lambda ()
-        (rkt:display (bytevector-append csi:display-restore csi:cursor-restore))
-        (flush-output)
-        (tty 'stty-set settings)))))
+     (lambda ()
+       (rkt:display (bytevector-append csi:cursor-save
+                                       csi:display-save
+                                       (csi:cursor-move 1 1)
+                                       csi:display-clear-screen))
+       (flush-output))
+     (lambda () body ...)
+     (lambda ()
+       (rkt:display (bytevector-append csi:display-restore csi:cursor-restore))
+       (flush-output)
+       (stty-set settings)))))
 (define-syntax-rule (with-tty-cursor-hidden body ...)
   (dynamic-wind
     (lambda () (rkt:display csi:cursor-hide))
@@ -66,7 +40,7 @@
 
 (with-tty-fresh
   (with-tty-cursor-hidden
-    (tty 'stty-raw)
+    (stty-raw)
     (define sgr.0 (make-sgr))
     (define sgr.1 (make-sgr
                    sgra:color-simple-fg:magenta
