@@ -26,8 +26,6 @@
 (include "../include/base/text.scm")
 (include "../include/base/io.scm")
 
-(include "../include/text/terminal-control.scm")
-
 (include "../include/syntax.scm")
 
 (include "../include/compiler/high-level-ir.scm")
@@ -50,6 +48,7 @@
 (include "../include/platform/posix/file.scm")
 (include "../include/platform/posix/host-process.scm")
 (include "../include/platform/posix/terminal/text.scm")
+(include "../include/platform/posix/terminal/terminal-control.scm")
 
 (define-runtime-path path.here ".")
 
@@ -86,10 +85,6 @@
      "../include/base/io.scm"
      )))
 
-(define def*.text
-  (file-name*->stx*
-   '("../include/text/terminal-control.scm"
-     )))
 (define def*.syntax
   (file-name*->stx*
    '("../include/syntax.scm")))
@@ -120,6 +115,7 @@
    '("../include/platform/posix/file.scm"
      "../include/platform/posix/host-process.scm"
      "../include/platform/posix/terminal/text.scm"
+     "../include/platform/posix/terminal/terminal-control.scm"
      )))
 
 (include "../include/platform/bootstrap.scm")
