@@ -47,6 +47,7 @@
 (include "../include/platform/posix/common.scm")
 (include "../include/platform/posix/file.scm")
 (include "../include/platform/posix/host-process.scm")
+(include "../include/platform/posix/terminal/osc.scm")
 (include "../include/platform/posix/terminal/sgr.scm")
 (include "../include/platform/posix/terminal/text.scm")
 (include "../include/platform/posix/terminal/terminal-control.scm")
@@ -115,6 +116,7 @@
   (file-name*->stx*
    '("../include/platform/posix/file.scm"
      "../include/platform/posix/host-process.scm"
+     "../include/platform/posix/terminal/osc.scm"
      "../include/platform/posix/terminal/sgr.scm"
      "../include/platform/posix/terminal/text.scm"
      "../include/platform/posix/terminal/terminal-control.scm"
