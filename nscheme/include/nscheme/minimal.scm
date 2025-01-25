@@ -181,12 +181,6 @@
                                       (parse-body env e*)
                                       (loop c*))))))))))))
 
-(define (parse-assert env . stx*.test)
-  (apply $begin (map (lambda (stx.test)
-                       ($unless (parse-expression env stx.test)
-                                ($error ($quote "failed assertion") ($quote stx.test))))
-                     stx*.test)))
-
 (define (parse-let env e0 e1 . e*)
   (if (identifier? e0)
       (let* ((bpair* (parse-binding-pair* e1)) (param* (map car bpair*)))
@@ -297,7 +291,6 @@
             (cons 'unless         (expression-operator-parser parse-unless         2 #f))
             (cons 'cond           (expression-operator-parser parse-cond           1 #f))
             (cons 'case           (expression-operator-parser parse-case           2 #f))
-            (cons 'assert         (expression-operator-parser parse-assert         1 #f))
             (cons 'apply/values   (expression-operator-parser parse-apply/values   2 2))
             (cons 'case-lambda    (expression-operator-parser parse-case-lambda    0 #f))
             (cons 'lambda         (expression-operator-parser parse-lambda         2 #f))

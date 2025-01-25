@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  apply/values case-values case let-values let*-values assert mlet mdefine interruptible-lambda
+  apply/values case-values case let-values let*-values mlet mdefine interruptible-lambda
   ;; privileged primitives
   native-signal-handler
   ;; procedure-metadata returns a vector with this shape:
@@ -218,7 +218,7 @@
 (define (make-raw-coroutine proc)
   (thread->coroutine (thread (lambda () (apply proc (thread-receive))))))
 
-(define-syntax-rule (assert test ...) (begin (unless test (panic 'violation 'assert 'test)) ...))
+(define-syntax-rule (assert test ...) (begin (unless test (panic #f 'failed-assert 'test)) ...))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Data primitives ;;;

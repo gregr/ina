@@ -184,10 +184,6 @@
     3)
   ==> 5
 
-  ! assert
-  (assert (< 1 2) (eqv? 2 2)) ==> (values)
-  (assert (< 1 2) (eqv? 1 2)) ==> error:eval
-
   ! if
   (if #t 'yes 'no)               ==> yes
   (if #f 'yes 'no)               ==> no
