@@ -95,6 +95,20 @@
 ;                                              (begin body ...)
 ;                                              (skip)))))
 
+(define env.syntax
+  (value-package->env
+    (cons
+      '(
+        syntax-note syntax-note-set syntax-note-add
+        syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
+        identifier? identifier?! identifier=?
+        make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!)
+      (list
+        syntax-note syntax-note-set syntax-note-add
+        syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
+        identifier? identifier?! identifier=?
+        make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!))))
+
 (define env.meta
   (let ((env (make-env))
         (b*.def

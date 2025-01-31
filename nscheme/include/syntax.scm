@@ -194,17 +194,4 @@
 
   (define (env-describe env)      (env 'describe))
   (define (env-ref      env id)   ((env 'ref) (lambda () #f) id))
-  (define (env-set!     env id x) ((env 'set!) id x))
-
-  (define package.syntax
-    (cons
-      '(
-        syntax-note syntax-note-set syntax-note-add
-        syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
-        identifier? identifier?! identifier=?
-        make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!)
-      (list
-        syntax-note syntax-note-set syntax-note-add
-        syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
-        identifier? identifier?! identifier=?
-        make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!))))
+  (define (env-set!     env id x) ((env 'set!) id x)))
