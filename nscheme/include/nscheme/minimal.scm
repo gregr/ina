@@ -215,7 +215,7 @@
 (define ((parse-quasiquote-X vocab tag.enter tag.escape tag.escape-splicing parse-quote-X) env stx)
   (define (finish  result stx.original) (or result (parse-quote-X env stx.original)))
   (define (tag     tag-value e)         (and e ($list ($quote tag-value) e)))
-  (define (keyword stx)                 (and (identifier? stx) (env-ref^ env stx vocab)))
+  (define (keyword stx)                 (and (identifier? stx) (env-vocabulary-ref env stx vocab)))
   (define (operand qq)                  (car (syntax-unwrap (cdr qq))))
   (define (operation? qq tag)
     (and (eqv? (keyword (car qq)) tag) (let ((qq.d (syntax-unwrap (cdr qq))))
@@ -317,26 +317,27 @@
             (list 'begin
                   (definition-operator-parser parse-begin-definition 0 #f)
                   (expression-operator-parser parse-begin-expression 1 #f)))))
-    (for-each (lambda (id) (env-bind! env id vocab.expression-auxiliary (syntax->datum id)))
+    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.expression-auxiliary
+                                                 (syntax->datum id)))
               b*.expr-aux)
-    (for-each (lambda (id op) (env-bind! env id vocab.definition-operator op))
+    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.definition-operator op))
               (map car b*.def) (map cdr b*.def))
-    (for-each (lambda (id op.def op.expr) (env-bind! env id
-                                                     vocab.definition-operator op.def
-                                                     vocab.expression-operator op.expr))
+    (for-each (lambda (id op.def op.expr) (env-vocabulary-bind! env id
+                                                                vocab.definition-operator op.def
+                                                                vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
-    (for-each (lambda (id) (env-bind! env id vocab.quasiquote (syntax->datum id)))
+    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote (syntax->datum id)))
               b*.qq)
-    (for-each (lambda (id op) (env-bind! env id
-                                         vocab.expression-operator op
-                                         vocab.quasiquote          (syntax->datum id)))
+    (for-each (lambda (id op) (env-vocabulary-bind! env id
+                                                    vocab.expression-operator op
+                                                    vocab.quasiquote          (syntax->datum id)))
               (map car b*.qq-and-expr) (map cdr b*.qq-and-expr))
-    (for-each (lambda (id) (env-bind! env id vocab.quasiquote-syntax (syntax->datum id)))
+    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote-syntax (syntax->datum id)))
               b*.qqs)
-    (for-each (lambda (id op) (env-bind! env id
-                                         vocab.expression-operator op
-                                         vocab.quasiquote-syntax   (syntax->datum id)))
+    (for-each (lambda (id op) (env-vocabulary-bind! env id
+                                                    vocab.expression-operator op
+                                                    vocab.quasiquote-syntax   (syntax->datum id)))
               (map car b*.qqs-and-expr) (map cdr b*.qqs-and-expr))
-    (for-each (lambda (id op) (env-bind! env id vocab.expression-operator op))
+    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
     (env-read-only env)))

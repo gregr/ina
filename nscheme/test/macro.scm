@@ -408,7 +408,7 @@
          (splicing-let ((x 6))
            (define-syntax (m stx)
              (lambda (env)
-               (env-ref^ env (quote-syntax foo) 'test))))
+               (env-vocabulary-ref env (quote-syntax foo) 'test))))
          (splicing-let ((x 7))
            (m))))
 ;==> 6
@@ -426,8 +426,8 @@
              'expression-operator
              (lambda (env stx)
                (parse-expression
-                (env-ref^ env (quote-syntax foo) 'env)
-                (env-ref^ env (quote-syntax foo) 'stx)))))
+                (env-vocabulary-ref env (quote-syntax foo) 'env)
+                (env-vocabulary-ref env (quote-syntax foo) 'stx)))))
          (splicing-let ((x 7))
            (m))))
 ;==> 5
@@ -447,8 +447,8 @@
                (match (syntax->list stx)
                  ((list _ arg)
                   (parse-expression
-                   (env-ref^ env arg 'env)
-                   (env-ref^ env arg 'stx)))))))
+                   (env-vocabulary-ref env arg 'env)
+                   (env-vocabulary-ref env arg 'stx)))))))
          (splicing-let ((x 7))
            (m foo))))
 ;==> 5

@@ -29,19 +29,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Environment helpers ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (env-bind! env id . vx*) (env-set! env id (vocab-dict-set* vocab-dict.empty vx*)))
-(define (env-set^! env id . vx*) (let ((vocab=>v (env-ref env id)))
-                                   (unless vocab=>v (error "cannot set unbound identifier" id))
-                                   (env-set! env id (vocab-dict-set* vocab=>v vx*))))
-(define (env-ref^  env id vocab) (let ((vocab=>v (env-ref env id)))
-                                   (and vocab=>v (vocab-dict-ref vocab=>v vocab))))
+(define (env-vocabulary-bind! env id . vx*)
+  (env-set! env id (vocab-dict-set* vocab-dict.empty vx*)))
+(define (env-vocabulary-set! env id . vx*)
+  (let ((vocab=>v (env-ref env id)))
+    (unless vocab=>v (error "cannot set unbound identifier" id))
+    (env-set! env id (vocab-dict-set* vocab=>v vx*))))
+(define (env-vocabulary-ref env id vocab)
+  (let ((vocab=>v (env-ref env id))) (and vocab=>v (vocab-dict-ref vocab=>v vocab))))
 
 (define (env-extend env param* E*)
   (parse-param* param*)
   (env-conjoin (let ((env.scope (make-env)))
-                 (for-each (lambda (id E) (env-bind! env.scope id vocab.expression
-                                                     (parse/constant-expression E)))
+                 (for-each (lambda (id E) (env-vocabulary-bind! env.scope id vocab.expression
+                                                                (parse/constant-expression E)))
                            param* E*)
                  (env-read-only env.scope))
                env))
@@ -51,19 +52,19 @@
 (define (env-introduce*! env stx*.id)
   (for-each (lambda (stx.id)
               (parse-undefined-identifier env stx.id)
-              (env-bind! env stx.id))
+              (env-vocabulary-bind! env stx.id))
             stx*.id))
 
 (define (env-introduce-boxed! env id ^E.box)
   (env-introduce! env id)
-  (env-set^! env id
-             vocab.expression
-             (lambda (env _) ($unbox (^E.box)))
-             vocab.set!
-             (lambda (env stx.lhs E.rhs) ($set-box! ($source (^E.box) stx.lhs) E.rhs))))
+  (env-vocabulary-set!
+    env id
+    vocab.expression (lambda (env _) ($unbox (^E.box)))
+    vocab.set! (lambda (env stx.lhs E.rhs) ($set-box! ($source (^E.box) stx.lhs) E.rhs))))
 
 (define (env-add-package! env pkg)
-  (for-each (lambda (id E) (env-bind! env id vocab.expression (parse/constant-expression E)))
+  (for-each (lambda (id E) (env-vocabulary-bind! env id vocab.expression
+                                                 (parse/constant-expression E)))
             (car pkg) (cdr pkg)))
 
 (define (package->env pkg)
@@ -260,7 +261,7 @@
    (define (D-tagged? D tag) (eqv? (D-tag D) tag))
 
    (define (env-set-variable! env id E)
-     (env-set^! env id vocab.expression (parse/constant-expression E)))
+     (env-vocabulary-set! env id vocab.expression (parse/constant-expression E)))
    (define (definition id env ^E)  (vector id env ^E))
    (define (definition-id   entry) (vector-ref entry 0))
    (define (definition-env  entry) (vector-ref entry 1))
@@ -316,10 +317,10 @@
   (define ($d:expression ^E)        (D:expression ^E))
   (define ($d:define env.d lhs ^rhs)
     (env-introduce! env.d lhs)
-    (env-set^! env.d lhs vocab.expression
-               (lambda (env stx)
-                 (raise-parse-error
-                   "parsed variable reference before completing its definition" stx)))
+    (env-vocabulary-set! env.d lhs vocab.expression
+                         (lambda (env stx)
+                           (raise-parse-error
+                             "parsed variable reference before completing its definition" stx)))
     (D:definition lhs env.d ^rhs)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -329,7 +330,7 @@
 (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
 
 (define ((auxiliary?/vocab vocab) a env stx.id)
-  (and (identifier? stx.id) (eqv? (env-ref^ env stx.id vocab) a)))
+  (and (identifier? stx.id) (eqv? (env-vocabulary-ref env stx.id vocab) a)))
 (define expression-auxiliary? (auxiliary?/vocab vocab.expression-auxiliary))
 
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
@@ -364,19 +365,19 @@
   ($source
     (let ((x (syntax-unwrap stx)))
       (cond
-        ((identifier? stx) (let ((op (env-ref^ env stx vocab.expression)))
-                             (if (procedure? op)
-                                 (op env stx)
-                                 (parse-free-variable-reference env stx))))
-        ((pair?       x)   (let* ((e.op (car x))
-                                  (op   (and (identifier? e.op)
-                                             (env-ref^ env e.op vocab.expression-operator))))
-                             (if (procedure? op)
-                                 (op env stx)
-                                 ($call* (parse-expression env e.op)
-                                         (parse-expression* env (syntax->list (cdr x)))))))
-        ((literal?    x)   ($quote x))
-        (else              (raise-parse-error "not an expression" stx))))
+        ((identifier? stx)
+         (let ((op (env-vocabulary-ref env stx vocab.expression)))
+           (if (procedure? op) (op env stx) (parse-free-variable-reference env stx))))
+        ((pair? x)
+         (let* ((e.op (car x))
+                (op   (and (identifier? e.op)
+                           (env-vocabulary-ref env e.op vocab.expression-operator))))
+           (if (procedure? op)
+               (op env stx)
+               ($call* (parse-expression env e.op)
+                       (parse-expression* env (syntax->list (cdr x)))))))
+        ((literal? x) ($quote x))
+        (else (raise-parse-error "not an expression" stx))))
     stx))
 
 (define ((expression-operator-parser parser argc.min argc.max) env stx)
@@ -394,17 +395,15 @@
 (define (parse-definition env.d env stx)
   (define (default) (parse-definition-expression env.d env stx))
   (let ((x (syntax-unwrap stx)))
-    (cond ((identifier? stx) (let ((op (env-ref^ env stx vocab.definition)))
-                               (if (procedure? op)
-                                   (op env.d env stx)
-                                   (default))))
-          ((pair? x)         (let* ((stx.op (car x))
-                                    (op     (and (identifier? stx.op)
-                                                 (env-ref^ env stx.op vocab.definition-operator))))
-                               (if (procedure? op)
-                                   (op env.d env stx)
-                                   (default))))
-          (else              (default)))))
+    (cond ((identifier? stx)
+           (let ((op (env-vocabulary-ref env stx vocab.definition)))
+             (if (procedure? op) (op env.d env stx) (default))))
+          ((pair? x)
+           (let* ((stx.op (car x))
+                  (op     (and (identifier? stx.op)
+                               (env-vocabulary-ref env stx.op vocab.definition-operator))))
+             (if (procedure? op) (op env.d env stx) (default))))
+          (else (default)))))
 
 (define (parse-definition-expression env.d env stx)
   ($d:expression (lambda () (parse-expression env stx))))
@@ -424,12 +423,13 @@
   (define (^rhs) (parse-expression env stx.rhs))
   (let ((x.lhs (syntax-unwrap stx.lhs)))
     (cond
-      ((identifier? stx.lhs) (let ((op (env-ref^ env stx.lhs vocab.set!)))
+      ((identifier? stx.lhs) (let ((op (env-vocabulary-ref env stx.lhs vocab.set!)))
                                (unless (procedure? op) (fail))
                                (op env stx.lhs (^rhs))))
-      ((pair? x.lhs)         (let* ((stx.op (car x.lhs))
-                                    (op     (and (identifier? stx.op)
-                                                 (env-ref^ env stx.op vocab.set!-operator))))
-                               (unless (procedure? op) (fail))
-                               (op env stx.lhs (^rhs))))
-      (else                  (fail)))))
+      ((pair? x.lhs)
+       (let* ((stx.op (car x.lhs))
+              (op     (and (identifier? stx.op)
+                           (env-vocabulary-ref env stx.op vocab.set!-operator))))
+         (unless (procedure? op) (fail))
+         (op env stx.lhs (^rhs))))
+      (else (fail)))))

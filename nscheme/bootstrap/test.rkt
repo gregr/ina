@@ -1038,8 +1038,8 @@
 
 (define env.test.large
   (let ((env (make-env)))
-    (env-bind! env 'env.test vocab.expression
-               (parse/constant-expression ($quote env.large)))
+    (env-vocabulary-bind! env 'env.test vocab.expression
+                          (parse/constant-expression ($quote env.large)))
     (env-conjoin env.large env)))
 
 (run-evaluation-tests

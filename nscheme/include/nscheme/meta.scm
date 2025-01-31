@@ -35,7 +35,7 @@
     (unless vocab=>v (raise-parse-error "cannot set unbound identifier" id.lhs))
     (unless (even? (length stx*.vocab&rhs))
       (raise-parse-error "not a list of alternating vocabularies and values" stx*.vocab&rhs))
-    (apply env-set^! env.d id.lhs (map E-eval (parse-expression* env stx*.vocab&rhs))))
+    (apply env-vocabulary-set! env.d id.lhs (map E-eval (parse-expression* env stx*.vocab&rhs))))
   ($d:begin))
 
 (define (parse-define-vocabulary-value env.d env id.lhs . stx*.vocab&rhs)
@@ -46,13 +46,13 @@
   (define (finish id.lhs ^rhs)
     (env-introduce! env.d id.lhs)
     (let ((op (E-eval (^rhs env.op))))
-      (env-set^! env.d id.lhs
-                 vocab.expression-operator
-                 (lambda (env.use stx)
-                   (transcribe-and-parse-expression op env.op env.use stx))
-                 vocab.definition-operator
-                 (lambda (env.d.use env.use stx)
-                   (transcribe-and-parse-definition op env.op env.d.use env.use stx))))
+      (env-vocabulary-set!
+        env.d id.lhs
+        vocab.expression-operator
+        (lambda (env.use stx) (transcribe-and-parse-expression op env.op env.use stx))
+        vocab.definition-operator
+        (lambda (env.d.use env.use stx)
+          (transcribe-and-parse-definition op env.op env.d.use env.use stx))))
     ($d:begin))
   (parse-operator-binding finish stx.lhs stx*.rhs))
 
@@ -106,12 +106,12 @@
             (list 'begin-meta
                   (definition-operator-parser parse-begin-meta-definition 0 #f)
                   (expression-operator-parser parse-begin-meta-expression 1 #f)))))
-    (for-each (lambda (id op.def op.expr) (env-bind! env id
-                                                     vocab.definition-operator op.def
-                                                     vocab.expression-operator op.expr))
+    (for-each (lambda (id op.def op.expr) (env-vocabulary-bind! env id
+                                                                vocab.definition-operator op.def
+                                                                vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
-    (for-each (lambda (id op) (env-bind! env id vocab.definition-operator op))
+    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.definition-operator op))
               (map car b*.def) (map cdr b*.def))
-    (for-each (lambda (id op) (env-bind! env id vocab.expression-operator op))
+    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
     (env-read-only env)))
