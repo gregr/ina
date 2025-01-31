@@ -1,3 +1,5 @@
+(define vocab.quasiquote 'quasiquote)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -102,12 +104,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (parse-quote        env stx)         ($quote (syntax->datum stx)))
-(define (parse-quote-syntax env stx)         ($quote stx))
-(define (parse-if           env e.c e.t e.f) ($if (parse-expression env e.c)
-                                                  (parse-expression env e.t)
-                                                  (parse-expression env e.f)))
-(define (parse-lambda       env param . e*)  (parse-case-lambda env (cons param e*)))
+(define (parse-quote  env stx)         ($quote (syntax->datum stx)))
+(define (parse-if     env e.c e.t e.f) ($if (parse-expression env e.c)
+                                            (parse-expression env e.t)
+                                            (parse-expression env e.f)))
+(define (parse-lambda env param . e*)  (parse-case-lambda env (cons param e*)))
 
 (define (parse-case-lambda env . stx*.cc)
   (let* ((cc*        (map (lambda (stx.cc)
@@ -242,12 +243,8 @@
               ((keyword stx.qq) (raise-parse-error "misplaced keyword" stx.qq))
               (else             #f))))
     stx))
-
 (define parse-quasiquote
   (parse-quasiquote-X vocab.quasiquote 'quasiquote 'unquote 'unquote-splicing parse-quote))
-(define parse-quasiquote-syntax
-  (parse-quasiquote-X vocab.quasiquote-syntax 'quasiquote-syntax 'unsyntax 'unsyntax-splicing
-                      parse-quote-syntax))
 
 (splicing-local
   ((define ((binder-parser $binder) env stx.def* . stx*)
@@ -260,9 +257,6 @@
   (define parse-let*-values    (binder-parser $binder-let*-values))
   (define parse-letrec*-values (binder-parser $binder-letrec*-values)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Pre-base language syntax environment ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define env.minimal
   (let ((env (make-env))
         (b*.expr-aux '(=> else))
@@ -283,7 +277,6 @@
         (b*.expr
           (list
             (cons 'quote          (expression-operator-parser parse-quote          1 1))
-            (cons 'quote-syntax   (expression-operator-parser parse-quote-syntax   1 1))
             (cons 'if             (expression-operator-parser parse-if             3 3))
             (cons 'and            (expression-operator-parser parse-and            0 #f))
             (cons 'or             (expression-operator-parser parse-or             0 #f))
@@ -306,9 +299,6 @@
             (cons 'set!           (expression-operator-parser parse-set! 2 2))))
         (b*.qq '(unquote unquote-splicing))
         (b*.qq-and-expr (list (cons 'quasiquote (expression-operator-parser parse-quasiquote 1 1))))
-        (b*.qqs '(unsyntax unsyntax-splicing))
-        (b*.qqs-and-expr
-          (list (cons 'quasiquote-syntax (expression-operator-parser parse-quasiquote-syntax 1 1))))
         (b*.def-and-expr
           (list
             (list 'expression
@@ -332,12 +322,6 @@
                                                     vocab.expression-operator op
                                                     vocab.quasiquote          (syntax->datum id)))
               (map car b*.qq-and-expr) (map cdr b*.qq-and-expr))
-    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote-syntax (syntax->datum id)))
-              b*.qqs)
-    (for-each (lambda (id op) (env-vocabulary-bind! env id
-                                                    vocab.expression-operator op
-                                                    vocab.quasiquote-syntax   (syntax->datum id)))
-              (map car b*.qqs-and-expr) (map cdr b*.qqs-and-expr))
     (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
     (env-read-only env)))

@@ -1,3 +1,5 @@
+(define vocab.quasiquote-syntax 'quasiquote-syntax)
+
 ;; TODO:
 ;; - match
 ;;   - match-define match-lambda match-lambda* match-lambda** match-let match-let*
@@ -14,6 +16,11 @@
 ;(define vocab.grammar 'grammar)
 ;(define vocab.formula 'formula)
 ;(define vocab.term    'term)
+
+(define (parse-quote-syntax env stx) ($quote stx))
+(define parse-quasiquote-syntax
+  (parse-quasiquote-X vocab.quasiquote-syntax 'quasiquote-syntax 'unsyntax 'unsyntax-splicing
+                      parse-quote-syntax))
 
 (define (parse-begin-meta-definition* env.d env stx*)
   (let* ((D (parse-begin-definition* env.d env stx*))
@@ -99,8 +106,11 @@
             (cons 'define-syntax (definition-operator-parser parse-define-syntax 2 #f))))
         (b*.expr
           (list
-            (cons 'current-environment
-                  (expression-operator-parser parse-current-environment 0 0))))
+            (cons 'quote-syntax        (expression-operator-parser parse-quote-syntax        1 1))
+            (cons 'current-environment (expression-operator-parser parse-current-environment 0 0))))
+        (b*.qqs '(unsyntax unsyntax-splicing))
+        (b*.qqs-and-expr
+          (list (cons 'quasiquote-syntax (expression-operator-parser parse-quasiquote-syntax 1 1))))
         (b*.def-and-expr
           (list
             (list 'begin-meta
@@ -112,6 +122,12 @@
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
     (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.definition-operator op))
               (map car b*.def) (map cdr b*.def))
+    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote-syntax (syntax->datum id)))
+              b*.qqs)
+    (for-each (lambda (id op) (env-vocabulary-bind! env id
+                                                    vocab.expression-operator op
+                                                    vocab.quasiquote-syntax   (syntax->datum id)))
+              (map car b*.qqs-and-expr) (map cdr b*.qqs-and-expr))
     (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
     (env-read-only env)))
