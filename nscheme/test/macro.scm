@@ -511,3 +511,28 @@
 ;==> 55
 ;EQUIVALENT RACKET CODE:
 ;((case-lambda ((x.0) ((case-lambda ((x.1) x.1)) (quote 55)))) (quote 44))
+
+(test '(let ((x 88))
+         (define-syntax (m stx)
+           (match (syntax->list stx)
+             ((list _ a)
+              (quasiquote-syntax
+                (begin
+                  (define #,a 77)
+                  x)))))
+         (m x)))
+;==> 77
+;EQUIVALENT RACKET CODE:
+;((case-lambda ((x.0) (letrec ((x.1 (quote 77))) x.1))) (quote 88))
+
+(test '(let ((x 88))
+         (define-syntax (m stx)
+           (match (syntax->list stx)
+             ((list _ a)
+              (quasiquote-syntax
+                (let ((#,a 77))
+                  x)))))
+         (m x)))
+;==> 88
+;EQUIVALENT RACKET CODE:
+;((case-lambda ((x.0) ((case-lambda ((x.1) x.0)) (quote 77)))) (quote 88))
