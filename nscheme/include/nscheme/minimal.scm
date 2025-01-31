@@ -48,7 +48,7 @@
            (map (lambda (i lhs)
                   ($d:define env.d lhs (lambda () ($vector-ref (parse-expression env.local id.v*)
                                                                ($quote i)))))
-                (iota (length lhs*))
+                (range (length lhs*))
                 lhs*))))
 
 (define (parse-mdefine env.d env id.lhs stx.rhs)

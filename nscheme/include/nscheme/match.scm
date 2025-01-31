@@ -93,7 +93,7 @@
 (define (linear-pattern-compile P)
   (define (id*->id.acc* id*)
     (map (lambda (i) (string->symbol (string-append "acc." (number->string i))))
-         (iota (length id*))))
+         (range (length id*))))
   (define ($$p:and*       p*)    (if (null? p*)
                                      $p:any
                                      (let loop ((p (car p*)) (p* (cdr p*)))
@@ -108,7 +108,7 @@
       ($$p:and* (cons* ($p:? ($quote vector?))
                        ($p:? ($lambda '(x) (lambda ($x)
                                              ($eqv? ($vector-length $x) ($quote len)))))
-                       (map $$p:vector-ref p* (map $quote (iota len)))))))
+                       (map $$p:vector-ref p* (map $quote (range len)))))))
   (define (P->linear-pattern&variable* P)
     (define id-set.empty            '())
     (define (id-set-add     id* id) (cons id id*))
@@ -268,7 +268,7 @@
                     (length.pre   (length P*.pre))
                     (length.suf   (length P*.suf))
                     (length.fixed (+ length.pre length.suf))
-                    (^pre         (loop ($$p:and* (map $$p:vector-ref P*.pre (map $quote (iota length.pre))))))
+                    (^pre         (loop ($$p:and* (map $$p:vector-ref P*.pre (map $quote (range length.pre))))))
                     (id*.ell      (linear-pattern-variables P.ell)))
                (lambda (succeed fail $x env)
                  (let* (($length.pre ($quote length.pre)))
@@ -281,7 +281,7 @@
                                            ($let1 'i.suf.0
                                                   ($+ $length.ell $length.pre)
                                                   (lambda ($i.suf.0)
-                                                    (let* (($i*.suf (map (lambda (i) ($+ $i.suf.0 ($quote i))) (iota length.suf)))
+                                                    (let* (($i*.suf (map (lambda (i) ($+ $i.suf.0 ($quote i))) (range length.suf)))
                                                            ($p*.suf (map $$p:vector-ref P*.suf $i*.suf))
                                                            (^suf    (loop ($$p:and* $p*.suf))))
                                                       ($let1 'k.ell

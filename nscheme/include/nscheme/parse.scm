@@ -15,10 +15,8 @@
 (define vocab-dict.empty '())
 (define (vocab-dict-ref    vocab=>x vocab)    (let ((vx (assv vocab vocab=>x))) (and vx (cdr vx))))
 (define (vocab-dict-remove vocab=>x . vocab*) (vocab-dict-remove* vocab=>x vocab*))
-
 (define (vocab-dict-remove* vocab=>x vocab*)
-  (filter-not (lambda (vx) (memv (car vx) vocab*)) vocab=>x))
-
+  (filter (lambda (vx) (not (memv (car vx) vocab*))) vocab=>x))
 (define (vocab-dict-set vocab=>x . vx*) (vocab-dict-set* vocab=>x vx*))
 (define (vocab-dict-set* vocab=>x vx*)
   (let loop ((vx* vx*) (vocab* '()) (x* '()))

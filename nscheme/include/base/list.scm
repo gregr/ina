@@ -88,12 +88,6 @@
 (define (atree-ref/default a key* default)
   (atree-ref/k a key* (lambda () default) (lambda (v) v)))
 
-(define (iota n)
-  (nonnegative-integer?! n)
-  (let loop ((i 0))
-    (cond ((= i n) '())
-          (else    (cons i (loop (+ i 1)))))))
-
 (define range-for-each
   (let ((go (lambda (f start end inc)
               (let ((? (if (< inc 0) > <)))
@@ -150,11 +144,6 @@
     (cond ((null? x*)   '())
           ((? (car x*)) (cons (car x*) (loop (cdr x*))))
           (else         (loop (cdr x*))))))
-
-(define (filter-not ? x*) (filter (lambda (x) (not (? x))) x*))
-(define (true* x*)        (filter (lambda (x) x)           x*))
-(define (null*? x*)       (let loop ((x* x*))
-                            (or (null? x*) (and (null? (car x*)) (loop (cdr x*))))))
 
 (splicing-local
   ((define (map1 f x*)
