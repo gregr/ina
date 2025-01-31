@@ -88,31 +88,14 @@
 (define (atree-ref/default a key* default)
   (atree-ref/k a key* (lambda () default) (lambda (v) v)))
 
-(define range-for-each
-  (let ((go (lambda (f start end inc)
+(define range
+  (let ((go (lambda (start end inc)
               (let ((? (if (< inc 0) > <)))
-                (let loop ((i start))
-                  (when (? i end)
-                    (f i)
-                    (loop (+ i inc))))))))
+                (let loop ((i start)) (if (? i end) (cons i (loop (+ i inc))) '()))))))
     (case-lambda
-      ((f end)           (go f 0     end 1))
-      ((f start end)     (go f start end 1))
-      ((f start end inc) (go f start end inc)))))
-
-(define range-map
-  (let ((go (lambda (f start end inc)
-              (let ((? (if (< inc 0) > <)))
-                (let loop ((i start))
-                  (if (? i end)
-                      (cons (f i) (loop (+ i inc)))
-                      '()))))))
-    (case-lambda
-      ((f end)           (go f 0 end 1))
-      ((f start end)     (go f start end 1))
-      ((f start end inc) (go f start end inc)))))
-
-(define (range . arg*) (apply range-map (lambda (x) x) arg*))
+      ((end)           (go 0 end 1))
+      ((start end)     (go start end 1))
+      ((start end inc) (go start end inc)))))
 
 (define (list? x) (or (null? x) (and (pair? x) (list? (cdr x)))))
 

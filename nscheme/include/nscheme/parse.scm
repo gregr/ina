@@ -234,11 +234,9 @@
                          ($let '(x.cdr) (list ($cdr $x)) (lambda ($x) (loop (cdr d) $x)))))
       ((vector? d) (apply $and ($vector? $x)
                           ($= ($vector-length $x) ($quote (vector-length d)))
-                          (range-map
-                            (lambda (i)
-                              ($let '(x.i) (list ($vector-ref $x ($quote i)))
-                                    (lambda ($x) (loop (vector-ref d i) $x))))
-                            (vector-length d))))
+                          (map (lambda (i) ($let '(x.i) (list ($vector-ref $x ($quote i)))
+                                                 (lambda ($x) (loop (vector-ref d i) $x))))
+                               (range (vector-length d)))))
       (else        ($eqv? $x ($quote d))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;

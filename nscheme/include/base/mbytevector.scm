@@ -13,7 +13,7 @@
                 (unless (<= end (mbytevector-length mbv))
                   (error "mbytevector-fill! range out of bounds" start count
                          (mbytevector-length mbv)))
-                (range-for-each (lambda (i) (mbytevector-set! mbv i v)) start end)))))
+                (for-each (lambda (i) (mbytevector-set! mbv i v)) (range start end))))))
   (case-lambda
     ((mbv v)             (go mbv v 0     (mbytevector-length mbv)))
     ((mbv v start)       (go mbv v start (- (mbytevector-length mbv) start)))
@@ -31,17 +31,17 @@
        (unless (<= (+ start.src count) len.src)
          (error "mbytevector-copy! source range is out of bounds" start.src count len.src)))
      (define (copy-forward! dst start.dst src start.src count)
-       (range-for-each
+       (for-each
          (lambda (i) (mbytevector-set! dst (+ start.dst i) (mbytevector-ref src (+ start.src i))))
-         0 count))
+         (range 0 count)))
      (define (copy-backward! dst start.dst src start.src count)
-       (range-for-each
+       (for-each
          (lambda (i) (mbytevector-set! dst (+ start.dst i) (mbytevector-ref src (+ start.src i))))
-         (- count 1) -1 -1))
+         (range (- count 1) -1 -1)))
      (define (copy-bytevector! dst start.dst src start.src count)
-       (range-for-each
+       (for-each
          (lambda (i) (mbytevector-set! dst (+ start.dst i) (bytevector-ref src (+ start.src i))))
-         0 count)))
+         (range 0 count))))
     (lambda (dst start.dst src start.src count)
       (cond ((mbytevector? src) (bounds?! dst start.dst (mbytevector-length src) start.src count)
                                 (if (and (eqv? dst src) (< start.src start.dst))
