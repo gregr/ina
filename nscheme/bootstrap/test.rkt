@@ -1557,12 +1557,12 @@
                 (() '())
                 ((b) (cons b (loop)))))))
    (tcp-listen/k
-    (gethostname) 8765 #t 5 raise-io-error
+    "127.0.0.1" 8765 #t 5 raise-io-error
     (lambda (accept/k close/k)
       (thread
        (lambda ()
          (tcp-connect/k
-          (gethostname) 8765 #f #f raise-io-error
+          "127.0.0.1" 8765 #f #f raise-io-error
           (lambda (in out)
             (oport-write-bytevector out #"ABC")
             (oport-close out)

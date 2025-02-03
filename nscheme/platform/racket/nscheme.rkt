@@ -24,7 +24,7 @@
   delete-directory/k delete-file/k move-file/k imemory:file/k omemory:file/k
   file-type/k file-size/k file-permissions/k file-modified-seconds/k
   set-file-permissions!/k set-file-modified-seconds!/k
-  gethostname tcp-listen/k tcp-connect/k udp-open/k
+  tcp-listen/k tcp-connect/k udp-open/k
 
   standard-input-port standard-output-port standard-error-port
 
