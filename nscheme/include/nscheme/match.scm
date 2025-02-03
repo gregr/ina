@@ -487,10 +487,9 @@
                 (cons 'list       (match-pattern-operator-parser parse-pattern-list       0 #f))))
         (b*.match-pattern-operator-primitive
           (list )))
-    (for-each (lambda (id) (env-vocabulary-bind! env.scope id vocab.expression-auxiliary
-                                                 (syntax->datum id)))
+    (for-each (lambda (id) (env-vocabulary-bind! env.scope id vocab.expression-auxiliary id))
               b*.expr-aux)
-    (for-each (lambda (id) (env-vocabulary-bind! env.scope id vocab.pattern-auxiliary (syntax->datum id)))
+    (for-each (lambda (id) (env-vocabulary-bind! env.scope id vocab.pattern-auxiliary id))
               b*.pattern-aux)
     (for-each (lambda (id op) (env-vocabulary-bind! env.scope id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))

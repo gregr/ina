@@ -136,11 +136,10 @@
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
     (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.definition-operator op))
               (map car b*.def) (map cdr b*.def))
-    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote-syntax (syntax->datum id)))
-              b*.qqs)
+    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote-syntax id)) b*.qqs)
     (for-each (lambda (id op) (env-vocabulary-bind! env id
                                                     vocab.expression-operator op
-                                                    vocab.quasiquote-syntax   (syntax->datum id)))
+                                                    vocab.quasiquote-syntax   id))
               (map car b*.qqs-and-expr) (map cdr b*.qqs-and-expr))
     (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))

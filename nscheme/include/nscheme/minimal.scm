@@ -307,20 +307,17 @@
             (list 'begin
                   (definition-operator-parser parse-begin-definition 0 #f)
                   (expression-operator-parser parse-begin-expression 1 #f)))))
-    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.expression-auxiliary
-                                                 (syntax->datum id)))
-              b*.expr-aux)
+    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.expression-auxiliary id)) b*.expr-aux)
     (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.definition-operator op))
               (map car b*.def) (map cdr b*.def))
     (for-each (lambda (id op.def op.expr) (env-vocabulary-bind! env id
                                                                 vocab.definition-operator op.def
                                                                 vocab.expression-operator op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
-    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote (syntax->datum id)))
-              b*.qq)
+    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote id)) b*.qq)
     (for-each (lambda (id op) (env-vocabulary-bind! env id
                                                     vocab.expression-operator op
-                                                    vocab.quasiquote          (syntax->datum id)))
+                                                    vocab.quasiquote          id))
               (map car b*.qq-and-expr) (map cdr b*.qq-and-expr))
     (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
