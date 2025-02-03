@@ -18,7 +18,7 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  host-pid host-argument* host-environment raw-host-process/k
+  host-argument* host-environment raw-host-process/k
   filesystem-change-evt filesystem-change-evt-cancel
   change-directory/k directory-file*/k make-symbolic-link/k make-directory/k
   delete-directory/k delete-file/k move-file/k imemory:file/k omemory:file/k
@@ -970,7 +970,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Host system processes ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define host-pid (getpid))
 (define host-argument* (apply vector (string->bytevector (path->string (find-system-path 'run-file)))
                               (map string->bytevector (vector->list (current-command-line-arguments)))))
 (define host-environment
