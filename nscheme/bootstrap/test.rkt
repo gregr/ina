@@ -1468,13 +1468,14 @@
  host-argument* ==> #(#"bootstrap/test.rkt")
 
  ;! stdio
- ;(begin
+ ;(let ((standard-output-port (current-output-port)))
  ;  (oport-write-byte standard-output-port 65)
  ;  (oport-write-byte standard-output-port 66)
  ;  (oport-write-byte standard-output-port 67)
  ;  (oport-write-byte standard-output-port 10))
  ;==> (values)
- ;(begin
+ ;(let ((standard-input-port (current-input-port))
+ ;      (standard-error-port (current-error-port)))
  ;  (oport-write-bytevector standard-error-port #"Type 'x' and hit enter: ")
  ;  (iport-read-byte standard-input-port))
  ;==> 120

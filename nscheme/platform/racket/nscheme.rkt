@@ -26,7 +26,7 @@
   set-file-permissions!/k set-file-modified-seconds!/k
   tcp-listen/k tcp-connect/k udp-open/k
 
-  standard-input-port standard-output-port standard-error-port
+  current-input-port current-output-port current-error-port
 
   make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
   current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
@@ -839,9 +839,9 @@
 ;;;;;;;;;;;;;;;;;;
 ;; Standard IO ;;;
 ;;;;;;;;;;;;;;;;;;
-(define standard-input-port  (rkt:iport '((type . iport:stdin))  (current-input-port)))
-(define standard-output-port (rkt:oport '((type . oport:stdout)) (current-output-port)))
-(define standard-error-port  (rkt:oport '((type . oport:stderr)) (current-error-port)))
+(define current-input-port  (make-parameter (rkt:iport '((type . iport:stdin))  (rkt:current-input-port))))
+(define current-output-port (make-parameter (rkt:oport '((type . oport:stdout)) (rkt:current-output-port))))
+(define current-error-port  (make-parameter (rkt:oport '((type . oport:stderr)) (rkt:current-error-port))))
 
 ;;;;;;;;;;;;;;;
 ;;; File IO ;;;

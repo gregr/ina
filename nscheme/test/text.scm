@@ -1,4 +1,5 @@
-(let* ((out standard-output-port)
+(let* ((standard-output-port (current-output-port))
+       (out standard-output-port)
        ;(out (thread-safe-oport standard-output-port))
        ;(out (buffered-oport standard-output-port))
        ;(out (buffered-oport (thread-safe-oport standard-output-port)))
