@@ -23,6 +23,7 @@
 (define (set-file-modified-seconds! path seconds)
   (set-file-modified-seconds!/k path seconds raise-io-error values))
 
+(define (find-file name) (find-file/env (host-environment) name))
 (define (find-file/env env name)
   (find-file/PATH (let ((kv (assv #"PATH" env))) (if kv (cdr kv) #"")) name))
 (define (find-file/PATH PATH name)

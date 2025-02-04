@@ -3,7 +3,7 @@
      (call/oport:bytevector
        (lambda (out)
          (let ((in (iport:file "/dev/tty")))
-           (host-process-wait (host-process in out out (find-file/env host-environment path) x* #f))
+           (host-process-wait (host-process in out out (find-file path) x* #f))
            (iport-close in)))))
    (define (command path . x*) (command* path x*)))
   (define (tput        x)     (command #"tput" x))

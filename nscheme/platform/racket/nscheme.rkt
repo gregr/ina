@@ -975,9 +975,9 @@
                                      (cons (path->string (find-system-path 'run-file))
                                            (vector->list (current-command-line-arguments)))))))
 (define host-environment
-  (let ((host-env (current-environment-variables)))
-    (map (lambda (name) (cons name (environment-variables-ref host-env name)))
-         (environment-variables-names host-env))))
+  (make-parameter (let ((env (current-environment-variables)))
+                    (map (lambda (name) (cons name (environment-variables-ref env name)))
+                         (environment-variables-names env)))))
 (current-subprocess-custodian-mode 'kill)
 (define (raw-host-process/k in out err path arg* env kf k)
   (define (fd->rkt-port fd name mode)
