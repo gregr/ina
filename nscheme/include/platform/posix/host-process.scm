@@ -5,15 +5,15 @@
 (define (host-process-wait      p) (p 'wait))
 (define (host-process-kill      p) (p 'kill))
 (define (host-process-interrupt p) (p 'interrupt))
-(define (host-process in out err path arg* env)
-  (host-process/k in out err path arg* env raise-io-error raise-io-error values))
-(define (host-process/k in out err path arg* env handle-internal-error kf k)
+(define (host-process in out err path arg*)
+  (host-process/k in out err path arg* raise-io-error raise-io-error values))
+(define (host-process/k in out err path arg* handle-internal-error kf k)
   (define (x->fd x)
     (and x (let ((kv (assoc 'file-descriptor (port-describe x))))
              (and kv (cdr kv)))))
   (raw-host-process/k
     (x->fd in) (x->fd out) (if (and err (or (eqv? out err) (eqv? err 'stdout))) 'stdout (x->fd err))
-    path arg* env kf
+    path arg* kf
     (lambda (p)
       (let ((in.p  (host-process-in  p))
             (out.p (host-process-out p))

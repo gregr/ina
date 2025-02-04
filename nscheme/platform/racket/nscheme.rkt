@@ -979,7 +979,7 @@
                     (map (lambda (name) (cons name (environment-variables-ref env name)))
                          (environment-variables-names env)))))
 (current-subprocess-custodian-mode 'kill)
-(define (raw-host-process/k in out err path arg* env kf k)
+(define (raw-host-process/k in out err path arg* kf k)
   (define (fd->rkt-port fd name mode)
     (and fd (unless (exact-nonnegative-integer? fd) (panic #f "not a file descriptor" fd name))
          (unsafe-file-descriptor->port fd name mode)))
@@ -993,13 +993,11 @@
                       'stdout
                       (fd->rkt-port err 'err '(write)))))
          (parameterize ((current-environment-variables
-                         (if env
-                             (apply make-environment-variables
-                                    (let loop ((env env))
-                                      (if (null? env)
-                                          '()
-                                          (cons (caar env) (cons (cdar env) (loop (cdr env)))))))
-                             (current-environment-variables))))
+                         (apply make-environment-variables
+                                (let loop ((env (host-environment)))
+                                  (if (null? env)
+                                      '()
+                                      (cons (caar env) (cons (cdar env) (loop (cdr env)))))))))
            (apply subprocess out in err #f (make-path path) arg*)))))
      (let ((in  (and in  (rkt:oport '((type . oport:pipe)) in)))
            (out (and out (rkt:iport '((type . iport:pipe)) out)))

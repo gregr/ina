@@ -1582,7 +1582,7 @@
  ! host-processes
  (call/oport:bytevector
   (lambda (out)
-    (let* ((p (raw-host-process/k #f #f 'stdout (find-file "echo") '("hello world") #f panic values))
+    (let* ((p (raw-host-process/k #f #f 'stdout (find-file "echo") '("hello world") panic values))
            (out.p.out (host-process-out p)))
       (oport-close (host-process-in p))
       (let loop ()
@@ -1593,14 +1593,14 @@
  ==>
  #"hello world\n0"
  (let-values (((out current) (oport:bytevector&current)))
-   (let ((p (host-process empty-iport out 'stdout (find-file "echo") '("hello world") #f)))
+   (let ((p (host-process empty-iport out 'stdout (find-file "echo") '("hello world"))))
      (values (host-process-wait p) (current))))
  ==>
  (values 0 #"hello world\n")
 
  (call/oport:bytevector
   (lambda (out)
-    (let* ((p (raw-host-process/k #f #f 'stdout (find-file "cat") '() #f panic values))
+    (let* ((p (raw-host-process/k #f #f 'stdout (find-file "cat") '() panic values))
            (in.p.in   (host-process-in p))
            (out.p.out (host-process-out p)))
       (thread (lambda ()
@@ -1617,17 +1617,17 @@
  #"another example0"
  (let-values (((out current) (oport:bytevector&current)))
    (let* ((in (iport:bytevector #"another example"))
-          (p  (host-process in out 'stdout (find-file "cat") '() #f)))
+          (p  (host-process in out 'stdout (find-file "cat") '())))
      (values (host-process-wait p) (current))))
  ==>
  (values 0 #"another example")
 
  (call/oport:bytevector
   (lambda (result)
-    (let* ((p1     (raw-host-process/k #f #f 'stdout (find-file "echo") '("pipe test") #f panic values))
+    (let* ((p1     (raw-host-process/k #f #f 'stdout (find-file "echo") '("pipe test") panic values))
            (in1    (host-process-out p1))
            (fd.in1 (cdr (assoc 'file-descriptor (port-describe in1))))
-           (p2     (raw-host-process/k fd.in1 #f 'stdout (find-file "cat") '() #f panic values))
+           (p2     (raw-host-process/k fd.in1 #f 'stdout (find-file "cat") '() panic values))
            (in2    (host-process-out p2)))
       (oport-close (host-process-in p1))
       (let loop ()
@@ -1638,8 +1638,8 @@
           ((b) (oport-write-byte result b) (loop)))))))
  ==> #"pipe test\n00"
  (let-values (((result current) (oport:bytevector&current)))
-   (let* ((p1 (host-process empty-iport #f 'stdout (find-file "echo") '("pipe test") #f))
-          (p2 (host-process (host-process-out p1) result 'stdout (find-file "cat") '() #f)))
+   (let* ((p1 (host-process empty-iport #f 'stdout (find-file "echo") '("pipe test")))
+          (p2 (host-process (host-process-out p1) result 'stdout (find-file "cat") '())))
      (values (host-process-wait p1) (host-process-wait p2) (current))))
  ==>
  (values 0 0 #"pipe test\n")
