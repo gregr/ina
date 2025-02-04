@@ -970,8 +970,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Host system processes ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define host-argument* (apply vector (string->bytevector (path->string (find-system-path 'run-file)))
-                              (map string->bytevector (vector->list (current-command-line-arguments)))))
+(define host-argument*
+  (make-parameter (list->vector (map string->bytevector
+                                     (cons (path->string (find-system-path 'run-file))
+                                           (vector->list (current-command-line-arguments)))))))
 (define host-environment
   (let ((host-env (current-environment-variables)))
     (map (lambda (name) (cons name (environment-variables-ref host-env name)))
