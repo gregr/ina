@@ -45,7 +45,7 @@
 (include "../include/platform/io.scm")
 (include "../include/platform/privileged.scm")
 (include "../include/platform/posix/common.scm")
-(include "../include/platform/posix/file.scm")
+(include "../include/platform/posix/filesystem.scm")
 (include "../include/platform/posix/network.scm")
 (include "../include/platform/posix/host-process.scm")
 (include "../include/platform/posix/terminal/osc.scm")
@@ -116,7 +116,7 @@
      )))
 (define def*.posix
   (file-name*->stx*
-   '("../include/platform/posix/file.scm"
+   '("../include/platform/posix/filesystem.scm"
      "../include/platform/posix/network.scm"
      "../include/platform/posix/host-process.scm"
      "../include/platform/posix/terminal/osc.scm"
