@@ -21,7 +21,7 @@
 (define (oport:file/k path mod kf k)
   (let ((k (lambda (om) (omemory-size/k om kf (lambda (size) (k (oport:memory om size #t)))))))
     (omemory:file/k path mod kf k)))
-(define (iport:file path)             (iport:file/k path             raise-io-error values))
+(define (iport:file path)     (iport:file/k path     raise-io-error values))
 (define (oport:file path mod) (oport:file/k path mod raise-io-error values))
 
 (define (file-change-evt       path) (file-change-evt/k       path  raise-io-error values))
@@ -58,3 +58,11 @@
         (ormap (lambda (dir) (let ((path (bytevector-join #"/" dir name)))
                                (and (file-type/k path (lambda _ #f) values) path)))
                (map element dir*)))))
+
+(define (path->bytevector path) (cond ((string? path) (string->bytevector path))
+                                      ((symbol? path) (symbol->bytevector path))
+                                      (else           path)))
+(define (path-split path) (bytevector-split (path->bytevector path) (bytevector-ref #"/" 0)))
+(define (path-directory path)
+  (let ((path (path->bytevector path)))
+    (bytevector-slice path 0 ((bytevector-index-end/byte (bytevector-ref #"/" 0)) path))))
