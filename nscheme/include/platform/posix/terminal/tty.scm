@@ -7,7 +7,7 @@
            (iport-close in)))))
    (define (command path . x*) (command* path x*)))
   (define (tput        x)     (command #"tput" x))
-  (define (tput-number x)     (utf8->number (bytevector-rtrim (tput x) 10)))
+  (define (tput-number x)     (utf8->number (bytevector-rtrim1 (tput x) 10)))
   (define (terminal-lines)    (tput-number #"lines"))
   (define (terminal-columns)  (tput-number #"cols"))
   (define (stty . x*)         (command* #"stty" x*))
