@@ -5,10 +5,10 @@
       current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
       sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
       make-channel channel-get channel-put channel-put-evt
-      current-time/type sleep-seconds-nanoseconds)
+      current-time/type current-sleep-seconds-nanoseconds)
     (list
       make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
       current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
       sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
       make-channel channel-get channel-put channel-put-evt
-      current-time/type sleep-seconds-nanoseconds)))
+      current-time/type current-sleep-seconds-nanoseconds)))

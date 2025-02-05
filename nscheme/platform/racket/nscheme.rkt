@@ -32,7 +32,7 @@
   current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
   sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
   make-channel channel-get channel-put channel-put-evt
-  current-time/type sleep-seconds-nanoseconds
+  current-time/type current-sleep-seconds-nanoseconds
 
   panic apply values
   eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
@@ -679,18 +679,20 @@
   (let ((chez:current-time    (vm-primitive 'current-time))
         (chez:time-second     (vm-primitive 'time-second))
         (chez:time-nanosecond (vm-primitive 'time-nanosecond)))
-    (lambda (type)
-      (let ((type (case type
-                    ((utc)                    'time-utc)
-                    ((monotonic)              'time-monotonic)
-                    ((process)                'time-process)
-                    ((thread)                 'time-thread)
-                    ((garbage-collector-cpu)  'time-collector-cpu)
-                    ((garbage-collector-real) 'time-collector-real)
-                    (else (panic #f "not a current-time type" type)))))
-        (lambda () (let ((time (chez:current-time type)))
-                     (values (chez:time-second time) (chez:time-nanosecond time))))))))
-(define (sleep-seconds-nanoseconds sec nsec) (rkt:sleep (+ sec (/ nsec 1000000000))))
+    (make-parameter
+     (lambda (type)
+       (let ((type (case type
+                     ((utc)                    'time-utc)
+                     ((monotonic)              'time-monotonic)
+                     ((process)                'time-process)
+                     ((thread)                 'time-thread)
+                     ((garbage-collector-cpu)  'time-collector-cpu)
+                     ((garbage-collector-real) 'time-collector-real)
+                     (else (panic #f "not a current-time type" type)))))
+         (lambda () (let ((time (chez:current-time type)))
+                      (values (chez:time-second time) (chez:time-nanosecond time)))))))))
+(define current-sleep-seconds-nanoseconds
+  (make-parameter (lambda (sec nsec) (rkt:sleep (+ sec (/ nsec 1000000000))))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; IO primitives ;;;
