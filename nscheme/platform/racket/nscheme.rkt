@@ -18,7 +18,7 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  host-argument* host-environment host-make-raw-process/k
+  current-host-argument* current-host-environment current-host-raw-process/k
   current-filesystem current-network
 
   current-input-port current-output-port current-error-port
@@ -988,16 +988,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Host system processes ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define host-argument*
+(define current-host-argument*
   (make-parameter (list->vector (map string->bytevector
                                      (cons (path->string (find-system-path 'run-file))
                                            (vector->list (current-command-line-arguments)))))))
-(define host-environment
+(define current-host-environment
   (make-parameter (let ((env (current-environment-variables)))
                     (map (lambda (name) (cons name (environment-variables-ref env name)))
                          (environment-variables-names env)))))
 (current-subprocess-custodian-mode 'kill)
-(define host-make-raw-process/k
+(define current-host-raw-process/k
   (make-parameter
    (lambda (in out err path arg* kf k)
      (define (fd->rkt-port fd name mode)
@@ -1014,7 +1014,7 @@
                          (fd->rkt-port err 'err '(write)))))
             (parameterize ((current-environment-variables
                             (apply make-environment-variables
-                                   (let loop ((env (host-environment)))
+                                   (let loop ((env (current-host-environment)))
                                      (if (null? env)
                                          '()
                                          (cons (caar env) (cons (cdar env) (loop (cdr env)))))))))
