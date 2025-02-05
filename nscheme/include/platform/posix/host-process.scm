@@ -1,3 +1,5 @@
+(define (host-raw-process/k in out err path arg* kf k)
+  ((host-make-raw-process/k) in out err path arg* kf k))
 (define (host-process-in        p) (p 'in))
 (define (host-process-out       p) (p 'out))
 (define (host-process-err       p) (p 'err))
@@ -11,7 +13,7 @@
   (define (x->fd x)
     (and x (let ((kv (assoc 'file-descriptor (port-describe x))))
              (and kv (cdr kv)))))
-  (raw-host-process/k
+  (host-raw-process/k
     (x->fd in) (x->fd out) (if (and err (or (eqv? out err) (eqv? err 'stdout))) 'stdout (x->fd err))
     path arg* kf
     (lambda (p)

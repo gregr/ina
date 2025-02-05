@@ -1582,7 +1582,7 @@
  ! host-processes
  (call/oport:bytevector
   (lambda (out)
-    (let* ((p (raw-host-process/k #f #f 'stdout (find-file "echo") '("hello world") panic values))
+    (let* ((p (host-raw-process/k #f #f 'stdout (find-file "echo") '("hello world") panic values))
            (out.p.out (host-process-out p)))
       (oport-close (host-process-in p))
       (let loop ()
@@ -1600,7 +1600,7 @@
 
  (call/oport:bytevector
   (lambda (out)
-    (let* ((p (raw-host-process/k #f #f 'stdout (find-file "cat") '() panic values))
+    (let* ((p (host-raw-process/k #f #f 'stdout (find-file "cat") '() panic values))
            (in.p.in   (host-process-in p))
            (out.p.out (host-process-out p)))
       (thread (lambda ()
@@ -1624,10 +1624,10 @@
 
  (call/oport:bytevector
   (lambda (result)
-    (let* ((p1     (raw-host-process/k #f #f 'stdout (find-file "echo") '("pipe test") panic values))
+    (let* ((p1     (host-raw-process/k #f #f 'stdout (find-file "echo") '("pipe test") panic values))
            (in1    (host-process-out p1))
            (fd.in1 (cdr (assoc 'file-descriptor (port-describe in1))))
-           (p2     (raw-host-process/k fd.in1 #f 'stdout (find-file "cat") '() panic values))
+           (p2     (host-raw-process/k fd.in1 #f 'stdout (find-file "cat") '() panic values))
            (in2    (host-process-out p2)))
       (oport-close (host-process-in p1))
       (let loop ()

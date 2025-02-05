@@ -18,7 +18,7 @@
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
-  host-argument* host-environment raw-host-process/k
+  host-argument* host-environment host-make-raw-process/k
   filesystem-change-evt filesystem-change-evt-cancel
   change-directory/k directory-file*/k make-symbolic-link/k make-directory/k
   delete-directory/k delete-file/k move-file/k imemory:file/k omemory:file/k
@@ -981,36 +981,38 @@
                     (map (lambda (name) (cons name (environment-variables-ref env name)))
                          (environment-variables-names env)))))
 (current-subprocess-custodian-mode 'kill)
-(define (raw-host-process/k in out err path arg* kf k)
-  (define (fd->rkt-port fd name mode)
-    (and fd (unless (exact-nonnegative-integer? fd) (panic #f "not a file descriptor" fd name))
-         (unsafe-file-descriptor->port fd name mode)))
-  (io-guard
-   kf
-   (let-values
-     (((sp out in err)
-       (let ((in  (fd->rkt-port in  'in  '(read)))
-             (out (fd->rkt-port out 'out '(write)))
-             (err (if (or (and out err (eqv? out err)) (eq? err 'stdout))
-                      'stdout
-                      (fd->rkt-port err 'err '(write)))))
-         (parameterize ((current-environment-variables
-                         (apply make-environment-variables
-                                (let loop ((env (host-environment)))
-                                  (if (null? env)
-                                      '()
-                                      (cons (caar env) (cons (cdar env) (loop (cdr env)))))))))
-           (apply subprocess out in err #f (make-path path) arg*)))))
-     (let ((in  (and in  (rkt:oport '((type . oport:pipe)) in)))
-           (out (and out (rkt:iport '((type . iport:pipe)) out)))
-           (err (and err (rkt:iport '((type . iport:pipe)) err))))
-       (k (lambda (method)
-            (case method
-              ((in)        in)
-              ((out)       out)
-              ((err)       err)
-              ((pid)       (subprocess-pid sp))
-              ((wait)      (subprocess-wait sp) (subprocess-status sp))
-              ((kill)      (subprocess-kill sp #t) (values))
-              ((interrupt) (subprocess-kill sp #f) (values))
-              (else        (panic #f "not a raw-host-process/k method" method)))))))))
+(define host-make-raw-process/k
+  (make-parameter
+   (lambda (in out err path arg* kf k)
+     (define (fd->rkt-port fd name mode)
+       (and fd (unless (exact-nonnegative-integer? fd) (panic #f "not a file descriptor" fd name))
+            (unsafe-file-descriptor->port fd name mode)))
+     (io-guard
+      kf
+      (let-values
+        (((sp out in err)
+          (let ((in  (fd->rkt-port in  'in  '(read)))
+                (out (fd->rkt-port out 'out '(write)))
+                (err (if (or (and out err (eqv? out err)) (eq? err 'stdout))
+                         'stdout
+                         (fd->rkt-port err 'err '(write)))))
+            (parameterize ((current-environment-variables
+                            (apply make-environment-variables
+                                   (let loop ((env (host-environment)))
+                                     (if (null? env)
+                                         '()
+                                         (cons (caar env) (cons (cdar env) (loop (cdr env)))))))))
+              (apply subprocess out in err #f (make-path path) arg*)))))
+        (let ((in  (and in  (rkt:oport '((type . oport:pipe)) in)))
+              (out (and out (rkt:iport '((type . iport:pipe)) out)))
+              (err (and err (rkt:iport '((type . iport:pipe)) err))))
+          (k (lambda (method)
+               (case method
+                 ((in)        in)
+                 ((out)       out)
+                 ((err)       err)
+                 ((pid)       (subprocess-pid sp))
+                 ((wait)      (subprocess-wait sp) (subprocess-status sp))
+                 ((kill)      (subprocess-kill sp #t) (values))
+                 ((interrupt) (subprocess-kill sp #f) (values))
+                 (else        (panic #f "not a raw-host-process/k method" method)))))))))))
