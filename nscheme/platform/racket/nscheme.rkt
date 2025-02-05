@@ -19,11 +19,7 @@
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 
   host-argument* host-environment host-make-raw-process/k
-  filesystem-change-evt filesystem-change-evt-cancel
-  change-directory/k directory-file*/k make-symbolic-link/k make-directory/k
-  delete-directory/k delete-file/k move-file/k imemory:file/k omemory:file/k
-  file-type/k file-size/k file-permissions/k file-modified-seconds/k
-  set-file-permissions!/k set-file-modified-seconds!/k
+  current-filesystem
   tcp-listen/k tcp-connect/k udp-open/k
 
   current-input-port current-output-port current-error-port
@@ -852,39 +848,51 @@
                                         ((string? path) (string->bytevector path))
                                         ((symbol? path) (string->bytevector (symbol->string path)))
                                         (else           path))))
-(define (change-directory/k      path kf k) (io-guard kf (rkt:current-directory (make-path path)) (k)))
-(define (directory-file*/k       path kf k) (io-guard kf (k (map path->string (rkt:directory-list (make-path path))))))
-(define (make-symbolic-link/k to path kf k) (io-guard kf (make-file-or-directory-link to (make-path path)) (k)))
-(define (make-directory/k        path kf k) (io-guard kf (rkt:make-directory (make-path path)) (k)))
-(define (move-file/k          old new kf k) (io-guard kf (rename-file-or-directory (make-path old) (make-path new) #f) (k)))
-(define (delete-file/k           path kf k) (io-guard kf (rkt:delete-file (make-path path)) (k)))
-(define (delete-directory/k      path kf k) (io-guard kf (rkt:delete-directory (make-path path)) (k)))
-(define (file-type/k             path kf k) (io-guard kf (let ((type (file-or-directory-type (make-path path))))
-                                                           (k (case type
-                                                                ((file directory link #f) type)
-                                                                (else                     'unknown))))))
-(define (file-size/k             path kf k) (io-guard kf (k (rkt:file-size (make-path path)))))
-(define (file-permissions/k      path kf k) (io-guard kf (k (file-or-directory-permissions (make-path path) 'bits))))
-(define (file-modified-seconds/k path kf k) (io-guard kf (k (file-or-directory-modify-seconds (make-path path)))))
-(define (set-file-permissions!/k path permissions kf k)
-  (nonnegative-integer?! permissions)
-  (io-guard kf (file-or-directory-permissions (make-path path) permissions) (k)))
-(define (set-file-modified-seconds!/k path seconds kf k)
-  (nonnegative-integer?! seconds)
-  (io-guard kf (file-or-directory-modify-seconds (make-path path) seconds) (k)))
-(define (imemory:file/k path kf k)
-  (let ((path (normalize-path (make-path path))))
-    (io-guard kf (k (rkt:imemory (list '(type . imemory:file) (cons 'path (path->bytes path)))
-                                 (open-input-file path))))))
-(define (omemory:file/k path restriction kf k)
-  (let ((path        (normalize-path (make-path path)))
-        (exists-flag (case restriction
-                       ((create) 'error)
-                       ((update) 'udpate)
-                       ((#f)     'can-update)
-                       (else     (panic #f "not an output-file restriction" restriction)))))
-    (io-guard kf (k (rkt:omemory (list '(type . omemory:file) (cons 'path (path->bytes path)))
-                                 (open-output-file path #:exists exists-flag))))))
+(define current-filesystem
+  (make-parameter
+   (lambda (method . arg*)
+     (apply
+      (case method
+        ((open-imemory)
+         (lambda (path kf k)
+           (let ((path (normalize-path (make-path path))))
+             (io-guard kf (k (rkt:imemory (list '(type . imemory:file) (cons 'path (path->bytes path)))
+                                          (open-input-file path)))))))
+        ((open-omemory)
+         (lambda (path mod kf k)
+           (let ((path        (normalize-path (make-path path)))
+                 (exists-flag (case mod
+                                ((create) 'error)
+                                ((update) 'udpate)
+                                ((#f)     'can-update)
+                                (else     (panic #f "not an output-file modifier" mod)))))
+             (io-guard kf (k (rkt:omemory (list '(type . omemory:file) (cons 'path (path->bytes path)))
+                                          (open-output-file path #:exists exists-flag)))))))
+        ((change-evt)            (lambda (path    kf k) (io-guard kf (k (filesystem-change-evt (make-path path))))))
+        ((change-directory)      (lambda (path    kf k) (io-guard kf (rkt:current-directory (make-path path)) (k))))
+        ((list)                  (lambda (path    kf k) (io-guard kf (k (map path->string (rkt:directory-list (make-path path)))))))
+        ((make-symbolic-link)    (lambda (to path kf k) (io-guard kf (make-file-or-directory-link to (make-path path)) (k))))
+        ((make-directory)        (lambda (path    kf k) (io-guard kf (rkt:make-directory (make-path path)) (k))))
+        ((move)                  (lambda (old new kf k) (io-guard kf (rename-file-or-directory (make-path old) (make-path new) #f) (k))))
+        ((delete-file)           (lambda (path    kf k) (io-guard kf (rkt:delete-file (make-path path)) (k))))
+        ((delete-directory)      (lambda (path    kf k) (io-guard kf (rkt:delete-directory (make-path path)) (k))))
+        ((type)                  (lambda (path    kf k) (io-guard kf (let ((type (file-or-directory-type (make-path path))))
+                                                                       (k (case type
+                                                                            ((file directory link #f) type)
+                                                                            (else                     'unknown)))))))
+        ((size)                  (lambda (path    kf k) (io-guard kf (k (rkt:file-size (make-path path))))))
+        ((permissions)           (lambda (path    kf k) (io-guard kf (k (file-or-directory-permissions (make-path path) 'bits)))))
+        ((modified-seconds)      (lambda (path    kf k) (io-guard kf (k (file-or-directory-modify-seconds (make-path path))))))
+        ((set-permissions!)
+         (lambda (path permissions kf k)
+           (nonnegative-integer?! permissions)
+           (io-guard kf (file-or-directory-permissions (make-path path) permissions) (k))))
+        ((set-modified-seconds!)
+         (lambda (path seconds kf k)
+           (nonnegative-integer?! seconds)
+           (io-guard kf (file-or-directory-modify-seconds (make-path path) seconds) (k))))
+        (else (panic #f "not a filesystem method" method)))
+      arg*))))
 
 ;;;;;;;;;;;;;;;;;;
 ;;; Network IO ;;;
