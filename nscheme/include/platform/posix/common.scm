@@ -2,9 +2,7 @@
   (cons
     '(
       host-argument* host-environment host-make-raw-process/k
-      current-filesystem
-      tcp-listen/k tcp-connect/k udp-open/k)
+      current-filesystem current-network)
     (list
       host-argument* host-environment host-make-raw-process/k
-      current-filesystem
-      tcp-listen/k tcp-connect/k udp-open/k)))
+      current-filesystem current-network)))
