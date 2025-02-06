@@ -54,9 +54,6 @@
 (include "../include/platform/posix/terminal/tty.scm")
 (include "../include/platform/posix/terminal/text.scm")
 
-(include "../include/platform/include.scm")
-(include "../include/platform/bootstrap.scm")
-
 (define (ns-eval E) (with-native-signal-handling (lambda () (E-eval E))))
 
 
