@@ -1,4 +1,4 @@
-(define env.base (env-conjoin/match (env-conjoin env.minimal env.common)))
+(define env.test (env-conjoin/match (env-conjoin env.minimal env.common)))
 
 (define def*.microkanren
   '(;;;;;;;;;;;;;;;;;
@@ -114,7 +114,7 @@
     (define (reify t st) (walk* t (state-sub st)))))
 
 (define $mk
-  (let ((env.microkanren (eval-definition* env.base def*.microkanren)))
+  (let ((env.microkanren (eval-definition* env.test def*.microkanren)))
     (lambda (name) (parse-expression env.microkanren name))))
 
 (define $==          ($mk '==))
@@ -188,7 +188,7 @@
     (env-vocabulary-bind! env.scope '== vocab.expression (parse/constant-expression $==))
     (env-conjoin (env-read-only env.scope) env)))
 
-(define env.mk (env-conjoin/minikanren env.base))
+(define env.mk (env-conjoin/minikanren env.test))
 
 (define (test-mk* body)
   (let ((E (with-milliseconds displayln (lambda () (parse-body env.mk body)))))
