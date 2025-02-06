@@ -21,7 +21,7 @@
   (define E.test (with-time (lambda () (parse-body env.large stx*.test))))
   (displayln "evaluating test:")
   ;; ~0ms
-  (pretty-write (with-time (lambda () (ns-eval E.test))))
+  (pretty-write (with-time (lambda () (E-eval E.test))))
   ;==>
   ;(3
   ; 15
@@ -57,10 +57,10 @@
 (define E.self-apply1 (with-time (lambda () (parse-body env.large+posix+privileged stx*.self-apply1))))
 (displayln "evaluating self-apply1 to parse self-apply2:")
 ;; ~553ms
-(define E.self-apply2 (with-time (lambda () (ns-eval E.self-apply1))))
+(define E.self-apply2 (with-time (lambda () (E-eval E.self-apply1))))
 (displayln "evaluating self-apply2:")
 ;; ~1ms
-(pretty-write (with-time (lambda () (ns-eval E.self-apply2))))
+(pretty-write (with-time (lambda () (E-eval E.self-apply2))))
 ;==>
 ;(3
 ; 15
