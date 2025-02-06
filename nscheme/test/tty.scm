@@ -40,7 +40,7 @@
                              sgra:blink+
                              sgra:underline+)))
         (stty-raw)
-        (rkt:display "\r\n")
+        (display "\r\n")
         (displayln/sgr sgr.0 "testing (1 2 3)")
         (displayln/sgr sgr.1 "testing (1 2 3)")
         (displayln/sgr sgr.2 "testing (1 2 3)")
