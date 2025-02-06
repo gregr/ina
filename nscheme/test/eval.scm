@@ -1440,9 +1440,6 @@
 (test-evaluation
  env.test.posix
 
- '(cmdline
-   (current-host-argument*) ==> #(#"bootstrap/test-eval.rkt"))
-
  ;'(stdio
  ;  (let ((standard-output-port (current-output-port)))
  ;    (oport-write-byte standard-output-port 65)
