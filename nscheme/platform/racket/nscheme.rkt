@@ -982,7 +982,7 @@
                          ((multicast-interface) (lambda () (udp-multicast-interface socket)))
                          (else                  (panic #f "not a udp-socket method" method)))
                        arg*)))))))
-        (else (panic #f "not a tcp method" method)))
+        (else (panic #f "not a network method" method)))
       arg*))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
