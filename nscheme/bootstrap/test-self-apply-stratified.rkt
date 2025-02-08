@@ -3,8 +3,11 @@
   "../platform/racket/nscheme.rkt" "include.rkt"
   racket/include (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 ;(require profile)
-(include "../include/platform/include.scm")
-(include "../include/platform/bootstrap.scm")
+(include "../include/platform/env/primitive.scm")
+(include "../include/platform/posix/include.scm")
+(include "../include/platform/env/evaluated.scm")
+(include "../include/platform/posix/env/primitive.scm")
+(include "../include/platform/posix/env/evaluated.scm")
 ;;; This program runs a minimal, ahead-of-time cross-compilation process on the code for an
 ;;; interactive system and its dependencies, targeting each platform.
 

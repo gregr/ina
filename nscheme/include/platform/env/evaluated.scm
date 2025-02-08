@@ -1,7 +1,3 @@
-(define env.common           (value-package->env package.common))
-(define env.control          (value-package->env package.control))
-(define env.io               (value-package->env package.io))
-(define env.privileged       (value-package->env package.privileged))
 (define env.tiny             (env-conjoin* env.minimal env.common))
 (define env.small            (env-conjoin* env.tiny env.control env.io))
 (define env.small+privileged (env-conjoin* env.small env.privileged))
@@ -13,9 +9,3 @@
                                              (eval-definition* env.deps def*.nscheme))))
 (define env.large            env.nscheme)
 (define env.large+privileged (env-conjoin* env.large env.privileged))
-
-(define env.posix.common (value-package->env package.posix.common))
-(define env.posix        (env-conjoin* (eval-definition* (env-conjoin* env.base env.posix.common)
-                                                         def*.posix)
-                                       env.posix.common))
-(define env.large+posix+privileged (env-conjoin* env.large+privileged env.posix))

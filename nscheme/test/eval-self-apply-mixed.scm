@@ -39,7 +39,8 @@
      (define def*.posix    ',def*.posix))
    def*.primitive
    def*.syntax
-   (file-name->stx* "../include/platform/bootstrap.scm")
+   (file-name->stx* "../include/platform/env/primitive.scm")
+   (file-name->stx* "../include/platform/env/evaluated.scm")
    '((define stx*.test (list '(list
                                (+ 1 2)
                                (foldr + 0 '(1 2 3 4 5))
