@@ -1,8 +1,5 @@
 #lang racket/base
-(require
-  "../platform/racket/nscheme.rkt" "include.rkt"
-  racket/include (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
-;(require profile)
+(require "../platform/racket/nscheme.rkt" "include.rkt" racket/include)
 (include "../include/platform/env/primitive.scm")
 (include "../include/platform/posix/include.scm")
 (include "../include/platform/env/evaluated.scm")
@@ -13,6 +10,8 @@
 
 ;;; This variant of bootstrapping stratifies evaluation so that values computed at different phases
 ;;; do not mix.  That means compilation does not need to support cross-stage persistence.
+
+(define (with-time thunk) (with-milliseconds displayln thunk))
 
 (let ()
   (include "../include/platform/bootstrap-stratified.scm")
@@ -26,12 +25,12 @@
                             (fold-right (lambda (acc x y) (cons (cons x y) acc))
                                         '(1 2) '(3 4 5) '(a b c)))))
   (void (link-definition* env.large stx*.test))
-  (rkt:displayln "parsing test:")
+  (displayln "parsing test:")
   ;; ~30ms
-  (define E.test (time (program->E program)))
-  (rkt:displayln "evaluating test:")
+  (define E.test (with-time (lambda () (program->E program))))
+  (displayln "evaluating test:")
   ;; ~5ms
-  (rkt:pretty-write (time (ns-eval E.test)))
+  (pretty-write (with-time (lambda () (E-eval E.test))))
   ;==>
   ;(3
   ; 15
@@ -61,17 +60,15 @@
                                            '(1 2) '(3 4 5) '(a b c)))))
      (void (link-definition* env.large stx*.test))
      (program->E program))))
-(rkt:displayln "parsing self-apply1:")
+(displayln "parsing self-apply1:")
 ;; ~2ms
-(define E.self-apply1 (time (parse-body env.large+posix+privileged stx*.self-apply1)))
-;(define E.self-apply1 (profile (parse-body env.large+posix+privileged stx*.self-apply1)))
-(rkt:displayln "evaluating self-apply1 to parse self-apply2:")
+(define E.self-apply1 (with-time (lambda () (parse-body env.large+posix+privileged stx*.self-apply1))))
+(displayln "evaluating self-apply1 to parse self-apply2:")
 ;; ~265ms
-(define E.self-apply2 (time (ns-eval E.self-apply1)))
-;(define E.self-apply2 (profile (ns-eval E.self-apply1)))
-(rkt:displayln "evaluating self-apply2:")
+(define E.self-apply2 (with-time (lambda () (E-eval E.self-apply1))))
+(displayln "evaluating self-apply2:")
 ;; ~5ms
-(rkt:pretty-write (time (ns-eval E.self-apply2)))
+(pretty-write (with-time (lambda () (E-eval E.self-apply2))))
 ;==>
 ;(3
 ; 15
