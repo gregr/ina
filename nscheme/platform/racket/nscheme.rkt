@@ -854,12 +854,12 @@
       (case method
         ((open-imemory)
          (lambda (path kf k)
-           (let ((path (normalize-path (make-path path))))
+           (let ((path (simple-form-path (make-path path))))
              (io-guard kf (k (rkt:imemory (list '(type . imemory:file) (cons 'path (path->bytes path)))
                                           (open-input-file path)))))))
         ((open-omemory)
          (lambda (path mod kf k)
-           (let ((path        (normalize-path (make-path path)))
+           (let ((path        (simple-form-path (make-path path)))
                  (exists-flag (case mod
                                 ((create) 'error)
                                 ((update) 'udpate)
