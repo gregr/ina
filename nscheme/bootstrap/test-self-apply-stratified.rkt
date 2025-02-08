@@ -14,7 +14,16 @@
 (define (with-time thunk) (with-milliseconds displayln thunk))
 
 (let ()
-  (include "../include/platform/bootstrap-stratified.scm")
+  (define program (make-program))
+  (define (link-definition* env def*) (program-parse-definition* program env def*))
+  (define env.tiny             (env-conjoin* env.minimal env.common))
+  (define env.small            (env-conjoin* env.tiny env.control env.io))
+  (define env.small+privileged (env-conjoin* env.small env.privileged))
+  (define env.base             (env-conjoin* env.small (link-definition* env.small+privileged def*.base)))
+  (define env.compiler         (link-definition* env.base def*.compiler))
+  (define env.nscheme          (let ((env.deps (env-conjoin* env.base env.syntax env.compiler)))
+                                 (env-conjoin* env.deps env.meta (link-definition* env.deps def*.nscheme))))
+  (define env.large            env.nscheme)
   (define stx*.test (list '(list
                             (+ 1 2)
                             (foldr + 0 '(1 2 3 4 5))
@@ -48,7 +57,18 @@
      (define def*.posix    ',def*.posix))
    def*.primitive
    def*.syntax
-   (file-name->stx* "../include/platform/bootstrap-stratified.scm")
+   (file-name->stx* "../include/platform/env/primitive.scm")
+   (file-name->stx* "../include/platform/posix/env/primitive.scm")
+   '((define program (make-program))
+     (define (link-definition* env def*) (program-parse-definition* program env def*))
+     (define env.tiny             (env-conjoin* env.minimal env.common))
+     (define env.small            (env-conjoin* env.tiny env.control env.io))
+     (define env.small+privileged (env-conjoin* env.small env.privileged))
+     (define env.base             (env-conjoin* env.small (link-definition* env.small+privileged def*.base)))
+     (define env.compiler         (link-definition* env.base def*.compiler))
+     (define env.nscheme          (let ((env.deps (env-conjoin* env.base env.syntax env.compiler)))
+                                    (env-conjoin* env.deps env.meta (link-definition* env.deps def*.nscheme))))
+     (define env.large            env.nscheme))
    '((define stx*.test (list '(list
                                (+ 1 2)
                                (foldr + 0 '(1 2 3 4 5))
