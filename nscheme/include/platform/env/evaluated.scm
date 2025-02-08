@@ -1,6 +1,3 @@
-(define env.tiny             (env-conjoin* env.minimal env.common))
-(define env.small            (env-conjoin* env.tiny env.control env.io))
-(define env.small+privileged (env-conjoin* env.small env.privileged))
 (define env.base             (env-conjoin* env.small
                                            (eval-definition* env.small+privileged def*.base)))
 (define env.compiler         (eval-definition* env.base def*.compiler))
