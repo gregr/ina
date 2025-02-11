@@ -66,7 +66,7 @@
   (define (path-split path) (bytevector-split (path->bytevector path) byte:/))
   (define (path-directory path)
     (let* ((path (path->bytevector path)) (count ((bytevector-index-end/byte byte:/) path)))
-      (if (< 0 count) (bytevector-slice path 0 count) #".")))
+      (if (< 0 count) (bytevector-copy path 0 count) #".")))
   (define (path-append* p*)
     (bytevector-join* #"/" (map (lambda (p) (bytevector-rtrim1 (path->bytevector p) byte:/)) p*)))
   (define (path-append . path*) (path-append* path*)))
