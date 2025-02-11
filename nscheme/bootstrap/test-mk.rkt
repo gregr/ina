@@ -1,4 +1,5 @@
 #lang racket/base
-(require "../platform/racket/nscheme.rkt" "include.rkt" racket/include)
-(include "../include/platform/env/primitive.scm")
-(include "../test/mk.scm")
+(require "../platform/racket/nscheme.rkt" "include.rkt")
+(nscheme-run
+ "../include/platform/env/primitive.scm"
+ "../test/mk.scm")
