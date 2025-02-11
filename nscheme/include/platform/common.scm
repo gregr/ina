@@ -7,10 +7,9 @@
       bytevector->string string->bytevector string->symbol symbol->string
       cons car cdr
       vector vector-length vector-ref
-      make-mvector mvector->vector mvector-slice mvector-length mvector-ref mvector-set!
+      make-mvector mvector->vector mvector-length mvector-ref mvector-set!
       bytevector bytevector-length bytevector-ref
-      make-mbytevector mbytevector->bytevector mbytevector-slice
-      mbytevector-length mbytevector-ref mbytevector-set!
+      make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
       bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
       integer-floor-divmod numerator denominator = <= >= < > + - * /)
     (list
@@ -20,9 +19,8 @@
       bytevector->string string->bytevector string->symbol symbol->string
       cons car cdr
       vector vector-length vector-ref
-      make-mvector mvector->vector mvector-slice mvector-length mvector-ref mvector-set!
+      make-mvector mvector->vector mvector-length mvector-ref mvector-set!
       bytevector bytevector-length bytevector-ref
-      make-mbytevector mbytevector->bytevector mbytevector-slice
-      mbytevector-length mbytevector-ref mbytevector-set!
+      make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
       bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
       integer-floor-divmod numerator denominator = <= >= < > + - * /)))

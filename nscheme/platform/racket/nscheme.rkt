@@ -35,10 +35,9 @@
   string->symbol symbol->string
   cons car cdr
   vector vector-length vector-ref
-  make-mvector mvector->vector mvector-slice mvector-length mvector-ref mvector-set!
+  make-mvector mvector->vector mvector-length mvector-ref mvector-set!
   bytevector bytevector-length bytevector-ref
-  make-mbytevector mbytevector->bytevector mbytevector-slice
-  mbytevector-length mbytevector-ref mbytevector-set!
+  make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
   bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
   integer-floor-divmod numerator denominator = <= >= < > + - * /
 
@@ -348,8 +347,6 @@
 (define (mvector-length  mv)     (vector-length (mvector-v mv)))
 (define (mvector-ref     mv i)   (vector-ref    (mvector-v mv) i))
 (define (mvector-set!    mv i x) (vector-set!   (mvector-v mv) i x))
-(define (mvector-slice mv start count)
-  (mvector:new (vector-copy (mvector-v mv) start (+ start count))))
 (define mvector->vector
   (case-lambda
     ((mv)             (vector-copy (mvector-v mv)))
@@ -364,8 +361,6 @@
 (define (mbytevector-length      mbv)     (bytevector-length (mbytevector-bv mbv)))
 (define (mbytevector-ref         mbv i)   (bytevector-ref    (mbytevector-bv mbv) i))
 (define (mbytevector-set!        mbv i n) (bytes-set!        (mbytevector-bv mbv) i n))
-(define (mbytevector-slice mbv start count)
-  (mbytevector:new (subbytes (mbytevector-bv mbv) start (+ start count))))
 (define mbytevector->bytevector
   (case-lambda
     ((mbv)             (bytes-copy (mbytevector-bv mbv)))
@@ -448,10 +443,9 @@
   string->symbol symbol->string
   cons car cdr
   vector vector-length vector-ref
-  make-mvector mvector->vector mvector-slice mvector-length mvector-ref mvector-set!
+  make-mvector mvector->vector mvector-length mvector-ref mvector-set!
   bytevector bytevector-length bytevector-ref
-  make-mbytevector mbytevector->bytevector mbytevector-slice
-  mbytevector-length mbytevector-ref mbytevector-set!
+  make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
   bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
   integer-floor-divmod numerator denominator = <= >= < > + - * /
 
