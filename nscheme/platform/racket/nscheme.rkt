@@ -861,6 +861,7 @@
                                 (else     (panic #f "not an output-file modifier" mod)))))
              (io-guard kf (k (rkt:omemory (list '(type . omemory:file) (cons 'path (path->bytes path)))
                                           (open-output-file path #:exists exists-flag)))))))
+        ((current-directory)     (lambda (kf k)         (io-guard kf (k (path->bytes (rkt:current-directory))))))
         ((change-evt)            (lambda (path    kf k) (io-guard kf (k (filesystem-change-evt (make-path path))))))
         ((change-directory)      (lambda (path    kf k) (io-guard kf (rkt:current-directory (make-path path)) (k))))
         ((list)                  (lambda (path    kf k) (io-guard kf (k (map path->string (rkt:directory-list (make-path path)))))))

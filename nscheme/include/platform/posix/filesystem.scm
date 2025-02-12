@@ -1,5 +1,6 @@
 (define (imemory:file/k               path      kf k) ((current-filesystem) 'open-imemory          path      kf k))
 (define (omemory:file/k               path mod  kf k) ((current-filesystem) 'open-omemory          path mod  kf k))
+(define (current-directory/k                    kf k) ((current-filesystem) 'current-directory               kf k))
 (define (file-change-evt/k            path      kf k) ((current-filesystem) 'change-evt            path      kf k))
 (define (change-directory/k           path      kf k) ((current-filesystem) 'change-directory      path      kf k))
 (define (directory-file*/k            path      kf k) ((current-filesystem) 'list                  path      kf k))
@@ -24,7 +25,8 @@
 (define (iport:file path)     (iport:file/k path     raise-io-error values))
 (define (oport:file path mod) (oport:file/k path mod raise-io-error values))
 
-(define (file-change-evt       path) (file-change-evt/k       path  raise-io-error values))
+(define (current-directory)          (current-directory/k          raise-io-error values))
+(define (file-change-evt       path) (file-change-evt/k       path raise-io-error values))
 (define (change-directory      path) (change-directory/k      path raise-io-error values))
 (define (directory-file*       path) (directory-file*/k       path raise-io-error values))
 (define (make-symbolic-link to path) (make-symbolic-link/k to path raise-io-error values))
