@@ -47,8 +47,8 @@
      (define def*.posix    ',def*.posix))
    def*.primitive
    def*.syntax
-   (file-name->stx* "../include/platform/env/primitive.scm")
-   (file-name->stx* "../include/platform/posix/env/primitive.scm")
+   (local-file->stx* "../include/platform/env/primitive.scm")
+   (local-file->stx* "../include/platform/posix/env/primitive.scm")
    '((define program (make-program))
      (define (link-definition* env def*) (program-parse-definition* program env def*))
      (define env.base     (env-conjoin* env.small (link-definition* env.small+privileged def*.base)))
