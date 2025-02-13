@@ -1,9 +1,6 @@
 #lang racket/base
-(require "../platform/racket/nscheme.rkt" "include.rkt")
+(require racket/include "../platform/racket/nscheme.rkt" "include.rkt")
 (nscheme-run
- "../include/platform/env/primitive.scm"
- "../include/platform/posix/env/include.scm"
- "../include/platform/env/evaluated.scm"
- "../include/platform/posix/env/primitive.scm"
- "../include/platform/posix/env/evaluated.scm"
- "../test/eval-self-apply-stratified.scm")
+ (include "../include/platform/env/evaluated.scm")
+ (include "../include/platform/posix/env/evaluated.scm")
+ (include "../test/eval-self-apply-stratified.scm"))

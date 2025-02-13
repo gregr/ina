@@ -1,3 +1,3 @@
 #lang racket/base
-(require "../platform/racket/nscheme.rkt" "include.rkt")
-(nscheme-run "../test/text.scm")
+(require racket/include "../platform/racket/nscheme.rkt" "include.rkt")
+(nscheme-run (include "../test/text.scm"))

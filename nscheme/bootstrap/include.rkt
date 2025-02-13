@@ -1,61 +1,56 @@
 #lang racket/base
-(provide nscheme-boot nscheme-run)
+(provide (all-defined-out))
 (require
   ;; Toggle commenting on these two to turn on interrupt-aware lambdas.
   "../platform/racket/nscheme.rkt"
   ;(rename-in "../platform/racket/nscheme.rkt" (interruptible-lambda lambda))
   racket/include racket/local racket/splicing (prefix-in rkt: racket/base))
+(include "../include/base/misc.scm")
+(include "../include/base/pair.scm")
+(include "../include/base/list.scm")
+(include "../include/base/number.scm")
+(include "../include/base/mvector.scm")
+(include "../include/base/vector.scm")
+(include "../include/base/mbytevector.scm")
+(include "../include/base/bytevector.scm")
+(include "../include/base/unicode.scm")
+(include "../include/base/record.scm")
+(include "../include/base/exception.scm")
+(include "../include/base/prompt.scm")
+(include "../include/base/coroutine.scm")
+(include "../include/base/generator.scm")
+(include "../include/base/port.scm")
+(include "../include/base/time.scm")
+(include "../include/base/text.scm")
+(include "../include/base/io.scm")
+(include "../include/syntax.scm")
+(include "../include/compiler/high-level-ir.scm")
+(include "../include/compiler/backend/rkt.scm")
+(include "../include/nscheme/stage.scm")
+(include "../include/nscheme/parse.scm")
+(include "../include/nscheme/minimal.scm")
+(include "../include/nscheme/match.scm")
+(include "../include/nscheme/program.scm")
+(include "../include/nscheme/meta.scm")
+(include "../include/platform/common.scm")
+(include "../include/platform/control.scm")
+(include "../include/platform/io.scm")
+(include "../include/platform/privileged.scm")
+(include "../include/platform/posix/common.scm")
+(include "../include/platform/posix/filesystem.scm")
+(include "../include/platform/posix/network.scm")
+(include "../include/platform/posix/host-process.scm")
+(include "../include/platform/posix/terminal/osc.scm")
+(include "../include/platform/posix/terminal/csi.scm")
+(include "../include/platform/posix/terminal/sgr.scm")
+(include "../include/platform/posix/terminal/tty.scm")
+(include "../include/platform/posix/terminal/text.scm")
+(include "../include/platform/env/primitive.scm")
+(include "../include/platform/posix/env/primitive.scm")
+(include "../include/platform/posix/env/include.scm")
 
-(define-syntax-rule (nscheme-boot path ...)
-  (with-native-signal-handling (lambda () (include path) ...)))
-
-(define-syntax-rule (nscheme-run path ...)
-  (nscheme-boot
-   "../include/base/misc.scm"
-   "../include/base/pair.scm"
-   "../include/base/list.scm"
-   "../include/base/number.scm"
-   "../include/base/mvector.scm"
-   "../include/base/vector.scm"
-   "../include/base/mbytevector.scm"
-   "../include/base/bytevector.scm"
-   "../include/base/unicode.scm"
-   "../include/base/record.scm"
-   "../include/base/exception.scm"
-   "../include/base/prompt.scm"
-   "../include/base/coroutine.scm"
-   "../include/base/generator.scm"
-   "../include/base/port.scm"
-   "../include/base/time.scm"
-   "../include/base/text.scm"
-   "../include/base/io.scm"
-
-   "../include/syntax.scm"
-
-   "../include/compiler/high-level-ir.scm"
-   "../include/compiler/backend/rkt.scm"
-
-   "../include/nscheme/stage.scm"
-   "../include/nscheme/parse.scm"
-   "../include/nscheme/minimal.scm"
-   "../include/nscheme/match.scm"
-   "../include/nscheme/program.scm"
-   "../include/nscheme/meta.scm"
-
-   "../include/platform/common.scm"
-   "../include/platform/control.scm"
-   "../include/platform/io.scm"
-   "../include/platform/privileged.scm"
-   "../include/platform/posix/common.scm"
-   "../include/platform/posix/filesystem.scm"
-   "../include/platform/posix/network.scm"
-   "../include/platform/posix/host-process.scm"
-   "../include/platform/posix/terminal/osc.scm"
-   "../include/platform/posix/terminal/csi.scm"
-   "../include/platform/posix/terminal/sgr.scm"
-   "../include/platform/posix/terminal/tty.scm"
-   "../include/platform/posix/terminal/text.scm"
-   path ...))
+(define-syntax-rule (nscheme-run stx ...)
+  (with-native-signal-handling (lambda () stx ...)))
 
 
 ;; Old notes:
