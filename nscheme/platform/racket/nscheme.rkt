@@ -984,9 +984,8 @@
 ;;; Host system processes ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define current-host-argument*
-  (make-parameter (list->vector (map string->bytevector
-                                     (cons (path->string (find-system-path 'run-file))
-                                           (vector->list (current-command-line-arguments)))))))
+  (make-parameter (map string->bytevector (cons (path->string (find-system-path 'run-file))
+                                                (vector->list (current-command-line-arguments))))))
 (define current-host-environment
   (make-parameter (let ((env (current-environment-variables)))
                     (map (lambda (name) (cons name (environment-variables-ref env name)))

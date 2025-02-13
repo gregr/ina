@@ -7,7 +7,7 @@
 (define (file*->stx* path*) (append* (map file->stx* path*)))
 (define ((file->stx*/relative  rel) path)  (file->stx* (path-append rel path)))
 (define ((file*->stx*/relative rel) path*) (file*->stx* (map (lambda (p) (path-append rel p)) path*)))
-(splicing-let ((path.bootstrap (path-directory (vector-ref (current-host-argument*) 0))))
+(splicing-let ((path.bootstrap (path-directory (car (current-host-argument*)))))
   (define local-file->stx*  (file->stx*/relative  path.bootstrap))
   (define local-file*->stx* (file*->stx*/relative path.bootstrap)))
 
