@@ -34,7 +34,6 @@
 (include "../include/nscheme/meta.scm")
 (include "../include/platform/common.scm")
 (include "../include/platform/control.scm")
-(include "../include/platform/io.scm")
 (include "../include/platform/privileged.scm")
 (include "../include/platform/posix/common.scm")
 (include "../include/platform/posix/filesystem.scm")

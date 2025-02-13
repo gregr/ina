@@ -59,7 +59,6 @@
           (read-include-file*
             '("platform/common.scm"
               "platform/control.scm"
-              "platform/io.scm"
               "platform/privileged.scm"
               "platform/posix/common.scm")))
     (cons 'env
