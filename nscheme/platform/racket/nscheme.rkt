@@ -102,7 +102,7 @@
 (define (with-native-signal-handling thunk)
   (parameterize-break
    #f
-   (let ((cust (make-custodian)))
+   (let ((cc (rkt:current-custodian)) (cust (make-custodian)))
      (dynamic-wind
       (lambda () (void))
       (lambda ()
@@ -114,7 +114,7 @@
                         (lambda ()
                           (with-handlers (((lambda _ #t)
                                            (lambda (x) (channel-put ch (lambda () (raise x))))))
-                            (let-values ((x* (thunk)))
+                            (let-values ((x* (parameterize ((rkt:current-custodian cc)) (thunk))))
                               (channel-put ch (lambda () (apply values x*)))))))))
             (let loop ()
               (with-handlers ((exn:break? (lambda (x)
