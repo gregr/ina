@@ -39,8 +39,10 @@
      (define def*.posix    ',def*.posix))
    def*.primitive
    def*.syntax
-   (local-file->stx* "../include/platform/env/primitive.scm")
-   (local-file->stx* "../include/platform/env/evaluated.scm")
+   (let ((path.include (path-append (path-directory (car (current-host-argument*))) "../include")))
+     (read-file* (map (lambda (p) (path-append path.include p))
+                      '("platform/env/primitive.scm"
+                        "platform/env/evaluated.scm"))))
    '((define stx*.test (list '(list
                                (+ 1 2)
                                (foldr + 0 '(1 2 3 4 5))

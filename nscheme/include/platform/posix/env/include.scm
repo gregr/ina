@@ -1,70 +1,80 @@
-(define (file->stx* path)
+(define (read-file path)
   (let* ((in    (iport:file path))
          (read* (read*/reader:data (lambda y* ((reader-track-line/start 0) (apply reader:data y*)))))
          (stx*  (read* in)))
     (iport-close in)
     stx*))
-(define (file*->stx* path*) (append* (map file->stx* path*)))
-(define ((file->stx*/relative  rel) path)  (file->stx* (path-append rel path)))
-(define ((file*->stx*/relative rel) path*) (file*->stx* (map (lambda (p) (path-append rel p)) path*)))
-(splicing-let ((path.bootstrap (path-directory (car (current-host-argument*)))))
-  (define local-file->stx*  (file->stx*/relative  path.bootstrap))
-  (define local-file*->stx* (file*->stx*/relative path.bootstrap)))
+(define (read-file* path*) (append* (map read-file path*)))
+(define (read-include path.include)
+  (define (read-include-file* p*)
+    (map (lambda (p) (let ((p (path->bytevector p)))
+                       (cons p (read-file (path-append path.include p)))))
+         p*))
+  (list (cons 'base
+          (read-include-file*
+            '("base/misc.scm"
+              "base/pair.scm"
+              "base/list.scm"
+              "base/number.scm"
+              "base/mvector.scm"
+              "base/vector.scm"
+              "base/mbytevector.scm"
+              "base/bytevector.scm"
+              "base/unicode.scm"
+              "base/record.scm"
+              "base/exception.scm"
+              "base/prompt.scm"
+              "base/coroutine.scm"
+              "base/generator.scm"
+              "base/port.scm"
+              "base/time.scm"
+              "base/text.scm"
+              "base/io.scm")))
+    (cons 'syntax
+          (read-include-file*
+            '("syntax.scm")))
+    (cons 'compiler
+          (read-include-file*
+            '("compiler/high-level-ir.scm"
+              "compiler/backend/rkt.scm")))
+    (cons 'nscheme
+          (read-include-file*
+            '("nscheme/stage.scm"
+              "nscheme/parse.scm"
+              "nscheme/minimal.scm"
+              "nscheme/match.scm"
+              "nscheme/program.scm"
+              "nscheme/meta.scm")))
+    (cons 'posix
+          (read-include-file*
+            '("platform/posix/filesystem.scm"
+              "platform/posix/network.scm"
+              "platform/posix/host-process.scm"
+              "platform/posix/terminal/osc.scm"
+              "platform/posix/terminal/csi.scm"
+              "platform/posix/terminal/sgr.scm"
+              "platform/posix/terminal/tty.scm"
+              "platform/posix/terminal/text.scm")))
+    (cons 'primitive
+          (read-include-file*
+            '("platform/common.scm"
+              "platform/control.scm"
+              "platform/io.scm"
+              "platform/privileged.scm"
+              "platform/posix/common.scm")))
+    (cons 'env
+          (read-include-file*
+            '("platform/env/primitive.scm"
+              "platform/env/evaluated.scm"
+              "platform/posix/env/primitive.scm"
+              "platform/posix/env/evaluated.scm")))))
 
-(define def*.base
-  (local-file*->stx*
-    '("../include/base/misc.scm"
-      "../include/base/pair.scm"
-      "../include/base/list.scm"
-      "../include/base/number.scm"
-      "../include/base/mvector.scm"
-      "../include/base/vector.scm"
-      "../include/base/mbytevector.scm"
-      "../include/base/bytevector.scm"
-      "../include/base/unicode.scm"
-      "../include/base/record.scm"
-      "../include/base/exception.scm"
-      "../include/base/prompt.scm"
-      "../include/base/coroutine.scm"
-      "../include/base/generator.scm"
-      "../include/base/port.scm"
-      "../include/base/time.scm"
-      "../include/base/text.scm"
-      "../include/base/io.scm"
-      )))
-(define def*.syntax
-  (local-file*->stx*
-    '("../include/syntax.scm")))
-(define def*.compiler
-  (local-file*->stx*
-    '("../include/compiler/high-level-ir.scm"
-      "../include/compiler/backend/rkt.scm"
-      )))
-(define def*.nscheme
-  (local-file*->stx*
-    '("../include/nscheme/stage.scm"
-      "../include/nscheme/parse.scm"
-      "../include/nscheme/minimal.scm"
-      "../include/nscheme/match.scm"
-      "../include/nscheme/program.scm"
-      "../include/nscheme/meta.scm"
-      )))
-(define def*.primitive
-  (local-file*->stx*
-    '("../include/platform/common.scm"
-      "../include/platform/control.scm"
-      "../include/platform/io.scm"
-      "../include/platform/privileged.scm"
-      "../include/platform/posix/common.scm"
-      )))
-(define def*.posix
-  (local-file*->stx*
-    '("../include/platform/posix/filesystem.scm"
-      "../include/platform/posix/network.scm"
-      "../include/platform/posix/host-process.scm"
-      "../include/platform/posix/terminal/osc.scm"
-      "../include/platform/posix/terminal/csi.scm"
-      "../include/platform/posix/terminal/sgr.scm"
-      "../include/platform/posix/terminal/tty.scm"
-      "../include/platform/posix/terminal/text.scm"
-      )))
+;; TODO: move these
+(define include* (read-include (path-append (path-directory (car (current-host-argument*))) "../include")))
+(define def*.base      (append* (map cdr (alist-ref include* 'base))))
+(define def*.syntax    (append* (map cdr (alist-ref include* 'syntax))))
+(define def*.compiler  (append* (map cdr (alist-ref include* 'compiler))))
+(define def*.nscheme   (append* (map cdr (alist-ref include* 'nscheme))))
+(define def*.posix     (append* (map cdr (alist-ref include* 'posix))))
+(define def*.primitive (append* (map cdr (alist-ref include* 'primitive))))
+(define def*.env       (append* (map cdr (alist-ref include* 'env))))
