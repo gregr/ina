@@ -84,9 +84,14 @@
         (k a)
         (let ((kv (assoc (car key*) a)))
           (if kv (loop (cdr kv) (cdr key*)) (kf))))))
+(define (atree-ref/default a key* default) (atree-ref/k a key* (lambda () default) (lambda (v) v)))
+(define (atree-ref         a key*)
+  (atree-ref/k a key* (lambda () (error "atree-ref with missing key*" key* a)) (lambda (v) v)))
 
-(define (atree-ref/default a key* default)
-  (atree-ref/k a key* (lambda () default) (lambda (v) v)))
+(define (alist-ref/k       a key kf k)    (atree-ref/k a (list key) kf k))
+(define (alist-ref/default a key default) (alist-ref/k a key (lambda () default) (lambda (v) v)))
+(define (alist-ref         a key)
+  (alist-ref/k a key (lambda () (error "alist-ref with missing key" key a)) (lambda (v) v)))
 
 (define range
   (let ((go (lambda (start end inc)
