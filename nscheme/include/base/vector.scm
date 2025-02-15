@@ -12,3 +12,13 @@
 (define (vector-for-each f x . x*) (apply for-each f (vector->list x) (map vector->list x*)))
 (define (vector-map      f x . x*) (list->vector
                                      (apply map f (vector->list x) (map vector->list x*))))
+
+(define (vector-set x i v)
+  (let ((len (vector-length x)))
+    (nonnegative-integer? i)
+    (unless (< i len) (error "vector-set index out of bounds" i len))
+    (let ((new (make-mvector len 0)))
+      (mvector-copy! new 0 x 0 len)
+      (mvector-set! new i v)
+      (mvector->vector new))))
+(define (vector-update x i update) (vector-set x i (update (vector-ref x i))))
