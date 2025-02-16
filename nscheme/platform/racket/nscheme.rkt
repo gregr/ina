@@ -21,13 +21,11 @@
   current-host-argument* current-host-environment current-host-raw-process/k
   current-filesystem current-network
 
-  current-input-port current-output-port current-error-port
-
   make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
   current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
   sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
   make-channel channel-get channel-put channel-put-evt
-  current-seconds-nanoseconds/type current-sleep-seconds-nanoseconds
+  current-platform
 
   panic apply values
   eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
@@ -664,24 +662,23 @@
 ;;;;;;;;;;;;
 (let ((vm (system-type 'vm)))
   (unless (eq? vm 'chez-scheme) (error "virtual machine is not chez-scheme" vm)))
-(define current-seconds-nanoseconds/type
+(define (sleep-seconds-nanoseconds sec nsec) (rkt:sleep (+ sec (/ nsec 1000000000))))
+(define seconds-nanoseconds/type
   (let ((chez:current-time    (vm-primitive 'current-time))
         (chez:time-second     (vm-primitive 'time-second))
         (chez:time-nanosecond (vm-primitive 'time-nanosecond)))
-    (make-parameter
-     (lambda (type)
-       (let ((type (case type
-                     ((utc)                    'time-utc)
-                     ((monotonic)              'time-monotonic)
-                     ((process)                'time-process)
-                     ((thread)                 'time-thread)
-                     ((garbage-collector-cpu)  'time-collector-cpu)
-                     ((garbage-collector-real) 'time-collector-real)
-                     (else (panic #f "not a current-seconds-nanoseconds type" type)))))
-         (lambda () (let ((time (chez:current-time type)))
-                      (values (chez:time-second time) (chez:time-nanosecond time)))))))))
-(define current-sleep-seconds-nanoseconds
-  (make-parameter (lambda (sec nsec) (rkt:sleep (+ sec (/ nsec 1000000000))))))
+    (lambda (type)
+      (let ((type (case type
+                    ((utc)                    'time-utc)
+                    ((monotonic)              'time-monotonic)
+                    ((process)                'time-process)
+                    ((thread)                 'time-thread)
+                    ((garbage-collector-cpu)  'time-collector-cpu)
+                    ((garbage-collector-real) 'time-collector-real)
+                    (else (panic #f "not a current-seconds-nanoseconds type" type)))))
+        (lambda () (let ((time (chez:current-time type)))
+                     (values (chez:time-second time) (chez:time-nanosecond time))))))))
+(define device.time (vector sleep-seconds-nanoseconds seconds-nanoseconds/type))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; IO primitives ;;;
@@ -830,9 +827,10 @@
 ;;;;;;;;;;;;;;;;;;
 ;; Standard IO ;;;
 ;;;;;;;;;;;;;;;;;;
-(define current-input-port  (make-parameter (rkt:iport '((type . iport:stdin))  (rkt:current-input-port))))
-(define current-output-port (make-parameter (rkt:oport '((type . oport:stdout)) (rkt:current-output-port))))
-(define current-error-port  (make-parameter (rkt:oport '((type . oport:stderr)) (rkt:current-error-port))))
+(define standard-input-port  (rkt:iport '((type . iport:stdin))  (rkt:current-input-port)))
+(define standard-output-port (rkt:oport '((type . oport:stdout)) (rkt:current-output-port)))
+(define standard-error-port  (rkt:oport '((type . oport:stderr)) (rkt:current-error-port)))
+(define device.console (vector standard-input-port standard-output-port standard-error-port))
 
 ;;;;;;;;;;;;;;;
 ;;; File IO ;;;
@@ -1026,3 +1024,10 @@
                  ((kill)      (subprocess-kill sp #t) (values))
                  ((interrupt) (subprocess-kill sp #f) (values))
                  (else        (panic #f "not a raw-host-process/k method" method)))))))))))
+
+;;;;;;;;;;;;;;;;
+;;; Platform ;;;
+;;;;;;;;;;;;;;;;
+(define current-platform (make-parameter (list (cons 'name    'racket)
+                                               (cons 'console device.console)
+                                               (cons 'time    device.time))))

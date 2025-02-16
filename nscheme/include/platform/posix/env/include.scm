@@ -27,8 +27,9 @@
               "base/coroutine.scm"
               "base/generator.scm"
               "base/port.scm"
-              "base/time.scm"
               "base/text.scm"
+              "base/platform.scm"
+              "base/time.scm"
               "base/io.scm")))
     (cons 'syntax
           (read-include-file*
