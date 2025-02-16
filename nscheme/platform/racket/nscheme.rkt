@@ -27,7 +27,7 @@
   current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
   sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
   make-channel channel-get channel-put channel-put-evt
-  current-time/type current-sleep-seconds-nanoseconds
+  current-seconds-nanoseconds/type current-sleep-seconds-nanoseconds
 
   panic apply values
   eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
@@ -664,7 +664,7 @@
 ;;;;;;;;;;;;
 (let ((vm (system-type 'vm)))
   (unless (eq? vm 'chez-scheme) (error "virtual machine is not chez-scheme" vm)))
-(define current-time/type
+(define current-seconds-nanoseconds/type
   (let ((chez:current-time    (vm-primitive 'current-time))
         (chez:time-second     (vm-primitive 'time-second))
         (chez:time-nanosecond (vm-primitive 'time-nanosecond)))
@@ -677,7 +677,7 @@
                      ((thread)                 'time-thread)
                      ((garbage-collector-cpu)  'time-collector-cpu)
                      ((garbage-collector-real) 'time-collector-real)
-                     (else (panic #f "not a current-time type" type)))))
+                     (else (panic #f "not a current-seconds-nanoseconds type" type)))))
          (lambda () (let ((time (chez:current-time type)))
                       (values (chez:time-second time) (chez:time-nanosecond time)))))))))
 (define current-sleep-seconds-nanoseconds

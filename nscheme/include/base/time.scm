@@ -4,7 +4,7 @@
     (let-values (((whole-seconds rem) (integer-floor-divmod (numerator sec) denom)))
       (sleep-seconds-nanoseconds whole-seconds (integer-floor-div (* rem 1000000000) denom)))))
 
-(define (seconds-nanoseconds/type type) ((current-time/type) type))
+(define (seconds-nanoseconds/type type) ((current-seconds-nanoseconds/type) type))
 (define ((seconds/seconds-nanoseconds     sns)) (let-values (((s ns) (sns))) (+ s (/ ns 1000000000))))
 (define ((nanoseconds/seconds-nanoseconds sns)) (let-values (((s ns) (sns))) (+ (* s 1000000000) ns)))
 ;; NOTE: for security, we are intentionally deferring, and not caching the result of, the call to
@@ -29,7 +29,7 @@
   (define (delta name t1 t0) (cons name (- t1 t0)))
   ;; Unlike the global variants defined outside, it is not insecure for these to cache because the
   ;; local platform capability does not escape this scope.
-  (define seconds-nanoseconds/type (current-time/type))
+  (define seconds-nanoseconds/type (current-seconds-nanoseconds/type))
   (define (nanoseconds/type type) (nanoseconds/seconds-nanoseconds (seconds-nanoseconds/type type)))
   (let ((nanoseconds-thread                 (nanoseconds/type 'thread))
         (nanoseconds-monotonic              (nanoseconds/type 'monotonic))
