@@ -1,5 +1,10 @@
 (splicing-local
-  ((define posix.default (vector #f #f #f #f #f))  ; TODO
+  ((define posix.default
+     (vector '() '()
+             (lambda (in out err path arg* env kf k)
+               (kf 'unsupported (list (vector '(unsupported posix-raw-process/k) path arg*))))
+             (lambda (method . arg*) (error "no posix-filesystem" method))
+             (lambda (method . arg*) (error "no posix-network" method))))
    (define current-posix-parameter/index
      (current-platform-capability-parameter/index/type&default 'posix posix.default)))
   (define current-posix-argument*     (current-posix-parameter/index 0))

@@ -27,7 +27,7 @@
   (define current-error-port  (current-console-parameter/index 2)))
 
 (splicing-local
-  ((define time.default (vector (lambda (sec) (values)) (lambda (type) (values 0 0))))
+  ((define time.default (vector (lambda (s ns) (values)) (lambda (type) (lambda () (values 0 0)))))
    (define current-time-parameter/index
      (current-platform-capability-parameter/index/type&default 'time time.default)))
   (define current-sleep-seconds-nanoseconds (current-time-parameter/index 0))
