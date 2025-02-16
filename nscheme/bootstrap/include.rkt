@@ -36,7 +36,7 @@
 (include "../include/platform/common.scm")
 (include "../include/platform/control.scm")
 (include "../include/platform/privileged.scm")
-(include "../include/platform/posix/common.scm")
+(include "../include/platform/posix/platform.scm")
 (include "../include/platform/posix/filesystem.scm")
 (include "../include/platform/posix/network.scm")
 (include "../include/platform/posix/host-process.scm")
@@ -46,7 +46,6 @@
 (include "../include/platform/posix/terminal/tty.scm")
 (include "../include/platform/posix/terminal/text.scm")
 (include "../include/platform/env/primitive.scm")
-(include "../include/platform/posix/env/primitive.scm")
 (include "../include/platform/posix/env/include.scm")
 
 (define-syntax-rule (nscheme-run stx ...)

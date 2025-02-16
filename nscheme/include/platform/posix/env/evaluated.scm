@@ -1,4 +1,2 @@
-(define env.posix
-  (env-conjoin* (eval-definition* (env-conjoin* env.base env.posix.common) def*.posix)
-                env.posix.common))
+(define env.posix                  (eval-definition* env.base def*.posix))
 (define env.large+posix+privileged (env-conjoin* env.large+privileged env.posix))

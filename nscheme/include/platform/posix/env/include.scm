@@ -48,7 +48,8 @@
               "nscheme/meta.scm")))
     (cons 'posix
           (read-include-file*
-            '("platform/posix/filesystem.scm"
+            '("platform/posix/platform.scm"
+              "platform/posix/filesystem.scm"
               "platform/posix/network.scm"
               "platform/posix/host-process.scm"
               "platform/posix/terminal/osc.scm"
@@ -60,17 +61,15 @@
           (read-include-file*
             '("platform/common.scm"
               "platform/control.scm"
-              "platform/privileged.scm"
-              "platform/posix/common.scm")))
+              "platform/privileged.scm")))
     (cons 'env
           (read-include-file*
             '("platform/env/primitive.scm"
               "platform/env/evaluated.scm"
-              "platform/posix/env/primitive.scm"
               "platform/posix/env/evaluated.scm")))))
 
 ;; TODO: move these
-(define include* (read-include (path-append (path-directory (car (current-host-argument*))) "../include")))
+(define include* (read-include (path-append (path-directory (car (current-posix-argument*))) "../include")))
 (define def*.base      (append* (map cdr (alist-ref include* 'base))))
 (define def*.syntax    (append* (map cdr (alist-ref include* 'syntax))))
 (define def*.compiler  (append* (map cdr (alist-ref include* 'compiler))))

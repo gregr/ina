@@ -39,7 +39,7 @@
      (define def*.posix    ',def*.posix))
    def*.primitive
    def*.syntax
-   (let ((path.include (path-append (path-directory (car (current-host-argument*))) "../include")))
+   (let ((path.include (path-append (path-directory (car (current-posix-argument*))) "../include")))
      (read-file* (map (lambda (p) (path-append path.include p))
                       '("platform/env/primitive.scm"
                         "platform/env/evaluated.scm"))))

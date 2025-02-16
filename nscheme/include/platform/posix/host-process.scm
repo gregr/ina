@@ -1,4 +1,5 @@
-(define (host-raw-process/k in out err path arg* kf k) ((current-host-raw-process/k) in out err path arg* kf k))
+(define (host-raw-process/k in out err path arg* kf k)
+  ((current-posix-raw-process/k) in out err path arg* (current-posix-environment) kf k))
 (define (host-process-in        p) (p 'in))
 (define (host-process-out       p) (p 'out))
 (define (host-process-err       p) (p 'err))
