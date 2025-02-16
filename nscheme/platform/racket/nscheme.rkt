@@ -836,53 +836,6 @@
                                         ((string? path) (string->bytevector path))
                                         ((symbol? path) (string->bytevector (symbol->string path)))
                                         (else           path))))
-(define current-filesystem
-  (make-parameter
-   (lambda (method . arg*)
-     (apply
-      (case method
-        ((open-imemory)
-         (lambda (path kf k)
-           (let ((path (simple-form-path (make-path path))))
-             (io-guard kf (k (rkt:imemory (list '(type . imemory:file) (cons 'path (path->bytes path)))
-                                          (open-input-file path)))))))
-        ((open-omemory)
-         (lambda (path mod kf k)
-           (let ((path        (simple-form-path (make-path path)))
-                 (exists-flag (case mod
-                                ((create) 'error)
-                                ((update) 'udpate)
-                                ((#f)     'can-update)
-                                (else     (panic #f "not an output-file modifier" mod)))))
-             (io-guard kf (k (rkt:omemory (list '(type . omemory:file) (cons 'path (path->bytes path)))
-                                          (open-output-file path #:exists exists-flag)))))))
-        ((current-directory)     (lambda (kf k)         (io-guard kf (k (path->bytes (rkt:current-directory))))))
-        ((change-evt)            (lambda (path    kf k) (io-guard kf (k (filesystem-change-evt (make-path path))))))
-        ((change-directory)      (lambda (path    kf k) (io-guard kf (rkt:current-directory (make-path path)) (k))))
-        ((list)                  (lambda (path    kf k) (io-guard kf (k (map path->string (rkt:directory-list (make-path path)))))))
-        ((make-symbolic-link)    (lambda (to path kf k) (io-guard kf (make-file-or-directory-link to (make-path path)) (k))))
-        ((make-directory)        (lambda (path    kf k) (io-guard kf (rkt:make-directory (make-path path)) (k))))
-        ((move)                  (lambda (old new kf k) (io-guard kf (rename-file-or-directory (make-path old) (make-path new) #f) (k))))
-        ((delete-file)           (lambda (path    kf k) (io-guard kf (rkt:delete-file (make-path path)) (k))))
-        ((delete-directory)      (lambda (path    kf k) (io-guard kf (rkt:delete-directory (make-path path)) (k))))
-        ((type)                  (lambda (path    kf k) (io-guard kf (let ((type (file-or-directory-type (make-path path))))
-                                                                       (k (case type
-                                                                            ((file directory link #f) type)
-                                                                            (else                     'unknown)))))))
-        ((size)                  (lambda (path    kf k) (io-guard kf (k (rkt:file-size (make-path path))))))
-        ((permissions)           (lambda (path    kf k) (io-guard kf (k (file-or-directory-permissions (make-path path) 'bits)))))
-        ((modified-seconds)      (lambda (path    kf k) (io-guard kf (k (file-or-directory-modify-seconds (make-path path))))))
-        ((set-permissions!)
-         (lambda (path permissions kf k)
-           (nonnegative-integer?! permissions)
-           (io-guard kf (file-or-directory-permissions (make-path path) permissions) (k))))
-        ((set-modified-seconds!)
-         (lambda (path seconds kf k)
-           (nonnegative-integer?! seconds)
-           (io-guard kf (file-or-directory-modify-seconds (make-path path) seconds) (k))))
-        (else (panic #f "not a filesystem method" method)))
-      arg*))))
-
 (define (posix-filesystem method . arg*)
   (apply
    (case method
