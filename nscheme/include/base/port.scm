@@ -8,27 +8,6 @@
 (define (port? x) (procedure? x))
 (define (port-describe p) (p 'describe))
 
-;;;;;;;;;;;;;;;;;
-;;; IO Errors ;;;
-;;;;;;;;;;;;;;;;;
-;;; Improper use of an iomemory, port, or port-buffer operation will panic.  Proper use may still
-;;; fail, indicated by two error description values:
-;;; - failure tag, typically a symbol, #f, or an integer code
-;;;   - #f        ; failure is not categorized
-;;;   - <integer> ; e.g., an errno value
-;;;   - exists
-;;;   - not-open
-;;;   - no-space
-;;;   - unsupported
-;;; - failed operation details
-;;; Depending on the operation variant, these two values are either:
-;;; - returned to a failure continuation for /k operations
-;;; - raised as an io-error otherwise
-(define-values (io-error:kind io-error? io-error-tag io-error-context)
-  (make-exception-kind-etc error:kind 'io-error '#(tag context)))
-(define (make-io-error  tag context) (make-exception io-error:kind (vector "IO error" tag context)))
-(define (raise-io-error tag context) (raise (make-io-error tag context)))
-
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Input memory ;;;
 ;;;;;;;;;;;;;;;;;;;;
