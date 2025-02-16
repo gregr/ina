@@ -19,6 +19,7 @@
 ;;;   - exists
 ;;;   - not-open
 ;;;   - no-space
+;;;   - unsupported
 ;;; - failed operation details
 ;;; Depending on the operation variant, these two values are either:
 ;;; - returned to a failure continuation for /k operations
