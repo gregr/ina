@@ -51,7 +51,7 @@
             '("platform/posix/platform.scm"
               "platform/posix/filesystem.scm"
               "platform/posix/network.scm"
-              "platform/posix/host-process.scm"
+              "platform/posix/process.scm"
               "platform/posix/terminal/osc.scm"
               "platform/posix/terminal/csi.scm"
               "platform/posix/terminal/sgr.scm"

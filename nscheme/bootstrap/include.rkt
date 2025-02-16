@@ -39,7 +39,7 @@
 (include "../include/platform/posix/platform.scm")
 (include "../include/platform/posix/filesystem.scm")
 (include "../include/platform/posix/network.scm")
-(include "../include/platform/posix/host-process.scm")
+(include "../include/platform/posix/process.scm")
 (include "../include/platform/posix/terminal/osc.scm")
 (include "../include/platform/posix/terminal/csi.scm")
 (include "../include/platform/posix/terminal/sgr.scm")
