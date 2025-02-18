@@ -1030,7 +1030,7 @@
 ;;; Platform ;;;
 ;;;;;;;;;;;;;;;;
 (define device.posix (vector posix-argument* posix-environment posix-raw-process/k
-                             posix-filesystem posix-network posix-set-signal-handler!))
+                             posix-filesystem posix-network posix-set-signal-handler! exit))
 (define current-platform (make-parameter (list (cons 'name    'racket)
                                                (cons 'console device.console)
                                                (cons 'time    device.time)
