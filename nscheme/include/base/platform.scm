@@ -7,16 +7,16 @@
 (define ((current-platform-capability-parameter/index/type&default type default) index)
   (case-lambda
     (() (vector-ref (platform-ref/default (current-platform) type default) index))
-    ((new-value thunk)
+    ((new thunk)
      (current-platform (platform-update/default (current-platform) type
-                                                (lambda (cap) (vector-set cap index new-value))
+                                                (lambda (cap) (vector-set cap index new))
                                                 default)
                        thunk))))
 
-(define current-platform-name
+(define current-platform-description
   (case-lambda
-    (()                (platform-ref/default (current-platform) 'name #f))
-    ((new-value thunk) (current-platform (platform-set (current-platform) 'name new-value) thunk))))
+    (()          (platform-ref/default (current-platform) 'description '()))
+    ((new thunk) (current-platform (platform-set (current-platform) 'description new) thunk))))
 
 (splicing-local
   ((define console.default (vector empty-iport full-oport full-oport))
