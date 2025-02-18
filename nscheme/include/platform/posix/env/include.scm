@@ -49,6 +49,7 @@
     (cons 'posix
           (read-include-file*
             '("platform/posix/platform.scm"
+              "platform/posix/signal.scm"
               "platform/posix/filesystem.scm"
               "platform/posix/network.scm"
               "platform/posix/process.scm"

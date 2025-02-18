@@ -37,6 +37,7 @@
 (include "../include/platform/control.scm")
 (include "../include/platform/privileged.scm")
 (include "../include/platform/posix/platform.scm")
+(include "../include/platform/posix/signal.scm")
 (include "../include/platform/posix/filesystem.scm")
 (include "../include/platform/posix/network.scm")
 (include "../include/platform/posix/process.scm")

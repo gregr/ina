@@ -1,8 +1,6 @@
 #lang racket/base
 (provide
   apply/values case-values case let-values let*-values mlet mdefine interruptible-lambda
-  ;; privileged primitives
-  native-signal-handler
   ;; procedure-metadata returns a vector with this shape:
   ;;   #(,primitive ,captured ,code*)
   ;; where:
@@ -93,7 +91,15 @@
   (exit 1))
 (uncaught-exception-handler (lambda (exn) (panic 'uncaught-exception exn)))
 
-(define-global-parameter native-signal-handler #f)
+(define posix-signal=>handler (make-hash))
+(define (posix-signal-handler signal)
+  (or (hash-ref posix-signal=>handler signal #f) (lambda (sig) (panic 'posix-signal sig))))
+(define (posix-set-signal-handler! signal handler)
+  (cond
+    ((procedure? handler) (hash-set!    posix-signal=>handler signal handler))
+    ((not        handler) (hash-remove! posix-signal=>handler signal))
+    (else                 (panic #f "not a posix-set-signal-handler! procedure" signal handler))))
+
 (define (with-native-signal-handling thunk)
   (parameterize-break
    #f
@@ -113,12 +119,11 @@
                               (channel-put ch (lambda () (apply values x*)))))))))
             (let loop ()
               (with-handlers ((exn:break? (lambda (x)
-                                            ((or (native-signal-handler)
-                                                 (lambda (kind) (panic 'native-signal kind)))
-                                             (cond
-                                               ((exn:break:hang-up?   x) 'hang-up)
-                                               ((exn:break:terminate? x) 'terminate)
-                                               (else                     'interrupt)))
+                                            (let ((signal (cond
+                                                            ((exn:break:hang-up?   x) 1)
+                                                            ((exn:break:terminate? x) 15)
+                                                            (else                     2))))
+                                              ((posix-signal-handler signal) signal))
                                             (loop))))
                 (sync/enable-break (handle-evt ch (lambda (^return) (^return)))
                                    (handle-evt (thread-dead-evt body) void)))))))
@@ -424,7 +429,7 @@
 
 (declare-primitives!
   ;; privileged primitives
-  current-panic-handler native-signal-handler
+  current-panic-handler
   procedure-metadata
   record? record record-type-descriptor record-ref
   bytevector->string string->bytevector
@@ -1024,7 +1029,8 @@
 ;;;;;;;;;;;;;;;;
 ;;; Platform ;;;
 ;;;;;;;;;;;;;;;;
-(define device.posix (vector posix-argument* posix-environment posix-raw-process/k posix-filesystem posix-network))
+(define device.posix (vector posix-argument* posix-environment posix-raw-process/k
+                             posix-filesystem posix-network posix-set-signal-handler!))
 (define current-platform (make-parameter (list (cons 'name    'racket)
                                                (cons 'console device.console)
                                                (cons 'time    device.time)

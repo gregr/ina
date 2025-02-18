@@ -18,10 +18,8 @@
 (define package.privileged
   (cons
     '(
-      native-signal-handler
       procedure-metadata
       record? record record-type-descriptor record-ref)
     (list
-      native-signal-handler
       procedure-metadata
       record? record record-type-descriptor record-ref)))
