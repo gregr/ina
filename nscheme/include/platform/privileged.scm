@@ -18,8 +18,6 @@
 (define package.privileged
   (cons
     '(
-      procedure-metadata
-      record? record record-type-descriptor record-ref)
+      procedure-metadata)
     (list
-      procedure-metadata
-      record? record record-type-descriptor record-ref)))
+      procedure-metadata)))

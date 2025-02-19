@@ -21,7 +21,6 @@
               "base/mbytevector.scm"
               "base/bytevector.scm"
               "base/unicode.scm"
-              "base/record.scm"
               "base/prompt.scm"
               "base/exception.scm"
               "base/coroutine.scm"

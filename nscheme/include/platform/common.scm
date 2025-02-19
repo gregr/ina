@@ -1,7 +1,7 @@
 (define package.common
   (cons
     '(
-      panic apply values
+      panic apply values make-record-type
       eqv? null? boolean? procedure? symbol? string? rational? integer?
       pair? vector? mvector? bytevector? mbytevector?
       bytevector->string string->bytevector string->symbol symbol->string
@@ -13,7 +13,7 @@
       bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
       integer-floor-divmod numerator denominator = <= >= < > + - * /)
     (list
-      panic apply values
+      panic apply values make-record-type
       eqv? null? boolean? procedure? symbol? string? rational? integer?
       pair? vector? mvector? bytevector? mbytevector?
       bytevector->string string->bytevector string->symbol symbol->string

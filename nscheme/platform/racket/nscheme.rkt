@@ -10,7 +10,6 @@
   ;; This operator can allocate the vector on demand (which will hopefully be unboxed during
   ;; optimization), populating it based on a lower-level code/closure representation.
   procedure-metadata
-  record? record record-type-descriptor record-ref
   bytevector->string string->bytevector
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
@@ -22,7 +21,7 @@
   make-channel channel-get channel-put channel-put-evt
   current-platform
 
-  panic apply values
+  panic apply values make-record-type
   eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
   pair? vector? mvector? bytevector? mbytevector?
   string->symbol symbol->string
@@ -41,8 +40,8 @@
 
   with-native-signal-handling)
 (require
-  ffi/unsafe/port ffi/unsafe/vm
-  racket/flonum racket/match racket/path racket/os racket/tcp racket/udp racket/vector
+  ffi/unsafe/port ffi/unsafe/vm racket/flonum racket/list racket/match racket/path racket/os
+  racket/set racket/tcp racket/udp racket/vector
   (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 
 (read-decimal-as-inexact #f)
@@ -327,21 +326,22 @@
   (let ((q (rkt:floor (/ dividend divisor))))
     (values q (- dividend (* q divisor)))))
 
+(define-values (prop:metadata metadata? metadata-ref) (make-struct-type-property 'metadata))
+(define (make-record-type . x*) (apply (make-record-type/super-type #f) x*))
+(define ((make-record-type/super-type super-type)
+         name field-count mutable-field-position* final? proc-spec? metadata)
+  (let-values (((stype construct ? access mutate!)
+                (make-struct-type
+                 name super-type field-count 0 #f
+                 (append (if final? (list (cons prop:sealed #t)) '())
+                         (list (cons prop:metadata metadata)))
+                 (current-inspector) proc-spec?
+                 (set-subtract (range field-count) (or mutable-field-position* '())) #f #f)))
+    (values (and (not final?) (make-record-type/super-type stype)) construct ? access
+            (and mutable-field-position* (not (null? mutable-field-position*)) mutate!))))
+
 (struct mbytevector (bv) #:name mbytevector-struct #:constructor-name mbytevector:new #:prefab)
 (struct mvector (v) #:name mvector-struct #:constructor-name mvector:new #:prefab)
-(struct record (type-descriptor field*) #:name record-struct #:constructor-name record:new #:prefab)
-
-(define (record rtd . x*)
-  (unless (and (vector? rtd) (< 0 (vector-length rtd)))
-    (error "record-type-descriptor is not a non-empty vector" rtd))
-  (let ((field-count (vector-ref rtd 0)))
-    (unless (fixnum? field-count) (error "not a field count" field-count))
-    (unless (= (length x*) field-count) (error "incorrect record argument count" field-count x*))
-    (record:new rtd (list->vector x*))))
-
-(define (record-ref x i)
-  (unless (record? x) (error "not a record" x))
-  (vector-ref (record-field* x) i))
 
 (define (make-mvector    len x)  (mvector:new   (make-vector len x)))
 (define (mvector-length  mv)     (vector-length (mvector-v mv)))
@@ -431,7 +431,6 @@
   ;; privileged primitives
   current-panic-handler
   procedure-metadata
-  record? record record-type-descriptor record-ref
   bytevector->string string->bytevector
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
