@@ -65,24 +65,27 @@ and resuming snapshots of a running system.
     types for implementing some variant of inheritance.  It could also be used to list field names
     for dynamic field lookup.
 - Equality and identity:
+  - Every mutable value and instance of an opaque type, such as a record or procedure, has an
+    identity.  An instance of an immutable transparent type, particularly a pair or vector, is not
+    guaranteed to have an identity.
+  - Structurally equal values with an identity may share that identity, except for mutable values,
+    which are always constructed with a unique identity.  Mutable values include all mvectors and
+    mbytevectors, even empty ones, as well as record instances whose type was created with a non-#f
+    `mutable-field-position*` list, even if the list is empty, and even if the record has no fields.
+  - Procedures that have indistinguishable application behavior, i.e., they are extensionally equal,
+    are considered structurally equal, even if they appear to close over distinct mutable values.
+    (An optimizer may recognize that the mutable value does not impact the procedure's behavior.)
+    - If a procedure's behavior can be distinguished from all others, then it effectively has a
+      unique identity.
+  - For any two values that are not structurally equal, `eqv?` returns `#f`.
+  - For two values with an identity, `eqv?` returns `#t` if the values have the same identity.
   - For any two values that are `()`, `#t`, `#f`, numbers, symbols, strings, or bytevectors, `eqv?`
-    returns `#t` if the two values are structurally equal, and `#f` if they are not.
-  - Each mvector and mbytevector value, including empty ones, is given a unique identity when it is
-    constructed.  For two values of these types, `eqv?` returns `#t` if the values have the same
-    identity, and `#f` if they do not.
-  - For two values of all other types, `eqv?` will always return `#f` if the two values are not
-    structurally equal, and may nondeterministically return `#t` when they are.  Even if a call to
-    `eqv?` returns `#t` once, the same call could return `#f` in the future.  Even `(eqv? x x)`
-    could theoretically return `#f` for such values.
+    returns `#t` if the two values are structurally equal.
+  - For two structurally equal values of all other types, `eqv?` may nondeterministically return
+    `#t` or `#f`.  Even if a call to `eqv?` returns `#t` once, the same call could return `#f` in
+    the future.  Even `(eqv? x x)` could theoretically return `#f` for such values.
     - For instance, `(list (eq? x x) (eq? x x))` for such values could theoretically return any of:
       `(#t #t)` `(#f #f)` `(#t #f)` `(#f #t)`
-  - For two values of all s-expression types, that is, immutable, non-procedure, and non-record,
-    `equal?` will return `#t` if they are structurally equal, and `#f` if they are not.  For all
-    other types, `equal?` behaves like `eqv?`.
-  - Procedures that have indistinguishable application behavior, that is, they are extensionally
-    equal, are considered structurally equal, even if they appear to close over distinct mutable
-    values.  (An optimizer may recognize that the mutable value does not impact the procedure's
-    behavior.)
   - `eq?` is not provided.
 - There is no primitive character type: a string is indivisible until it is decoded as a bytevector
   - e.g., `string->bytevector` and `bytevector->string`
