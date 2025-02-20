@@ -669,7 +669,8 @@
                     (else (panic #f "not a current-seconds-nanoseconds type" type)))))
         (lambda () (let ((time (chez:current-time type)))
                      (values (chez:time-second time) (chez:time-nanosecond time))))))))
-(define device.time (vector sleep-seconds-nanoseconds seconds-nanoseconds/type))
+(define platform.time (list (cons 'time (list (cons 'sleep-seconds-nanoseconds sleep-seconds-nanoseconds)
+                                              (cons 'seconds-nanoseconds/type  seconds-nanoseconds/type)))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; IO primitives ;;;
@@ -821,7 +822,9 @@
 (define standard-input-port  (rkt:iport '((type . iport:stdin))  (rkt:current-input-port)))
 (define standard-output-port (rkt:oport '((type . oport:stdout)) (rkt:current-output-port)))
 (define standard-error-port  (rkt:oport '((type . oport:stderr)) (rkt:current-error-port)))
-(define device.console (vector standard-input-port standard-output-port standard-error-port))
+(define platform.console (list (cons 'console (list (cons 'input-port  standard-input-port)
+                                                    (cons 'output-port standard-output-port)
+                                                    (cons 'error-port  standard-error-port)))))
 
 ;;;;;;;;;;;;;;;
 ;;; File IO ;;;
@@ -1018,12 +1021,17 @@
 ;;;;;;;;;;;;;;;;
 ;;; Platform ;;;
 ;;;;;;;;;;;;;;;;
-(define device.posix (vector posix-argument* posix-environment posix-raw-process/k
-                             posix-filesystem posix-network posix-set-signal-handler! exit))
-(define current-platform (make-parameter
-                          (list (cons 'description (list (cons 'type 'racket)
-                                                         (cons 'os   (system-type 'os*))
-                                                         (cons 'arch (system-type 'arch))))
-                                (cons 'console     device.console)
-                                (cons 'time        device.time)
-                                (cons 'posix       device.posix))))
+(define current-platform
+  (make-parameter
+   (append platform.console
+           platform.time
+           (list (cons 'description (list (cons 'type 'racket)
+                                          (cons 'os   (system-type 'os*))
+                                          (cons 'arch (system-type 'arch))))
+                 (cons 'posix       (list (cons 'argument*           posix-argument*)
+                                          (cons 'environment         posix-environment)
+                                          (cons 'raw-process/k       posix-raw-process/k)
+                                          (cons 'filesystem          posix-filesystem)
+                                          (cons 'network             posix-network)
+                                          (cons 'set-signal-handler! posix-set-signal-handler!)
+                                          (cons 'exit                exit)))))))

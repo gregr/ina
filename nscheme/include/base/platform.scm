@@ -1,49 +1,18 @@
+(define (make-platform-parameter key* platform.default)
+  (case-lambda
+    (()          (atree-ref* (list (current-platform) platform.default) key*))
+    ((new thunk) (current-platform (atree-set (current-platform) key* new) thunk))))
+
 (define platform.empty '())
-(define (platform-ref/default    p key default)        (alist-ref/default p key default))
-(define (platform-remove         p key)                (alist-remove p key))
-(define (platform-set            p key value)          (alist-set p key value))
-(define (platform-update/default p key update default) (alist-update/default p key update default))
-
-(define (make-platform-field name default)
-  (case-lambda
-    ((p)        (platform-ref/default    p name        default))
-    ((p update) (platform-update/default p name update default))))
-(define (current-platform-field-parameter field subfield)
-  (case-lambda
-    (()          (subfield (field (current-platform))))
-    ((new thunk) (field (current-platform) (lambda (entry) (subfield entry new))))))
-
-(define platform-immediate-field (case-lambda
-                                   ((x)     x)
-                                   ((x new) new)))
-(define make-platform-table vector)
-(define (make-platform-table-field index)
-  (case-lambda
-    ((pt)     (vector-ref pt index))
-    ((pt new) (vector-set pt index new))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Typical platform fields ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (make-console-table input-port output-port error-port)
-  (make-platform-table input-port output-port error-port))
-(define console-table-input-port  (make-platform-table-field 0))
-(define console-table-output-port (make-platform-table-field 1))
-(define console-table-error-port  (make-platform-table-field 2))
-(define console-table.default (make-platform-table empty-iport full-oport full-oport))
-
-(define (make-time-table sleep-seconds-nanoseconds seconds-nanoseconds/type)
-  (vector sleep-seconds-nanoseconds seconds-nanoseconds/type))
-(define time-table-sleep-seconds-nanoseconds (make-platform-table-field 0))
-(define time-table-seconds-nanoseconds/type  (make-platform-table-field 1))
-(define time-table.default (vector (lambda (s ns) (values)) (lambda (type) (lambda () (values 0 0)))))
-
-(define platform-description              (make-platform-field 'description '()))
-(define platform-time                     (make-platform-field 'time        time-table.default))
-(define platform-console                  (make-platform-field 'console     console-table.default))
-(define current-platform-description      (current-platform-field-parameter platform-description platform-immediate-field))
-(define current-input-port                (current-platform-field-parameter platform-console console-table-input-port))
-(define current-output-port               (current-platform-field-parameter platform-console console-table-output-port))
-(define current-error-port                (current-platform-field-parameter platform-console console-table-error-port))
-(define current-sleep-seconds-nanoseconds (current-platform-field-parameter platform-time time-table-sleep-seconds-nanoseconds))
-(define current-seconds-nanoseconds/type  (current-platform-field-parameter platform-time time-table-seconds-nanoseconds/type))
+(define platform.default
+  (list (cons 'description '())
+        (cons 'console     (list (cons 'input-port  empty-iport)
+                                 (cons 'output-port full-oport)
+                                 (cons 'output-port full-oport)))
+        (cons 'time        (list (cons 'sleep-seconds-nanoseconds (lambda (s ns) (values)))
+                                 (cons 'seconds-nanoseconds/type  (lambda (type) (lambda () (values 0 0))))))))
+(define current-input-port                (make-platform-parameter '(console input-port)             platform.default))
+(define current-output-port               (make-platform-parameter '(console output-port)            platform.default))
+(define current-error-port                (make-platform-parameter '(console error-port)             platform.default))
+(define current-sleep-seconds-nanoseconds (make-platform-parameter '(time sleep-seconds-nanoseconds) platform.default))
+(define current-seconds-nanoseconds/type  (make-platform-parameter '(time seconds-nanoseconds/type)  platform.default))
