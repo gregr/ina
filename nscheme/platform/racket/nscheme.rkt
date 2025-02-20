@@ -1,16 +1,7 @@
 #lang racket/base
 (provide
   apply/values case-values case let-values let*-values mlet mdefine interruptible-lambda
-  ;; procedure-metadata returns a vector with this shape:
-  ;;   #(,primitive ,captured ,code*)
-  ;; where:
-  ;;   - primitive is either #f or a name
-  ;;   - captured is either #f or a vector of captured values
-  ;;   - code* is a possibly-empty list of code descriptions
-  ;; This operator can allocate the vector on demand (which will hopefully be unboxed during
-  ;; optimization), populating it based on a lower-level code/closure representation.
-  procedure-metadata
-  bytevector->string string->bytevector
+
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
   timer-interrupt-handler set-timer enable-interrupts disable-interrupts
@@ -22,9 +13,9 @@
   current-platform
 
   panic apply values make-record-type
-  eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
+  eqv? null? boolean? procedure? symbol? string? rational? integer?
   pair? vector? mvector? bytevector? mbytevector?
-  string->symbol symbol->string
+  bytevector->string string->bytevector string->symbol symbol->string
   cons car cdr
   vector vector-length vector-ref
   make-mvector mvector->vector mvector-length mvector-ref mvector-set!
@@ -33,7 +24,7 @@
   bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
   integer-floor-divmod numerator denominator = <= >= < > + - * /
 
-  ;f32->u32 u32->f32 f64->u64 u64->f64
+  ;f32? f64? f32->u32 u32->f32 f64->u64 u64->f64
   ;f32->f64 f64->f32 f32->rational rational->f32 f64->rational rational->f64
   ;f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
   ;f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/
@@ -430,7 +421,6 @@
 (declare-primitives!
   ;; privileged primitives
   current-panic-handler
-  procedure-metadata
   bytevector->string string->bytevector
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine

@@ -9,7 +9,7 @@
 (let ()
   (define program (make-program))
   (define (link-definition* env def*) (program-parse-definition* program env def*))
-  (define env.base     (env-conjoin* env.small (link-definition* env.small+privileged def*.base)))
+  (define env.base     (env-conjoin* env.small (link-definition* env.small def*.base)))
   (define env.compiler (link-definition* env.base def*.compiler))
   (define env.nscheme  (let ((env.deps (env-conjoin* env.base env.syntax env.compiler)))
                          (env-conjoin* env.deps env.meta (link-definition* env.deps def*.nscheme))))
@@ -52,7 +52,7 @@
                       '("platform/env/primitive.scm"))))
    '((define program (make-program))
      (define (link-definition* env def*) (program-parse-definition* program env def*))
-     (define env.base     (env-conjoin* env.small (link-definition* env.small+privileged def*.base)))
+     (define env.base     (env-conjoin* env.small (link-definition* env.small def*.base)))
      (define env.compiler (link-definition* env.base def*.compiler))
      (define env.nscheme  (let ((env.deps (env-conjoin* env.base env.syntax env.compiler)))
                             (env-conjoin* env.deps env.meta (link-definition* env.deps def*.nscheme))))
@@ -70,7 +70,7 @@
      (program->E program))))
 (displayln "parsing self-apply1:")
 ;; ~2ms
-(define E.self-apply1 (with-time (lambda () (parse-body env.large+posix+privileged stx*.self-apply1))))
+(define E.self-apply1 (with-time (lambda () (parse-body env.large+posix stx*.self-apply1))))
 (displayln "evaluating self-apply1 to parse self-apply2:")
 ;; ~265ms
 (define E.self-apply2 (with-time (lambda () (E-eval E.self-apply1))))

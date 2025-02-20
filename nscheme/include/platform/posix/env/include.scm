@@ -60,8 +60,7 @@
     (cons 'primitive
           (read-include-file*
             '("platform/common.scm"
-              "platform/control.scm"
-              "platform/privileged.scm")))
+              "platform/control.scm")))
     (cons 'env
           (read-include-file*
             '("platform/env/primitive.scm"

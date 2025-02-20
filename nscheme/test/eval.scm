@@ -1435,7 +1435,7 @@
     (lambda () (panic 'a 'b 'c)))
    ==> error:eval))
 
-(define env.test.posix env.large+posix+privileged)
+(define env.test.posix env.large+posix)
 
 (test-evaluation
  env.test.posix

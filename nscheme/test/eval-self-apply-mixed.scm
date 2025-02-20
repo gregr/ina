@@ -57,7 +57,7 @@
 
 (displayln "parsing self-apply1:")
 ;; ~2ms
-(define E.self-apply1 (with-time (lambda () (parse-body env.large+posix+privileged stx*.self-apply1))))
+(define E.self-apply1 (with-time (lambda () (parse-body env.large+posix stx*.self-apply1))))
 (displayln "evaluating self-apply1 to parse self-apply2:")
 ;; ~553ms
 (define E.self-apply2 (with-time (lambda () (E-eval E.self-apply1))))
