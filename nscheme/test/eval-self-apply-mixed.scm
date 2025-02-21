@@ -35,7 +35,7 @@
   (append
    `((define def*.base     ',def*.base)
      (define def*.compiler ',def*.compiler)
-     (define def*.nscheme  ',def*.nscheme)
+     (define def*.parser   ',def*.parser)
      (define def*.posix    ',def*.posix))
    def*.primitive
    def*.syntax

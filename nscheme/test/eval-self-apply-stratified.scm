@@ -11,9 +11,9 @@
   (define (link-definition* env def*) (program-parse-definition* program env def*))
   (define env.base     (env-conjoin* env.small (link-definition* env.small def*.base)))
   (define env.compiler (link-definition* env.base def*.compiler))
-  (define env.nscheme  (let ((env.deps (env-conjoin* env.base env.syntax env.compiler)))
-                         (env-conjoin* env.deps env.meta (link-definition* env.deps def*.nscheme))))
-  (define env.large    env.nscheme)
+  (define env.large    (let* ((env.deps   (env-conjoin* env.base env.syntax env.compiler))
+                              (env.parser (link-definition* env.deps def*.parser)))
+                         (env-conjoin* env.deps env.meta env.parser)))
   (define stx*.test (list '(list
                             (+ 1 2)
                             (foldr + 0 '(1 2 3 4 5))
@@ -43,7 +43,7 @@
   (append
    `((define def*.base     ',def*.base)
      (define def*.compiler ',def*.compiler)
-     (define def*.nscheme  ',def*.nscheme)
+     (define def*.parser   ',def*.parser)
      (define def*.posix    ',def*.posix))
    def*.primitive
    def*.syntax
@@ -54,9 +54,9 @@
      (define (link-definition* env def*) (program-parse-definition* program env def*))
      (define env.base     (env-conjoin* env.small (link-definition* env.small def*.base)))
      (define env.compiler (link-definition* env.base def*.compiler))
-     (define env.nscheme  (let ((env.deps (env-conjoin* env.base env.syntax env.compiler)))
-                            (env-conjoin* env.deps env.meta (link-definition* env.deps def*.nscheme))))
-     (define env.large    env.nscheme))
+     (define env.large    (let* ((env.deps   (env-conjoin* env.base env.syntax env.compiler))
+                                 (env.parser (link-definition* env.deps def*.parser)))
+                            (env-conjoin* env.deps env.meta env.parser))))
    '((define stx*.test (list '(list
                                (+ 1 2)
                                (foldr + 0 '(1 2 3 4 5))

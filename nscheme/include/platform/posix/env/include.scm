@@ -37,14 +37,14 @@
           (read-include-file*
             '("compiler/high-level-ir.scm"
               "compiler/backend/rkt.scm")))
-    (cons 'nscheme
+    (cons 'parser
           (read-include-file*
-            '("nscheme/stage.scm"
-              "nscheme/parse.scm"
-              "nscheme/minimal.scm"
-              "nscheme/match.scm"
-              "nscheme/program.scm"
-              "nscheme/meta.scm")))
+            '("parser/stage.scm"
+              "parser/parse.scm"
+              "parser/minimal.scm"
+              "parser/match.scm"
+              "parser/program.scm"
+              "parser/meta.scm")))
     (cons 'posix
           (read-include-file*
             '("platform/posix/platform.scm"
@@ -72,7 +72,7 @@
 (define def*.base      (append* (map cdr (alist-ref include* 'base))))
 (define def*.syntax    (append* (map cdr (alist-ref include* 'syntax))))
 (define def*.compiler  (append* (map cdr (alist-ref include* 'compiler))))
-(define def*.nscheme   (append* (map cdr (alist-ref include* 'nscheme))))
+(define def*.parser    (append* (map cdr (alist-ref include* 'parser))))
 (define def*.posix     (append* (map cdr (alist-ref include* 'posix))))
 (define def*.primitive (append* (map cdr (alist-ref include* 'primitive))))
 (define def*.env       (append* (map cdr (alist-ref include* 'env))))
