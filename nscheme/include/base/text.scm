@@ -1284,6 +1284,8 @@
                                (lambda ()                                       #f)
                                (lambda (x)   (set! x* (cons x x*))              #t)))
       (return))))
+(define (((reader:data-track-line/start line-start) reader:data) . y*)
+  ((reader-track-line/start 0) (apply reader:data y*)))
 
 (define (make-number->string   notation) (let ((n->utf8 (make-number->utf8 notation)))
                                            (lambda (n) (bytevector->string (n->utf8 n)))))

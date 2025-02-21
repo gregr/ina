@@ -1,6 +1,6 @@
 (define (read-file path)
   (let* ((in    (iport:file path))
-         (read* (read*/reader:data (lambda y* ((reader-track-line/start 0) (apply reader:data y*)))))
+         (read* (read*/reader:data ((reader:data-track-line/start 0) reader:data)))
          (stx*  (read* in)))
     (iport-close in)
     stx*))
