@@ -72,3 +72,5 @@
   (define (path-append* p*)
     (bytevector-join* #"/" (map (lambda (p) (bytevector-rtrim1 (path->bytevector p) byte:/)) p*)))
   (define (path-append . path*) (path-append* path*)))
+
+(define (current-posix-program-directory) (path-directory (car (current-posix-argument*))))

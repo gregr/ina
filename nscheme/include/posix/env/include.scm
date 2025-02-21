@@ -68,7 +68,7 @@
               "posix/env/evaluated.scm")))))
 
 ;; TODO: move these
-(define include* (read-include (path-append (path-directory (car (current-posix-argument*))) "../include")))
+(define include* (read-include (path-append (current-posix-program-directory) "../include")))
 (define def*.base      (append* (map cdr (alist-ref include* 'base))))
 (define def*.syntax    (append* (map cdr (alist-ref include* 'syntax))))
 (define def*.compiler  (append* (map cdr (alist-ref include* 'compiler))))
