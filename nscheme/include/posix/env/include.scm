@@ -47,16 +47,16 @@
               "parser/meta.scm")))
     (cons 'posix
           (read-include-file*
-            '("platform/posix/platform.scm"
-              "platform/posix/signal.scm"
-              "platform/posix/filesystem.scm"
-              "platform/posix/network.scm"
-              "platform/posix/process.scm"
-              "platform/posix/terminal/osc.scm"
-              "platform/posix/terminal/csi.scm"
-              "platform/posix/terminal/sgr.scm"
-              "platform/posix/terminal/tty.scm"
-              "platform/posix/terminal/text.scm")))
+            '("posix/platform.scm"
+              "posix/signal.scm"
+              "posix/filesystem.scm"
+              "posix/network.scm"
+              "posix/process.scm"
+              "posix/terminal/osc.scm"
+              "posix/terminal/csi.scm"
+              "posix/terminal/sgr.scm"
+              "posix/terminal/tty.scm"
+              "posix/terminal/text.scm")))
     (cons 'primitive
           (read-include-file*
             '("platform/common.scm"
@@ -65,7 +65,7 @@
           (read-include-file*
             '("platform/env/primitive.scm"
               "platform/env/evaluated.scm"
-              "platform/posix/env/evaluated.scm")))))
+              "posix/env/evaluated.scm")))))
 
 ;; TODO: move these
 (define include* (read-include (path-append (path-directory (car (current-posix-argument*))) "../include")))
