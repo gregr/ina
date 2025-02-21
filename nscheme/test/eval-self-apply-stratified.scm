@@ -48,8 +48,8 @@
    def*.primitive
    def*.syntax
    (let ((path.include (path-append (path-directory (car (current-posix-argument*))) "../include")))
-     (read-file* (map (lambda (p) (path-append path.include p))
-                      '("platform/env/primitive.scm"))))
+     (posix-read-file* (map (lambda (p) (path-append path.include p))
+                            '("platform/env/primitive.scm"))))
    '((define program (make-program))
      (define (link-definition* env def*) (program-parse-definition* program env def*))
      (define env.base     (env-conjoin* env.small (link-definition* env.small def*.base)))

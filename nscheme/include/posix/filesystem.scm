@@ -74,3 +74,13 @@
   (define (path-append . path*) (path-append* path*)))
 
 (define (current-posix-program-directory) (path-directory (car (current-posix-argument*))))
+
+(define (posix-read-file* path*) (append* (map posix-read-file path*)))
+(define (posix-read-file path)
+  (with-local-custodian
+    (lambda ()
+      (let* ((in    (iport:file path))
+             (read* (read*/reader:data ((reader:data-track-line/start 0) reader:data)))
+             (stx*  (read* in)))
+        (iport-close in)
+        stx*))))

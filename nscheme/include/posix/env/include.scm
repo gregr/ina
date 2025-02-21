@@ -1,14 +1,7 @@
-(define (read-file path)
-  (let* ((in    (iport:file path))
-         (read* (read*/reader:data ((reader:data-track-line/start 0) reader:data)))
-         (stx*  (read* in)))
-    (iport-close in)
-    stx*))
-(define (read-file* path*) (append* (map read-file path*)))
 (define (read-include path.include)
   (define (read-include-file* p*)
     (map (lambda (p) (let ((p (path->bytevector p)))
-                       (cons p (read-file (path-append path.include p)))))
+                       (cons p (posix-read-file (path-append path.include p)))))
          p*))
   (list (cons 'base
           (read-include-file*
