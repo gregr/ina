@@ -1,5 +1,0 @@
-(define env.base     (env-conjoin* env.small (eval-definition* env.small def*.base)))
-(define env.compiler (eval-definition* env.base def*.compiler))
-(define env.large    (let* ((env.deps   (env-conjoin* env.base env.syntax env.compiler))
-                            (env.parser (eval-definition* env.deps def*.parser)))
-                       (env-conjoin* env.deps env.meta env.parser)))

@@ -1013,14 +1013,14 @@
           (,_          'something-else))
   ==> (vector-second: 2)))
 
-(define env.test.large
+(define env.test.medium
   (let ((env (make-env)))
     (env-vocabulary-bind! env 'env.test vocab.expression
-                          (parse/constant-expression ($quote env.large)))
-    (env-conjoin env.large env)))
+                          (parse/constant-expression ($quote env.medium)))
+    (env-conjoin env.medium env)))
 
 (test-evaluation
- env.test.large
+ env.test.medium
 
  '(bytevector-ports
    (call/oport:bytevector
@@ -1428,14 +1428,14 @@
 
 (displayln "\nBeginning recursive panic test:")
 (test-evaluation
- env.test.large
+ env.test.medium
  '(recursive-panic
    (current-panic-handler
     (lambda x* (begin (apply panic x*)))
     (lambda () (panic 'a 'b 'c)))
    ==> error:eval))
 
-(define env.test.posix env.large+posix)
+(define env.test.posix env.large)
 
 (test-evaluation
  env.test.posix
