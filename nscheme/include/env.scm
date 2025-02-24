@@ -124,6 +124,5 @@
 (define (make-library=>env/library=>def* library=>def* load-definition*)
   (make-library=>env ((make-load-library/library=>def* library=>def*) load-definition*)))
 
-(define (posix-default-library-path) (path-append (current-posix-program-directory) "../include"))
 (define (posix-make-library=>def* path.here)
   (make-library=>def* (lambda (p) (posix-read-file (path-append path.here p)))))

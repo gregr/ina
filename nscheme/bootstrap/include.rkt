@@ -43,7 +43,7 @@
 (include "../include/posix/terminal/tty.scm")
 (include "../include/posix/terminal/text.scm")
 (include "../include/env.scm")
-(define path.library  (posix-default-library-path))
+(define path.library  (path-append (current-posix-program-directory) "../include"))
 (define library=>def* (posix-make-library=>def* path.library))
 (define library=>env  (make-library=>env/library=>def* library=>def* eval-definition*))
 (define env.medium    (alist-ref library=>env 'medium))
