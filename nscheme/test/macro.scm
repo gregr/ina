@@ -456,62 +456,6 @@
 ;((case-lambda
 ;  (() (letrec ((x.0 (quote 5)) (x.1 (quote 6)) (x.2 (quote 7))) x.0))))
 
-;; unbound identifier
-;(test '(let ((x 44))
-;         (define-syntax (m stx)
-;           (define-syntax (m2 stx)
-;             (quote-syntax (quote-syntax x)))
-;           (quasiquote-syntax (let ((x 55)) #,(m2))))
-;         (m)))
-
-(test '(let ((x 44))
-         (define-syntax (m stx)
-           (define-syntax (m2 stx)
-             (quote-syntax (quote x)))
-           (quasiquote-syntax (let ((x 55)) #,(m2))))
-         (m)))
-;==> 55
-;EQUIVALENT RACKET CODE:
-;((case-lambda ((x.0) ((case-lambda ((x.1) x.1)) (quote 55)))) (quote 44))
-
-(test '(let ((x 44))
-         (define-syntax (m stx)
-           (define (m2) (quote-syntax x))
-           (quasiquote-syntax (let ((x 55)) #,(m2))))
-         (m)))
-;==> 55
-;EQUIVALENT RACKET CODE:
-;((case-lambda ((x.0) ((case-lambda ((x.1) x.1)) (quote 55)))) (quote 44))
-
-(test '(let ((x 44))
-         (define-syntax (m3 stx)
-           (define-syntax (m4 stx)
-             (quote-syntax (quote-syntax x)))
-           (quasiquote-syntax (let ((#,(m4) 55)) x)))
-         (m3)))
-;==> 44
-;EQUIVALENT RACKET CODE:
-;((case-lambda ((x.0) ((case-lambda ((x.1) x.0)) (quote 55)))) (quote 44))
-
-(test '(let ((x 44))
-         (define-syntax (m3 stx)
-           (define-syntax (m4 stx)
-             (quote-syntax (quote x)))
-           (quasiquote-syntax (let ((#,(m4) 55)) x)))
-         (m3)))
-;==> 55
-;EQUIVALENT RACKET CODE:
-;((case-lambda ((x.0) ((case-lambda ((x.1) x.1)) (quote 55)))) (quote 44))
-
-(test '(let ((x 44))
-         (define-syntax (m3 stx)
-           (define (m4) (quote-syntax x))
-           (quasiquote-syntax (let ((#,(m4) 55)) x)))
-         (m3)))
-;==> 55
-;EQUIVALENT RACKET CODE:
-;((case-lambda ((x.0) ((case-lambda ((x.1) x.1)) (quote 55)))) (quote 44))
-
 (test '(let ((x 88))
          (define-syntax (m stx)
            (match (syntax->list stx)
@@ -536,3 +480,94 @@
 ;==> 88
 ;EQUIVALENT RACKET CODE:
 ;((case-lambda ((x.0) ((case-lambda ((x.1) x.0)) (quote 77)))) (quote 88))
+
+(test '(let ()
+         (define-syntax (m stx)
+           (match (syntax->list stx)
+             ((list _ a b)
+              (quasiquote-syntax
+                (begin
+                  (define #,a 1)
+                  #,b)))))
+         (define-syntax (n stx)
+           (match (syntax->list stx)
+             ((list _ id)
+              (quasiquote-syntax (m #,id x)))))
+         (n x)))
+;==> 1
+;EQUIVALENT RACKET CODE:
+;((case-lambda (() (letrec ((x.0 (quote 1))) x.0))))
+
+;;; Different ways to intentionally choose the outermost binding of x to 6:
+;(test '(let ((x 6))
+;         (define-syntax (m2 stx)
+;           (quote-syntax x))
+;         (let ((x 5))
+;           (m2))))
+;(test '(let ((x 6))
+;         (define-syntax (m stx)
+;           (define id1 (quote-syntax x))
+;           (quasiquote-syntax
+;             (begin
+;               (define-syntax (m3 stx)
+;                 (quote-syntax x))
+;               (let ((#,id1 5))
+;                 (m3)))))
+;         (m)))
+;(test '(let ((x 6))
+;         (define-syntax (m stx)
+;           (define-syntax (m2 stx)
+;             (quote-syntax
+;               (quote-syntax x)))
+;           (define id1 (quote-syntax x))
+;           (define id2 (m2))
+;           (quasiquote-syntax
+;             (begin
+;               (define-syntax (m3 stx)
+;                 (quote-syntax #,id2))
+;               (let ((#,id1 5))
+;                 (m3)))))
+;         (m)))
+
+;; These examples require meta-level hygiene to behave properly.
+;; Returning either 44 or 55 is reasonable, but all of these must return the same value to be reasonable.
+;(test '(let ((x 44))
+;         (define-syntax (m stx)
+;           (define-syntax (m2 stx)
+;             (quote-syntax (quote-syntax x)))
+;           (quasiquote-syntax (let ((x 55)) #,(m2))))
+;         (m)))
+;(test '(let ((x 44))
+;         (define-syntax (m3 stx)
+;           (define-syntax (m4 stx)
+;             (quote-syntax (quote-syntax x)))
+;           (quasiquote-syntax (let ((#,(m4) 55)) x)))
+;         (m3)))
+;(test '(let ((x 44))
+;         (define-syntax (m stx)
+;           (define-syntax (m2 stx)
+;             (quote-syntax
+;               (quote-syntax x)))
+;           (define id1 (quote-syntax x))
+;           (define id2 (m2))
+;           (quasiquote-syntax
+;             (let ()
+;               (define-syntax (m3 stx)
+;                 (let ((#,id1 55))
+;                   #,id2))
+;               (m3))))
+;         (m)))
+;(test '(let ((x 44))
+;         (define-syntax (m stx)
+;           (define-syntax (m2 stx)
+;             (quote-syntax
+;               (quote-syntax x)))
+;           (define id1 (quote-syntax x))
+;           (define id2 (m2))
+;           (quasiquote-syntax
+;             (let ()
+;               (define-syntax (m3 stx)
+;                 (let ((#,id2 55))
+;                   #,id1))
+;               (m3))))
+;         (m)))
