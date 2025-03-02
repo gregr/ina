@@ -5,8 +5,7 @@
 (define (fresh-mark) (mvector))
 
 (splicing-local
-  ((define antimark #f)
-   (define mark=?   eqv?)
+  ((define mark=?   eqv?)
    (define (mark*=? a* b*)
      (let loop ((a* a*) (b* b*))
        (if (pair? a*)
@@ -14,14 +13,20 @@
                 (mark=? (car a*) (car b*))
                 (loop (cdr a*) (cdr b*)))
            (null? b*))))
-   (define antimark? not)
-   (define (marks-append m*.outer m*.inner)
-     (cond ((null? m*.inner)                 m*.outer)
-           ((null? m*.outer)                 m*.inner)
-           ((not (antimark? (car m*.inner))) (append m*.outer m*.inner))
-           (else (let loop ((m (car m*.outer)) (m* (cdr m*.outer)))
-                   (cond ((null? m*) (cdr m*.inner))
-                         (else       (cons m (loop (car m*) (cdr m*)))))))))
+   (define (mark*-append m*.outer m*.inner)
+     (cond ((null? m*.inner) m*.outer)
+           ((null? m*.outer) m*.inner)
+           (else (let loop ((m*.outer (reverse m*.outer)) (m*.inner m*.inner))
+                   (if (mark=? (car m*.outer) (car m*.inner))
+                       (let ((m*.outer (cdr m*.outer)) (m*.inner (cdr m*.inner)))
+                         (cond ((null? m*.outer) m*.inner)
+                               ((null? m*.inner) (reverse m*.outer))
+                               (else             (loop m*.outer m*.inner))))
+                       (cons (car m*.outer)
+                             (let loop ((m*.outer (cdr m*.outer)) (m* m*.inner))
+                               (if (null? m*.outer)
+                                   m*
+                                   (loop (cdr m*.outer) (cons (car m*.outer) m*))))))))))
 
    (define-values (unused-subtype-annotated make-annotated annotated? access-annotated unused-mutate-annotated!)
      (make-record-type 'syntax:annotated 2 #f #t #f #f))
@@ -36,7 +41,7 @@
    (define (syntax-mark* s) (if (marked? s) (access-marked s 0) '()))
    (define (syntax-wrap s m*)
      (if (marked? s)
-         (marked (marks-append m* (syntax-mark* s)) (marked-form s))
+         (marked (mark*-append m* (syntax-mark* s)) (marked-form s))
          (let ((form (annotated-form s)))
            (if (or (pair? form) (vector? form) (symbol? form)) (marked m* s) s))))
    (define (syntax-add-mark s m) (syntax-wrap s (list m)))
@@ -79,7 +84,7 @@
          (mark*=? (syntax-mark* a) (syntax-mark* b))))
 
   (define (transcribe op m env stx)
-    (let ((result (op (syntax-add-mark stx antimark))))
+    (let ((result (op (syntax-add-mark stx m))))
       (syntax-add-mark (if (procedure? result) (result (env-unmark env m)) result) m)))
 
   ;;;;;;;;;;;;;;;;;;;;
