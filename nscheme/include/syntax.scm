@@ -2,10 +2,11 @@
 ;;; Syntax with lazy mark propagation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (fresh-mark) (mvector))
 
 (splicing-local
-  ((define mark=?   eqv?)
+  ((define-values (unused-subtype-mark make-mark mark? access-mark unused-mutate-mark!)
+     (make-record-type 'mark 0 '() #t #f #f))
+   (define mark=? eqv?)
    (define (mark*=? a* b*)
      (let loop ((a* a*) (b* b*))
        (if (pair? a*)
@@ -27,7 +28,6 @@
                                (if (null? m*.outer)
                                    m*
                                    (loop (cdr m*.outer) (cons (car m*.outer) m*))))))))))
-
    (define-values (unused-subtype-annotated make-annotated annotated? access-annotated unused-mutate-annotated!)
      (make-record-type 'syntax:annotated 2 #f #t #f #f))
    (define (annotated form note) (if (null? note) form (make-annotated form note)))
@@ -49,6 +49,8 @@
      (identifier?! id)
      (let ((m* (syntax-mark* id)))
        (and (pair? m*) (mark=? (car m*) m) (marked (cdr m*) (marked-form id))))))
+
+  (define (fresh-mark) (make-mark))
 
   (define (syntax-note     s)       (annotated-note (if (marked? s) (marked-form s) s)))
   (define (syntax-note-set s note) (marked (syntax-mark* s) (annotated (syntax-form s) note)))
