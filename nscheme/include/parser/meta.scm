@@ -17,21 +17,28 @@
 ;(define vocab.formula 'formula)
 ;(define vocab.term    'term)
 
-(define (parse-quote-syntax env stx) ($quote stx))
+(define (with-higher-mark-level thunk) (current-mark-level (+ (current-mark-level) 1) thunk))
+
+(define (parse-quote-syntax env stx) ($quote (syntax-prune-level stx (current-mark-level))))
+
 (define parse-quasiquote-syntax
   (parse-quasiquote-X vocab.quasiquote-syntax 'quasiquote-syntax 'unsyntax 'unsyntax-splicing
                       parse-quote-syntax))
 
 (define (parse-begin-meta-definition* env.d env stx*)
-  (let* ((D (parse-begin-definition* env.d env stx*))
-         (E (apply/values $quote-values (E-eval (D->E/publish D)))))
+  (let ((E (apply/values $quote-values
+                         (with-higher-mark-level
+                           (lambda ()
+                             (E-eval (D->E/publish (parse-begin-definition* env.d env stx*))))))))
     ($d:expression (lambda () E))))
 (define (parse-begin-meta-definition env.d env . stx*)
   (parse-begin-meta-definition* env.d env stx*))
 
 (define (parse-begin-meta-expression* env stx*)
   (apply/values $quote-values
-                (E-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx*))))
+                (with-higher-mark-level
+                  (lambda ()
+                    (E-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx*))))))
 (define (parse-begin-meta-expression env . stx*) (parse-begin-meta-expression* env stx*))
 
 (define (parse-current-environment env) ($quote env))
@@ -42,7 +49,9 @@
     (unless vocab=>v (raise-parse-error "cannot set unbound identifier" id.lhs))
     (unless (even? (length stx*.vocab&rhs))
       (raise-parse-error "not a list of alternating vocabularies and values" stx*.vocab&rhs))
-    (apply env-vocabulary-set! env.d id.lhs (map E-eval (parse-expression* env stx*.vocab&rhs))))
+    (apply env-vocabulary-set! env.d id.lhs
+           (with-higher-mark-level
+             (lambda () (map E-eval (parse-expression* env stx*.vocab&rhs))))))
   ($d:begin))
 
 (define (parse-define-vocabulary-value env.d env id.lhs . stx*.vocab&rhs)
@@ -52,7 +61,7 @@
 (define (parse-define-syntax env.d env.op stx.lhs . stx*.rhs)
   (define (finish id.lhs ^rhs)
     (env-introduce! env.d id.lhs)
-    (let ((op (E-eval (^rhs env.op))))
+    (let ((op (with-higher-mark-level (lambda () (E-eval (^rhs env.op))))))
       (env-vocabulary-set!
         env.d id.lhs
         vocab.expression-operator
@@ -99,13 +108,13 @@
   (value-package->env
     (cons
       '(
-        syntax-note syntax-note-set syntax-note-add
-        syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
+        current-mark-level fresh-mark transcribe syntax-prune-level
+        syntax-note syntax-note-set syntax-note-add syntax-unwrap syntax->datum datum->syntax
         identifier? identifier?! identifier=?
         make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!)
       (list
-        syntax-note syntax-note-set syntax-note-add
-        syntax-unwrap syntax->datum datum->syntax fresh-mark transcribe
+        current-mark-level fresh-mark transcribe syntax-prune-level
+        syntax-note syntax-note-set syntax-note-add syntax-unwrap syntax->datum datum->syntax
         identifier? identifier?! identifier=?
         make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!))))
 
