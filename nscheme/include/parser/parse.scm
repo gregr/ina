@@ -348,7 +348,7 @@
   (raise (apply make-unbound-identifier-parse-error arg*)))
 
 (define (parse-free-variable-reference env stx)
-  (let ((desc "not an expression"))
+  (let ((desc "identifier is not bound as an expression"))
     (with-use-value
       '(replace unbound-variable-reference)
       (lambda ()
