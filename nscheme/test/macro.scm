@@ -530,7 +530,7 @@
 ;         (m)))
 
 ;; These examples require meta-level hygiene to behave properly.
-;; Returning either 44 or 55 is reasonable, but all of these must return the same value to be reasonable.
+;; They should all return 55 in the current system.
 ;(test '(let ((x 44))
 ;         (define-syntax (m stx)
 ;           (define-syntax (m2 stx)

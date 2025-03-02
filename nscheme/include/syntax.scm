@@ -2,10 +2,12 @@
 ;;; Syntax with lazy mark propagation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define current-mark-level (make-parameter 0))
 
 (splicing-local
   ((define-values (unused-subtype-mark make-mark mark? access-mark unused-mutate-mark!)
-     (make-record-type 'mark 0 '() #t #f #f))
+     (make-record-type 'mark 1 '() #t #f #f))
+   (define (mark-level m) (access-mark m 0))
    (define mark=? eqv?)
    (define (mark*=? a* b*)
      (let loop ((a* a*) (b* b*))
@@ -50,7 +52,7 @@
      (let ((m* (syntax-mark* id)))
        (and (pair? m*) (mark=? (car m*) m) (marked (cdr m*) (marked-form id))))))
 
-  (define (fresh-mark) (make-mark))
+  (define (fresh-mark) (make-mark (current-mark-level)))
 
   (define (syntax-note     s)       (annotated-note (if (marked? s) (marked-form s) s)))
   (define (syntax-note-set s note) (marked (syntax-mark* s) (annotated (syntax-form s) note)))
@@ -64,6 +66,19 @@
                 ((vector? d) (vector-map wrap d))
                 (else        d)))
         (annotated-form s)))
+
+  (define (syntax-prune-level s level)
+    (let prune ((s s))
+      (let loop ((m* (syntax-mark* s)))
+        (if (null? m*)
+            (let ((d (syntax-form s)))
+              (cond ((pair?   d) (cons (prune (car d)) (prune (cdr d))))
+                    ((vector? d) (vector-map prune d))
+                    (else        d)))
+            (let ((m (car m*)))
+              (if (<= level (mark-level m))
+                  (loop (cdr m*))
+                  (marked m* (marked-form s))))))))
 
   (define (datum->syntax context datum)
     (identifier?! context)
