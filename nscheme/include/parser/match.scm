@@ -68,7 +68,7 @@
     ((3) (vector (vector-ref P 0) note (vector-ref P 2)))
     ((4) (vector (vector-ref P 0) note (vector-ref P 2) (vector-ref P 3)))
     ((5) (vector (vector-ref P 0) note (vector-ref P 2) (vector-ref P 3) (vector-ref P 4)))
-    (else (error "not a P" P))))
+    (else (mistake 'P-annotate "not a P" P))))
 
 (define ($p:annotate P note)  (P-annotate P note))
 (define ($p:source   P stx)   ($p:annotate P stx))
@@ -181,7 +181,7 @@
                               (foldl (lambda (id id*) (id-set-add id* id)) id* id*.l))))
         ((P:not? P) (let-values (((P.inner _) (loop (P:not-inner P) #f)))
                       (return ($p:not P.inner) id*)))
-        (else       (error "not a linear P" P)))))
+        (else       (mistake 'linear-pattern-compile "not a linear P" P)))))
   (define (linear-pattern-variables P)
     (let loop ((P P) (id* '()))
       (cond
@@ -310,7 +310,7 @@
                                         (fail env)
                                         (^pre succeed.pre fail $x env)))))
                         (fail env))))))
-            (else (error "not a compilable linear P" P)))))
+            (else (mistake 'linear-pattern-compile "not a compilable linear P" P)))))
       id*)))
 
 (define (parse-pattern-any    _ __)                $p:any)
@@ -425,7 +425,7 @@
 (define ((parse-match/parse-pattern parse-pattern) env stx.e . stx*.clause*)
   ($let1 'x (parse-expression env stx.e)
          (lambda ($x)
-           ($let1 'fail ($thunk ($error ($quote "no matching clause") $x))
+           ($let1 'fail ($thunk ($mistake ($quote "no matching clause") $x))
                   (lambda ($fail)
                     (let loop ((stx*.clause* stx*.clause*))
                       (if (null? stx*.clause*)

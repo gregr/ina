@@ -11,7 +11,7 @@
               (nonnegative-integer? count)
               (let ((end (+ start count)))
                 (unless (<= end (mvector-length mv))
-                  (error "mvector-fill! range out of bounds" start count (mvector-length mv)))
+                  (mistake 'mvector-fill! "range out of bounds" start count (mvector-length mv)))
                 (for-each (lambda (i) (mvector-set! mv i v)) (range start end))))))
   (case-lambda
     ((mv v)             (go mv v 0     (mvector-length mv)))
@@ -24,10 +24,10 @@
             (nonnegative-integer?! start.dst)
             (nonnegative-integer?! count)
             (unless (<= (+ start.dst count) (mvector-length dst))
-              (error "mvector-copy! destination range is out of bounds" start.dst count
+              (mistake 'mvector-copy! "destination range is out of bounds" start.dst count
                      (mvector-length dst)))
             (unless (<= (+ start.src count) len.src)
-              (error "mvector-copy! source range is out of bounds" start.src count len.src)))
+              (mistake 'mvector-copy! "source range is out of bounds" start.src count len.src)))
           (define (copy-forward! dst start.dst src start.src count)
             (for-each
               (lambda (i) (mvector-set! dst (+ start.dst i) (mvector-ref src (+ start.src i))))
@@ -47,4 +47,4 @@
                                 (copy-forward!  dst start.dst src start.src count)))
             ((vector? src)  (bounds?! dst start.dst (vector-length src) start.src count)
                             (copy-vector! dst start.dst src start.src count))
-            (else           (error "not a vector or mvector" src))))))
+            (else           (mistake 'mvector-copy! "not a vector or mvector" src))))))

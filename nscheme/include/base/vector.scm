@@ -16,7 +16,7 @@
 (define (vector-set x i v)
   (let ((len (vector-length x)))
     (nonnegative-integer? i)
-    (unless (< i len) (error "vector-set index out of bounds" i len))
+    (unless (< i len) (mistake 'vector-set "index out of bounds" 'index i 'length len))
     (let ((new (make-mvector len 0)))
       (mvector-copy! new 0 x 0 len)
       (mvector-set! new i v)

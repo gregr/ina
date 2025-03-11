@@ -43,7 +43,7 @@
     ((3) (vector (vector-ref E 0) note (vector-ref E 2)))
     ((4) (vector (vector-ref E 0) note (vector-ref E 2) (vector-ref E 3)))
     ((5) (vector (vector-ref E 0) note (vector-ref E 2) (vector-ref E 3) (vector-ref E 4)))
-    (else (error "not an E" E))))
+    (else (mistake 'E-annotate "not an E" E))))
 
 (define (E-pretty E)
   (define address-pretty address-name)
@@ -65,7 +65,7 @@
       ((E:letrec?       E) (list 'letrec (map list (map address-pretty (E:letrec-binding-left* E))
                                               (map loop (E:letrec-binding-right* E)))
                                  (loop (E:letrec-body E))))
-      (else                (error "not an E" E)))))
+      (else                (mistake 'E-pretty "not an E" E)))))
 
 ;;; NOTE: this evaluator is only intended for testing until the compiler is finished.
 (splicing-local
@@ -83,7 +83,7 @@
    (define cenv.empty '())
    (define (cenv-ref cenv addr)
      (let loop ((j 0) (cenv.1 cenv))
-       (when (null? cenv.1) (error "unbound or out-of-phase reference" addr))
+       (when (null? cenv.1) (mistake 'E-eval "unbound or out-of-phase reference" addr))
        (let ((rec? (caar cenv.1)) (param*~ (cdar cenv.1)) (cenv (cdr cenv.1)))
          (let find ((i 0) (a*~ param*~))
            (cond ((pair? a*~) (let ((a (car a*~)) (a*~ (cdr a*~)))
@@ -93,7 +93,7 @@
                                         (lambda (renv) (list-ref (list-ref renv j) i)))
                                     (find (+ i 1) a*~))))
                  ((and (not (null? a*~)) (address=? a*~ addr))
-                  (when rec? (error "recursive frame cannot be variadic" cenv.1))
+                  (when rec? (mistake 'E-eval "recursive frame cannot be variadic" cenv.1))
                   (lambda (renv) (list-tail (list-ref renv j) i)))
                  (else (loop (+ j 1) cenv)))))))
    (define (cenv-extend      cenv param*~)      (cenv-extend/rec? cenv param*~ #f))
@@ -128,7 +128,7 @@
                                  (body (renv-extend renv args))
                                  (k renv count args))))))
                      (lambda (renv count args)
-                       (error "arity mismatch" 'given count 'expected (E:case-lambda-param*~* E)))
+                       (mistake 'E-eval "arity mismatch" 'given count 'expected (E:case-lambda-param*~* E)))
                      (E:case-lambda-param*~* E) (E:case-lambda-body* E))))
             (lambda (renv) (lambda args (k renv (length args) args)))))
          ((E:letrec? E)
@@ -142,5 +142,5 @@
                              (let ((renv (renv-extend renv loc*)))
                                (for-each (lambda (loc arg) (set-box! loc (arg renv))) loc* arg*))
                              (body (renv-extend renv (map unbox loc*)))))))
-         (else (error "not an E" E))))))
+         (else (mistake 'E-eval "not an E" E))))))
   (define (E-eval E) ((E-stage E cenv.empty) renv.empty)))

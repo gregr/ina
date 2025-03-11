@@ -94,7 +94,7 @@
               (else        x)))))
 
   (define (identifier?  s) (symbol? (syntax-form s)))
-  (define (identifier?! s) (unless (identifier? s) (error "not an identifier" s)))
+  (define (identifier?! s) (unless (identifier? s) (mistake "not an identifier" s)))
   (define (identifier=? a b)
     (identifier?! a) (identifier?! b)
     (and (eqv? (syntax-form a) (syntax-form b))
@@ -163,15 +163,15 @@
               ((describe) (list->vector (id-dict-key* id=>x)))
               ((ref)      (lambda (fail id) (or (id-dict-ref id=>x id) (fail))))
               ((set!)     (lambda (id x) (set! id=>x (id-dict-set id=>x id x))))
-              (else       (error "invalid environment operation" method))))))))
+              (else       (mistake "invalid environment operation" method))))))))
 
   (define (env-read-only env)
     (lambda (method)
       (case method
         ((describe) (list 'read-only (env 'describe)))
         ((ref)      (env 'ref))
-        ((set!)     (lambda (id x) (error "set! with read-only environment" id x)))
-        (else       (error "invalid environment operation" method)))))
+        ((set!)     (lambda (id x) (mistake 'env-set! "read-only environment" id x)))
+        (else       (mistake "invalid environment operation" method)))))
 
   (define (env-unmark env.m m)
     (lambda (method)
@@ -179,7 +179,7 @@
         ((describe) (list 'unmark m (env.m 'describe)))
         ((ref)      (lambda (fail id) ((env.m 'ref) fail (syntax-add-mark id m))))
         ((set!)     (lambda (id x) ((env.m 'set!) (syntax-add-mark id m) x)))
-        (else       (error "invalid environment operation" method)))))
+        (else       (mistake "invalid environment operation" method)))))
 
   (define (env-disjoin env.mark m env.no-mark)
     (lambda (method)
@@ -191,7 +191,7 @@
         ((set!)     (lambda (id x)
                       (let ((i (identifier-remove-mark id m)))
                         (if i ((env.mark 'set!) i x) ((env.no-mark 'set!) id x)))))
-        (else       (error "invalid environment operation" method)))))
+        (else       (mistake "invalid environment operation" method)))))
 
   (define (env-conjoin env.first env.second)
     (lambda (method)
@@ -200,7 +200,7 @@
         ((ref)      (lambda (fail id)
                       ((env.first 'ref) (lambda () ((env.second 'ref) fail id)) id)))
         ((set!)     (lambda (id x) ((env.first 'set!) id x)))
-        (else       (error "invalid environment operation" method)))))
+        (else       (mistake "invalid environment operation" method)))))
 
   (define (env-conjoin* env.first . env*.rest)
     (let loop ((env env.first) (env* env*.rest))

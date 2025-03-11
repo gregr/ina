@@ -3,9 +3,10 @@
   ;; any global names, such as the names of any primitives or special form keywords.
   (define address->fresh-id (address->local-gensym/default '_))
   (define (cenv-extend cenv addr* id*) (append (map cons addr* id*) cenv))
-  (define (cenv-ref cenv addr) (let ((addr&id (assv addr cenv)))
-                                 (unless addr&id (error "unbound or out-of-phase reference" addr))
-                                 (cdr addr&id)))
+  (define (cenv-ref cenv addr)
+    (let ((addr&id (assv addr cenv)))
+      (unless addr&id (mistake 'E-compile-rkt "unbound or out-of-phase reference" addr))
+      (cdr addr&id)))
   (let loop/env ((E E) (cenv global-addr=>id))
     (define (loop E) (loop/env E cenv))
     (cond
@@ -37,4 +38,4 @@
                              (let ((id* (map address->fresh-id lhs*)))
                                (let-values (((rhs* body) (apply ^rhs*&body id*)))
                                  (list 'letrec (map list id* rhs*) body)))))
-      (else                (error "not an E" E)))))
+      (else                (mistake 'E-compile-rkt "not an E" E)))))

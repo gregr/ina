@@ -4,7 +4,8 @@
 (define (call-with-values produce consume) (apply/values consume (produce)))
 (define call/values call-with-values)
 
-(define (error . detail*) (panic 'error detail*))
+(define (mistake* detail*) (panic 'mistake detail*))
+(define (mistake . detail*) (mistake* detail*))
 
 (define (box        x) (make-mvector 1 x))
 (define (unbox      b) (mvector-ref  b 0))

@@ -30,7 +30,7 @@
   (env-set! env id (vocab-dict-set* vocab-dict.empty vx*)))
 (define (env-vocabulary-set! env id . vx*)
   (let ((vocab=>v (env-ref env id)))
-    (unless vocab=>v (error "cannot set unbound identifier" id))
+    (unless vocab=>v (mistake 'env-vocabulary-set! "unbound identifier" id))
     (env-set! env id (vocab-dict-set* vocab=>v vx*))))
 (define (env-vocabulary-ref env id vocab)
   (let ((vocab=>v (env-ref env id))) (and vocab=>v (vocab-dict-ref vocab=>v vocab))))
@@ -182,7 +182,7 @@
 (define ($vector           . x*) (apply $pcall vector x*))
 (define ($values           . x*) (apply $pcall values x*))
 (define ($quote-values     . x*) (apply $values (map $quote x*)))
-(define ($error       . detail*) (apply $pcall panic ($quote 'error) detail*))
+(define ($mistake     . detail*) (apply $pcall panic ($quote 'mistake) detail*))
 (define ($list             . x*) (let loop ((x* x*))
                                    (cond ((null? x*) ($quote '()))
                                          (else       ($cons (car x*) (loop (cdr x*)))))))
@@ -284,7 +284,7 @@
                   (raise-parse-error
                     (if (null? rdef*) "no expression" "no expression after definitions")
                     (D:end/expression-syntax D))))
-               (else (error "not a definition" D))))
+               (else (mistake 'D-compile "not a D" D))))
        (let ((def* (reverse rdef*)) (^E (or ^E.current $values)))
          (if (null? rdef*)
              (^E)
@@ -355,8 +355,8 @@
         (with-continue
           '(return unbound-variable-reference)
           (lambda () (raise-unbound-identifier-parse-error desc stx vocab.expression env)))
-        ($error ($quote 'unbound-variable-reference)
-                ($quote (list desc stx vocab.expression env)))))))
+        ($mistake ($quote 'unbound-variable-reference)
+                  ($quote (list desc stx vocab.expression env)))))))
 
 (define (parse-expression env stx)
   ($source

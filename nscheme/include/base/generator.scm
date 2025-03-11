@@ -14,7 +14,7 @@
                         (set! ch.reply.current (car ch.reply&x))
                         (proc (cdr ch.reply&x))
                         (let loop () (yield done-value) (loop))))))
-           (dead  (handle-evt (thread-dead-evt t) (lambda (_) (error "dead generator")))))
+           (dead  (handle-evt (thread-dead-evt t) (lambda (_) (mistake "dead generator")))))
       (lambda (x)
         (let ((ch.reply (make-channel)))
           (sync (channel-put-evt ch.in (cons ch.reply x)) dead)

@@ -11,8 +11,8 @@
               (nonnegative-integer? count)
               (let ((end (+ start count)))
                 (unless (<= end (mbytevector-length mbv))
-                  (error "mbytevector-fill! range out of bounds" start count
-                         (mbytevector-length mbv)))
+                  (mistake 'mbytevector-fill! "range out of bounds" start count
+                           (mbytevector-length mbv)))
                 (for-each (lambda (i) (mbytevector-set! mbv i v)) (range start end))))))
   (case-lambda
     ((mbv v)             (go mbv v 0     (mbytevector-length mbv)))
@@ -26,10 +26,10 @@
        (nonnegative-integer?! start.dst)
        (nonnegative-integer?! count)
        (unless (<= (+ start.dst count) (mbytevector-length dst))
-         (error "mbytevector-copy! destination range is out of bounds" start.dst count
-                (mbytevector-length dst)))
+         (mistake 'mbytevector-copy! "destination range is out of bounds" start.dst count
+                  (mbytevector-length dst)))
        (unless (<= (+ start.src count) len.src)
-         (error "mbytevector-copy! source range is out of bounds" start.src count len.src)))
+         (mistake 'mbytevector-copy! "source range is out of bounds" start.src count len.src)))
      (define (copy-forward! dst start.dst src start.src count)
        (for-each
          (lambda (i) (mbytevector-set! dst (+ start.dst i) (mbytevector-ref src (+ start.src i))))
@@ -49,4 +49,4 @@
                                     (copy-forward!  dst start.dst src start.src count)))
             ((bytevector? src)  (bounds?! dst start.dst (bytevector-length src) start.src count)
                                 (copy-bytevector! dst start.dst src start.src count))
-            (else               (error "not a bytevector or mbytevector" src))))))
+            (else               (mistake 'mbytevector-copy! "not a bytevector or mbytevector" src))))))
