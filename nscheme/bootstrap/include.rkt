@@ -6,7 +6,6 @@
   ;(rename-in "../platform/racket/nscheme.rkt" (interruptible-lambda lambda))
   racket/include racket/local racket/splicing (prefix-in rkt: racket/base))
 (include "../include/base/misc.scm")
-(include "../include/base/pair.scm")
 (include "../include/base/list.scm")
 (include "../include/base/number.scm")
 (include "../include/base/mvector.scm")

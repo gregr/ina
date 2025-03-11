@@ -1,7 +1,6 @@
 (define library=>path*
   '((base
       "base/misc.scm"
-      "base/pair.scm"
       "base/list.scm"
       "base/number.scm"
       "base/mvector.scm"
