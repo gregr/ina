@@ -326,7 +326,7 @@
                  name super-type field-count 0 #f
                  (append (if final? (list (cons prop:sealed #t)) '())
                          (list (cons prop:metadata metadata)))
-                 (current-inspector) proc-spec?
+                 #f proc-spec?
                  (set-subtract (range field-count) (or mutable-field-position* '())) #f #f)))
     (values (and (not final?) (make-record-type/super-type stype)) construct ? access
             (and mutable-field-position* (not (null? mutable-field-position*)) mutate!))))
