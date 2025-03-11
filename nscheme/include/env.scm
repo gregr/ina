@@ -123,5 +123,24 @@
 (define (make-library=>env/library=>def* library=>def* load-definition*)
   (make-library=>env ((make-load-library/library=>def* library=>def*) load-definition*)))
 
+(define (current-posix-program-directory) (path-directory (car (current-posix-argument*))))
+
+(define ((posix-read-file/annotate? annotate?) path)
+  (with-local-custodian
+    (lambda ()
+      (let* ((in    (iport:file path))
+             (read* (read*/reader:data
+                      ((reader:data-track-line/start 0)
+                       (if annotate?
+                           (reader:data/annotate
+                             (lambda (x loc text loc.end text.end)
+                               (syntax-note-set x (vector path loc text loc.end text.end))))
+                           reader:data))))
+             (stx*  (read* in)))
+        (iport-close in)
+        stx*))))
+(define posix-read-file           (posix-read-file/annotate? #f))
+(define posix-read-file-annotated (posix-read-file/annotate? #t))
+
 (define (posix-make-library=>def* path.here)
   (make-library=>def* (lambda (p) (posix-read-file (path-append path.here p)))))
