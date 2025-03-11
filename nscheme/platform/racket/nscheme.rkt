@@ -78,6 +78,8 @@
   (rkt:displayln "unhandled panic:")
   (rkt:pretty-write (cons 'panic x*))
   (for-each (lambda (x) (when (exn? x) ((error-display-handler) (exn-message x) x))) x*)
+  (let ((msg "panic"))
+    ((error-display-handler) msg (make-exn:fail msg (current-continuation-marks))))
   (exit 1))
 (uncaught-exception-handler (lambda (exn) (panic 'uncaught-exception exn)))
 
