@@ -708,15 +708,16 @@
     (apply (case method
              ((read)     (lambda (pos dst start count kf keof k)
                            (buffer-range?! dst start count)
-                           (io-guard kf
-                                     (unless (eqv? pos.cached pos) (file-position port pos))
-                                     (let ((amount (read-bytes! (mbytevector-bv dst) port start
-                                                                (+ start count))))
-                                       (if (eof-object? amount)
-                                           (keof)
-                                           (begin
-                                             (set! pos.cached (+ pos amount))
-                                             (k amount)))))))
+                           (io-guard
+                            kf
+                            (unless (eqv? pos.cached pos) (file-position port pos))
+                            (let ((amount (read-bytes-avail! (mbytevector-bv dst) port start
+                                                             (+ start count))))
+                              (if (eof-object? amount)
+                                  (keof)
+                                  (begin
+                                    (set! pos.cached (+ pos amount))
+                                    (k amount)))))))
              ((size)     (lambda (kf k) (io-guard kf
                                                   (file-position port eof)
                                                   (let ((size (file-position port)))

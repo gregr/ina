@@ -17,7 +17,7 @@
 (define (imemory-size/k  im kf k) (im 'size kf k))
 (define (imemory-size    im)      (imemory-size/k im raise-io-error values))
 ;; Returns EOF, the amount read, or a failure indication.
-;; Blocks until at least (min count remaining-bytes) bytes are read.
+;; Blocks until at least (min count (max 1 available-bytes)) bytes are read.
 ;; Failure may occur after a partial read.
 (define (imemory-read/k im pos dst start count kf keof k) (im 'read pos dst start count kf keof k))
 (define (imemory-read im pos dst start count)
@@ -25,10 +25,10 @@
 ;; Returns EOF, the byte read, or a failure indication.
 (define (imemory-read-byte/k im pos kf keof k)
   (let ((dst (make-mbytevector 1 0)))
-    (imemory-read/k im pos dst 0 1 1 kf keof (lambda (amount) (k (mbytevector-ref dst 0))))))
+    (imemory-read/k im pos dst 0 1 kf keof (lambda (amount) (k (mbytevector-ref dst 0))))))
 (define (imemory-read-byte im pos) (imemory-read-byte/k im pos raise-io-error values values))
 ;; Returns EOF, the bytevector read, or a failure indication.
-;; Blocks until at least (min count remaining-bytes) bytes are read.
+;; Blocks until at least (min count (max 1 available-bytes)) bytes are read.
 ;; Failure may occur after a partial read.
 (define (imemory-read-bytevector/k im pos count kf keof k)
   (let ((dst (make-mbytevector count 0)))
@@ -37,6 +37,30 @@
                       (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
 (define (imemory-read-bytevector im pos count)
   (imemory-read-bytevector/k im pos count raise-io-error values values))
+;; Returns EOF, the amount read, or a failure indication.
+;; Blocks until at least (min count remaining-bytes) bytes are read.
+;; Failure may occur after a partial read.
+(define (imemory-read*/k im pos dst start count kf keof k)
+  (imemory-read/k im pos dst start count kf keof
+                  (lambda (amount)
+                    (let loop ((total amount))
+                      (if (< total count)
+                          (imemory-read/k im (+ pos total) dst (+ start total) (- count total) kf
+                                          (lambda ()       (k total))
+                                          (lambda (amount) (loop (+ total amount))))
+                          (k total))))))
+(define (imemory-read* im pos dst start count)
+  (imemory-read*/k im pos dst start count raise-io-error values values))
+;; Returns EOF, the bytevector read, or a failure indication.
+;; Blocks until at least (min count remaining-bytes) bytes are read.
+;; Failure may occur after a partial read.
+(define (imemory-read*-bytevector/k im pos count kf keof k)
+  (let ((dst (make-mbytevector count 0)))
+    (imemory-read*/k im pos dst 0 count kf keof
+                     (lambda (amount)
+                       (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
+(define (imemory-read*-bytevector im pos count)
+  (imemory-read*-bytevector/k im pos count raise-io-error values values))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Output memory ;;;
