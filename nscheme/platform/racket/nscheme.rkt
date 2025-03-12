@@ -850,7 +850,7 @@
           (let ((path        (simple-form-path (make-path path)))
                 (exists-flag (case mod
                                ((create) 'error)
-                               ((update) 'udpate)
+                               ((update) 'update)
                                ((#f)     'can-update)
                                (else     (panic #f "not an output-file modifier" mod)))))
             (io-guard kf (k (rkt:omemory (list '(type . omemory:file) (cons 'path (path->bytes path)))
