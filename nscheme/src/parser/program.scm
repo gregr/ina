@@ -18,8 +18,10 @@
     (program-parse-definition*/env.d p env.d env stx*.def)
     (env-read-only env.d)))
 
-(define (eval-definition* env stx*.def)
+(define ((eval-definition*/yield yield) env stx*.def)
   (let* ((p     (make-program))
          (env.d (program-parse-definition* p env stx*.def)))
-    (E-eval (program->E/publish p))
+    (apply/values yield (E-eval (program->E/publish p)))
     env.d))
+
+(define eval-definition* (eval-definition*/yield void))
