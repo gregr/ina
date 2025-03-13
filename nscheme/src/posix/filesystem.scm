@@ -1,5 +1,7 @@
 (define (imemory:file/k               path      kf k) (((current-posix-filesystem) 'open-imemory          path)      kf k))
 (define (omemory:file/k               path mod  kf k) (((current-posix-filesystem) 'open-omemory          path mod)  kf k))
+(define (iport:file/k                 path      kf k) (((current-posix-filesystem) 'open-iport            path)      kf k))
+(define (oport:file/k                 path mod  kf k) (((current-posix-filesystem) 'open-oport            path mod)  kf k))
 (define (current-directory/k                    kf k) (((current-posix-filesystem) 'current-directory)               kf k))
 (define (file-change-evt/k            path      kf k) (((current-posix-filesystem) 'change-evt            path)      kf k))
 (define (change-directory/k           path      kf k) (((current-posix-filesystem) 'change-directory      path)      kf k))
@@ -18,12 +20,8 @@
 
 (define (imemory:file path)     (imemory:file/k path     raise-io-error values))
 (define (omemory:file path mod) (omemory:file/k path mod raise-io-error values))
-(define (iport:file/k path kf k) (imemory:file/k path kf (lambda (im) (k (iport:memory im 0 #t)))))
-(define (oport:file/k path mod kf k)
-  (let ((k (lambda (om) (omemory-size/k om kf (lambda (size) (k (oport:memory om size #t)))))))
-    (omemory:file/k path mod kf k)))
-(define (iport:file path)     (iport:file/k path     raise-io-error values))
-(define (oport:file path mod) (oport:file/k path mod raise-io-error values))
+(define (iport:file   path)     (iport:file/k path     raise-io-error values))
+(define (oport:file   path mod) (oport:file/k path mod raise-io-error values))
 
 (define (current-directory)          (current-directory/k          raise-io-error values))
 (define (file-change-evt       path) (file-change-evt/k       path raise-io-error values))
