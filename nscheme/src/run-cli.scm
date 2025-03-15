@@ -1,7 +1,7 @@
 (define cli-arg* (current-posix-argument*))
 (define path.library (path-directory (car cli-arg*)))
 
-(define quiet? #t)
+(define quiet? #f)
 (define verbose? #t)
 (define verbose-write
   (if verbose?
@@ -19,7 +19,10 @@
   `(library-path ,path.library))
 
 (define interact? #t)
-(define path.program #f)
+(define path.program
+  (and (pair? (cdr cli-arg*))
+       (let ((path (cadr cli-arg*)))
+         (and (not (eqv? path #"-")) path))))
 
 (verbose-write
   `(interact? ,interact?)
@@ -28,13 +31,17 @@
 (define library=>def* (posix-make-library=>def* path.library))
 (define library=>env  (make-library=>env/library=>def* library=>def* eval-definition*))
 
-(let ((env (alist-ref library=>env 'large)))
+(let ((env (env-conjoin*
+             (alist-ref library=>env 'large)
+             (value-package->env
+               (cons '(library=>def* library=>env)
+                     (list library=>def* library=>env))))))
   (current-posix-argument*
     (cdr cli-arg*)
     (lambda ()
-      (let ((env (if path.program
-                     (env-conjoin (eval-definition* env (posix-read-file path.program)) env)
-                     env)))
+      (let* ((env (if path.program
+                      (env-conjoin (eval-definition* env (posix-read-file path.program)) env)
+                      env)))
         (when interact?
           (unless quiet? (displayln "Entering REPL"))
           (let ((eval-def* (if quiet?
