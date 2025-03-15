@@ -124,20 +124,21 @@
 (define (make-library=>env/library=>def* library=>def* load-definition*)
   (make-library=>env ((make-load-library/library=>def* library=>def*) load-definition*)))
 
+(define read*-syntax (read*/reader:data ((reader:data-track-line/start 0) reader:data)))
+(define (read*-syntax-annotated/source source)
+  (read*/reader:data
+    ((reader:data-track-line/start 0)
+     (reader:data/annotate
+       (lambda (x loc text loc.end text.end)
+         (syntax-note-set x (vector source loc text loc.end text.end)))))))
+
 (define ((posix-read-file/annotate? annotate?) path)
-  (with-local-custodian
-    (lambda ()
-      (let* ((in    (iport:file path))
-             (read* (read*/reader:data
-                      ((reader:data-track-line/start 0)
-                       (if annotate?
-                           (reader:data/annotate
-                             (lambda (x loc text loc.end text.end)
-                               (syntax-note-set x (vector path loc text loc.end text.end))))
-                           reader:data))))
-             (stx*  (read* in)))
-        (iport-close in)
-        stx*))))
+  (call-with-iport:file
+    path
+    (lambda (in)
+      (if annotate?
+          ((read*-syntax-annotated/source path) in)
+          (read*-syntax in)))))
 (define posix-read-file           (posix-read-file/annotate? #f))
 (define posix-read-file-annotated (posix-read-file/annotate? #t))
 
