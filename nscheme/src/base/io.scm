@@ -23,11 +23,9 @@
 
 (define display
   (let ((go (lambda (x port)
-              (let ((go (lambda (x) (oport-write-bytevector port x))))
-                (cond ((bytevector? x) (go x))
-                      ((string?     x) (go (string->bytevector x)))
-                      ((symbol?     x) (go (string->bytevector (symbol->string x))))
-                      (else            (write x port)))))))
+              (if (text? x)
+                  (oport-write-bytevector port (text->bytevector x))
+                  (write x port)))))
     (case-lambda
       ((x)      (go x (current-output-port)))
       ((x port) (go x port)))))

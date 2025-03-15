@@ -60,9 +60,10 @@
                (map element dir*)))))
 
 (splicing-let ((byte:/ (bytevector-ref #"/" 0)))
-  (define (path->bytevector path) (cond ((string? path) (string->bytevector path))
-                                        ((symbol? path) (symbol->bytevector path))
-                                        (else           path)))
+  (define (path->bytevector path)
+    (if (text? path)
+        (text->bytevector path)
+        (mistake 'path->bytevector "not a symbol, string, or bytevector" path)))
   (define (path-split path) (bytevector-split (path->bytevector path) byte:/))
   (define (path-directory path)
     (let* ((path (path->bytevector path)) (count ((bytevector-index-end/byte byte:/) path)))
