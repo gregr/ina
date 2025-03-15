@@ -4,6 +4,8 @@
 ;;; This variant of bootstrapping is unstratified, mixing values computed at different phases.  That
 ;;; means compilation must support cross-stage persistence.
 
+(define env.medium (alist-ref library=>env 'medium))
+(define env.large (alist-ref library=>env 'large))
 (define (with-time thunk) (with-milliseconds displayln thunk))
 
 (let ()
@@ -35,7 +37,6 @@
   (append
    `((define library=>def* ',library=>def*))
    (alist-ref library=>def* 'syntax)
-   (alist-ref library=>def* 'env)
    '((define library=>env (make-library=>env/library=>def* library=>def* eval-definition*))
      (define env.medium   (alist-ref library=>env 'medium)))
    '((define stx*.test (list '(list

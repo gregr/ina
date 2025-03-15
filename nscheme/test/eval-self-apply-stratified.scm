@@ -4,6 +4,7 @@
 ;;; This variant of bootstrapping stratifies evaluation so that values computed at different phases
 ;;; do not mix.  That means compilation does not need to support cross-stage persistence.
 
+(define env.large (alist-ref library=>env 'large))
 (define (with-time thunk) (with-milliseconds displayln thunk))
 
 (let ()
@@ -40,7 +41,6 @@
   (append
    `((define library=>def* ',library=>def*))
    (alist-ref library=>def* 'syntax)
-   (alist-ref library=>def* 'env)
    '((define program (make-program))
      (define (link-definition* env def*) (program-parse-definition* program env def*))
      (define library=>env (make-library=>env/library=>def* library=>def* link-definition*))
