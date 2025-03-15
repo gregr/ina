@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eufo pipefail
+here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+racket "$here/run-file.rkt" "$here/../test/eval.scm"
+racket "$here/run-file.rkt" "$here/../test/mk.scm"
+racket "$here/run-file.rkt" "$here/../test/macro.scm"
+racket "$here/run-file.rkt" "$here/../test/text.scm"
+racket "$here/run-file.rkt" "$here/../test/eval-self-apply-stratified.scm"
+racket "$here/run-file.rkt" "$here/../test/eval-self-apply-mixed.scm"
+racket "$here/run-file.rkt" "$here/../test/tty.scm"
