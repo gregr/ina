@@ -2,7 +2,7 @@
 (provide (all-defined-out))
 (require
   "../platform/racket/nscheme.rkt"
-  racket/include racket/local racket/splicing (prefix-in rkt: racket/base))
+  racket/include racket/local racket/runtime-path racket/splicing (prefix-in rkt: racket/base))
 (include "../src/base/misc.scm")
 (include "../src/base/list.scm")
 (include "../src/base/number.scm")
@@ -40,9 +40,13 @@
 (include "../src/posix/terminal/tty.scm")
 (include "../src/posix/terminal/text.scm")
 (include "../src/bootstrap.scm")
+(define-runtime-path path.here ".")
+(splicing-local
+  ((define path.library (path-append (rkt:path->string path.here) "../src")))
+  (define library=>def* (posix-make-library=>def* path.library))
+  (define library=>env  (make-library=>env/library=>def* library=>def* eval-definition*)))
 
 (define-namespace-anchor anchor.here)
-
 (current-posix-argument*
  (cdr (current-posix-argument*))
  (lambda ()

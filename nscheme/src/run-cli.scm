@@ -1,6 +1,7 @@
 (define cli-arg* (current-posix-argument*))
 (define path.library (path-directory (car cli-arg*)))
 
+(define reboot? #f)
 (define quiet? #f)
 (define verbose? #t)
 (define verbose-write
@@ -25,13 +26,17 @@
          (and (not (eqv? path #"-")) path))))
 
 (verbose-write
+  `(reboot? ,reboot?)
   `(interact? ,interact?)
   `(program-path ,path.program))
 
-(define library=>def* (posix-make-library=>def* path.library))
-(define library=>env  (make-library=>env/library=>def* library=>def* eval-definition*))
-
-(let ((env (env-conjoin*
+(let ((library=>def* (if reboot?
+                         (posix-make-library=>def* path.library)
+                         library=>def*))
+      (library=>env  (if reboot?
+                         (make-library=>env/library=>def* library=>def* eval-definition*)
+                         library=>env))
+      (env (env-conjoin*
              (alist-ref library=>env 'large)
              (value-package->env
                (cons '(library=>def* library=>env)
