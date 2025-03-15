@@ -1,4 +1,4 @@
-(define env.test (env-conjoin/match env.large))
+(define env.test (env-conjoin/match (alist-ref library=>env 'large)))
 
 (define (test stx)
   (newline)

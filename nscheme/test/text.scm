@@ -181,7 +181,7 @@
                                        (cons 'absolute-position (line-location-absolute-position loc))
                                        (cons 'line              (line-location-line              loc))
                                        (cons 'line-position     (line-location-line-position     loc))))))
-                  error values)))))
+                  mistake values)))))
               (go 'example: text.example)
               (go 'another-example: text.another-example)
               (go 'failure-example: text.failure-example)

@@ -48,4 +48,4 @@
         (displayln/sgr sgr.4 "testing (1 2 3)")
         (displayln/sgr sgr.0 "testing (1 2 3)")
         (displayln/sgr sgr.0 "\r\nHit any key...")
-        (read-byte))))))
+        (iport-read-byte (current-input-port)))))))

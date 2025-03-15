@@ -1,6 +1,8 @@
 (define verbosity 0)
 (define show-compiled-racket? (and #t (< 0 verbosity)))
 
+(define env.medium (alist-ref library=>env 'medium))
+(define env.large (alist-ref library=>env 'large))
 (define env.test.tiny (env-conjoin/match (env-conjoin* env.minimal env.common)))
 
 (define (error:parse c) (vector 'error:parse c))
@@ -54,8 +56,8 @@
   (displayln "================================================================================"))
 
 (define (test-evaluation env . test-part**)
-  (define test-successes '())
-  (define test-failures  '())
+  (mdefine test-successes '())
+  (mdefine test-failures  '())
   (for-each
    (lambda (test-part*)
      (when (< 0 verbosity)
@@ -66,9 +68,10 @@
      (let loop ((test-part* (cdr test-part*)))
        (unless (null? test-part*)
          (unless (and (pair? test-part*) (pair? (cdr test-part*)) (pair? (cddr test-part*)))
-           (error "not a test case" test-part*))
+           (mistake 'test-evaluation "not a test case" test-part*))
          (let ((test-case (list (car test-part*) (cadr test-part*) (caddr test-part*))))
-           (unless (eqv? (cadr test-case) '==>) (error "test case without ==>" test-case))
+           (unless (eqv? (cadr test-case) '==>)
+             (mistake 'test-evaluation "test case without ==>" test-case))
            (when (< 0 verbosity) (newline))
            (when (< 2 verbosity) (pretty-write test-case))
            (let* ((stx.expr (car test-case))
@@ -95,7 +98,10 @@
     (newline)
     (unless (= tests-passed tests-total)
       (display-border)
-      (printf "Tests failed: ~a out of ~a\n" tests-failed tests-total)
+      (display "Tests failed: ")
+      (write tests-failed)
+      (display " out of ")
+      (writeln tests-total)
       (display-border)
       (for-each (lambda (failure) (apply (lambda (actual expr type expected)
                                            (newline)
@@ -105,7 +111,10 @@
                 (reverse test-failures))
       (newline))
     (display-border)
-    (printf "Tests passed: ~a out of ~a\n" tests-passed tests-total)
+    (display "Tests passed: ")
+    (write tests-passed)
+    (display " out of ")
+    (writeln tests-total)
     (display-border)))
 
 (test-evaluation
