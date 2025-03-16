@@ -30,17 +30,13 @@
   `(interact? ,interact?)
   `(program-path ,path.program))
 
-(let ((library=>def* (if reboot?
-                         (posix-make-library=>def* path.library)
-                         library=>def*))
-      (library=>env  (if reboot?
-                         (make-library=>env/library=>def* library=>def* eval-definition*)
-                         library=>env))
-      (env (env-conjoin*
-             (alist-ref library=>env 'large)
-             (value-package->env
-               (cons '(library=>def* library=>env)
-                     (list library=>def* library=>env))))))
+(let* ((library=>def* (posix-make-library=>def* path.library))
+       (library=>env  (make-library=>env/library=>def* reboot? library=>def* eval-definition*))
+       (env (env-conjoin*
+              (alist-ref library=>env 'large)
+              (value-package->env
+                (cons '(library=>def* library=>env)
+                      (list library=>def* library=>env))))))
   (current-posix-argument*
     (cdr cli-arg*)
     (lambda ()
