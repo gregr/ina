@@ -45,14 +45,10 @@
           (unless quiet? (displayln "Entering REPL"))
           (let ((eval-def* (if quiet?
                                eval-definition*
-                               (eval-definition*/yield
-                                 (lambda x* (for-each (lambda (x)
-                                                        (display "; ")
-                                                        (pretty-write x))
-                                                      x*))))))
+                               (eval-definition*/yield (lambda x* (for-each pretty-write x*))))))
             ;; TODO: panic handling, abort, retry
             (let loop ((env env))
-              (unless quiet? (displayln ";; evaluate:"))
+              (unless quiet? (displayln ";; Evaluate:"))
               (case-values (read)
                 (()    (values))
                 ((stx) (loop (env-conjoin (eval-def* env (list stx)) env)))))))))))
