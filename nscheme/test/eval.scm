@@ -1,3 +1,4 @@
+(mdefine at-least-one-test-failed? #f)
 (define verbosity 0)
 (define show-compiled-racket? (and #t (< 0 verbosity)))
 
@@ -95,6 +96,7 @@
          (tests-failed    (length test-failures))
          (tests-total     (+ tests-succeeded tests-failed))
          (tests-passed    (- tests-total tests-failed)))
+    (when (< 0 tests-failed) (set! at-least-one-test-failed? #t))
     (newline)
     (unless (= tests-passed tests-total)
       (display-border)
@@ -1622,3 +1624,5 @@
        (values (posix-process-wait p1) (posix-process-wait p2) (current))))
    ==>
    (values 0 0 #"pipe test\n")))
+
+(posix-exit (if at-least-one-test-failed? 1 0))
