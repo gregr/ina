@@ -173,6 +173,17 @@
 
 (define (list-ref x* i) (car (list-tail x* i)))
 
+(define (take n x*)
+  (if (and (< 0 n) (pair? x*))
+      (cons (car x*) (take (- n 1) (cdr x*)))
+      '()))
+(define (drop n x*) (if (and (< 0 n) (pair? x*)) (drop (- n 1) (cdr x*)) x*))
+(define (take-drop n x*)
+  (let loop ((n n) (x* x*) (rx* '()))
+    (if (and (< 0 n) (pair? x*))
+        (loop (- n 1) (cdr x*) (cons (car x*) rx*))
+        (values (reverse rx*) x*))))
+
 (define (cons* x . x*)
   (let loop ((x x) (x* x*))
     (cond ((null? x*) x)
