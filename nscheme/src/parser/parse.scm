@@ -59,22 +59,15 @@
     vocab.expression (lambda (env _) ($unbox (^E.box)))
     vocab.set! (lambda (env stx.lhs E.rhs) ($set-box! ($source (^E.box) stx.lhs) E.rhs))))
 
-(define (env-add-package! env pkg)
-  (for-each (lambda (id E) (env-vocabulary-bind! env id vocab.expression
-                                                 (parse/constant-expression E)))
-            (car pkg) (cdr pkg)))
-
-(define (package->env pkg)
+(define (env-add-alist! env a)
+  (alist-for-each a (lambda (id E) (env-vocabulary-bind!
+                                     env id vocab.expression (parse/constant-expression E)))))
+(define (alist->env a)
   (let ((env (make-env)))
-    (env-add-package! env pkg)
+    (env-add-alist! env a)
     (env-read-only env)))
-
-(define (package-append* pkg*)   (cons (append* (map car pkg*)) (append* (map cdr pkg*))))
-(define (package-append  . pkg*) (package-append* pkg*))
-(define (package-map     pkg f)  (cons (car pkg) (map f (cdr pkg))))
-
-(define (value-package->env pkg) (package->env (package-map pkg $quote)))
-(define (addr-package->env  pkg) (package->env (package-map pkg $ref)))
+(define (value-alist->env a) (alist->env (alist-map-value a $quote)))
+(define (addr-alist->env  a) (alist->env (alist-map-value a $ref)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing helpers ;;;

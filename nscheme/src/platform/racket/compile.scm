@@ -7,6 +7,21 @@
 ;primitive-env.cross-compiling   is symbol-name => parser producing (E:ref address)            ; defined here
 ;global-addr=>id                 is address => symbol-name                                     ; also defined here
 
+;; TODO: replace packages with association lists
+(define (env-add-package! env pkg)
+  (for-each (lambda (id E) (env-vocabulary-bind! env id vocab.expression
+                                                 (parse/constant-expression E)))
+            (car pkg) (cdr pkg)))
+(define (package->env pkg)
+  (let ((env (make-env)))
+    (env-add-package! env pkg)
+    (env-read-only env)))
+(define (package-append* pkg*)   (cons (append* (map car pkg*)) (append* (map cdr pkg*))))
+(define (package-append  . pkg*) (package-append* pkg*))
+(define (package-map     pkg f)  (cons (car pkg) (map f (cdr pkg))))
+(define (value-package->env pkg) (package->env (package-map pkg $quote)))
+(define (addr-package->env  pkg) (package->env (package-map pkg $ref)))
+
 (define (name*->addr-package    name*) (cons name* (map (lambda (n) (make-address n #f)) name*)))
 (define (addr-package->addr=>id pkg)   (map cons (cdr pkg) (car pkg)))
 

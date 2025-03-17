@@ -34,9 +34,7 @@
        (library=>env  (make-library=>env/library=>def* reboot? library=>def* eval-definition*))
        (env (env-conjoin*
               (alist-ref library=>env 'large)
-              (value-package->env
-                (cons '(library=>def* library=>env)
-                      (list library=>def* library=>env))))))
+              (value-alist->env (aquote library=>def* library=>env)))))
   (current-posix-argument*
     (cdr cli-arg*)
     (lambda ()

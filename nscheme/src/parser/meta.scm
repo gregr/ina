@@ -105,18 +105,12 @@
 ;                                              (skip)))))
 
 (define env.syntax
-  (value-package->env
-    (cons
-      '(
-        current-mark-level fresh-mark transcribe syntax-prune-level
-        syntax-note syntax-note-set syntax-note-add syntax-unwrap syntax->datum datum->syntax
-        identifier? identifier?! identifier=?
-        make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!)
-      (list
-        current-mark-level fresh-mark transcribe syntax-prune-level
-        syntax-note syntax-note-set syntax-note-add syntax-unwrap syntax->datum datum->syntax
-        identifier? identifier?! identifier=?
-        make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!))))
+  (value-alist->env
+    (aquote
+      current-mark-level fresh-mark transcribe syntax-prune-level
+      syntax-note syntax-note-set syntax-note-add syntax-unwrap syntax->datum datum->syntax
+      identifier? identifier?! identifier=?
+      make-env env-read-only env-disjoin env-conjoin env-conjoin* env-describe env-ref env-set!)))
 
 (define env.meta
   (let ((env (make-env))
