@@ -145,6 +145,9 @@
                                                    (lambda (a) (cons (cons key value) (cdr a)))
                                                    (lambda ()  (cons (cons key value) a))
                                                    (lambda (a) a)))
+(define (alist-for-each  a f) (for-each (lambda (kv) (f (car kv) (cdr kv))) a))
+(define (alist-map       a f) (map (lambda (kv) (f (car kv) (cdr kv))) a))
+(define (alist-map-value a f) (alist-map a (lambda (k v) (cons k (f v)))))
 
 (define range
   (let ((go (lambda (start end inc)
