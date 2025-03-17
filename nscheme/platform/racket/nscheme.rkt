@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  apply/values case-values case let-values let*-values mlet mdefine interruptible-lambda
+  apply/values case-values case let-values let*-values mlet mdefine aquote interruptible-lambda
 
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
@@ -479,6 +479,8 @@
 
 (define-syntax-rule (mlet . body) (let . body))
 (define-syntax-rule (mdefine . body) (define . body))
+
+(define-syntax-rule (aquote expr ...) (list (cons 'expr expr) ...))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Snapshot saving and loading ;;;

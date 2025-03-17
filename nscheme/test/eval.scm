@@ -174,6 +174,11 @@
     3)
    ==> 5)
 
+ '(aquote
+    (aquote #t 'foo (cons 1 2) (car (cons 3 4)))
+    ==>
+    ((#t . #t) ('foo . foo) ((cons 1 2) . (1 . 2)) ((car (cons 3 4)) . 3)))
+
  '(if
    (if #t 'yes 'no)               ==> yes
    (if #f 'yes 'no)               ==> no

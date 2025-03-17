@@ -257,6 +257,15 @@
   (define parse-let*-values    (binder-parser $binder-let*-values))
   (define parse-letrec*-values (binder-parser $binder-letrec*-values)))
 
+(define (parse-aquote env . stx*)
+  (let loop ((stx* stx*))
+    (if (null? stx*)
+        ($quote '())
+        ($cons (let ((stx (car stx*)))
+                 ($cons ($quote (syntax->datum stx))
+                        (parse-expression env stx)))
+               (loop (cdr stx*))))))
+
 (define env.minimal
   (let ((env (make-env))
         (b*.expr-aux '(=> else))
@@ -277,6 +286,7 @@
         (b*.expr
           (list
             (cons 'quote          (expression-operator-parser parse-quote          1 1))
+            (cons 'aquote         (expression-operator-parser parse-aquote         0 #f))
             (cons 'if             (expression-operator-parser parse-if             3 3))
             (cons 'and            (expression-operator-parser parse-and            0 #f))
             (cons 'or             (expression-operator-parser parse-or             0 #f))
