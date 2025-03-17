@@ -4,7 +4,7 @@
 
 (define env.medium (alist-ref library=>env 'medium))
 (define env.large (alist-ref library=>env 'large))
-(define env.test.tiny (env-conjoin/match (env-conjoin* env.minimal env.common)))
+(define env.test.tiny (env-conjoin/match (env-conjoin* env.minimal env.medium)))
 
 (define (error:parse c) (vector 'error:parse c))
 (define (error:eval  c) (vector 'error:eval  c))
