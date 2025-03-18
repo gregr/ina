@@ -10,7 +10,7 @@
 (let ()
   (define program (make-program))
   (define (link-definition* env def*) (program-parse-definition* program env def*))
-  (define library=>env (make-library=>env/library=>def* #f library=>def* link-definition*))
+  (define library=>env (make-library=>env/library=>def* #f #f library=>def* link-definition*))
   (define env.medium   (alist-ref library=>env 'medium))
   (define stx*.test (list '(list
                             (+ 1 2)
@@ -43,7 +43,7 @@
    (alist-ref library=>def* 'syntax)
    '((define program (make-program))
      (define (link-definition* env def*) (program-parse-definition* program env def*))
-     (define library=>env (make-library=>env/library=>def* #f library=>def* link-definition*))
+     (define library=>env (make-library=>env/library=>def* #f #f library=>def* link-definition*))
      (define env.medium   (alist-ref library=>env 'medium)))
    '((define stx*.test (list '(list
                                (+ 1 2)

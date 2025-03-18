@@ -43,8 +43,8 @@
 (define-runtime-path path.here ".")
 (splicing-local
   ((define path.library (path-append (rkt:path->string path.here) "../src")))
-  (define library=>def* (posix-make-library=>def* path.library))
-  (define library=>env  (make-library=>env/library=>def* #f library=>def* eval-definition*)))
+  (define library=>def* (posix-make-library=>def* #f path.library))
+  (define library=>env  (make-library=>env/library=>def* #f #f library=>def* eval-definition*)))
 
 (define-namespace-anchor anchor.here)
 (current-posix-argument*

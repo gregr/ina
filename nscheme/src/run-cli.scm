@@ -114,16 +114,18 @@
       (verbose? ,verbose?)
       (reboot? ,reboot?)
       (interact? ,interact?)
-      (library-path ,path.library)
+      (command-line-arguments ,cli-arg*)
       (definition-sources ,source*)
-      (command-line-arguments ,cli-arg*))))
+      (library-path ,path.library)
+      (library-files ,library=>path*))))
 (define eval-def*
   (if quiet?
       eval-definition*
       (eval-definition*/yield (lambda x* (for-each pretty-write x*)))))
 
-(let* ((library=>def* (posix-make-library=>def* path.library))
-       (library=>env (make-library=>env/library=>def* reboot? library=>def* eval-definition*))
+(let* ((out.verbose (and verbose? (current-error-port)))
+       (library=>def* (posix-make-library=>def* out.verbose path.library))
+       (library=>env (make-library=>env/library=>def* reboot? out.verbose library=>def* eval-definition*))
        (env (env-conjoin* (value-alist->env (aquote library=>def* library=>env))
                           (alist-ref library=>env 'large)))
        (def* (source*->def*)))

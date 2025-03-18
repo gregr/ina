@@ -37,7 +37,7 @@
   (append
    `((define library=>def* ',library=>def*))
    (alist-ref library=>def* 'syntax)
-   '((define library=>env (make-library=>env/library=>def* #f library=>def* eval-definition*))
+   '((define library=>env (make-library=>env/library=>def* #f #f library=>def* eval-definition*))
      (define env.medium   (alist-ref library=>env 'medium)))
    '((define stx*.test (list '(list
                                (+ 1 2)

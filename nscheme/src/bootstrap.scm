@@ -100,14 +100,15 @@
   (map (lambda (lib&path*) (cons (car lib&path*) (append* (map read-file (cdr lib&path*)))))
        library=>path*))
 
-(define ((make-load-library/library=>def* library=>def* load-definition*) env lib)
+(define ((make-load-library/library=>def* out.verbose library=>def* load-definition*) env lib)
+  (when out.verbose (pretty-write `(load-library ,lib) out.verbose))
   (load-definition* env (alist-ref library=>def* lib)))
 
 (define (((make-load-library-lazy/read-file read-file) load-definition*) env lib)
   (load-definition* env (append* (map read-file (alist-ref library=>path* lib)))))
 
-(define (make-library=>env/library=>def* reboot? library=>def* load-definition*)
-  (make-library=>env reboot? (make-load-library/library=>def* library=>def* load-definition*)))
+(define (make-library=>env/library=>def* reboot? out.verbose library=>def* load-definition*)
+  (make-library=>env reboot? (make-load-library/library=>def* out.verbose library=>def* load-definition*)))
 
 (define read*-syntax (read*/reader:data ((reader:data-track-line/start 0) reader:data)))
 (define (read*-syntax-annotated/source source)
@@ -127,5 +128,8 @@
 (define posix-read-file           (posix-read-file/annotate? #f))
 (define posix-read-file-annotated (posix-read-file/annotate? #t))
 
-(define (posix-make-library=>def* path.here)
-  (make-library=>def* (lambda (p) (posix-read-file (path-append path.here p)))))
+(define (posix-make-library=>def* out.verbose path.here)
+  (make-library=>def* (lambda (p)
+                        (let ((p (path-append path.here p)))
+                          (when out.verbose (pretty-write `(read-file ,p) out.verbose))
+                          (posix-read-file p)))))
