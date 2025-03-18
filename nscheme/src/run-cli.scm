@@ -88,10 +88,15 @@
 (define (source*-add-file! path) (source*-add! `(file ,path)))
 (define (source*-add-text! txt)  (source*-add! `(text ,txt)))
 (define (source*->def*)
+  (verbose-displayln "Reading sources:")
   (append* (map (lambda (source)
                   (case (car source)
-                    ((file) (posix-read-file (cadr source)))
-                    ((text) (read*-syntax (iport:bytevector (cadr source))))
+                    ((file) (let ((path (cadr source)))
+                              (verbose-write `(read-file ,path))
+                              (posix-read-file path)))
+                    ((text) (let ((text (cadr source)))
+                              (verbose-write `(read-text ,text))
+                              (read*-syntax (iport:bytevector text))))
                     (else (mistake "unexpected definition source" source))))
                 source*)))
 
@@ -106,32 +111,44 @@
   (set! source* (reverse source*)))
 
 (loop (cdr cli-arg*))
-(when verbose?
-  (for-each
-    (let ((out (current-error-port)))
-      (lambda (x) (pretty-write x out)))
-    `((quiet? ,quiet?)
-      (verbose? ,verbose?)
-      (reboot? ,reboot?)
-      (interact? ,interact?)
-      (command-line-arguments ,cli-arg*)
-      (definition-sources ,source*)
-      (library-path ,path.library)
-      (library-files . ,library=>path*))))
+(define (verbose-write . x*)
+  (when verbose? (for-each (let ((out (current-error-port)))
+                             (lambda (x) (pretty-write x out)))
+                           x*)))
+(define (verbose-displayln . x*)
+  (when verbose? (for-each (let ((out (current-error-port)))
+                             (lambda (x) (displayln x out)))
+                           x*)))
+(apply verbose-write
+       `((quiet? ,quiet?)
+         (verbose? ,verbose?)
+         (reboot? ,reboot?)
+         (interact? ,interact?)
+         (command-line-arguments ,cli-arg*)
+         (definition-sources ,source*)
+         (library-path ,path.library)
+         (library-files . ,library=>path*)))
+
 (define eval-def*
   (if quiet?
       eval-definition*
       (eval-definition*/yield (lambda x* (for-each pretty-write x*)))))
 
 (let* ((out.verbose (and verbose? (current-error-port)))
-       (library=>def* (posix-make-library=>def* out.verbose path.library))
-       (library=>env (make-library=>env/library=>def* reboot? out.verbose library=>def* eval-definition*))
+       (library=>def* (begin
+                        (verbose-displayln "Reading libraries:")
+                        (posix-make-library=>def* out.verbose path.library)))
+       (library=>env (begin
+                       (verbose-displayln "Loading library definitions:")
+                       (make-library=>env/library=>def* reboot? out.verbose library=>def* eval-definition*)))
        (env (env-conjoin* (value-alist->env (aquote library=>def* library=>env))
                           (alist-ref library=>env 'large)))
        (def* (source*->def*)))
   (current-posix-argument*
     cli-arg*
     (lambda ()
+      (verbose-displayln "Loading source definitions:")
+      (verbose-write `(count . ,(length def*)))
       (let ((env (env-conjoin (eval-def* env def*) env)))
         (when interact?
           (unless quiet? (displayln ";; Entering REPL"))
