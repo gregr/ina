@@ -117,7 +117,7 @@
       (command-line-arguments ,cli-arg*)
       (definition-sources ,source*)
       (library-path ,path.library)
-      (library-files ,library=>path*))))
+      (library-files . ,library=>path*))))
 (define eval-def*
   (if quiet?
       eval-definition*
