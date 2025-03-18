@@ -1,3 +1,16 @@
+(define usage-description
+  (let ((go (lambda (path.program arg-description options)
+              (bytevector-join*
+                #"\n"
+                (cons (bytevector-append #"usage: " (path->bytevector path.program) #" "
+                                         (text->bytevector arg-description))
+                      (if options
+                          (cons #"options:" (options->description options))
+                          '()))))))
+  (case-lambda
+    ((path.program arg-description)         (go path.program arg-description #f))
+    ((path.program arg-description options) (go path.program arg-description options)))))
+
 (define (option-attribute* o) (filter (lambda (entry) (not (procedure? entry))) o))
 (define (options->description o*)
   (map (lambda (o)
