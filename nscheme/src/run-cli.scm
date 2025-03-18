@@ -24,6 +24,18 @@
      (description "Load <definitions> from text provided directly on the command-line.")
      (arguments "<definitions>")
      ,(lambda (text.def* arg*) (source*-add-text! text.def*) (loop arg*)))
+    ((flags "-c" "--compile")
+     (description
+       "Compile loaded definitions instead of evaluating them."
+       "Generate code for <target> and write the generated code to <output-file>."
+       "<backend> must be one of the following: TODO"
+       "<output-file> may be '-' to write the generated code to standard output."
+       "This option may be used multiple times to compile for multiple targets at once.")
+     (arguments "<target>" "<output-file>")
+     ,(lambda (target path.out arg*)
+        (pretty-write `((target ,target) (output-file ,path.out)))
+        (displayln "Compiler is not yet supported.")
+        (posix-exit 1)))
     ((flags "-")
      (description "Pass through remaining command-line arguments.")
      ,(lambda (arg*) (finish 'stdin arg*)))

@@ -23,7 +23,7 @@
                #", " (map (lambda (flag) (if (null? arg*) flag (bytevector-append flag #" " args)))
                           (map text->bytevector (alist-ref o 'flags))))
              #"\n    "
-             (bytevector-join* #"\n" (map text->bytevector (alist-ref/default o 'description '()))))))
+             (bytevector-join* #"\n    " (map text->bytevector (alist-ref/default o 'description '()))))))
        o*))
 (define (options->dispatch o*)
   (let ((flag=>handle
