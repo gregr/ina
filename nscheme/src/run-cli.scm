@@ -147,8 +147,7 @@
   (current-posix-argument*
     cli-arg*
     (lambda ()
-      (verbose-displayln "Loading source definitions:")
-      (verbose-write `(count . ,(length def*)))
+      (verbose-displayln (string-append "Loading source definitions: " (number->string (length def*))))
       (let ((env (env-conjoin (eval-def* env def*) env)))
         (when interact?
           (unless quiet? (displayln ";; Entering REPL"))
