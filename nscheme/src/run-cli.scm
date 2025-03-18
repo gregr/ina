@@ -1,54 +1,141 @@
-(define cli-arg* (current-posix-argument*))
-(define path.library (path-directory (car cli-arg*)))
+(define options
+  `(((flags "-h" "--help")
+     (description "Print this usage and option information, then exit.")
+     ,(lambda (_)
+        (displayln (bytevector-append #"usage: " (path->bytevector path.self)
+                                      #" [<option> ...] [(<file> | -) <argument> ...]"))
+        (displayln "options:")
+        (for-each displayln (options->description options))
+        (posix-exit 0)))
+    ((flags "-q" "--quiet")
+     (description "Suppress implicit printing when loading definitions.")
+     ,(lambda (arg*) (set! quiet? #t) (loop arg*)))
+    ((flags "-v" "--verbose")
+     (description "Print diagnostic information during startup.")
+     ,(lambda (arg*) (set! verbose? #t) (loop arg*)))
+    ((flags "-r" "--reboot")
+     (description "Load fresh copies of libraries that are normally persisted.")
+     ,(lambda (arg*) (set! reboot? #t) (loop arg*)))
+    ((flags "-i" "--interact")
+     (description "Load definitions interactively from standard input after loading all other sources.")
+     ,(lambda (arg*) (set! interact? #t) (loop arg*)))
+    ((flags "-f" "--file")
+     (description "Load definitions from <file>.")
+     (arguments "<file>")
+     ,(lambda (path arg*) (source*-add-file! path) (loop arg*)))
+    ((flags "-t" "--text")
+     (description "Load <definitions> from text provided directly on the command-line.")
+     (arguments "<definitions>")
+     ,(lambda (text.def* arg*) (source*-add-text! text.def*) (loop arg*)))
+    ((flags "-")
+     (description "Load definitions from standard input and pass through remaining command-line arguments.")
+     ,(lambda (arg*) (finish 'stdin arg*)))
+    ((flags "--")
+     (description "Stop parsing option flags in remaining command-line arguments.")
+     ,(lambda (arg*) (finish #f arg*)))))
 
-(define reboot? #f)
-(define quiet? #f)
-(define verbose? #t)
-(define verbose-write
-  (if verbose?
-      (let ((out (current-error-port)))
-        (lambda x* (for-each (lambda (x) (pretty-write x out)) x*)))
-      (lambda x* (values))))
-(define verbose-display
-  (if verbose?
-      (let ((out (current-error-port)))
-        (lambda x* (for-each (lambda (x) (displayln x out)) x*)))
-      (lambda x* (values))))
+(define (option-attribute* o) (filter (lambda (entry) (not (procedure? entry))) o))
+(define (options->description o*)
+  (map (lambda (o)
+         (let* ((o    (option-attribute* o))
+                (arg* (alist-ref/default o 'arguments '()))
+                (args (bytevector-join* #" " (map text->bytevector arg*))))
+           (bytevector-append
+             #"  "
+             (bytevector-join*
+               #", " (map (lambda (flag) (if (null? arg*) flag (bytevector-append flag #" " args)))
+                          (map text->bytevector (alist-ref o 'flags))))
+             #"\n    "
+             (bytevector-join* #"\n" (map text->bytevector (alist-ref/default o 'description '()))))))
+       o*))
+(define (options->dispatch o*)
+  (let ((flag=>handle
+          (append*
+            (map (lambda (o)
+                   (let* ((attr*  (option-attribute* o))
+                          (flag*  (map text->bytevector (alist-ref attr* 'flags)))
+                          (arg*   (alist-ref/default attr* 'arguments '()))
+                          (argc   (length arg*))
+                          (handle (or (memp procedure? o)
+                                      (mistake 'options->dispatch
+                                               "option has no handler procedure" o)))
+                          (handle (car handle))
+                          (handle
+                            (lambda (arg*)
+                              (let ((x* (take argc arg*)))
+                                (unless (= (length x*) argc)
+                                  (raise-error
+                                    (list 'options->dispatch "not enough arguments for option" o
+                                          'arguments arg*)))
+                                (apply handle (append x* (list (drop argc arg*))))))))
+                     (map (lambda (flag) (cons flag handle)) flag*)))
+                 o*))))
+    (lambda (arg* kempty)
+      (if (null? arg*)
+          (kempty)
+          ((alist-ref/default flag=>handle (car arg*) (lambda (_) (kempty))) (cdr arg*))))))
 
-(verbose-write
-  `(command-line ,cli-arg*)
-  `(library-path ,path.library))
+(mdefine cli-arg* (current-posix-argument*))
+(define path.self (car cli-arg*))
+(define path.library (path-directory path.self))
 
-(define interact? #t)
-(define path.program
-  (and (pair? (cdr cli-arg*))
-       (let ((path (cadr cli-arg*)))
-         (and (not (eqv? path #"-")) path))))
+(mdefine quiet? #f)
+(mdefine verbose? #f)
+(mdefine reboot? #f)
+(mdefine interact? #f)
+(mdefine source* '())
+(define (source*-add! src) (set! source* (cons src source*)))
+(define (source*-add-file! path) (source*-add! `(file ,path)))
+(define (source*-add-text! txt)  (source*-add! `(text ,txt)))
+(define (source*->def*)
+  (append* (map (lambda (source)
+                  (case (car source)
+                    ((file) (posix-read-file (cadr source)))
+                    ((text) (read*-syntax (iport:bytevector (cadr source))))
+                    (else (mistake "unexpected definition source" source))))
+                source*)))
 
-(verbose-write
-  `(reboot? ,reboot?)
-  `(interact? ,interact?)
-  `(program-path ,path.program))
+(define dispatch (options->dispatch options))
+(define (loop arg*) (dispatch arg* (lambda () (finish #f arg*))))
+(define (finish stdin? arg*)
+  (cond (stdin?       (set! cli-arg* (cons path.self arg*)))
+        ((pair? arg*) (source*-add-file! (car arg*))
+                      (set! cli-arg* arg*))
+        (else         (set! cli-arg* (list path.self))))
+  (when (null? source*) (set! interact? #t))
+  (set! source* (reverse source*)))
+
+(loop (cdr cli-arg*))
+(when verbose?
+  (for-each
+    (let ((out (current-error-port)))
+      (lambda (x) (pretty-write x out)))
+    `((quiet? ,quiet?)
+      (verbose? ,verbose?)
+      (reboot? ,reboot?)
+      (interact? ,interact?)
+      (library-path ,path.library)
+      (definition-sources ,source*)
+      (command-line-arguments ,cli-arg*))))
+(define eval-def*
+  (if quiet?
+      eval-definition*
+      (eval-definition*/yield (lambda x* (for-each pretty-write x*)))))
 
 (let* ((library=>def* (posix-make-library=>def* path.library))
-       (library=>env  (make-library=>env/library=>def* reboot? library=>def* eval-definition*))
-       (env (env-conjoin*
-              (alist-ref library=>env 'large)
-              (value-alist->env (aquote library=>def* library=>env)))))
+       (library=>env (make-library=>env/library=>def* reboot? library=>def* eval-definition*))
+       (env (env-conjoin* (value-alist->env (aquote library=>def* library=>env))
+                          (alist-ref library=>env 'large)))
+       (def* (source*->def*)))
   (current-posix-argument*
-    (cdr cli-arg*)
+    cli-arg*
     (lambda ()
-      (let* ((env (if path.program
-                      (env-conjoin (eval-definition* env (posix-read-file path.program)) env)
-                      env)))
+      (let ((env (env-conjoin (eval-def* env def*) env)))
         (when interact?
-          (unless quiet? (displayln "Entering REPL"))
-          (let ((eval-def* (if quiet?
-                               eval-definition*
-                               (eval-definition*/yield (lambda x* (for-each pretty-write x*))))))
-            ;; TODO: panic handling, abort, retry
-            (let loop ((env env))
-              (unless quiet? (displayln ";; Evaluate:"))
-              (case-values (read)
-                (()    (values))
-                ((stx) (loop (env-conjoin (eval-def* env (list stx)) env)))))))))))
+          (unless quiet? (displayln ";; Entering REPL"))
+          ;; TODO: panic handling, abort, retry
+          (let loop ((env env))
+            (unless quiet? (displayln ";; Evaluate:"))
+            (case-values (read)
+              (()    (values))
+              ((stx) (loop (env-conjoin (eval-def* env (list stx)) env))))))))))
