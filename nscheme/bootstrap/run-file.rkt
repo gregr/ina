@@ -34,6 +34,7 @@
 (include "../src/posix/filesystem.scm")
 (include "../src/posix/network.scm")
 (include "../src/posix/process.scm")
+(include "../src/posix/cli.scm")
 (include "../src/posix/terminal/osc.scm")
 (include "../src/posix/terminal/csi.scm")
 (include "../src/posix/terminal/sgr.scm")

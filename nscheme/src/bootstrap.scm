@@ -34,6 +34,7 @@
       "posix/filesystem.scm"
       "posix/network.scm"
       "posix/process.scm"
+      "posix/cli.scm"
       "posix/terminal/osc.scm"
       "posix/terminal/csi.scm"
       "posix/terminal/sgr.scm"
@@ -130,6 +131,5 @@
 
 (define (posix-make-library=>def* out.verbose path.here)
   (make-library=>def* (lambda (p)
-                        (let ((p (path-append path.here p)))
-                          (when out.verbose (pretty-write `(read-file ,p) out.verbose))
-                          (posix-read-file p)))))
+                        (when out.verbose (pretty-write `(read-file ,p) out.verbose))
+                        (posix-read-file (path-append path.here p)))))
