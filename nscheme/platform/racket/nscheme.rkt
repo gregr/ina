@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  apply/values case-values case let-values let*-values mlet mdefine aquote interruptible-lambda
+  apply/values set! case-values case let-values let*-values mlet mdefine aquote interruptible-lambda
 
   native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
   current-raw-coroutine make-raw-coroutine
@@ -331,7 +331,8 @@
                  #f proc-spec?
                  (set-subtract (range field-count) (or mutable-field-position* '())) #f #f)))
     (values (and (not final?) (make-record-type/super-type stype)) construct ? access
-            (and mutable-field-position* (not (null? mutable-field-position*)) mutate!))))
+            (and mutable-field-position* (not (null? mutable-field-position*))
+                 (lambda (r i v) (mutate! r i v) (values))))))
 
 (struct mbytevector (bv) #:name mbytevector-struct #:constructor-name mbytevector:new #:prefab)
 (struct mvector (v) #:name mvector-struct #:constructor-name mvector:new #:prefab)
@@ -339,7 +340,7 @@
 (define (make-mvector    len x)  (mvector:new   (make-vector len x)))
 (define (mvector-length  mv)     (vector-length (mvector-v mv)))
 (define (mvector-ref     mv i)   (vector-ref    (mvector-v mv) i))
-(define (mvector-set!    mv i x) (vector-set!   (mvector-v mv) i x))
+(define (mvector-set!    mv i x) (vector-set!   (mvector-v mv) i x) (values))
 (define mvector->vector
   (case-lambda
     ((mv)             (vector-copy (mvector-v mv)))
@@ -353,7 +354,7 @@
 (define (make-mbytevector        len n)   (mbytevector:new (make-bytes len n)))
 (define (mbytevector-length      mbv)     (bytevector-length (mbytevector-bv mbv)))
 (define (mbytevector-ref         mbv i)   (bytevector-ref    (mbytevector-bv mbv) i))
-(define (mbytevector-set!        mbv i n) (bytes-set!        (mbytevector-bv mbv) i n))
+(define (mbytevector-set!        mbv i n) (bytes-set!        (mbytevector-bv mbv) i n) (values))
 (define mbytevector->bytevector
   (case-lambda
     ((mbv)             (bytes-copy (mbytevector-bv mbv)))
@@ -450,6 +451,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-syntax-rule (apply/values rator vrand) (call-with-values (lambda () vrand) rator))
+(define-syntax-rule (set! x e) (begin (rkt:set! x e) (values)))
 (define-syntax-rule (case-values e.values case-clauses ...)
   (apply/values (case-lambda case-clauses ...) e.values))
 
