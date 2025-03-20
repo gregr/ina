@@ -37,11 +37,11 @@
                       (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
 (define (imemory-read-bytevector im pos count)
   (imemory-read-bytevector/k im pos count raise-io-error values values))
-;; Returns EOF, the amount read, or a failure indication.
+;; Returns the amount read, or a failure indication.
 ;; Blocks until at least (min count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
-(define (imemory-read*/k im pos dst start count kf keof k)
-  (imemory-read/k im pos dst start count kf keof
+(define (imemory-read*/k im pos dst start count kf k)
+  (imemory-read/k im pos dst start count kf (lambda () (k 0))
                   (lambda (amount)
                     (let loop ((total amount))
                       (if (< total count)
@@ -50,17 +50,17 @@
                                           (lambda (amount) (loop (+ total amount))))
                           (k total))))))
 (define (imemory-read* im pos dst start count)
-  (imemory-read*/k im pos dst start count raise-io-error values values))
-;; Returns EOF, the bytevector read, or a failure indication.
+  (imemory-read*/k im pos dst start count raise-io-error values))
+;; Returns the amount read, or a failure indication.
 ;; Blocks until at least (min count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
-(define (imemory-read*-bytevector/k im pos count kf keof k)
+(define (imemory-read*-bytevector/k im pos count kf k)
   (let ((dst (make-mbytevector count 0)))
-    (imemory-read*/k im pos dst 0 count kf keof
+    (imemory-read*/k im pos dst 0 count kf (lambda () (k #""))
                      (lambda (amount)
                        (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
 (define (imemory-read*-bytevector im pos count)
-  (imemory-read*-bytevector/k im pos count raise-io-error values values))
+  (imemory-read*-bytevector/k im pos count raise-io-error values))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Output memory ;;;
@@ -117,11 +117,11 @@
                     (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
 (define (iport-read-bytevector p count)
   (iport-read-bytevector/k p count raise-io-error values values))
-;; Returns EOF, the amount read, or a failure indication.
+;; Returns the amount read, or a failure indication.
 ;; Blocks until at least (min count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
-(define (iport-read*/k p dst start count kf keof k)
-  (iport-read/k p dst start count kf keof
+(define (iport-read*/k p dst start count kf k)
+  (iport-read/k p dst start count kf (lambda () (k 0))
                 (lambda (amount)
                   (let loop ((total amount))
                     (if (< total count)
@@ -130,17 +130,17 @@
                                       (lambda (amount) (loop (+ total amount))))
                         (k total))))))
 (define (iport-read* p dst start count)
-  (iport-read*/k p dst start count raise-io-error values values))
-;; Returns EOF, the bytevector read, or a failure indication.
+  (iport-read*/k p dst start count raise-io-error values))
+;; Returns the amount read, or a failure indication.
 ;; Blocks until at least (min count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
-(define (iport-read*-bytevector/k p count kf keof k)
+(define (iport-read*-bytevector/k p count kf k)
   (let ((dst (make-mbytevector count 0)))
-    (iport-read*/k p dst 0 count kf keof
+    (iport-read*/k p dst 0 count kf (lambda () (k #""))
                    (lambda (amount)
                      (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
 (define (iport-read*-bytevector p count)
-  (iport-read*-bytevector/k p count raise-io-error values values))
+  (iport-read*-bytevector/k p count raise-io-error values))
 ;; Reverts the most recent read(s) of count bytes, provided by the mbytevector src.
 ;; It is an error to unread different bytes from those that were originally read.
 ;; It is an error to unread more bytes than have been read since the last unread.
