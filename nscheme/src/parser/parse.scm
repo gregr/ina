@@ -66,6 +66,7 @@
   (let ((env (make-env)))
     (env-add-alist! env a)
     (env-read-only env)))
+(define (env-add-value-alist! env a) (env-add-alist! env (alist-map-value a $quote)))
 (define (value-alist->env a) (alist->env (alist-map-value a $quote)))
 (define (addr-alist->env  a) (alist->env (alist-map-value a $ref)))
 
