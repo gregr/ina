@@ -76,7 +76,7 @@
 (define (panic . x*)
   (let ((handle (current-panic-handler))) (when handle (apply handle x*)))
   (rkt:displayln "unhandled panic:")
-  (rkt:pretty-write (cons 'panic x*))
+  (rkt:pretty-write (cons 'panic x*) (current-error-port))
   (for-each (lambda (x) (when (exn? x) ((error-display-handler) (exn-message x) x))) x*)
   (let ((msg "panic"))
     ((error-display-handler) msg (make-exn:fail msg (current-continuation-marks))))
