@@ -47,16 +47,17 @@
   (define library=>def* (posix-make-library=>def* #f path.library))
   (define library=>env  (make-library=>env/library=>def* #f #f library=>def* eval-definition*)))
 
-(define-namespace-anchor anchor.here)
-(current-posix-argument*
- (cdr (current-posix-argument*))
- (lambda ()
-   (rkt:call-with-input-file
-    (bytes->string/utf-8 (car (current-posix-argument*)))
-    (lambda (in)
-      (let ((ns (namespace-anchor->namespace anchor.here))
-            (stx* (let loop ()
-                    (let ((x (rkt:read in)))
-                      (if (eof-object? x) '() (cons x (loop)))))))
-        (with-native-signal-handling
-         (lambda () (rkt:for-each (lambda (stx) (rkt:eval stx ns)) stx*))))))))
+(module+ main
+  (define-namespace-anchor anchor.here)
+  (current-posix-argument*
+   (cdr (current-posix-argument*))
+   (lambda ()
+     (rkt:call-with-input-file
+      (bytes->string/utf-8 (car (current-posix-argument*)))
+      (lambda (in)
+        (let ((ns (namespace-anchor->namespace anchor.here))
+              (stx* (let loop ()
+                      (let ((x (rkt:read in)))
+                        (if (eof-object? x) '() (cons x (loop)))))))
+          (with-native-signal-handling
+           (lambda () (rkt:for-each (lambda (stx) (rkt:eval stx ns)) stx*)))))))))
