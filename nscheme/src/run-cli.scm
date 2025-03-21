@@ -42,7 +42,6 @@
 
 (mdefine cli-arg* (current-posix-argument*))
 (define path.self (car cli-arg*))
-(define path.library (path-directory path.self))
 
 (mdefine quiet? #f)
 (mdefine verbose? #f)
@@ -69,6 +68,20 @@
                               (read*-syntax (iport:bytevector text))))
                     (else (mistake "unexpected definition source" source))))
                 source*)))
+(define (source*->path&text)
+  (if (null? source*)
+      (verbose-displayln "No additional sources to load.")
+      (verbose-displayln "Reading sources:"))
+  (map (lambda (source)
+         (case (car source)
+           ((file) (let ((path (cadr source)))
+                     (verbose-write `(read-file-text ,path))
+                     (cons path (file->bytevector path))))
+           ((text) (let ((text (cadr source)))
+                     (verbose-write `(read-text ,text))
+                     (cons #f text)))
+           (else (mistake "unexpected definition source" source))))
+       source*))
 
 (define dispatch (options->dispatch options))
 (define (loop arg*) (dispatch arg* (lambda () (finish #f arg*))))
@@ -97,31 +110,52 @@
          (command-line-arguments ,cli-arg*)
          (definition-sources . ,source*)
          (compiler-outputs . ,compiler-output*)
-         (library-path ,path.library)
          (library-files . ,library=>path*)))
-(unless (null? compiler-output*)
-  (displayln "Compiler is not yet supported." (current-error-port))
-  (posix-exit 1))
+(define library=>def* (make-library=>def* out.verbose #t library=>text*))
 
-(define eval-def*
-  (if quiet?
-      eval-definition*
-      (eval-definition*/yield (lambda x* (for-each pretty-write x*)))))
-
-(let* ((library=>def* (make-library=>def* out.verbose #t library=>text*))
-       (library=>env (make-library=>env out.verbose library=>text* library=>def*))
-       (env (alist-ref library=>env 'large))
-       (def* (source*->def*)))
-  (current-posix-argument*
-    cli-arg*
-    (lambda ()
-      (verbose-displayln (string-append "Loading source definitions: " (number->string (length def*))))
-      (let ((env (env-conjoin (eval-def* env def*) env)))
-        (when interact?
-          (unless quiet? (displayln ";; Entering REPL"))
-          ;; TODO: panic handling, abort, retry
-          (let loop ((env env))
-            (unless quiet? (displayln ";; Evaluate:"))
-            (case-values (read)
-              (()    (values))
-              ((stx) (loop (env-conjoin (eval-def* env (list stx)) env))))))))))
+(if (null? compiler-output*)
+    (let* ((library=>env (make-library=>env out.verbose library=>text* library=>def*))
+           (env (alist-ref library=>env 'large))
+           (def* (source*->def*)))
+      (define eval-def*
+        (if quiet?
+            eval-definition*
+            (eval-definition*/yield (lambda x* (for-each pretty-write x*)))))
+      (current-posix-argument*
+        cli-arg*
+        (lambda ()
+          (verbose-displayln (string-append "Loading source definitions: " (number->string (length def*))))
+          (let ((env (env-conjoin (eval-def* env def*) env)))
+            (when interact?
+              (unless quiet? (displayln ";; Entering REPL"))
+              ;; TODO: panic handling, abort, retry
+              (let loop ((env env))
+                (unless quiet? (displayln ";; Evaluate:"))
+                (case-values (read)
+                  (()    (values))
+                  ((stx) (loop (env-conjoin (eval-def* env (list stx)) env))))))))))
+    (let ((E.program
+            (parse-bootstrapped-program-definition*
+              library=>text* library=>def*
+              `((let* ((library=>text* ',library=>text*)
+                       (library=>def* (make-library=>def* #f #t library=>text*))
+                       (library=>env (make-library=>env #f library=>text* library=>def*))
+                       (env (alist-ref library=>env 'large))
+                       (program (make-program))
+                       (def*.source*
+                         (append*
+                           (alist-map
+                             ',(source*->path&text)
+                             (lambda (path text)
+                               ((text->definition*/read*
+                                  (if path (read*-syntax-annotated/source path) read*-syntax))
+                                text))))))
+                  (program-parse-definition* program env def*.source*)
+                  (E-eval (program->E program)))))))
+      (displayln "Compiler is not yet supported." (current-error-port))
+      (posix-exit 1)
+      (verbose-displayln "Generating code:")
+      ;; TODO: generate code for each target and write it to the corresponding output
+      (compact-write (E-pretty E.program))
+      (verbose-displayln "Testing evaluation:")
+      (pretty-write (apply/values list (E-eval E.program)))))
