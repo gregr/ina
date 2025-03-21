@@ -42,10 +42,8 @@
 (include "../src/posix/terminal/text.scm")
 (include "../src/library.scm")
 (define-runtime-path path.here ".")
-(splicing-local
-  ((define path.library (path-append (rkt:path->string path.here) "../src")))
-  (define library=>text* (posix-make-library=>text* #f path.library))
-  (define library=>env (make-library=>env #f library=>text* (make-library=>def* #f #t library=>text*))))
+(define library=>text* (posix-make-library=>text* #f (path-append (rkt:path->string path.here) "../src")))
+(define library=>env (make-library=>env #f library=>text* (make-library=>def* #f #t library=>text*)))
 
 (module+ main
   (define-namespace-anchor anchor.here)
