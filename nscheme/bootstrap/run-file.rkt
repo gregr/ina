@@ -1,7 +1,7 @@
 #lang racket/base
 (provide (all-defined-out))
 (require
-  "../platform/racket/nscheme.rkt"
+  "nscheme.rkt"
   racket/include racket/local racket/runtime-path racket/splicing (prefix-in rkt: racket/base))
 (include "../src/base/misc.scm")
 (include "../src/base/list.scm")
