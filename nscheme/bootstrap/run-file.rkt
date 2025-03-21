@@ -40,12 +40,13 @@
 (include "../src/posix/terminal/sgr.scm")
 (include "../src/posix/terminal/tty.scm")
 (include "../src/posix/terminal/text.scm")
-(include "../src/bootstrap.scm")
+(include "../src/library.scm")
 (define-runtime-path path.here ".")
 (splicing-local
   ((define path.library (path-append (rkt:path->string path.here) "../src")))
-  (define library=>def* (posix-make-library=>def* #f path.library))
-  (define library=>env  (make-library=>env/library=>def* #f #f library=>def* eval-definition*)))
+  (define library=>text*
+    (make-library=>text* #f (lambda (p) (file->bytevector (path-append path.library p)))))
+  (define library=>env (make-library=>env #f library=>text* (make-library=>def* #f #t library=>text*))))
 
 (module+ main
   (define-namespace-anchor anchor.here)

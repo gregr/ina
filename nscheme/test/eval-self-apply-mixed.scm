@@ -6,6 +6,7 @@
 
 (define env.medium (alist-ref library=>env 'medium))
 (define env.large (alist-ref library=>env 'large))
+(define library=>def* (make-library=>def* #f #t library=>text*))
 (define (with-time thunk) (with-milliseconds displayln thunk))
 
 (let ()
@@ -37,7 +38,7 @@
   (append
    `((define library=>def* ',library=>def*))
    (alist-ref library=>def* 'syntax)
-   '((define library=>env (make-library=>env/library=>def* #f #f library=>def* eval-definition*))
+   '((define library=>env (make-library=>env #f library=>text* library=>def*))
      (define env.medium   (alist-ref library=>env 'medium)))
    '((define stx*.test (list '(list
                                (+ 1 2)

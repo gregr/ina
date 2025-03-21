@@ -5,12 +5,13 @@
 ;;; do not mix.  That means compilation does not need to support cross-stage persistence.
 
 (define env.large (alist-ref library=>env 'large))
+(define library=>def* (make-library=>def* #f #t library=>text*))
 (define (with-time thunk) (with-milliseconds displayln thunk))
 
 (let ()
   (define program (make-program))
   (define (link-definition* env def*) (program-parse-definition* program env def*))
-  (define library=>env (make-library=>env/library=>def* #f #f library=>def* link-definition*))
+  (define library=>env (make-library=>env #f library=>text* library=>def*))
   (define env.medium   (alist-ref library=>env 'medium))
   (define stx*.test (list '(list
                             (+ 1 2)
@@ -43,7 +44,7 @@
    (alist-ref library=>def* 'syntax)
    '((define program (make-program))
      (define (link-definition* env def*) (program-parse-definition* program env def*))
-     (define library=>env (make-library=>env/library=>def* #f #f library=>def* link-definition*))
+     (define library=>env (make-library=>env #f library=>text* library=>def*))
      (define env.medium   (alist-ref library=>env 'medium)))
    '((define stx*.test (list '(list
                                (+ 1 2)
