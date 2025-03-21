@@ -29,7 +29,7 @@
   ;f32-cmp f32-floor f32-ceiling f32-truncate f32-round f32+ f32- f32* f32/
   ;f64-cmp f64-floor f64-ceiling f64-truncate f64-round f64+ f64- f64* f64/
 
-  with-native-signal-handling)
+  with-panic-translation with-native-signal-handling)
 (require
   ffi/unsafe/port ffi/unsafe/vm racket/flonum racket/list racket/match racket/path racket/os
   racket/set racket/tcp racket/udp racket/vector
@@ -82,6 +82,9 @@
     ((error-display-handler) msg (make-exn:fail msg (current-continuation-marks))))
   (exit 1))
 (uncaught-exception-handler (lambda (exn) (panic 'uncaught-exception exn)))
+(define (with-panic-translation thunk)
+  (call-with-exception-handler (lambda (x) (panic #f x)) thunk))
+(define (thread thunk) (rkt:thread (lambda () (with-panic-translation thunk))))
 
 (define posix-signal=>handler (make-hash))
 (define (posix-signal-handler signal)
@@ -101,9 +104,9 @@
       (lambda ()
         (parameterize ((rkt:current-custodian cust))
           (let ((self (current-thread)))
-            (thread (lambda () (thread-wait self) (custodian-shutdown-all cust))))
+            (rkt:thread (lambda () (thread-wait self) (custodian-shutdown-all cust))))
           (let* ((ch   (make-channel))
-                 (body (thread
+                 (body (rkt:thread
                         (lambda ()
                           (with-handlers (((lambda _ #t)
                                            (lambda (x) (channel-put ch (lambda () (raise x))))))
@@ -202,7 +205,7 @@
     (apply values (thread-receive))))
 (define (current-raw-coroutine) (thread->coroutine (current-thread)))
 (define (make-raw-coroutine proc)
-  (thread->coroutine (thread (lambda () (apply proc (thread-receive))))))
+  (thread->coroutine (rkt:thread (lambda () (apply proc (thread-receive))))))
 
 (define-syntax-rule (assert test ...) (begin (unless test (panic #f 'failed-assert 'test)) ...))
 

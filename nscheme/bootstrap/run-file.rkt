@@ -58,4 +58,7 @@
                       (let ((x (rkt:read in)))
                         (if (eof-object? x) '() (cons x (loop)))))))
           (with-native-signal-handling
-           (lambda () (rkt:for-each (lambda (stx) (rkt:eval stx ns)) stx*)))))))))
+           (lambda ()
+             (with-panic-translation
+              (lambda ()
+                (rkt:for-each (lambda (stx) (rkt:eval stx ns)) stx*)))))))))))
