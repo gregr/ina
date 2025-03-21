@@ -121,17 +121,5 @@
 (define call/oport:file call-with-oport:file)
 
 (define (file->bytevector path)
-  (mlet ((buffer (make-mbytevector (+ (file-size path) 4096) 0)))
-    (call-with-iport:file
-      path
-      (lambda (in)
-        (let loop ((start 0))
-          (let* ((len       (mbytevector-length buffer))
-                 (available (- len start))
-                 (amount    (iport-read* in buffer start available)))
-            (if (< amount available)
-                (mbytevector->bytevector buffer 0 (+ start amount))
-                (let ((new (make-mbytevector (+ len len) 0)))
-                  (mbytevector-copy! new 0 buffer 0 len)
-                  (set! buffer new)
-                  (loop len)))))))))
+  (call-with-iport:file path (lambda (in)
+                               (iport->bytevector/buffer-size in (+ (file-size path) 4096)))))
