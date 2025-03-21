@@ -32,10 +32,7 @@
        "<output-file> may be '-' to write the generated code to standard output."
        "This option may be used multiple times to compile for multiple targets at once.")
      (arguments "<target>" "<output-file>")
-     ,(lambda (target path.out arg*)
-        (pretty-write `((target ,target) (output-file ,path.out)))
-        (displayln "Compiler is not yet supported.")
-        (posix-exit 1)))
+     ,(lambda (target path.out arg*) (compiler-output*-add! target path.out) (loop arg*)))
     ((flags "-")
      (description "Pass through remaining command-line arguments.")
      ,(lambda (arg*) (finish 'stdin arg*)))
@@ -51,7 +48,10 @@
 (mdefine verbose? #f)
 (mdefine reboot? #f)
 (mdefine interact? #f)
+(mdefine compiler-output* '())
 (mdefine source* '())
+(define (compiler-output*-add! target path)
+  (set! compiler-output* (cons (cons (bytevector->symbol target) path) compiler-output*)))
 (define (source*-add! src) (set! source* (cons src source*)))
 (define (source*-add-file! path) (source*-add! `(file ,path)))
 (define (source*-add-text! txt)  (source*-add! `(text ,txt)))
@@ -96,8 +96,12 @@
          (interact? ,interact?)
          (command-line-arguments ,cli-arg*)
          (definition-sources . ,source*)
+         (compiler-outputs . ,compiler-output*)
          (library-path ,path.library)
          (library-files . ,library=>path*)))
+(unless (null? compiler-output*)
+  (displayln "Compiler is not yet supported." (current-error-port))
+  (posix-exit 1))
 
 (define eval-def*
   (if quiet?
