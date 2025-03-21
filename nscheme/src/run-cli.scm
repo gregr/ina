@@ -86,6 +86,9 @@
   (when verbose? (for-each (lambda (x) (pretty-write x out.verbose)) x*)))
 (define (verbose-displayln . x*)
   (when verbose? (for-each (lambda (x) (displayln x out.verbose)) x*)))
+(verbose-displayln
+  "This program uses a persisted copy of the library file data that it was built with."
+  "Rebuild this program to update the library files it uses.")
 (apply verbose-write
        `((quiet? ,quiet?)
          (verbose? ,verbose?)

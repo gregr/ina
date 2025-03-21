@@ -44,8 +44,7 @@
 (define-runtime-path path.here ".")
 (splicing-local
   ((define path.library (path-append (rkt:path->string path.here) "../src")))
-  (define library=>text*
-    (make-library=>text* #f (lambda (p) (file->bytevector (path-append path.library p)))))
+  (define library=>text* (posix-make-library=>text* #f path.library))
   (define library=>env (make-library=>env #f library=>text* (make-library=>def* #f #t library=>text*))))
 
 (module+ main

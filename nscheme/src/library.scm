@@ -78,11 +78,24 @@
          (syntax-note-set x (vector source loc text loc.end text.end)))))))
 (define ((text->definition*/read* read*) text) (read* (iport:bytevector text)))
 
+(define ((posix-read-file/annotate? annotate?) path)
+  (call-with-iport:file
+    path
+    (lambda (in)
+      (if annotate?
+          ((read*-syntax-annotated/source path) in)
+          (read*-syntax in)))))
+(define posix-read-file           (posix-read-file/annotate? #f))
+(define posix-read-file-annotated (posix-read-file/annotate? #t))
+
 (define (make-library=>text* out.verbose path->text)
   (define (p->text p)
     (when out.verbose (pretty-write `(read-file-text ,p) out.verbose))
     (path->text p))
   (alist-map-value library=>path* (lambda (path*) (map p->text path*))))
+
+(define (posix-make-library=>text* out.verbose path.library)
+  (make-library=>text* out.verbose (lambda (p) (file->bytevector (path-append path.library p)))))
 
 (define (make-library=>def* out.verbose annotate? library=>text*)
   (when out.verbose (displayln "Reading library file definitions:" out.verbose))
@@ -136,13 +149,3 @@
                            (value-alist->env (aquote library=>text*)))))
     (program-parse-definition* program env def*.program))
   (program->E program))
-
-(define ((posix-read-file/annotate? annotate?) path)
-  (call-with-iport:file
-    path
-    (lambda (in)
-      (if annotate?
-          ((read*-syntax-annotated/source path) in)
-          (read*-syntax in)))))
-(define posix-read-file           (posix-read-file/annotate? #f))
-(define posix-read-file-annotated (posix-read-file/annotate? #t))

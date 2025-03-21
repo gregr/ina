@@ -6,7 +6,7 @@
 (define (verbose-write     . x*) (when verbose? (for-each (lambda (x) (pretty-write x out.verbose)) x*)))
 (define (verbose-displayln . x*) (when verbose? (for-each (lambda (x) (displayln x out.verbose)) x*)))
 
-(define library=>text* (make-library=>text* out.verbose (lambda (p) (file->bytevector (path-append path.library p)))))
+(define library=>text* (posix-make-library=>text* out.verbose path.library))
 (define library=>def* (make-library=>def* out.verbose #t library=>text*))
 (define E.run-cli (parse-bootstrapped-program-definition* library=>text* library=>def* (alist-ref library=>def* 'run-cli)))
 
