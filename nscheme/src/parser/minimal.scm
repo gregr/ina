@@ -127,10 +127,11 @@
 (define (parse-case-values env ve . clause*)
   ($apply/values (apply parse-case-lambda env clause*) (parse-expression env ve)))
 
-(define (parse-and    env . e*) (apply $and    (parse-expression* env e*)))
-(define (parse-or     env . e*) (apply $or     (parse-expression* env e*)))
-(define (parse-when   env . e*) (apply $when   (parse-expression* env e*)))
-(define (parse-unless env . e*) (apply $unless (parse-expression* env e*)))
+(define (parse-and env . e*) (apply $and (parse-expression* env e*)))
+(define (parse-or  env . e*) (apply $or  (parse-expression* env e*)))
+
+(define (parse-when   env e.c . stx*.body) ($when   (parse-expression env e.c) (parse-body env stx*.body)))
+(define (parse-unless env e.c . stx*.body) ($unless (parse-expression env e.c) (parse-body env stx*.body)))
 
 (define (parse-cond env clause . clause*)
   (let loop ((c* (cons clause clause*)))
