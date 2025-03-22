@@ -125,13 +125,22 @@
           (verbose-displayln (string-append "Loading source definitions: " (number->string (length def*))))
           (let ((env (env-conjoin (eval-def* env def*) env)))
             (when interact?
-              (unless quiet? (displayln ";; Entering REPL"))
-              ;; TODO: panic handling, abort, retry
+              (unless quiet? (displayln "Entering interactive evaluator."))
+              ;; TODO: interrupt signal handling
               (let loop ((env env))
-                (unless quiet? (displayln ";; Evaluate:"))
-                (case-values (read)
-                  (()    (values))
-                  ((stx) (loop (env-conjoin (eval-def* env (list stx)) env))))))))))
+                (call/escape
+                  (lambda _ (loop env))
+                  (lambda (retry)
+                    (current-panic-handler
+                      (lambda x*
+                        (displayln "unhandled panic:")
+                        (pretty-write `(panic . ,x*))
+                        (retry))
+                      (lambda ()
+                        (unless quiet? (displayln ";; Evaluate:"))
+                        (case-values (read)
+                          (()    (values))
+                          ((stx) (loop (env-conjoin (eval-def* env (list stx)) env))))))))))))))
     (let ((E.program
             (parse-bootstrapped-program-definition*
               library=>text* library=>def*
