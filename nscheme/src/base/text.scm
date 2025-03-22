@@ -1000,7 +1000,7 @@
           (define (rerror pos text desc x*)
             (reader-error reader pos text (if (null? x*) desc (cons desc x*))))
           (define (fail-local text desc . x*) (rerror pos.abs text desc x*))
-          (define (fail offset text desc . x*) (rerror (pos++ offset) text desc x*))
+          (define (fail offset text desc . x*) (rerror (pos++ (max 1 offset)) text desc x*))
           (define (unread-buffer) (iport-unread port buf pos.buf (- end.buf pos.buf)))
           (define (fill-buffer keof k)
             (define (copy! dst) (let ((count (- end.buf pos.buf)))
