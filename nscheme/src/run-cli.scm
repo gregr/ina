@@ -136,7 +136,7 @@
                       (current-panic-handler
                         (lambda x*
                           (displayln "unhandled panic:")
-                          (pretty-write `(panic . ,x*))
+                          (for-each (lambda (x) (if (text? x) (displayln x) (pretty-write x))) x*)
                           (retry))
                         (lambda ()
                           (unless quiet? (displayln ";; Evaluate:"))
