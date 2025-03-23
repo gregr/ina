@@ -5,4 +5,7 @@
 (define (posix-set-signal-handler! signal handler)
   ((current-posix-set-signal-handler!) signal handler))
 
-(define (posix-exit code) ((current-posix-exit) code))
+(define exit
+  (case-lambda
+    (()     ((current-posix-exit) 0))
+    ((code) ((current-posix-exit) code))))

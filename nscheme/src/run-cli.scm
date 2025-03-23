@@ -3,7 +3,7 @@
      (description "Print this usage and option information, then exit.")
      ,(lambda (_)
         (displayln (usage-description path.self #"[<option> ...] [(<file> | -) <argument> ...]" options))
-        (posix-exit 0)))
+        (exit 0)))
     ((flags "-q" "--quiet")
      (description "Suppress implicit printing when loading definitions.")
      ,(lambda (arg*) (set! quiet? #t) (loop arg*)))
@@ -125,7 +125,8 @@
           (verbose-displayln (string-append "Loading source definitions: " (number->string (length def*))))
           (let ((env (env-conjoin (eval-def* env def*) env)))
             (when interact?
-              (unless quiet? (displayln "Entering interactive evaluator."))
+              (unless quiet?
+                (displayln "Entering interactive evaluator.  (exit) or Ctrl-d to exit."))
               ;; TODO: interrupt signal handling
               (let loop ((env env))
                 (call/escape
@@ -160,7 +161,7 @@
                   (program-parse-definition* program env def*.source*)
                   (E-eval (program->E program)))))))
       (displayln "Compiler is not yet supported." (current-error-port))
-      (posix-exit 1)
+      (exit 1)
       (verbose-displayln "Generating code:")
       ;; TODO: generate code for each target and write it to the corresponding output
       (compact-write (E-pretty E.program))

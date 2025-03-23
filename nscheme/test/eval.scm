@@ -1630,4 +1630,4 @@
    ==>
    (values 0 0 #"pipe test\n")))
 
-(posix-exit (if at-least-one-test-failed? 1 0))
+(exit (if at-least-one-test-failed? 1 0))

@@ -104,7 +104,8 @@
   (cond
     ((procedure? handler) (hash-set!    posix-signal=>handler signal handler))
     ((not        handler) (hash-remove! posix-signal=>handler signal))
-    (else                 (panic #f "not a posix-set-signal-handler! procedure" signal handler))))
+    (else                 (panic #f "not a posix-set-signal-handler! procedure" signal handler)))
+  (values))
 
 (define (with-native-signal-handling thunk)
   (parameterize-break
