@@ -1,8 +1,34 @@
 #lang racket/base
 (provide (all-defined-out))
+(module more racket/base
+  (provide read-syntax-extended)
+  (define read-syntax-extended
+    (let ((rt.extended
+           (make-readtable
+            (current-readtable)
+            #\#
+            'dispatch-macro
+            (lambda (char in . ignore*)
+              (let loop ((skip 0))
+                (if (eqv? (peek-char in skip) #\")
+                    (let ((delim-length (+ skip 2))
+                          (delim-text (string-append (read-string skip in) "##")))
+                      (read-char in)
+                      (let loop ((skip 0))
+                        (if (and (eqv? (peek-char in skip) #\")
+                                 (string=? (peek-string delim-length (+ skip 1) in) delim-text))
+                            (let ((result (read-string skip in)))
+                              (read-string (+ delim-length 1) in)
+                              (string->bytes/utf-8 result))
+                            (loop (+ skip 1)))))
+                    (loop (+ skip 1))))))))
+      (lambda (source in)
+        (parameterize ((current-readtable rt.extended))
+          (read-syntax source in))))))
 (require
-  "nscheme.rkt"
+  "nscheme.rkt" 'more (for-syntax 'more)
   racket/include racket/local racket/runtime-path racket/splicing (prefix-in rkt: racket/base))
+;; TODO: use (include/reader PATH read-syntax-extended) for files containing here-bytevectors
 (include "../src/base/misc.scm")
 (include "../src/base/list.scm")
 (include "../src/base/number.scm")
@@ -55,7 +81,7 @@
       (lambda (in)
         (let ((ns (namespace-anchor->namespace anchor.here))
               (stx* (let loop ()
-                      (let ((x (rkt:read in)))
+                      (let ((x (read-syntax-extended #f in)))
                         (if (eof-object? x) '() (cons x (loop)))))))
           (with-native-signal-handling
            (lambda ()

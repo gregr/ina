@@ -163,6 +163,12 @@
            #\"\\xcg;\\xbbb;\"
            ;; binary numbers:\n #b00 #b01 #b02 #;other-radixes: #xfg #d25a
            \"\\a\\b\\c unfinished")
+           (text.here-bytevector-example
+             ##test"##example"this here-bytevector contains literal text
+             containing "embedded\ndouble quotes" etc.
+             across multiple
+             lines
+             and can be conveniently embedded in another here-bytevector without escapes"example##"test##)
            (go (lambda (name text)
                  (example-write name)
                  (example-write text)
@@ -185,10 +191,14 @@
               (go 'example: text.example)
               (go 'another-example: text.another-example)
               (go 'failure-example: text.failure-example)
+              (go 'here-bytevector-example: text.here-bytevector-example)
               (example-read-write text.example)
               (oport-write-byte out 10)
               (example-read-write text.another-example)
               (oport-write-byte out 10)
               ;(example-read-write text.failure-example)
+              (oport-write-byte out 10)
+              (example-read-write text.here-bytevector-example)
+              (oport-write-byte out 10)
               ;(oport-close out)
               ))
