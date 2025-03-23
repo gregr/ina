@@ -127,21 +127,26 @@
             (when interact?
               (unless quiet?
                 (displayln "Entering interactive evaluator.  (exit) or Ctrl-d to exit."))
-              ;; TODO: interrupt signal handling
-              (let loop ((env env))
-                (call/escape
-                  (lambda _ (loop env))
-                  (lambda (retry)
-                    (current-panic-handler
-                      (lambda x*
-                        (displayln "unhandled panic:")
-                        (pretty-write `(panic . ,x*))
-                        (retry))
-                      (lambda ()
-                        (unless quiet? (displayln ";; Evaluate:"))
-                        (case-values (read)
-                          (()    (values))
-                          ((stx) (loop (env-conjoin (eval-def* env (list stx)) env))))))))))))))
+              (let ((ch.command (make-channel)))
+                (posix-set-signal-handler! SIGINT (lambda (sig) (channel-put ch.command retry)))
+                (let loop ((env env))
+                  (with-retry
+                    '(abort current evaluation and return to prompt)
+                    (lambda ()
+                      (current-panic-handler
+                        (lambda x*
+                          (displayln "unhandled panic:")
+                          (pretty-write `(panic . ,x*))
+                          (retry))
+                        (lambda ()
+                          (unless quiet? (displayln ";; Evaluate:"))
+                          (thread
+                            (lambda ()
+                              (case-values (read)
+                                (()    (exit))
+                                ((stx) (let ((env.new (eval-def* env (list stx))))
+                                         (channel-put ch.command (lambda () (loop (env-conjoin env.new env)))))))))
+                          ((channel-get ch.command)))))))))))))
     (let ((E.program
             (parse-bootstrapped-program-definition*
               library=>text* library=>def*
