@@ -111,9 +111,19 @@
          (library-files . ,library=>path*)))
 (define library=>def* (make-library=>def* out.verbose #t library=>text*))
 
+(define env.import
+  (let ((env.import (make-env)))
+    (define (parse-load env.d env stx.path)
+      (let ((path (syntax-unwrap stx.path)))
+        (unless (text? path) (raise-parse-error (list 'load "not a path") stx.path))
+        (parse-begin-definition* env.d env (posix-read-file-annotated path))))
+    (env-vocabulary-bind!
+      env.import 'load vocab.definition-operator (definition-operator-parser parse-load 1 1))
+    (env-read-only env.import)))
+
 (if (null? compiler-output*)
     (let* ((library=>env (make-library=>env out.verbose library=>text* library=>def*))
-           (env (alist-ref library=>env 'large))
+           (env (env-conjoin* (alist-ref library=>env 'large) env.import))
            (def* (source*->def*)))
       (define eval-def*
         (if quiet?
