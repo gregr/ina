@@ -26,7 +26,7 @@
         (parameterize ((current-readtable rt.extended))
           (read-syntax source in))))))
 (require
-  "primitive.rkt" "nscheme.rkt" 'more (for-syntax 'more)
+  "primitive.rkt" "syntax-shim.rkt" 'more (for-syntax 'more)
   racket/include racket/local racket/runtime-path racket/splicing (prefix-in rkt: racket/base))
 ;; TODO: use (include/reader PATH read-syntax-extended) for files containing here-bytevectors
 (include "../src/base/misc.scm")
