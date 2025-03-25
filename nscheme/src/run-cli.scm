@@ -45,6 +45,7 @@
 (mdefine interact? #f)
 (mdefine compiler-output* '())
 (mdefine source* '())
+(mdefine initial-include-directory #f)
 (define (compiler-output*-add! target path)
   (set! compiler-output* (cons (cons (bytevector->symbol target) path) compiler-output*)))
 (define (source*-add! src) (set! source* (cons src source*)))
@@ -87,6 +88,7 @@
   (cond (stdin?       (unless interact? (source*-add! '(stdin)))
                       (set! cli-arg* (cons path.self arg*)))
         ((pair? arg*) (source*-add-file! (car arg*))
+                      (set! initial-include-directory (path-directory (car arg*)))
                       (set! cli-arg* arg*))
         (else         (set! interact? #t)
                       (set! cli-arg* (list path.self))))
@@ -111,6 +113,8 @@
          (library-files . ,library=>path*)))
 (define library=>def* (make-library=>def* out.verbose #t library=>text*))
 
+;; TODO: improve for other file sources
+(define current-include-directory (make-parameter initial-include-directory))
 (define env.import
   (let ((env.import (make-env)))
     (define (parse-load env.d env stx.path)
@@ -119,6 +123,17 @@
         (parse-begin-definition* env.d env (posix-read-file-annotated path))))
     (env-vocabulary-bind!
       env.import 'load vocab.definition-operator (definition-operator-parser parse-load 1 1))
+    (define (parse-include env.d env stx.path)
+      (let ((path (syntax-unwrap stx.path)))
+        (unless (text? path) (raise-parse-error (list 'include "not a path") stx.path))
+        (let* ((path (let ((dir (current-include-directory)))
+                       (if dir (path-append dir path) path)))
+               (def* (posix-read-file-annotated path)))
+          (current-include-directory
+            (path-directory path)
+            (lambda () (parse-begin-definition* env.d env def*))))))
+    (env-vocabulary-bind!
+      env.import 'include vocab.definition-operator (definition-operator-parser parse-include 1 1))
     (env-read-only env.import)))
 
 (if (null? compiler-output*)
