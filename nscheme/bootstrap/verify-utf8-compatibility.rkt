@@ -1,5 +1,5 @@
 #lang racket/base
-(require "nscheme.rkt")
+(require "primitive.rkt")
 
 (define (utf8? bv)
   (define (extra-octet? b) (= (bitwise-and b #b11000000) #b10000000))

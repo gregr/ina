@@ -26,7 +26,7 @@
         (parameterize ((current-readtable rt.extended))
           (read-syntax source in))))))
 (require
-  "nscheme.rkt" 'more (for-syntax 'more)
+  "primitive.rkt" "nscheme.rkt" 'more (for-syntax 'more)
   racket/include racket/local racket/runtime-path racket/splicing (prefix-in rkt: racket/base))
 ;; TODO: use (include/reader PATH read-syntax-extended) for files containing here-bytevectors
 (include "../src/base/misc.scm")
@@ -86,5 +86,4 @@
           (with-native-signal-handling
            (lambda ()
              (with-panic-translation
-              (lambda ()
-                (rkt:for-each (lambda (stx) (rkt:eval stx ns)) stx*)))))))))))
+              (lambda () (rkt:for-each (lambda (stx) (rkt:eval stx ns)) stx*)))))))))))
