@@ -45,28 +45,27 @@
 (mdefine interact? #f)
 (mdefine compiler-output* '())
 (mdefine source* '())
-(mdefine initial-include-directory #f)
 (define (compiler-output*-add! target path)
   (set! compiler-output* (cons (cons (bytevector->symbol target) path) compiler-output*)))
 (define (source*-add! src) (set! source* (cons src source*)))
 (define (source*-add-file! path) (source*-add! `(file ,path)))
 (define (source*-add-text! txt)  (source*-add! `(text ,txt)))
-(define (source*->def*)
+(define (source*->path=>def*)
   (if (null? source*)
       (verbose-displayln "No additional sources to load.")
       (verbose-displayln "Reading sources:"))
-  (append* (map (lambda (source)
-                  (case (car source)
-                    ((file)  (let ((path (cadr source)))
-                               (verbose-write `(read-file ,path))
-                               (posix-read-file-annotated path)))
-                    ((text)  (let ((text (cadr source)))
-                               (verbose-write `(read-text ,text))
-                               ((read*-syntax-annotated/source 'cli) (iport:bytevector text))))
-                    ((stdin) ((read*-syntax-annotated/source 'stdin) (current-input-port)))
-                    (else (mistake "unexpected definition source" source))))
-                source*)))
-(define (source*->path&text)
+  (map (lambda (source)
+         (case (car source)
+           ((file)  (let ((path (cadr source)))
+                      (verbose-write `(read-file ,path))
+                      (cons path (posix-read-file-annotated path))))
+           ((text)  (let ((text (cadr source)))
+                      (verbose-write `(read-text ,text))
+                      (cons #f ((read*-syntax-annotated/source 'cli) (iport:bytevector text)))))
+           ((stdin) (cons #f ((read*-syntax-annotated/source 'stdin) (current-input-port))))
+           (else (mistake "unexpected definition source" source))))
+       source*))
+(define (source*->path=>text)
   (if (null? source*)
       (verbose-displayln "No additional sources to load.")
       (verbose-displayln "Reading sources:"))
@@ -88,7 +87,6 @@
   (cond (stdin?       (unless interact? (source*-add! '(stdin)))
                       (set! cli-arg* (cons path.self arg*)))
         ((pair? arg*) (source*-add-file! (car arg*))
-                      (set! initial-include-directory (path-directory (car arg*)))
                       (set! cli-arg* arg*))
         (else         (set! interact? #t)
                       (set! cli-arg* (list path.self))))
@@ -113,8 +111,7 @@
          (library-files . ,library=>path*)))
 (define library=>def* (make-library=>def* out.verbose #t library=>text*))
 
-;; TODO: improve for other file sources
-(define current-include-directory (make-parameter initial-include-directory))
+(define current-include-directory (make-parameter #f))
 (define env.import
   (let ((env.import (make-env)))
     (define (parse-load env.d env stx.path)
@@ -139,7 +136,7 @@
 (if (null? compiler-output*)
     (let* ((library=>env (make-library=>env out.verbose library=>text* library=>def*))
            (env (env-conjoin* (alist-ref library=>env 'large) env.import))
-           (def* (source*->def*)))
+           (path=>def* (source*->path=>def*)))
       (define eval-def*
         (if quiet?
             eval-definition*
@@ -147,8 +144,20 @@
       (current-posix-argument*
         cli-arg*
         (lambda ()
-          (verbose-displayln (string-append "Loading source definitions: " (number->string (length def*))))
-          (let ((env (env-conjoin (eval-def* env def*) env)))
+          (verbose-displayln
+            (string-append "Loading source definitions: "
+                           (number->string (length (append* (map cdr path=>def*))))))
+          (let ((env (let loop ((path=>def* path=>def*) (env env))
+                       (if (null? path=>def*)
+                           env
+                           (let* ((path&def* (car path=>def*))
+                                  (path      (car path&def*)))
+                             (loop (cdr path=>def*)
+                                   (env-conjoin
+                                     (current-include-directory
+                                       (and path (path-directory path))
+                                       (lambda () (eval-def* env (cdr path&def*))))
+                                     env)))))))
             (when interact?
               (unless quiet?
                 (displayln "Entering interactive evaluator.  (exit) or Ctrl-d to exit."))
@@ -183,7 +192,7 @@
                        (def*.source*
                          (append*
                            (alist-map
-                             ',(source*->path&text)
+                             ',(source*->path=>text)
                              (lambda (path text)
                                ((text->definition*/read*
                                   (if path (read*-syntax-annotated/source path) read*-syntax))
