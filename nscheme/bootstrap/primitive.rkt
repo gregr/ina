@@ -76,19 +76,19 @@
   (cond
     ((rkt:string?      x) (rkt:string->symbol x))
     ((non-utf8-string? x) (non-utf8-symbol (non-utf8-string-bv x)))
-    (else                 (panic #f "not a string" x))))
+    (else                 (mistake 'string->symbol "not a string" x))))
 (define (symbol->string x)
   (cond
     ((rkt:symbol?      x) (rkt:symbol->string x))
     ((non-utf8-symbol? x) (non-utf8-string (non-utf8-symbol-bv x)))
-    (else                 (panic #f "not a symbol" x))))
+    (else                 (mistake 'symbol->string "not a symbol" x))))
 (define (string->bytevector x)
   (cond
     ((rkt:string?      x) (string->bytes/utf-8 x))
     ((non-utf8-string? x) (non-utf8-string-bv x))
-    (else                 (panic #f "not a string" x))))
+    (else                 (mistake 'string->bytevector "not a string" x))))
 (define (bytevector->string x)
-  (unless (bytes? x) (panic #f "not a bytevector" x))
+  (unless (bytes? x) (mistake 'bytevector->string "not a bytevector" x))
   (with-handlers ((exn:fail:contract? (lambda (e) (non-utf8-string x)))) (bytes->string/utf-8 x)))
 
 (define (eqv? a b)
@@ -222,7 +222,7 @@
                     ((thread)                 'time-thread)
                     ((garbage-collector-cpu)  'time-collector-cpu)
                     ((garbage-collector-real) 'time-collector-real)
-                    (else (panic #f "not a current-seconds-nanoseconds type" type)))))
+                    (else (mistake 'current-seconds-nanoseconds "not a time type" type)))))
         (lambda () (let ((time (chez:current-time type)))
                      (values (chez:time-second time) (chez:time-nanosecond time))))))))
 (define platform.time (list (cons 'time (list (cons 'sleep-seconds-nanoseconds sleep-seconds-nanoseconds)
@@ -245,12 +245,12 @@
     (thunk)))
 (define-syntax-rule (io-guard kfail body ...) (with-io-guard kfail (lambda () body ...)))
 (define (nonnegative-integer?! x) (unless (exact-nonnegative-integer? x)
-                                    (panic #f "not a nonnegative integer" x)))
+                                    (mistake "not a nonnegative integer" x)))
 (define (buffer-range?! buf start count)
   (nonnegative-integer?! start)
   (nonnegative-integer?! count)
   (let ((len (if (mbytevector? buf) (mbytevector-length buf) (bytevector-length buf))))
-    (unless (<= (+ start count) len) (panic #f "buffer range out of bounds" start count len))))
+    (unless (<= (+ start count) len) (mistake "buffer range out of bounds" start count len))))
 
 (define (rkt:imemory partial-description port)
   (file-stream-buffer-mode port 'none)
@@ -402,7 +402,7 @@
                          ((create) 'error)
                          ((update) 'update)
                          ((#f)     'can-update)
-                         (else     (panic #f "not an output-file modifier" mod)))))
+                         (else     (mistake "not an output-file modifier" mod)))))
       (io-guard kf (k (make-device (list (cons 'type device-type) (cons 'path (path->bytes path)))
                                    (open-output-file path #:exists exists-flag)))))))
 (define (posix-filesystem method . arg*)
@@ -438,7 +438,7 @@
         (lambda (kf k)
           (nonnegative-integer?! seconds)
           (io-guard kf (file-or-directory-modify-seconds (make-path path) seconds) (k)))))
-     (else (panic #f "not a posix-filesystem method" method)))
+     (else (mistake "not a posix-filesystem method" method)))
    arg*))
 
 ;;;;;;;;;;;;;;;;;;
@@ -529,9 +529,9 @@
                         ((multicast-ttl)       (lambda () (udp-multicast-ttl socket)))
                         ((multicast-loopback?) (lambda () (udp-multicast-loopback? socket)))
                         ((multicast-interface) (lambda () (udp-multicast-interface socket)))
-                        (else                  (panic #f "not a udp-socket method" method)))
+                        (else                  (mistake "not a udp-socket method" method)))
                       arg*))))))))
-     (else (panic #f "not a posix-network method" method)))
+     (else (mistake "not a posix-network method" method)))
    arg*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -545,7 +545,7 @@
 (current-subprocess-custodian-mode 'kill)
 (define (posix-raw-process/k in out err path arg* env kf k)
   (define (fd->rkt-port fd name mode)
-    (and fd (unless (exact-nonnegative-integer? fd) (panic #f "not a file descriptor" fd name))
+    (and fd (unless (exact-nonnegative-integer? fd) (mistake "not a file descriptor" fd name))
          (unsafe-file-descriptor->port fd name mode)))
   (io-guard
    kf
@@ -575,7 +575,7 @@
               ((wait)      (subprocess-wait sp) (subprocess-status sp))
               ((kill)      (subprocess-kill sp #t) (values))
               ((interrupt) (subprocess-kill sp #f) (values))
-              (else        (panic #f "not a posix-raw-process/k method" method)))))))))
+              (else        (mistake "not a posix-raw-process/k method" method)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Posix signals ;;;
@@ -587,7 +587,7 @@
   (cond
     ((procedure? handler) (hash-set!    posix-signal=>handler signal handler))
     ((not        handler) (hash-remove! posix-signal=>handler signal))
-    (else                 (panic #f "not a posix-set-signal-handler! procedure" signal handler)))
+    (else                 (mistake 'posix-set-signal-handler! "not a procedure or #f" signal handler)))
   (values))
 (define (with-native-signal-handling thunk)
   (parameterize-break
