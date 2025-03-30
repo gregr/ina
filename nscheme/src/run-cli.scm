@@ -23,7 +23,8 @@
      (description
        "Compile loaded definitions instead of evaluating them."
        "Generate code for <target> and write the generated code to <output-file>."
-       "<backend> must be one of the following: TODO"
+       "<target> must be one of the following:"
+       "  racket"
        "<output-file> may be '-' to write the generated code to standard output."
        "This option may be used multiple times to compile for multiple targets at once.")
      (arguments "<target>" "<output-file>")
@@ -56,7 +57,7 @@
 (mdefine source* '())
 (define (compiler-output*-add! target path)
   (let ((target (bytevector->symbol target)))
-    (unless (memv target '())
+    (unless (memv target '(racket))
       (usage-error "not a supported compile target" `(<target> ,target) `(<output-file> ,path)))
     (set! compiler-output* (cons (cons target path) compiler-output*))))
 (define (source*-add! src) (set! source* (cons src source*)))
@@ -211,10 +212,14 @@
                                 text))))))
                   (program-parse-definition* program env def*.source*)
                   (E-eval (program->E program)))))))
-      (displayln "Compiler is not yet supported." (current-error-port))
-      (exit 1)
-      (verbose-displayln "Generating code:")
-      ;; TODO: generate code for each target and write it to the corresponding output
-      (compact-write (E-pretty E.program))
-      (verbose-displayln "Testing evaluation:")
-      (pretty-write (apply/values list (E-eval E.program)))))
+      (alist-for-each
+        (reverse compiler-output*)
+        (lambda (target path)
+          (verbose-displayln "Compiling:" '<target> target '<output-file> path)
+          (define (write-output text)
+            (if (eqv? path #"-")
+                (displayln text)
+                (call/oport:file path 'create (lambda (out) (displayln text out)))))
+          (case target
+            ((racket) (write-output (E-compile-racket-program E.program)))
+            (else (mistake "compiler target is not yet supported" target path)))))))
