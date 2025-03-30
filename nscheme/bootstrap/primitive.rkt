@@ -18,7 +18,7 @@
   with-panic-translation with-native-signal-handling)
 (require
   ffi/unsafe/port ffi/unsafe/vm
-  racket/list racket/path racket/set racket/tcp racket/udp racket/vector
+  racket/list racket/path racket/port racket/set racket/tcp racket/udp racket/vector
   (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 
 (define (sync/default handle-default . evt*) (apply sync/timeout handle-default evt*))
@@ -619,6 +619,32 @@
                                    (handle-evt (thread-dead-evt body) void)))))))
       (lambda () (custodian-shutdown-all cust))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Primitive evaluation ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define-namespace-anchor anchor.primitive)
+(define evaluate-racket-form
+  (let ((ns (namespace-anchor->namespace anchor.primitive)))
+    (lambda (stx) (rkt:eval stx ns))))
+(define (evaluate-racket-text code)
+  (let ((type 'racket-text))
+    (unless (bytes? code) (mistake 'primitive-evaluate "code is not a bytevector" type code))
+    (call-with-input-bytes
+     code
+     (lambda (in)
+       (let ((stx (read in)))
+         (when (eof-object? stx) (mistake 'primitive-evaluate "empty code" type code))
+         (unless (eof-object? (read in))
+           (mistake 'primitive-evaluate "code contains more than one expression" type code))
+         (evaluate-racket-form stx))))))
+(define primitive-evaluate
+  (case-lambda
+    (()               '(racket-form racket-text))
+    ((type code kf k) (case type
+                        ((racket-form) (k (evaluate-racket-form code)))
+                        ((racket-text) (k (evaluate-racket-text code)))
+                        (else          (kf '(racket-form racket-text)))))))
+
 ;;;;;;;;;;;;;;;;
 ;;; Platform ;;;
 ;;;;;;;;;;;;;;;;
@@ -635,4 +661,5 @@
                                           (cons 'filesystem          posix-filesystem)
                                           (cons 'network             posix-network)
                                           (cons 'set-signal-handler! posix-set-signal-handler!)
-                                          (cons 'exit                exit)))))))
+                                          (cons 'exit                exit)))
+                 (cons 'primitive-evaluate primitive-evaluate)))))
