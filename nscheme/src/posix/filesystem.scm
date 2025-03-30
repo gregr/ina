@@ -122,4 +122,4 @@
 
 (define (file->bytevector path)
   (call-with-iport:file path (lambda (in)
-                               (iport->bytevector/buffer-size in (+ (file-size path) 4096)))))
+                               ((iport->bytevector/buffer-size (+ (file-size path) 4096)) in))))
