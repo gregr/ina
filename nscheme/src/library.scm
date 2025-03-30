@@ -21,6 +21,8 @@
     (compiler
       "compiler/high-level-ir.scm"
       "compiler/backend/rkt.scm")
+    (platform
+      "platform/racket.scm")
     (parser
       "parser/stage.scm"
       "parser/parse.scm"
@@ -115,7 +117,8 @@
          (env.small    (env-conjoin* env.tiny env.posix))
          (env.compiler (load-library env.tiny 'compiler))
          (env.parser   (load-library (env-conjoin* env.tiny env.syntax env.compiler) 'parser))
-         (env.medium   (env-conjoin* env.small env.parser env.syntax env.compiler))
+         (env.platform (load-library (env-conjoin* env.tiny env.syntax env.compiler) 'platform))
+         (env.medium   (env-conjoin* env.small env.platform env.parser env.syntax env.compiler))
          (env.library  (load-library env.medium 'library))
          (menv.persist (make-env))
          (env.large    (env-conjoin* env.medium env.meta env.library (env-read-only menv.persist)))
@@ -127,6 +130,7 @@
                  (cons 'micro    env.micro)
                  (cons 'nano     env.nano)
                  (cons 'library  env.library)
+                 (cons 'platform env.platform)
                  (cons 'parser   env.parser)
                  (cons 'compiler env.compiler)
                  (cons 'posix    env.posix)
@@ -141,7 +145,7 @@
 
 (define (parse-bootstrapped-program-definition* library=>text* library=>def* def*.program)
   (define def*.library (append* (map (lambda (lib) (alist-ref library=>def* lib))
-                                     '(base syntax compiler parser posix library))))
+                                     '(base syntax compiler parser platform posix library))))
   (define program (make-program))
   (let ((env (env-conjoin* (program-parse-definition* program env.micro def*.library)
                            env.micro

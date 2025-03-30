@@ -28,7 +28,6 @@
 (require
   "primitive.rkt" "syntax-shim.rkt" 'more (for-syntax 'more)
   racket/include racket/local racket/runtime-path racket/splicing (prefix-in rkt: racket/base))
-;; TODO: use (include/reader PATH read-syntax-extended) for files containing here-bytevectors
 (include "../src/base/misc.scm")
 (include "../src/base/list.scm")
 (include "../src/base/number.scm")
@@ -55,6 +54,7 @@
 (include "../src/parser/match.scm")
 (include "../src/parser/program.scm")
 (include "../src/parser/meta.scm")
+(include/reader "../src/platform/racket.scm" read-syntax-extended)
 (include "../src/posix/platform.scm")
 (include "../src/posix/signal.scm")
 (include "../src/posix/filesystem.scm")
