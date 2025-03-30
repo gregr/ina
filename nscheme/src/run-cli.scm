@@ -101,7 +101,7 @@
                       (set! cli-arg* (cons path.self arg*)))
         ((pair? arg*) (source*-add-file! (car arg*))
                       (set! cli-arg* arg*))
-        (else         (set! interact? #t)
+        (else         (when (null? source*) (set! interact? #t))
                       (set! cli-arg* (list path.self))))
   (set! source* (reverse source*)))
 
