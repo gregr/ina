@@ -22,14 +22,7 @@
             (err.p (posix-process-err p)))
         (mlet ((fuse* '()))
           (define (fuse-io in out close!)
-            (thread
-              (lambda ()
-                (let* ((buffer-size 4096) (buffer (make-mbytevector buffer-size 0)))
-                  (let loop ()
-                    (iport-read/k
-                      in buffer 0 buffer-size handle-internal-error close!
-                      (lambda (amount)
-                        (oport-write/k out buffer 0 amount handle-internal-error loop))))))))
+            (thread (lambda () (iport-transfer-all/k in out handle-internal-error close!))))
           (define (fuse*-push t) (set! fuse* (cons t fuse*)) #f)
           (define (fuse-input in out)
             (fuse-io in out (lambda () (oport-close/k out handle-internal-error values))))

@@ -493,3 +493,12 @@
               (set! buffer new)
               (loop len)))))))
 (define iport->bytevector (iport->bytevector/buffer-size 4096))
+
+(define ((iport-transfer-all/k/buffer-size buffer-size) in out kf k)
+  (let ((buffer (make-mbytevector buffer-size 0)))
+    (let loop ()
+      (iport-read/k
+        in buffer 0 buffer-size kf k
+        (lambda (amount) (oport-write/k out buffer 0 amount kf loop))))))
+(define iport-transfer-all/k (iport-transfer-all/k/buffer-size 4096))
+(define (iport-transfer-all in out) (iport-transfer-all/k in out raise-io-error values))
