@@ -1,9 +1,7 @@
 (define options
   `(((flags "-h" "--help")
      (description "Print this usage and option information, then exit.")
-     ,(lambda (_)
-        (displayln (usage-description path.self #"[<option> ...] [(<file> | -) <argument> ...]" options))
-        (exit 0)))
+     ,(lambda (_) (display-usage (current-output-port)) (exit 0)))
     ((flags "-q" "--quiet")
      (description "Suppress implicit printing when loading definitions.")
      ,(lambda (arg*) (set! quiet? #t) (loop arg*)))
@@ -37,6 +35,17 @@
      (description "Stop parsing option flags in remaining command-line arguments.")
      ,(lambda (arg*) (finish #f arg*)))))
 
+(define (display-usage out)
+  (displayln (usage-description path.self #"[<option> ...] [(<file> | -) <argument> ...]" options) out))
+
+(define (usage-error . desc*)
+  (let ((out (current-error-port)))
+    (displayln "usage error:" out)
+    (for-each (lambda (desc) (displayln desc out)) desc*)
+    (newline out)
+    (display-usage out)
+    (exit 1)))
+
 (mdefine cli-arg* (current-posix-argument*))
 (define path.self (car cli-arg*))
 
@@ -46,7 +55,10 @@
 (mdefine compiler-output* '())
 (mdefine source* '())
 (define (compiler-output*-add! target path)
-  (set! compiler-output* (cons (cons (bytevector->symbol target) path) compiler-output*)))
+  (let ((target (bytevector->symbol target)))
+    (unless (memv target '())
+      (usage-error "not a supported compile target" `(<target> ,target) `(<output-file> ,path)))
+    (set! compiler-output* (cons (cons target path) compiler-output*))))
 (define (source*-add! src) (set! source* (cons src source*)))
 (define (source*-add-file! path) (source*-add! `(file ,path)))
 (define (source*-add-text! txt)  (source*-add! `(text ,txt)))
