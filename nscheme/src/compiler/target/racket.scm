@@ -66,7 +66,9 @@
   (bytevector-append #"#lang racket/base\n"
                      racket-primitive-require-text
                      racket-primitive-definition-text
-                     text))
+                     #"(with-native-signal-handling (lambda () (with-panic-translation (lambda ()\n"
+                     text
+                     #"))))"))
 
 (define racket-primitive-provide
   '(provide
