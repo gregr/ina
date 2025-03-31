@@ -52,17 +52,13 @@
   (E-map-quote E (lambda (E) (alist-ref/k prim=>addr (E:quote-value E) (lambda () E)
                                           (lambda (addr) (E:ref (E-note E) addr))))))
 
-(define (E-compile-racket-form E)
+(define (E-compile-rkt-expr E)
   (E-compile-rkt (E-replace-primitive (E-simplify-quote E) prim=>addr) addr=>id))
+(define (E-compile-rkt-text       E) (rkt-expr->rkt-text (E-compile-rkt-expr E)))
+(define (E-compile-racket-program E) (rkt-text->racket-program (E-compile-rkt-text E)))
 
-(define (E-compile-racket-text E) (racket-form->racket-text (E-compile-racket-form E)))
-
-(define (E-compile-racket-program E) (racket-text->racket-program (E-compile-racket-text E)))
-
-(define (racket-form->racket-text form)
-  (call/oport:bytevector (lambda (out) (compact-write form out))))
-
-(define (racket-text->racket-program text)
+(define (rkt-expr->rkt-text form) (call/oport:bytevector (lambda (out) (compact-write form out))))
+(define (rkt-text->racket-program text)
   (bytevector-append #"#lang racket/base\n"
                      racket-primitive-definition-text
                      #"(with-native-signal-handling (lambda () (with-panic-translation (lambda ()\n"
@@ -699,11 +695,11 @@ racket-primitive-definition-text))
 ;;; Primitive evaluation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-namespace-anchor anchor.primitive)
-(define evaluate-racket-form
+(define evaluate-rkt-expr
   (let ((ns (namespace-anchor->namespace anchor.primitive)))
     (lambda (stx) (rkt:eval stx ns))))
-(define (evaluate-racket-text code)
-  (let ((type 'racket-text))
+(define (evaluate-rkt-text code)
+  (let ((type 'rkt-text))
     (unless (bytes? code) (mistake 'primitive-evaluate "code is not a bytevector" type code))
     (call-with-input-bytes
      code
@@ -712,14 +708,14 @@ racket-primitive-definition-text))
          (when (eof-object? stx) (mistake 'primitive-evaluate "empty code" type code))
          (unless (eof-object? (read in))
            (mistake 'primitive-evaluate "code contains more than one expression" type code))
-         (evaluate-racket-form stx))))))
+         (evaluate-rkt-expr stx))))))
 (define primitive-evaluate
   (case-lambda
-    (()               '(racket-form racket-text))
+    (()               '(rkt-expr rkt-text))
     ((type code kf k) (case type
-                        ((racket-form) (k (evaluate-racket-form code)))
-                        ((racket-text) (k (evaluate-racket-text code)))
-                        (else          (kf '(racket-form racket-text)))))))
+                        ((rkt-expr) (k (evaluate-rkt-expr code)))
+                        ((rkt-text) (k (evaluate-rkt-text code)))
+                        (else       (kf '(rkt-expr rkt-text)))))))
 
 ;;;;;;;;;;;;;;;;
 ;;; Platform ;;;

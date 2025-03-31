@@ -623,11 +623,11 @@
 ;;; Primitive evaluation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-namespace-anchor anchor.primitive)
-(define evaluate-racket-form
+(define evaluate-rkt-expr
   (let ((ns (namespace-anchor->namespace anchor.primitive)))
     (lambda (stx) (rkt:eval stx ns))))
-(define (evaluate-racket-text code)
-  (let ((type 'racket-text))
+(define (evaluate-rkt-text code)
+  (let ((type 'rkt-text))
     (unless (bytes? code) (mistake 'primitive-evaluate "code is not a bytevector" type code))
     (call-with-input-bytes
      code
@@ -636,14 +636,14 @@
          (when (eof-object? stx) (mistake 'primitive-evaluate "empty code" type code))
          (unless (eof-object? (read in))
            (mistake 'primitive-evaluate "code contains more than one expression" type code))
-         (evaluate-racket-form stx))))))
+         (evaluate-rkt-expr stx))))))
 (define primitive-evaluate
   (case-lambda
-    (()               '(racket-form racket-text))
+    (()               '(rkt-expr rkt-text))
     ((type code kf k) (case type
-                        ((racket-form) (k (evaluate-racket-form code)))
-                        ((racket-text) (k (evaluate-racket-text code)))
-                        (else          (kf '(racket-form racket-text)))))))
+                        ((rkt-expr) (k (evaluate-rkt-expr code)))
+                        ((rkt-text) (k (evaluate-rkt-text code)))
+                        (else       (kf '(rkt-expr rkt-text)))))))
 
 ;;;;;;;;;;;;;;;;
 ;;; Platform ;;;
