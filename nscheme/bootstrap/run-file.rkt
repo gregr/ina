@@ -47,6 +47,7 @@
 (include "../src/base/io.scm")
 (include "../src/syntax.scm")
 (include "../src/compiler/high-level-ir.scm")
+(include "../src/compiler/high-level-passes.scm")
 (include "../src/compiler/backend/rkt.scm")
 (include/reader "../src/compiler/target/racket.scm" read-syntax-extended)
 (include "../src/parser/stage.scm")

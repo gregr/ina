@@ -20,6 +20,7 @@
     (syntax "syntax.scm")  ; typically, we cross-phase persist this
     (compiler
       "compiler/high-level-ir.scm"
+      "compiler/high-level-passes.scm"
       "compiler/backend/rkt.scm"
       "compiler/target/racket.scm")
     (parser
