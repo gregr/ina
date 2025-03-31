@@ -1,10 +1,5 @@
 #lang racket/base
 (provide
-  make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
-  current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
-  sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
-  make-channel channel-get channel-put channel-put-evt
-  current-platform
   panic apply values make-record-type
   eqv? null? boolean? procedure? symbol? string? rational? integer?
   pair? vector? mvector? bytevector? mbytevector?
@@ -15,6 +10,11 @@
   make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
   bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
   integer-floor-divmod numerator denominator = <= >= < > + - * /
+  make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
+  current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
+  sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
+  make-channel channel-get channel-put channel-put-evt
+  current-platform
   with-panic-translation with-native-signal-handling)
 (require
   ffi/unsafe/port ffi/unsafe/vm

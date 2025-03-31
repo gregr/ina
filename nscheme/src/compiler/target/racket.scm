@@ -64,40 +64,39 @@
 
 (define (racket-text->racket-program text)
   (bytevector-append #"#lang racket/base\n"
-                     racket-primitive-require-text
                      racket-primitive-definition-text
                      #"(with-native-signal-handling (lambda () (with-panic-translation (lambda ()\n"
                      text
                      #"))))"))
 
-(define racket-primitive-provide
-  '(provide
-     make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
-     current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
-     sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
-     make-channel channel-get channel-put channel-put-evt
-     current-platform
-     panic apply values make-record-type
-     eqv? null? boolean? procedure? symbol? string? rational? integer?
-     pair? vector? mvector? bytevector? mbytevector?
-     bytevector->string string->bytevector string->symbol symbol->string
-     cons car cdr vector vector-length vector-ref
-     make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-     bytevector bytevector-length bytevector-ref
-     make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
-     bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
-     integer-floor-divmod numerator denominator = <= >= < > + - * /
-     with-panic-translation with-native-signal-handling))
-
-(define racket-primitive-require
-  '(require
-     ffi/unsafe/port ffi/unsafe/vm
-     racket/list racket/path racket/port racket/set racket/tcp racket/udp racket/vector
-     (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty)))
-(define racket-primitive-require-text (racket-form->racket-text racket-primitive-require))
+(define (make-primitive.rkt-text)
+  (bytevector-append
+    #"#lang racket/base
+(provide
+  panic apply values make-record-type
+  eqv? null? boolean? procedure? symbol? string? rational? integer?
+  pair? vector? mvector? bytevector? mbytevector?
+  bytevector->string string->bytevector string->symbol symbol->string
+  cons car cdr vector vector-length vector-ref
+  make-mvector mvector->vector mvector-length mvector-ref mvector-set!
+  bytevector bytevector-length bytevector-ref
+  make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
+  bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
+  integer-floor-divmod numerator denominator = <= >= < > + - * /
+  make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
+  current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
+  sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
+  make-channel channel-get channel-put channel-put-evt
+  current-platform
+  with-panic-translation with-native-signal-handling)\n"
+racket-primitive-definition-text))
 
 (define racket-primitive-definition-text
-##defs"
+##defs"(require
+  ffi/unsafe/port ffi/unsafe/vm
+  racket/list racket/path racket/port racket/set racket/tcp racket/udp racket/vector
+  (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
+
 (define (sync/default handle-default . evt*) (apply sync/timeout handle-default evt*))
 (define (make-parameter default)
   (let ((rkt-param (rkt:make-parameter default)))
