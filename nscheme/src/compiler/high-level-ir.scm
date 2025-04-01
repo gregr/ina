@@ -67,7 +67,11 @@
                                  (loop (E:letrec-body E))))
       (else                (mistake 'E-pretty "not an E" E)))))
 
-;;; NOTE: this evaluator is only intended for testing until the compiler is finished.
+(define (E-eval E)
+  (let ((primitive-evaluate (current-primitive-evaluate)))
+    (let loop ((code-type* (primitive-evaluate)))
+      (cond ((memv 'rkt-expr code-type*) (primitive-evaluate 'rkt-expr (E-compile-rkt E '()) loop))
+            (else                        (E-eval-direct E))))))
 (splicing-local
   ((define (param-arity param)
      (let loop ((param param) (arity 0))
@@ -143,4 +147,4 @@
                                (for-each (lambda (loc arg) (set-box! loc (arg renv))) loc* arg*))
                              (body (renv-extend renv (map unbox loc*)))))))
          (else (mistake 'E-eval "not an E" E))))))
-  (define (E-eval E) ((E-stage E cenv.empty) renv.empty)))
+  (define (E-eval-direct E) ((E-stage E cenv.empty) renv.empty)))

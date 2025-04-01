@@ -15,4 +15,4 @@ racket "$here/run-file.rkt" "$here/../src/run-cli.scm" "$here/../test/eval-self-
 racket "$here/run-file.rkt" "$here/../test/eval-self-apply-mixed.scm"
 racket "$here/run-file.rkt" "$here/../src/run-cli.scm" "$here/../test/eval-self-apply-mixed.scm"
 racket "$here/run-file.rkt" "$here/../test/mk.scm"
-#racket "$here/run-file.rkt" "$here/../src/run-cli.scm" "$here/../test/mk.scm"
+racket "$here/run-file.rkt" "$here/../src/run-cli.scm" "$here/../test/mk.scm"
