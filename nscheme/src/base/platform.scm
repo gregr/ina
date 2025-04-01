@@ -12,8 +12,8 @@
         (cons 'time        (list (cons 'sleep-seconds-nanoseconds (lambda (s ns) (values)))
                                  (cons 'seconds-nanoseconds/type  (lambda (type) (lambda () (values 0 0))))))
         (cons 'primitive-evaluate (case-lambda
-                                    (()               '())
-                                    ((type code kf k) (kf '()))))))
+                                    (()                 '())
+                                    ((type code kretry) (kretry '()))))))
 (define current-input-port                (make-platform-parameter '(console input-port)             platform.default))
 (define current-output-port               (make-platform-parameter '(console output-port)            platform.default))
 (define current-error-port                (make-platform-parameter '(console error-port)             platform.default))

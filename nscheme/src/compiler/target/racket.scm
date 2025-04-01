@@ -657,11 +657,11 @@ racket-primitive-definition-text))
          (evaluate-rkt-expr stx))))))
 (define primitive-evaluate
   (case-lambda
-    (()               '(rkt-expr rkt-text))
-    ((type code kf k) (case type
-                        ((rkt-expr) (k (evaluate-rkt-expr code)))
-                        ((rkt-text) (k (evaluate-rkt-text code)))
-                        (else       (kf '(rkt-expr rkt-text)))))))
+    (()                 '(rkt-expr rkt-text))
+    ((type code kretry) (case type
+                          ((rkt-expr) (evaluate-rkt-expr code))
+                          ((rkt-text) (evaluate-rkt-text code))
+                          (else       (kretry '(rkt-expr rkt-text)))))))
 
 ;;;;;;;;;;;;;;;;
 ;;; Platform ;;;
