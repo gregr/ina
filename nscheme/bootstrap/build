@@ -1,0 +1,15 @@
+#!/bin/bash
+set -eufo pipefail
+here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+## TODO: also build for other platforms once they are supported
+
+cd "$here/.."
+printf "Cleaning built/ directory\n"
+mkdir built 2>/dev/null || true
+rm built/run-cli.rkt 2>/dev/null || true
+printf "Performing bootstrapped build\n"
+racket bootstrap/run-file.rkt src/build.scm >built/run-cli.rkt 2>/dev/null
+printf "Diffing bootstrapped build with self-applied build\n"
+racket built/run-cli.rkt src/build.scm 2>/dev/null | diff built/run-cli.rkt - >/dev/null || { printf "FAILURE: they are different\n" && exit 1; }
+printf "SUCCESS: they are the same\n"

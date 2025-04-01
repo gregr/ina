@@ -133,11 +133,12 @@ and resuming snapshots of a running system.
 
 ## Run tests and bootstrap
 
-Eventually:
+```
+bootstrap/test
+bootstrap/build
+```
 
-`time racket bootstrap/test.rkt`
-
-`time racket bootstrap/bootstrap.rkt`
+Optionally move resulting artifacts from built/ to prebuilt/ to commit a snapshot.
 
 ## TODO
 
