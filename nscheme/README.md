@@ -142,96 +142,357 @@ Optionally move resulting artifacts from built/ to prebuilt/ to commit a snapsho
 
 ## TODO
 
-parsing and printing:
-- utf8/string <-> number conversion is too language/notation-specific to be part of base?
-- same would be true of read.scm and write.scm
-  - not sure: include/text/read.scm and include/text/write.scm
-  - include/base/port.scm may belong in include/io/* instead?  not sure
-    - maybe read.scm and write.scm belong there too
-- reimplement read and write
-  - a variant for syntax objects
-  - a variant for styled document objects
-- proper fraction notation
-  - more generally, allow any expanded addition/subtraction as input, though we will only ever output one proper or improper fraction
-- limit preference for decimal notation to radix-powered denominators only
+- improve environments
+  - attribute algebra for vocabularies
+  - better data structures: hash and/or trie
+- improved DSLs
+  - text
+    - scanner
+    - read / iterative denotate
+    - e.g., automatic nline, source location support (buffer abstraction over a port)
+    - layout via constraints?
+  - better support for auxiliaries
+  - quasiquote
+    - a quasiquote intermediate language that can be used both for expressions and patterns?
+    - it would embed unquoted syntax fragments to be dealt with by the IR's consumer
+    - ellipsis too?
+    - should we introduce a similar "constructors" intermediate language?
+      - for cons, list, vector, bytevector, records, etc.
+      - is this too trivial?
+      - even if it is too trivial, a sublanguage for record construction with named fields might still be worthwhile
+        - though it could just be a higher-order utility that takes a subparser (e.g., parse-expression) for the field arguments
+          - seems more reasonable than implementing a new language
+          - should the same be true for quasiquote?
+            - the value of a sublanguage is that it can be extended with additional operators, which we might want for qq, but
+              wouldn't want for records?
+  - match, qmatch, smatch, qsmatch
+  - syntax-rules/case patterns and templates
+  - maybe ultimate conditional syntax: call it ucond?
+  - general record update notation
+    - how do we do this for immutable records without mutator?  do we need a built-in update operator?
+  - logic programming: miniKanren, datalog
+  - maybe probablistic programming
 
 
-What is the next step?  We want to complete a Racket platform bootstrap.  We still need:
-- include/compiler/backend/rkt.scm
-  - module construction, literal code construction, and linking
-- cross-compiler and primitive implementations: include/platform/posix/rkt.scm
-  - build env.primitive.whatever with fresh primitive addresses, mapping each to a parser that produces its (E:ref addr)
-  - build a map of `prim-addr=>id` (the usual Racket ids for each) that we can pass to E-compile-rkt
-- bootstrap/clean-bootstrap
+
+new environment algebra supporting both scalar and aggregate attributes on variables:
+- motivation: when adding match pattern operators, we only want to add them when the expected normal operator is bound
+  - if the normal binding has been shadowed, it's inconsistent to have the corresponding pattern operator be available
+- binding-identity: uid
+- entry: #(binding-identity optional-alias ((attr-key . attr-value) ...))
+- alias: #(identifier uid environment)
+- attributes for a particular binding may be distributed across multiple entries and multiple environments
+- search for attributes:
+  - scalar: first-found with a matching binding-identity
+  - aggregate: exhaustive for matching binding-identity, producing a list, ordered by search
+- binding-identity used in search:
+  - initially #f
+  - first hit for an identifier learns the binding-identity that will be used in the remainder of that search
+- alias search
+  - if the first hit during normal search includes an alias, we complete the normal search first, then
+    if necessary, continue with a fresh search using the alias identifier and environment
+    - the fresh search itself may hit another alias, and recurse in the expected way
+- use binding-identity for auxiliary literal recognition, and other `free-identifier=?`-like uses
+- redefine env-ref to return a stream of bindings for a particular identifier
+  - then we can implement arbitrary lookup policies without changing the implementation of environments
+  - and absence is the empty stream, rather than ad-hoc #f
+    - which means we should have some form of env-hide or env-remove to interrupt the streaming for deleted ids
+    - we should be able to express deletion both of specific attributes, and of entire bindings
+  - we can use this to enumerate bound identifiers and their attributes
+  - we can remove env-describe
+  - we can use this to define an env-freeze that produces a new env capturing an immutable snapshot of another env
+- prefer monotonic environment updates: add-vocabulary instead of set-vocabulary-value!
+  - and rename define-vocabulary-value to define-with-vocabulary aka define/vocabulary
+- env-conjoin optimization for empty immutable environments
+
+
+
+- nscheme stage/unstage macro
+
+
+
+port dbk's 2-3 btree, old hamt, and/or other efficient data structures
+
+consider bytevector-u64le-ref etc.
+- conversions like `u64<->s64` are also possible
+- naively compare performance with bytevector-ref
 ```
-backend/rkt.scm
-;; TODO: rkt->rkt-text
-;; - the caller is responsible for providing code with structure that explicitly ensures the
-;;   desired level sharing of quoted data
-;;   - because unlike the rkt form, rkt-text serialization loses object identity (it's just text)
-;; - the caller is also responsible for replacing any E-quotes whose values cannot be written
-;;   - particularly procedures, where we likely need either a lambda or a (global) variable ref
+(time
+  (let* ((len (expt 2 24))
+         (bv  (make-bytes len 0)))
+    (let loop ((i 0) (acc 0))
+      (if (< i len)
+          (loop (+ i 8)
+                (+ acc (bytes-ref bv i) (bytes-ref bv (+ i 1)) (bytes-ref bv (+ i 2)) (bytes-ref bv (+ i 3))
+                       (bytes-ref bv (+ i 4)) (bytes-ref bv (+ i 5)) (bytes-ref bv (+ i 6)) (bytes-ref bv (+ i 7))))
+          acc))))
+(time
+  (let* ((len (expt 2 24))
+         (bv  (make-bytes len 0)))
+    (let loop ((i 0) (acc 0))
+      (if (< i len)
+          (loop (+ i 8) (+ acc (integer-bytes->integer bv #f #f i (+ i 8))))
+          acc))))
 ```
+
+
+
+redesign `make-library=>env` to eagerly build libraries given by name, and their (transitive) dependencies
+- can make both persistent and reboot variants of all relevant libraries, where reboot status is part of name?
+- NOTE: the bootstrapped environment is only insufficient when we want to use env.meta facilities, or persist syntax/env/expr-code
+
+create and persist e.scm (or expr.scm), which defines address and E data types
+- only need construtors, predicates, and accessors
+- no need to define E-pretty or E-eval there
+- move this file to the same level as syntax.scm
+  - possibly move them to a new subdirectory
+    - what name? persistent/ cross-phase/ meta/ boot/ ?
+
+- separate env.meta into declarative and procedural portions
+  - the declarative portion is useful in smaller languages that don't have the syntax / expr / parser / compiler  interface yet
+    - it is also safe to use across phases, such as in a rebooted environment
+  - the procedural portion has more dependencies, and is not safe across phases
+
+
+
+- improve description for io-error so that it can be informative on its own, without io-error-specific details
+- raise-parse-error should include an optional who/where ?
+- an interactive unhandled error handler should avoid dumping large amounts of text
+  - instead, allow the user to carefully explore diagnostic output
+  - for structures whose size is above a certain threshold, provide a summary, with an option to gradually expand
+
+
+
+define make-record-type as a non-primitive that returns a type descriptor or controller that
+captures the multi-value return of the primitive
+- maybe rename the underlying multi-value-returning primitive to raw-make-record-type
+
+should we add basic define-record-type syntax to env.minimal ?
+- and how would subclassing work via syntax?
+- defining a non-final record type would also define a new subclassing definition operator
+- we can have define-record-type bundle a record type descriptor object, representing it as an alist
+  - it would contain a subclassing operator, among other things
+  - then you could pass this rtd to define-record-[sub]type to indicate inheritance
+- we would want match pattern syntax too
+
+
+
+text document system:
+- atom: #(width style bytevector)
+- sequence types: #(width style type-tag vector-of-tdocs)
+  - adjacent
+  - space-separated
+  - line-separated
+    - but this is subsumed by borderless, single-column table, no?
+    - but with an inefficient representation, so maybe this is still ok
+- table: #(width style border widths heights rows)
+  - widths and heights are vectors whose elements are either a nonnegative integer or #f
+    - can also make the whole thing #f
+  - rows is a vector of vectors
+  - border is either #f or a pair of outer, and inner border vectors (style and characters (or #f))
+    - outer border: #f or #(style horizontal vertical tl tr bl br t b l r)
+    - inner border: #f or #(style horizontal vertical junction)
+- do we still need to track width within each element?
+UI (UIDE) ideas:
+- make sure code/data can still be manipulated as plain text, even if we also have structural manipulation
+- UI as a canvas of entities that act like their own miniature computer, each with their own private canvas
+  - REPL interactions spawn these entities
+  - the computations running in these entities can be isolated, paused, stepped, etc.
+    - if we have the right kind of virtualization, we can also capture IO, and maybe other effects
+  - retain source info for spawned entities
+  - optionally allow auto-update of spawned entities when their sources (now considered dependencies) change
+    - topologically sort the update to avoid jitter
+  - hard and soft links to entities
+  - canvases can be block/document-structured, or more free-form spatial with objects having x,y coordinates
+    - text environments could approximate the free-form variant
+      - all the data is there and computing as usual, but the scene drawing will be crude
+- text file watching nodes that use file-change-evt
+  - edit a text file in a separate editor and see the reactive effects in the UIDE
+- entity presentation/interaction modes
+  - viewing as textual code/data and maybe editing
+  - viewing as widget and maybe interacting
+- E-style remote capabilities for multi-user interaction
+  - each user is a server for their capabilities
+  - each user also caches the transparent portion of remote capabilities they get from other users
+    - to make some copy/paste and offline functionality possible
+  - optional semi-transparent overlays that other users can point/draw on during a demo, to gesture at things they
+    aren't allowed to interact with
+- REPL-like structured canvases with an implicit environment
+  - (begin (define ...) ...) pushes you deeper into a hierarchy of environments?
+  - make it easy to fork canvas environments (maybe also some content), and adjust the environments
+    - what is the interface for adjusting the environment?
+    - we should reify environments like any other object, right?  how do we spatially represent the environment of a REPL pane?
+
+
+
+- a server-based session interpreter to use with external editors, such as vim?
+  - might use filesystem instead of network-based communication
+    - add an input file to some location, server notices via file-change-evt
+    - might be too clunky
+- a repl w/ virtual computers
+  - connect to any number of machines
+  - machines can share devices, and have devices relinked on the fly
+  - posix-style
+    - console, network, filesystem, clock, shell, process manager
+  - other styles also possible
+    - www
+    - spreadsheet
+    - database
+  - text canvas
+  - gui canvas
+  - grabbable data (correlated with text) and interactive text widgets
+  - virtual filesystem implementation possibilities:
+    - directory on actual file system
+    - single file on actual file system
+    - in-memory representation
+      - can mount links to real file system content too
+    - /dev/null (throw everything away)
+  - automatic snapshots and change logging
+    - fork at any point in time
+    - embed another system's state in another
+    - snapshot a subset of system state
+    - do STEPS-style worlds make sense?
+
+implement an execution simulator/virtual-machine in nscheme itself
+- testing an implemention of custodians and ConcurrentML
+- testing a memory management system
+- encapsulated effects
+  - repl w/ virtual machine seems good enough
+- debugger-like break points and stepping
+- hierarchically-powered thread-groups
+  - need to hold children using weak refs
+- it's not worth also implementing a simulator in Racket
+- so we will delete poll-interrupts!, timer interrupts, interruptible-lambda etc. once we
+  no longer need these as an implementation guide
+
+it is probably worth implementing image snapshots in only two settings:
+- native
+- simulator
+non-native platforms can incur the overhead of running the virtual machine if they want to support snapshots
+- maybe we can try to mitigate this overhead later, possibly through specialization
+- and maybe the overhead won't be too high, anyway
+
+opaque types whose metadata we need to extract for image snapshots:
+- procedures
+  - parameters
+  - code
+- records
+- threads
+- thread-groups
+- channels
+- evts
+- custodians
+
+inspector method interface:
+- all
+  - type
+  - value
+- procedure
+  - code
+    - name
+    - note
+    - `clause*`
+    - free-count
+  - `free*`
+- record
+  - system and user metadata for the type
+  - fields of the instance
+- thread
+  - some way to unravel continuation, parameter values, code, etc.
+- thread-group
+  - thread hierarchy
+- channel
+  - pending threads, and which side they are on
+- evt
+  - free variables
+- custodian
+  - resource hierarchy
+
+
+
+- notes on Es can be more involved than just storing stx
+  - E:ref only needs source (stx)
+  - but the others need source AND more info, likely in the form of flags that inform and are updated by analysis and inlining
+  - E:call and E:apply/values might track info about:
+    - procedure arity
+    - return arity
+      - maybe return types
+    - possibility of nontermination
+      - maybe other effects
+    - whether inlining is safe (w.r.t. recursion)
+  - E:case-lambda might track similar info, plus:
+    - whether it is well-known
+    - free variables
+    - whether a fv/parameter escapes
+      - returned, directly or embedded
+      - passed to unknown procedure call
+    - how many times a fv/parameter is referenced
+    - how a fv/parameter is referenced
+      - e.g., whether it is passed through without observation, or scrutinized:
+        - "if", called/applied, taken apart, used by some other primitive operation
+    - time/space resource usage
+- but we can start by having the parser just store stx, then have the compiler progressively add its own info as needed
+
+
+
 - cross-phase persistence/serialization transformation of E
   - memoizing shared E-quote values
-    - replace non-procedure E-quotes with E:refs to shared constructor expressions
+    - replace E-quotes containing compound or large atomic values with E:refs to shared constructor expressions
       - or directly to contructor expressions if used only once
-      - or leave them as-is for small values that don't need to be shared
-  - (procedure) values that cannot be written
+  - values that cannot be written
+    - E-replace-primitive does a limited form of this currently
     - transformation is parameterized by a lookup procedure
     - may replace a procedure (or other data as well) with a global E:ref
     - may replace a procedure with E:lambda when code and values of free variables are available
       - if lookup is backed by a capability such as procedure-metadata, for instance
     - otherwise, this transformation may fail in some standard way
   - useful for all platforms, so should be located in include/compiler/, probably in high-level-ir.scm
-  - eq-hash-code ? eq-unreliable-hash-code (in JS use a Map or WeakMap?)
-    - for amortized constant time hash lookup
+  - eqv-unreliable-hash-code (in JS use a Map or WeakMap?)
+    - for either amortized constant time hash, or log time tree-based lookup
     - we need something like this to solve the E:quote sharing analysis problem
-      - because two different E:quotes might reference the exact same allocated object, and this needs to be preserved during compilation
-    - alternatively, we can use a mostly-content-based hash code built as we analyze values bottom-up
-      - we can also avoid lookups for parent values as soon as one child is not found in our table
-        - we still have to insert them into the table, however, since they are newly seen
-```
-high-level-ir.scm
-;; TODO: just replace E:prim with uses of E:ref instead?
-;; - if we do that, how will we recognize when we can optimize a primitive operation?
-;; - maybe the primitive info can be installed in the environment
-;;   - so, when we look up a ref, we either get concrete primitive info we can apply
-;;     or we just get an indicator for a fully abstract variable that we can't do much with
-;;   - we might be able to do other kinds of constant folding/inlining through refs this way too
-;; TODO: E:let E:begin, and probably also E:let-values for the same reason
+      - because two different E:quotes might reference objects with the same identity, and this needs to be preserved
+    - for reliability, pair this with a table using a content-based hash code built as we analyze values bottom-up
+      - first attempt unreliable lookup
+      - if that fails, recursively look up children of compound values
+        - perform content-based insertion, building on the content-based hashes of children
+        - also insert the eqv-unreliable-hash-code to detect when we need to resynchronize the unreliable table
 
 
-Start with a simpler model for stratified evaluation (phases) for macro expansion before cross-compilation?
-- it means not having begin-meta, or at least not using it to define procedures that are used in the object program
-- but we still need a way to define procedures that are only used in the meta program (particularly in procedural macros)
-- one option is to not have macro definition syntax, and manually populate meta environments before parsing an object program
-- another option is to maintain (2?) separate environments, in a Racket-like phasing model
-- manual population seems like a nice low-tech approach to try first, to see whether its affordances are already good enough
-  - it could still support defining non-procedural macros in an object program, in a style like syntax-rules
-meta.scm
-;; TODO: let-syntax let*-syntax letrec*-syntax letrec*-syntax&values ?
-;; - splicing forms?
-```
 
-- curate a "safe" subset of base?
-  - how safe is "safe"?
-    - how safe is mutation?
-  - maybe a "pure" subset of "safe" too?
-- what is the right thread-safe stdio api?
-  - don't worry about thread-safety at the port level
-  - instead, come up with a higher-level concurrency-oriented io system
-    - common logging procedures, like displayln or something analogous, should use this by default
-      - they should implement their own line-based flushing (we don't support line-buffering in ports)
-    - "hello world" should be straightforward
-  - alternatively, we can put optional thread-safety into some io streams, and make it easy to swap out the ports that wrap them
-    - so dangerous threads don't corrupt your ports
-- (make-equal? super)
-  - (define equal? (make-equal? (lambda (a b) #f)))
-  - alternative to providing super, provide an association list of type-predicate => type-destructurer (or type-component-iterator)
-  - though this is less general as far as the forms of equality that can be encoded (e.g., set equality would be challenging to do this way)
-- define a (make-write super) in the same way as make-equal?
-- `#<unknown>` for opaque values without a generally-known predicate, such as records, unless overridden by super
+separate mutable primitives from the other common ones
+- not all effects have to move: can leave panic, since panicking is equivalent to any other mistake
+
+- subsets of base
+  - this may be a waste of time, aside from identifying the definitely unsafe portion (time and io)
+    - concurrency also allows crude timing, so it's not exactly safe either
+  - curate a "safe" subset of base?
+    - how safe is "safe"?
+      - how safe is mutation?
+    - pure is probably part of safe, but what else is?
+  - pure (immutable, sequential)
+    - misc.scm
+    - number.scm
+    - list.scm
+      - for-each is not likely to be useful in a pure setting, though
+    - pair.scm
+    - vector.scm
+    - bytevector.scm
+    - record.scm (but we're probably going to change this quite a bit)
+    - exception.scm
+  - procedural (mutable, sequential)
+    - mvector.scm
+    - mbytevector.scm
+    - port.scm
+    - unicode.scm
+    - text.scm
+  - concurrent
+    - generator.scm
+    - coroutine.scm
+    - prompt.scm
+    - thread-safe-port.scm
+  - unsafe
+    - time.scm
+    - io.scm
 - start adopting a generic type-identification strategy across OOP-style procedures
   - examples:
     - io streams (therefore affecting ports)
@@ -241,143 +502,60 @@ meta.scm
     that case returns some (ideally human-readable) type identifier and possibly other descriptive info?
 - finish platform interoperation:
   - gui?
-- maybe remove pipe IO
-- at some point, Racket primitives that return void should be modified to return (values).
 
-
-bootstrap/include.rkt should build a database out of include/: an association-list-tree of directories, files, and their contents
-- can chop off the .scm suffix? but maybe don't
-- need to be able to distinguish directories from files
-- then we will provide this database as an embedded constant to the nscheme program to use when running client programs
-  - to build envs/programs by linking
-
-
-top-level build/ and prebuilt/ for temporary and checked-in build results
-
-top-level test/ directory
-
-top-level bootstrap/ directory
-- a (prebuilt or hand-written) nscheme.rkt program:
-  - usage: racket nscheme.rkt program.scm program-args ...
-  - or require it as a module
-- test.rkt and/or test script
-- clean-bootstrap script, which will clear out bootstrap/build/ and then re-populate it
-  - run nscheme.rkt on cross-compilers for all platforms, compiling nscheme.scm for each, and place the resulting nscheme.X files in bootstrap/build/
-    - running cross-compilers on nscheme.scm should itself be a shared program, like bootstrap.scm
-    - so this means bootstrapping will run nscheme.rkt on bootstrap.scm
-
-top-level include/ directory
-- base/
-  - misc.scm
-  - record.scm
-  - exception.scm
-  - unicode.scm
-  - etc.
-- syntax.scm  ; this doesn't have to be specific to the nscheme language, and doesn't really belong anywhere else?
-  - interesting thing to note: it not only provides definitions, but also packages them up
-    - because we want the same syntax record definitions to persist across phases so that macros/parsers behave intuitively
-    - we would probably also do this in any other situation where we want to share the same representation across phases
-- text/
-  - stream.scm
-  - port.scm
-    - a general form that doesn't depend on posix or files
-    - an implementation of string/bytevector ports too
-  - read.scm   ; parameterize over an annotator so we don't depend on syntax.scm
-  - write.scm  ; parameterize over a styler so we don't depend on syntax.scm
-  - terminal-control.scm
-- codegen/
+- codegen/  ; general code generation that can be used with or without the compiler
   - c.scm
   - js.scm
   - html.scm
   - css.scm
   - py.scm
   - x86-64.scm
+  - aarch64.scm
   - wasm.scm
-  - lua.scm
 - compiler/
   ;; all of these passes include relevant IR definitions
   ;; if we end up needing more divisions, maybe these should be called level0.scm level1.scm etc.
   - high-level-ir.scm
-  - high-level-passes.scm   ; transitions to either mid-level.scm or one of the high-level backends (only a language with proper tail calls(?), such as racket, scheme, or back to nscheme)
+  - high-level-passes.scm   ; transitions to either mid-level.scm or one of the high-level (tail-call-safe) backends (rkt or back to nscheme)
   - high-level-passes-optional.scm  ; stays within high-level
   - mid-level-ir.scm
-  - mid-level-passes.scm    ; transitions to either low-level.scm or one of the mid-level backends (py, js, lua)
+  - mid-level-passes.scm    ; transitions to either low-level.scm or one of the mid-level backends (py, js)
   - mid-level-passes-optional.scm   ; stays within mid-level
   - low-level-ir.scm
-  - low-level-passes.scm    ; transitions to one of the low-level backends (c, x86-64, wasm)
+  - low-level-passes.scm    ; transitions to one of the low-level backends (simulator, c, x86-64, aarch64, wasm)
   - low-level-passes-optional.scm   ; stays within low-level
   - backend/
+    - simulator.scm
     - c.scm
     - js.scm
-    - lua.scm
     - py.scm
     - rkt.scm
-    - wasm.scm
     - x86-64.scm
-- nscheme/
-  - it depends on restarts and raise, but shouldn't otherwise depend on a particular control implementation
-  - base-primitives.scm
-  - stage-simple.scm
-  - parse.scm
-  - program.scm
-  - minimal.scm
-  - meta.scm
-  - match.scm
-- gui/
-  - library built on whatever native or emulated gui capabilities are provided
-- platform/
-  - common.scm, control.scm, privileged.scm  ; primitive packages shared by all platforms
-  - /low-level/
-    - for low-level primitive operators, such as those used to implement the operators provided by control.scm
-  - bootstrap.scm etc.
-    - these currently test the process for building environments, but will probably be removed once nscheme.scm is implemented for each platform family (posix, www, etc.)
-  - posix/ and www/ subdirectories describe platforms, and contain one or more platform-specific primitive-envs/runtime/compiler/linker compositions
-  - posix  ; library for working in the context of a posix-like environment (simulated or otherwise)
-    - common.scm  ; package of posix-specific primitives
-    - host-process.scm, file.scm, network.scm
-    - nscheme.scm  ; a (command-line) evaluation/compilation program that might also double as a library/module in the target platform language
-      - this interface is allowed to run code that overrides, or even throws away, the interface, replacing it with something else
-      - this repo may or may not include an implementation of a more featureful interactive editor/evaluator/desktop with documents, auto-save, snapshotting, and data export
-        - both TUI and GUI variants
-    ; each of these puts together a platform-specific (cross-)compiler that also bundles a copy of all of include/
-    - racket/
-      - implementation for Racket primitives should be generated as literal Racket code, not nScheme code
-      - we manually link to it during bootstrap, but also automatically link to it when compiling to posix Racket
-    - c/         ; c/compile.scm will be more portable than c/x86-64/compile.scm
-    - c/x86-64/  ; tail call and coroutine implementation differs from c/compile.scm
-    - node.js/
-    - python/
-  - www  ; library for working in the context of a web browser-like environment (simulated or otherwise)
-    - nscheme.scm  ; like posix/nscheme.scm but implemented with www capabilities instead of posix capabilities
-      - it might be an .html file that you open in the browser that provides form-based IO (text fields or browser-based file opening)
-        - we could also emulate a limited posix-like interface
-    ; each of these puts together a platform-specific (cross-)compiler that also bundles a copy of all of include/
-    - js/
-    - js/wasm/
-
-time and date:
-https://srfi.schemers.org/srfi-19/srfi-19.html
+    - aarch64.scm
+    - wasm.scm
+  - target/
+    - simulator.scm
+    - racket.scm
+    - python.scm
+    - c.scm
+    - c-x86-64.scm
+    - c-aarch64.scm
+    - www-js.scm
+    - www-js-wasm.scm
 
 
-;;;;;;;;;;;;;;;;; DO THE ABOVE FIRST
 
-- nscheme stage/unstage macro
+dynamic escape analysis via lattice-based reference counting
+- conservative approximation by RC-ing entire pages instead of objects
+  - multiple, potentially unrelated, candidates for non-escaping allocations can be grouped on the
+    same page, gambling that they will all be valid at the same time, in order to reduce RC overhead
+- used when calling unknown procedures that would otherwise force a conservative analysis to decide
+  that the arguments escape
+  - each procedure itself knows whether it is well-known or potentially uknown to its callers
+- support runtime checking of a procedure's metadata to determine whether an argument might escape
+  - three possibilities: unused, used-without-escape, escape
+  - can enable call-site memory management specialization
 
-
-when will a thread's resources be garbage collected when using reference counting?
-- have to avoid cyclic references, which seems challenging in combination with threads that link themselves to other threads
-- but should be acyclic if they just use (current-thread) to do so, right?
-
-
-see what affect on timing we get from introducing E:begin/E:seq and E:let
-- to reduce the amount of interrupt ticking
-
-
-there are different kinds of posix programs, and/or ways to launch them
-  - terminal with standard IO
-  - desktop GUI
-- the cross-compiler will know how to provide posix initialization scaffolding, and (re)bind procedures with the standard capability names
-  - specifically, it knows how to set up the ambient capability environment
 
 
 what if a program obtains new platform-specific capabilities at runtime?  how do we account for these?
@@ -397,32 +575,6 @@ what if a program obtains new platform-specific capabilities at runtime?  how do
       - the handler decides when we want to do extreme things like this
       - platform can provide some default handlers, and users can override and augment this set of handlers
         - default reinstantiation handler for an open file might just say, "sorry, can't reinstantiate this without more context"
-
-
-continue with tty library and other posix-interfacing stuff
-- maybe work on an editor / repl
-
-
-a quasiquote intermediate language that can be used both for expressions and patterns?
-- it would embed unquoted syntax fragments to be dealt with by the IR's consumer
-- ellipsis too?
-
-should we introduce a similar "constructors" intermediate language?
-- for cons, list, vector, bytevector, records, etc.
-- or is this too trivial?
-- maybe a sublanguage for record construction with named fields is still worthy, though
-  - though it could just be a higher-order utility that takes a subparser (e.g., parse-expression) for the field arguments
-    - seems more reasonable than implementing a new language
-    - should the same be true for quasiquote?
-      - the value of a sublanguage is that it can be extended with additional operators, which we might want for qq, but wouldn't want for records?
-
-
-
-clean up old notes in this file!
-
-
-then go back to working on a compiler
-- probably starting with an assembler, and/or other target code generators, so we can build something executable right away
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -607,21 +759,6 @@ figure out JS representation strategy
 - the compiler should associate prim op names with general attribute flags (pure, terminates, etc.)
   - if the compiler doesn't recognize a prim op name, it can assume worst-case attributes, treating it as an opaque procedure
   - later note: maybe don't do this by name
-
-weak refs w/ non-referencing finalizers
-- finalizer is scavenged before determining whether weak ref is broken, so objects are not in danger of being resurrected
-- weak refs introduce observable nondeterminism, unless well encapsulated
-  - e.g., a referentially-transparent weak value dictionary used for caching
-    - a key's membership is deterministic
-      - referencing a particular key either always fails, or always produces an equivalent value
-    - referencing a member key that is missing from storage must automatically load a new value
-      - so the user can't detect it was missing
-    - e.g., a symbol-interning table
-- in what context is a finalizer called? allows abitrary code execution at an arbitrary time
-- weak refs might be harder to support with reference-counting memory management
-
-port dbk's 2-3 btree, old hamt, and/or other efficient data structures
-- we'll use these as sets during program analysis
 
 start working on an initial optimization pass inspired by cp0
 - track variable references and single-references

@@ -9,6 +9,10 @@
       (cdr addr&id)))
   (let loop/env ((E E) (cenv global-addr=>id))
     (define (loop E) (loop/env E cenv))
+    ;; TODO: optionally generate error-checking code for operations that could fail
+    ;; - use E-note to provide source location for error messages
+    ;; - optionally build a stack trace that retains thread lineage unless explicitly isolated
+    ;;   - stack trace of a new thread should begin at the parent thread's current trace
     (cond
       ((E:quote?        E) (list 'quote (E:quote-value E)))
       ((E:ref?          E) (cenv-ref cenv (E:ref-address E)))
@@ -18,6 +22,7 @@
       ((E:apply/values? E) (list 'call-with-values
                                  (list 'lambda '() (loop (E:apply/values-operand E)))
                                  (loop (E:apply/values-operator E))))
+      ;; TODO: generate Racket code to wrap case-lambda with inspector-compatible metadata
       ((E:case-lambda?  E) (let* ((param*~* (E:case-lambda-param*~* E))
                                   (^body*   (map (lambda (addr* body)
                                                    (lambda id*
