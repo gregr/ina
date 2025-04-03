@@ -4,7 +4,6 @@
   '(;;;;;;;;;;;;;;;;;
     ;;; Utilities ;;;
     ;;;;;;;;;;;;;;;;;
-
     (define (not x) (if x #f #t))
 
     (define (map f x*)
@@ -22,7 +21,6 @@
     ;;;;;;;;;;;;;;;;;;;
     ;;; microKanren ;;;
     ;;;;;;;;;;;;;;;;;;;
-
     (define (var   id)  (vector id))
     (define (var?  x)   (vector? x))
     (define (var=? a b) (eqv? (vector-ref a 0) (vector-ref b 0)))
