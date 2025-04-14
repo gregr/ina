@@ -91,26 +91,21 @@
   (define (==     u v)   (lambda (st) (state->stream (unify u v st))))
 
   ;; TODO: improve reification
-  (define (reify t st) (walk* t (state-sub st))))
+  (define (reify t st) (walk* t (state-sub st)))
 
-(begin-meta
   ;;;;;;;;;;;;;;;;;;
   ;;; miniKanren ;;;
   ;;;;;;;;;;;;;;;;;;
-  (define $mk
-    (let ((env.microkanren (current-environment)))
-      (lambda (name) (parse-expression env.microkanren name))))
-
-  (define $==          ($mk '==))
-  (define $disj        ($mk 'disj))
-  (define $conj        ($mk 'conj))
-  (define $pause       ($mk 'pause))
-  (define $call/fresh  ($mk 'call/fresh))
-  (define $var.initial ($mk 'var.initial))
-  (define $state.empty ($mk 'state.empty))
-  (define $s-take      ($mk 's-take))
-  (define $reify       ($mk 'reify))
-  (define $map         ($mk 'map))
+  (define $==          ($quote ==))
+  (define $disj        ($quote disj))
+  (define $conj        ($quote conj))
+  (define $pause       ($quote pause))
+  (define $call/fresh  ($quote call/fresh))
+  (define $var.initial ($quote var.initial))
+  (define $state.empty ($quote state.empty))
+  (define $s-take      ($quote s-take))
+  (define $reify       ($quote reify))
+  (define $map         ($quote map))
 
   (define ($run env $count param ^body)
     ($call $map ($lambda '(st) (lambda ($st) ($call $reify $var.initial $st)))
