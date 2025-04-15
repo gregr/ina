@@ -184,7 +184,7 @@
     (for-each (lambda (id op) (env-vocabulary-bind! env.scope id vocab.expression-operator op))
               (map car b*.expr-op) (map cdr b*.expr-op))
     (env-vocabulary-bind! env.scope '== vocab.expression (parse/constant-expression $==))
-    (env-conjoin (env-read-only env.scope) env)))
+    (env-conjoin (env-freeze env.scope) env)))
 
 (define env.mk (env-conjoin/minikanren env.test))
 

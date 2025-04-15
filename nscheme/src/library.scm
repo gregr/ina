@@ -120,7 +120,7 @@
          (env.medium   (env-conjoin env.small env.parser env.syntax env.compiler))
          (env.library  (load-library env.medium 'library))
          (menv.persist (make-env))
-         (env.large    (env-conjoin env.medium env.meta env.library (env-read-only menv.persist)))
+         (env.large    (env-conjoin env.medium env.meta env.library menv.persist))
          (library=>env
            (list (cons 'large    env.large)
                  (cons 'medium   env.medium)
@@ -139,6 +139,7 @@
                  (cons 'control  env.control)
                  (cons 'common   env.common))))
     (env-add-value-alist! menv.persist (aquote library=>text* library=>env))
+    (env-freeze! menv.persist)
     library=>env))
 
 (define (parse-bootstrapped-program-definition* library=>text* library=>def* def*.program)

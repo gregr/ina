@@ -147,4 +147,4 @@
               (map car b*.qqs-and-expr) (map cdr b*.qqs-and-expr))
     (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
-    (env-read-only env)))
+    (env-freeze env)))

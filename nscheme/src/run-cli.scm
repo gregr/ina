@@ -144,7 +144,7 @@
             (lambda () (parse-begin-definition* env.d env def*))))))
     (env-vocabulary-bind!
       env.import 'include vocab.definition-operator (definition-operator-parser parse-include 1 1))
-    (env-read-only env.import)))
+    (env-freeze env.import)))
 
 (if (null? compiler-output*)
     (let* ((library=>env (make-library=>env out.verbose library=>text* library=>def*))

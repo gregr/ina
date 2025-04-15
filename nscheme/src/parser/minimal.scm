@@ -6,8 +6,7 @@
 (define (parse-body env stx.body)
   (let ((env.d (make-env)))
     (D->E ($d:end/expression
-            (parse-begin-definition* env.d (env-conjoin (env-read-only env.d) env)
-                                     (syntax->list stx.body))
+            (parse-begin-definition* env.d (env-conjoin env.d env) (syntax->list stx.body))
             stx.body))))
 
 (define (parse-begin-definition* env.d env stx*)
@@ -206,7 +205,7 @@
                               (let ((E.boxed (parse-expression env.unboxed id)))
                                 (env-introduce-boxed! env.boxed id (lambda () E.boxed))))
                             param*)
-                  (parse-body (env-conjoin (env-read-only env.boxed) env) stx*.body))))))
+                  (parse-body (env-conjoin (env-freeze env.boxed) env) stx*.body))))))
 
 (define (parse-begin-expression* env e e*)
   (let loop ((e e) (e* e*))
@@ -332,4 +331,4 @@
               (map car b*.qq-and-expr) (map cdr b*.qq-and-expr))
     (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression-operator op))
               (map car b*.expr) (map cdr b*.expr))
-    (env-read-only env)))
+    (env-freeze env)))

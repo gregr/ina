@@ -465,7 +465,6 @@
 
 (define (env-conjoin/match env)
   (let* ((env.scope (make-env))
-         (env       (env-conjoin env.scope env))
          (b*.expr-aux '(guard))
          (b*.pattern-aux '(...))
          (b*.expr
@@ -500,4 +499,4 @@
     (for-each (lambda (id op) (when (env-ref env id)
                                 (env-vocabulary-add! env.scope env id vocab.pattern-operator op)))
               (map car b*.match-pattern-operator.extend) (map cdr b*.match-pattern-operator.extend))
-    (env-read-only env)))
+    (env-conjoin (env-freeze env.scope) env)))
