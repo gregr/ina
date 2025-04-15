@@ -203,7 +203,6 @@ new environment algebra supporting both scalar and aggregate attributes on varia
   - we can use this to define an env-freeze that produces a new env capturing an immutable snapshot of another env
 - prefer monotonic environment updates: add-vocabulary instead of set-vocabulary-value!
   - and rename define-vocabulary-value to define-with-vocabulary aka define/vocabulary
-- env-conjoin optimization for empty immutable environments
 
 
 
