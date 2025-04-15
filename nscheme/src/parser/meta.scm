@@ -110,7 +110,8 @@
       current-mark-level fresh-mark transcribe syntax-prune-level
       syntax-note syntax-note-set syntax-note-add syntax-unwrap syntax->datum datum->syntax
       identifier? identifier?! identifier=?
-      make-env env-read-only env-disjoin env-conjoin env-describe env-ref env-set!)))
+      env.empty make-env env:ref/k env-read-only env-disjoin env-conjoin env-remove env-freeze
+      env-describe env-ref/k env-ref env-set! env-freeze!)))
 
 (define env.meta
   (let ((env (make-env))
