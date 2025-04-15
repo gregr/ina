@@ -28,10 +28,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (env-vocabulary-bind! env id . vx*)
   (env-set! env id (vocab-dict-set* vocab-dict.empty vx*)))
+;; TODO: fix this to support source and destination env
 (define (env-vocabulary-set! env id . vx*)
   (let ((vocab=>v (env-ref env id)))
     (unless vocab=>v (mistake 'env-vocabulary-set! "unbound identifier" id))
     (env-set! env id (vocab-dict-set* vocab=>v vx*))))
+;; TODO: env-vocabulary-update! env-vocabulary-remove!
+;; TODO: fix this to recognize and fail for existing keys
+(define (env-vocabulary-add! env.dst env.src id . vx*)
+  (let ((vocab=>v (env-ref env.src id)))
+    (unless vocab=>v (mistake 'env-vocabulary-add! "unbound identifier" id))
+    (env-set! env.dst id (vocab-dict-set* vocab=>v vx*))))
 (define (env-vocabulary-ref env id vocab)
   (let ((vocab=>v (env-ref env id))) (and vocab=>v (vocab-dict-ref vocab=>v vocab))))
 

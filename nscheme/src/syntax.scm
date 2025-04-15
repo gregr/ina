@@ -199,7 +199,7 @@
         ((describe) (list 'conjoin2 (env.first 'describe) (env.second 'describe)))
         ((ref)      (lambda (fail id)
                       ((env.first 'ref) (lambda () ((env.second 'ref) fail id)) id)))
-        ((set!)     (lambda (id x) ((env.first 'set!) id x)))
+        ((set!)     (lambda (id x) (mistake 'env-set! "read-only environment" id x)))
         (else       (mistake "invalid environment operation" method)))))
 
   (define (env-conjoin env.first . env*.rest)
