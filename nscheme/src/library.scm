@@ -67,8 +67,8 @@
       sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
       make-channel channel-get channel-put channel-put-evt
       current-platform)))
-(define env.nano  (env-conjoin* env.minimal env.common))
-(define env.micro (env-conjoin* env.nano env.control))
+(define env.nano  (env-conjoin env.minimal env.common))
+(define env.micro (env-conjoin env.nano env.control))
 
 (define read*-syntax (read*/reader:data ((reader:data-track-line/start 0) reader:data)))
 (define (read*-syntax-annotated/source source)
@@ -112,15 +112,15 @@
     (when out.verbose (pretty-write `(load-library ,lib) out.verbose))
     (eval-definition* env (alist-ref library=>def* lib)))
   (let* ((env.base     (load-library env.micro 'base))
-         (env.tiny     (env-conjoin* env.micro env.base))
+         (env.tiny     (env-conjoin env.micro env.base))
          (env.posix    (load-library env.tiny 'posix))
-         (env.small    (env-conjoin* env.tiny env.posix))
+         (env.small    (env-conjoin env.tiny env.posix))
          (env.compiler (load-library env.tiny 'compiler))
-         (env.parser   (load-library (env-conjoin* env.tiny env.syntax env.compiler) 'parser))
-         (env.medium   (env-conjoin* env.small env.parser env.syntax env.compiler))
+         (env.parser   (load-library (env-conjoin env.tiny env.syntax env.compiler) 'parser))
+         (env.medium   (env-conjoin env.small env.parser env.syntax env.compiler))
          (env.library  (load-library env.medium 'library))
          (menv.persist (make-env))
-         (env.large    (env-conjoin* env.medium env.meta env.library (env-read-only menv.persist)))
+         (env.large    (env-conjoin env.medium env.meta env.library (env-read-only menv.persist)))
          (library=>env
            (list (cons 'large    env.large)
                  (cons 'medium   env.medium)
@@ -145,8 +145,8 @@
   (define def*.library (append* (map (lambda (lib) (alist-ref library=>def* lib))
                                      '(base syntax compiler parser posix library))))
   (define program (make-program))
-  (let ((env (env-conjoin* (program-parse-definition* program env.micro def*.library)
-                           env.micro
-                           (value-alist->env (aquote library=>text*)))))
+  (let ((env (env-conjoin (program-parse-definition* program env.micro def*.library)
+                          env.micro
+                          (value-alist->env (aquote library=>text*)))))
     (program-parse-definition* program env def*.program))
   (program->E program))

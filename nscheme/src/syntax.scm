@@ -193,20 +193,20 @@
                         (if i ((env.mark 'set!) i x) ((env.no-mark 'set!) id x)))))
         (else       (mistake "invalid environment operation" method)))))
 
-  (define (env-conjoin env.first env.second)
+  (define (env-conjoin2 env.first env.second)
     (lambda (method)
       (case method
-        ((describe) (list 'conjoin (env.first 'describe) (env.second 'describe)))
+        ((describe) (list 'conjoin2 (env.first 'describe) (env.second 'describe)))
         ((ref)      (lambda (fail id)
                       ((env.first 'ref) (lambda () ((env.second 'ref) fail id)) id)))
         ((set!)     (lambda (id x) ((env.first 'set!) id x)))
         (else       (mistake "invalid environment operation" method)))))
 
-  (define (env-conjoin* env.first . env*.rest)
+  (define (env-conjoin env.first . env*.rest)
     (let loop ((env env.first) (env* env*.rest))
       (if (null? env*)
           env
-          (env-conjoin env (loop (car env*) (cdr env*))))))
+          (env-conjoin2 env (loop (car env*) (cdr env*))))))
 
   (define (env-describe env)      (env 'describe))
   (define (env-ref      env id)   ((env 'ref) (lambda () #f) id))

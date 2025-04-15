@@ -148,7 +148,7 @@
 
 (if (null? compiler-output*)
     (let* ((library=>env (make-library=>env out.verbose library=>text* library=>def*))
-           (env (env-conjoin* (alist-ref library=>env 'large) env.import))
+           (env (env-conjoin (alist-ref library=>env 'large) env.import))
            (path=>def* (source*->path=>def*)))
       (define eval-def*
         (if quiet?
