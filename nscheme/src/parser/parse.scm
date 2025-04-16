@@ -243,26 +243,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (splicing-local
-  ((define (D:begin          D*)          (vector 'D:begin          D*))
-   (define (D:definition     id env ^rhs) (vector 'D:definition     id env ^rhs))
-   (define (D:expression     ^E)          (vector 'D:expression     ^E))
-   (define (D:end/expression D stx)       (vector 'D:end/expression D stx))
-
+  ((define (D:begin          D*)        (vector 'D:begin          D*))
+   (define (D:definition     id b ^rhs) (vector 'D:definition     id b ^rhs))
+   (define (D:expression     ^E)        (vector 'D:expression     ^E))
+   (define (D:end/expression D stx)     (vector 'D:end/expression D stx))
    (define (D-tag                   D) (vector-ref D 0))
    (define (D:begin-D*              D) (vector-ref D 1))
    (define (D:definition-id         D) (vector-ref D 1))
-   (define (D:definition-env        D) (vector-ref D 2))
+   (define (D:definition-binding    D) (vector-ref D 2))
    (define (D:definition-^rhs       D) (vector-ref D 3))
    (define (D:expression-^E         D) (vector-ref D 1))
    (define (D:end/expression-D      D) (vector-ref D 1))
    (define (D:end/expression-syntax D) (vector-ref D 2))
    (define (D-tagged? D tag) (eqv? (D-tag D) tag))
-
-   (define (env-set-variable! env id E)
-     (env-vocabulary-set! env id vocab.expression (parse/constant-expression E)))
-   (define (definition id env ^E)  (vector id env ^E))
+   (define (binding-set! binding E) (set-box! binding E))
+   (define (binding-ref  binding)   (unbox binding))
+   (define (definition id b ^E)  (vector id b ^E))
    (define (definition-id   entry) (vector-ref entry 0))
-   (define (definition-env  entry) (vector-ref entry 1))
+   (define (definition-b    entry) (vector-ref entry 1))
    (define (definition-^rhs entry) (vector-ref entry 2))
    (define (D-compile D publish-values?)
      (mlet ((rdef* '()) (^E.current #f))
@@ -271,7 +269,7 @@
                ((D-tagged? D 'D:definition)
                 (let ((^E   ^E.current)
                       (^E.D (D:definition-^rhs D)))
-                  (set! rdef* (cons (definition (D:definition-id D) (D:definition-env D)
+                  (set! rdef* (cons (definition (D:definition-id D) (D:definition-binding D)
                                                 (if ^E (lambda () ($begin (^E) (^E.D))) ^E.D))
                                     rdef*))
                   (set! ^E.current #f)))
@@ -290,23 +288,23 @@
          (if (null? rdef*)
              (^E)
              (let* ((id*   (map definition-id   def*))
-                    (env*  (map definition-env  def*))
+                    (b*    (map definition-b    def*))
                     (^rhs* (map definition-^rhs def*))
                     (^E    (if publish-values?
                                (lambda ()
                                  (define (publish-rhs*! rhs*)
-                                   (for-each env-set-variable! env* id* (map $quote rhs*)))
+                                   (for-each binding-set! b* (map $quote rhs*)))
                                  ($let '(result* rhs*)
                                        (list ($apply/values
                                                ($lambda 'result* (lambda ($result*) $result*))
                                                (^E))
-                                             (apply $list (map parse-expression env* id*)))
+                                             (apply $list (map binding-ref b*)))
                                        (lambda ($result* $rhs*)
                                          ($begin ($call ($quote publish-rhs*!) $rhs*)
                                                  ($pcall apply ($quote values) $result*)))))
                                ^E)))
                ($letrec id* (lambda E*
-                              (for-each env-set-variable! env* id* E*)
+                              (for-each binding-set! b* E*)
                               (values (map (lambda (^rhs) (^rhs)) ^rhs*) (^E))))))))))
   (define (D->E         D) (D-compile D #f))
   (define (D->E/publish D) (D-compile D #t))
@@ -315,11 +313,13 @@
   (define ($d:expression ^E)        (D:expression ^E))
   (define ($d:define env.d lhs ^rhs)
     (env-introduce! env.d lhs)
-    (env-vocabulary-set! env.d lhs vocab.expression
-                         (lambda (env stx)
-                           (raise-parse-error
-                             "parsed variable reference before completing its definition" stx)))
-    (D:definition lhs env.d ^rhs)))
+    (let ((binding (box #f)))
+      (env-vocabulary-set!
+        env.d lhs vocab.expression
+        (lambda (env stx)
+          (or (binding-ref binding)
+              (raise-parse-error "parsed variable reference before completing its definition" stx))))
+      (D:definition lhs binding ^rhs))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
