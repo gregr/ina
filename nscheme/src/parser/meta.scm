@@ -43,7 +43,7 @@
 
 (define (parse-current-environment env) ($quote env))
 
-(define (parse-set-vocabulary-value! env.d env id.lhs . stx*.vocab&rhs)
+(define (parse-set-vocabulary! env.d env id.lhs . stx*.vocab&rhs)
   (parse-identifier id.lhs)
   (let ((vocab=>v (env-ref env.d id.lhs)))
     (unless vocab=>v (raise-parse-error "cannot set unbound identifier" id.lhs))
@@ -54,9 +54,9 @@
              (lambda () (map E-eval (parse-expression* env stx*.vocab&rhs))))))
   ($d:begin))
 
-(define (parse-define-vocabulary-value env.d env id.lhs . stx*.vocab&rhs)
+(define (parse-define-vocabulary env.d env id.lhs . stx*.vocab&rhs)
   (env-introduce! env.d id.lhs)
-  (apply parse-set-vocabulary-value! env.d env id.lhs stx*.vocab&rhs))
+  (apply parse-set-vocabulary! env.d env id.lhs stx*.vocab&rhs))
 
 (define (parse-define-syntax env.d env.op stx.lhs . stx*.rhs)
   (define (finish id.lhs ^rhs)
@@ -117,11 +117,9 @@
   (let ((env (make-env))
         (b*.def
           (list
-            (cons 'set-vocabulary-value!
-                  (definition-operator-parser parse-set-vocabulary-value! 3 #f))
-            (cons 'define-vocabulary-value
-                  (definition-operator-parser parse-define-vocabulary-value 3 #f))
-            (cons 'define-syntax (definition-operator-parser parse-define-syntax 2 #f))))
+            (cons 'set-vocabulary!   (definition-operator-parser parse-set-vocabulary!   3 #f))
+            (cons 'define-vocabulary (definition-operator-parser parse-define-vocabulary 3 #f))
+            (cons 'define-syntax     (definition-operator-parser parse-define-syntax     2 #f))))
         (b*.expr
           (list
             (cons 'quote-syntax        (expression-operator-parser parse-quote-syntax        1 1))

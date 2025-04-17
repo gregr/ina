@@ -17,13 +17,13 @@
 ;; Examples for other metaprogramming facilities
 ;(test '(current-environment))
 ;(test '(let ()
-;         (define-vocabulary-value
+;         (define-vocabulary
 ;          thing 'expression
 ;          (lambda (env stx)
 ;            ($quote (vector 'thing-syntax: stx))))
 ;         (vector 'thing: thing)))
 ;(test '(let ()
-;         (define-vocabulary-value
+;         (define-vocabulary
 ;          thing 'expression-operator
 ;          (lambda (env stx)
 ;            ($quote (vector 'thing-syntax: stx))))
@@ -31,7 +31,7 @@
 
 ;; Example of unhygienic expansion leading to an incorrect result.
 ;(test '(let ()
-;         (define-vocabulary-value
+;         (define-vocabulary
 ;          example-or
 ;          'expression-operator
 ;          (lambda (env stx)
@@ -404,7 +404,7 @@
 
 (test '(let ()
          (splicing-let ((x 5))
-           (define-vocabulary-value foo 'test (quote-syntax x)))
+           (define-vocabulary foo 'test (quote-syntax x)))
          (splicing-let ((x 6))
            (define-syntax (m stx)
              (lambda (env)
@@ -418,11 +418,11 @@
 
 (test '(let ()
          (splicing-let ((x 5))
-           (define-vocabulary-value foo
+           (define-vocabulary foo
              'env (current-environment)
              'stx (quote-syntax x)))
          (splicing-let ((x 6))
-           (define-vocabulary-value m
+           (define-vocabulary m
              'expression-operator
              (lambda (env stx)
                (parse-expression
@@ -437,18 +437,18 @@
 
 (test '(let ()
          (splicing-let ((x 5))
-           (define-vocabulary-value foo
+           (define-vocabulary foo
              'env (current-environment)
              'stx (quote-syntax x)))
          (splicing-let ((x 6))
-           (define-vocabulary-value m
+           (define-vocabulary m
              'expression-operator
              (lambda (env stx)
                (match (syntax->list stx)
                  ((list _ arg)
                   (parse-expression
-                   (env-vocabulary-ref env arg 'env)
-                   (env-vocabulary-ref env arg 'stx)))))))
+                    (env-vocabulary-ref env arg 'env)
+                    (env-vocabulary-ref env arg 'stx)))))))
          (splicing-let ((x 7))
            (m foo))))
 ;==> 5
