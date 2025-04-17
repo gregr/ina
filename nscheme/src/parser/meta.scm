@@ -43,20 +43,21 @@
 
 (define (parse-current-environment env) ($quote env))
 
-(define (parse-set-vocabulary! env.d env id.lhs . stx*.vocab&rhs)
+(define ((parse-modify-vocabulary! plist? env-vocabulary-modify!*) env.d env id.lhs . stx*)
   (parse-identifier id.lhs)
   (let ((vocab=>v (env-ref env.d id.lhs)))
-    (unless vocab=>v (raise-parse-error "cannot set unbound identifier" id.lhs))
-    (unless (even? (length stx*.vocab&rhs))
-      (raise-parse-error "not a list of alternating vocabularies and values" stx*.vocab&rhs))
-    (apply env-vocabulary-set! env.d env.d id.lhs
-           (with-higher-mark-level
-             (lambda () (map E-eval (parse-expression* env stx*.vocab&rhs))))))
+    (unless (or (not plist?) (even? (length stx*)))
+      (raise-parse-error "not a list of alternating vocabularies and values" stx*))
+    (env-vocabulary-modify!*
+      env.d env id.lhs (with-higher-mark-level
+                         (lambda () (map E-eval (parse-expression* env stx*))))))
   ($d:begin))
-
-(define (parse-define-vocabulary env.d env id.lhs . stx*.vocab&rhs)
-  (env-introduce! env.d id.lhs)
-  (apply parse-set-vocabulary! env.d env id.lhs stx*.vocab&rhs))
+(define parse-define-vocabulary  (parse-modify-vocabulary! #t (lambda (env.dst env.src id vx*)
+                                                                (env-vocabulary-introduce!* env.dst id vx*))))
+(define parse-set-vocabulary!    (parse-modify-vocabulary! #t env-vocabulary-set!*))
+(define parse-add-vocabulary!    (parse-modify-vocabulary! #t env-vocabulary-add!*))
+(define parse-update-vocabulary! (parse-modify-vocabulary! #t env-vocabulary-update!*))
+(define parse-remove-vocabulary! (parse-modify-vocabulary! #f env-vocabulary-remove!*))
 
 (define (parse-define-syntax env.d env.op stx.lhs . stx*.rhs)
   (define (finish id.lhs ^rhs)
@@ -117,9 +118,12 @@
   (let ((env (make-env))
         (b*.def
           (list
-            (cons 'set-vocabulary!   (definition-operator-parser parse-set-vocabulary!   3 #f))
-            (cons 'define-vocabulary (definition-operator-parser parse-define-vocabulary 3 #f))
-            (cons 'define-syntax     (definition-operator-parser parse-define-syntax     2 #f))))
+            (cons 'set-vocabulary!    (definition-operator-parser parse-set-vocabulary!    3 #f))
+            (cons 'add-vocabulary!    (definition-operator-parser parse-add-vocabulary!    3 #f))
+            (cons 'update-vocabulary! (definition-operator-parser parse-update-vocabulary! 3 #f))
+            (cons 'remove-vocabulary! (definition-operator-parser parse-remove-vocabulary! 2 #f))
+            (cons 'define-vocabulary  (definition-operator-parser parse-define-vocabulary  3 #f))
+            (cons 'define-syntax      (definition-operator-parser parse-define-syntax      2 #f))))
         (b*.expr
           (list
             (cons 'quote-syntax        (expression-operator-parser parse-quote-syntax        1 1))
