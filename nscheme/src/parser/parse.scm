@@ -337,14 +337,24 @@
   (define ($d:begin . D*)           (D:begin D*))
   (define ($d:end/expression D stx) (D:end/expression D stx))
   (define ($d:expression ^E)        (D:expression ^E))
-  (define ($d:define env.d lhs ^rhs)
+  (define ($d:define/vocabulary . vp*) ($d:define/vocabulary* vp*))
+  (define (($d:define/vocabulary* vp*) env.d lhs ^rhs)
     (let ((binding (box #f)))
-      (env-vocabulary-introduce!
-        env.d lhs vocab.expression
-        (lambda (env stx)
-          (or (binding-ref binding)
-              (raise-parse-error "parsed variable reference before completing its definition" stx))))
-      (D:definition lhs binding ^rhs))))
+      (env-vocabulary-introduce!*
+        env.d lhs
+        (alist->plist
+          (alist-map
+            (plist->alist vp*)
+            (lambda (vocab parse/binding)
+              (cons vocab
+                    (lambda (env stx)
+                      ((parse/binding
+                         (or (binding-ref binding)
+                             (raise-parse-error
+                               "parsed identifier reference before completing its definition" stx)))
+                       env stx)))))))
+      (D:definition lhs binding ^rhs)))
+  (define $d:define ($d:define/vocabulary vocab.expression (lambda ($x) (lambda (env stx) $x)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
