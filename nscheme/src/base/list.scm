@@ -82,6 +82,11 @@
 (define (plist-key*   kvs) (if (null? kvs) '() (cons (car  kvs) (plist-key*   (cddr kvs)))))
 (define (plist-value* kvs) (if (null? kvs) '() (cons (cadr kvs) (plist-value* (cddr kvs)))))
 
+(define (alist->plist a) (if (null? a)
+                             '()
+                             (let ((kv (car a)))
+                               (cons (car kv) (cons (cdr kv) (alist->plist (cdr a)))))))
+
 (define (atree-merge a b merge)
   (let loop ((a a) (b b))
     (cond ((pair? a) (if (null? b)
