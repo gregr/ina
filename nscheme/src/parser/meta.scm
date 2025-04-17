@@ -49,7 +49,7 @@
     (unless vocab=>v (raise-parse-error "cannot set unbound identifier" id.lhs))
     (unless (even? (length stx*.vocab&rhs))
       (raise-parse-error "not a list of alternating vocabularies and values" stx*.vocab&rhs))
-    (apply env-vocabulary-set! env.d id.lhs
+    (apply env-vocabulary-set! env.d env.d id.lhs
            (with-higher-mark-level
              (lambda () (map E-eval (parse-expression* env stx*.vocab&rhs))))))
   ($d:begin))
@@ -60,9 +60,9 @@
 
 (define (parse-define-syntax env.d env.op stx.lhs . stx*.rhs)
   (define (finish id.lhs ^rhs)
-    (env-introduce! env.d id.lhs)
+    (parse-undefined-identifier env.d id.lhs)
     (let ((op (with-higher-mark-level (lambda () (E-eval (^rhs env.op))))))
-      (env-vocabulary-set!
+      (env-vocabulary-bind!
         env.d id.lhs
         vocab.expression-operator
         (lambda (env.use stx) (transcribe-and-parse-expression op env.op env.use stx))

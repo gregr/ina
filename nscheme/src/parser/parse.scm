@@ -1,86 +1,6 @@
-;;;;;;;;;;;;;;;;;;;;
-;;; Vocabularies ;;;
-;;;;;;;;;;;;;;;;;;;;
-(define vocab.definition           'definition)
-(define vocab.definition-operator  'definition-operator)
-(define vocab.expression           'expression)
-(define vocab.expression-operator  'expression-operator)
-(define vocab.expression-auxiliary 'expression-auxiliary)
-(define vocab.set!                 'set!)
-(define vocab.set!-operator        'set!-operator)
-
-(define vocab-dict.empty '())
-(define (vocab-dict-ref    vocab=>x vocab)    (let ((vx (assv vocab vocab=>x))) (and vx (cdr vx))))
-(define (vocab-dict-remove vocab=>x . vocab*) (vocab-dict-remove* vocab=>x vocab*))
-(define (vocab-dict-remove* vocab=>x vocab*)
-  (filter (lambda (vx) (not (memv (car vx) vocab*))) vocab=>x))
-(define (vocab-dict-set vocab=>x . vx*) (vocab-dict-set* vocab=>x vx*))
-(define (vocab-dict-set* vocab=>x vx*)
-  (let loop ((vx* vx*) (vocab* '()) (x* '()))
-    (cond ((null? vx*) (vocab-dict-set** vocab=>x vocab* x*))
-          (else        (loop (cddr vx*) (cons (car vx*) vocab*) (cons (cadr vx*) x*))))))
-(define (vocab-dict-set** vocab=>x vocab* x*)
-  (fold-left (lambda (vocab=>x vocab x) (if x (cons (cons vocab x) vocab=>x) vocab=>x))
-             (vocab-dict-remove* vocab=>x vocab*) vocab* x*))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Environment helpers ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (env-vocabulary-bind! env id . vx*)
-  (env-set! env id (vocab-dict-set* vocab-dict.empty vx*)))
-;; TODO: fix this to support source and destination env
-(define (env-vocabulary-set! env id . vx*)
-  (let ((vocab=>v (env-ref env id)))
-    (unless vocab=>v (mistake 'env-vocabulary-set! "unbound identifier" id))
-    (env-set! env id (vocab-dict-set* vocab=>v vx*))))
-;; TODO: env-vocabulary-update! env-vocabulary-remove!
-;; TODO: fix this to recognize and fail for existing keys
-(define (env-vocabulary-add! env.dst env.src id . vx*)
-  (let ((vocab=>v (env-ref env.src id)))
-    (unless vocab=>v (mistake 'env-vocabulary-add! "unbound identifier" id))
-    (env-set! env.dst id (vocab-dict-set* vocab=>v vx*))))
-(define (env-vocabulary-ref env id vocab)
-  (let ((vocab=>v (env-ref env id))) (and vocab=>v (vocab-dict-ref vocab=>v vocab))))
-
-(define (env-extend env param* E*)
-  (parse-param* param*)
-  (env-conjoin (let ((env.scope (make-env)))
-                 (for-each (lambda (id E) (env-vocabulary-bind! env.scope id vocab.expression
-                                                                (parse/constant-expression E)))
-                           param* E*)
-                 (env-freeze env.scope))
-               env))
-
-(define (env-introduce! env stx.id) (env-introduce*! env (list stx.id)))
-
-(define (env-introduce*! env stx*.id)
-  (for-each (lambda (stx.id)
-              (parse-undefined-identifier env stx.id)
-              (env-vocabulary-bind! env stx.id))
-            stx*.id))
-
-(define (env-introduce-boxed! env id ^E.box)
-  (env-introduce! env id)
-  (env-vocabulary-set!
-    env id
-    vocab.expression (lambda (env _) ($unbox (^E.box)))
-    vocab.set! (lambda (env stx.lhs E.rhs) ($set-box! ($source (^E.box) stx.lhs) E.rhs))))
-
-(define (env-add-alist! env a)
-  (alist-for-each a (lambda (id E) (env-vocabulary-bind!
-                                     env id vocab.expression (parse/constant-expression E)))))
-(define (alist->env a)
-  (let ((env (make-env)))
-    (env-add-alist! env a)
-    (env-freeze env)))
-(define (env-add-value-alist! env a) (env-add-alist! env (alist-map-value a $quote)))
-(define (value-alist->env a) (alist->env (alist-map-value a $quote)))
-(define (addr-alist->env  a) (alist->env (alist-map-value a $ref)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing helpers ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;
-
 (define (syntax->improper-list s)
   (let ((x (syntax-unwrap s)))
     (if (pair? x)
@@ -113,6 +33,112 @@
       (unless (= (length e*) 2) (raise-parse-error "binding pair without 2 elements" e.bpair))
       (cons (car e*) (cadr e*))))
   (map parse-binding-pair (syntax->list e.bpairs)))
+
+;;;;;;;;;;;;;;;;;;;;
+;;; Vocabularies ;;;
+;;;;;;;;;;;;;;;;;;;;
+(define vocab.definition           'definition)
+(define vocab.definition-operator  'definition-operator)
+(define vocab.expression           'expression)
+(define vocab.expression-operator  'expression-operator)
+(define vocab.expression-auxiliary 'expression-auxiliary)
+(define vocab.set!                 'set!)
+(define vocab.set!-operator        'set!-operator)
+
+(define vocab-dict.empty '())
+(define (vocab-dict-ref    vocab=>x vocab)    (let ((vx (assv vocab vocab=>x))) (and vx (cdr vx))))
+(define (vocab-dict-remove vocab=>x . vocab*) (vocab-dict-remove* vocab=>x vocab*))
+(define (vocab-dict-remove* vocab=>x vocab*)
+  (filter (lambda (vx) (not (memv (car vx) vocab*))) vocab=>x))
+(define (vocab-dict-set vocab=>x . vx*) (vocab-dict-set* vocab=>x vx*))
+(define (vocab-dict-set* vocab=>x vx*)
+  (let loop ((vx* vx*) (vocab* '()) (x* '()))
+    (if (null? vx*)
+        (vocab-dict-set** vocab=>x vocab* x*)
+        (loop (cddr vx*) (cons (car vx*) vocab*) (cons (cadr vx*) x*)))))
+(define (vocab-dict-set** vocab=>x vocab* x*)
+  (fold-left (lambda (vocab=>x vocab x) (if x (cons (cons vocab x) vocab=>x) vocab=>x))
+             (vocab-dict-remove* vocab=>x vocab*) vocab* x*))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Environment helpers ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define (env-vocabulary-ref env id vocab)
+  (let ((vocab=>x (env-ref env id))) (and vocab=>x (vocab-dict-ref vocab=>x vocab))))
+(define (env-vocabulary-bind!* env id vx*)
+  (env-set! env id (vocab-dict-set* vocab-dict.empty vx*)))
+(define (env-vocabulary-bind! env id . vx*) (env-vocabulary-bind!* env id vx*))
+(define (env-vocabulary-set!* env.dst env.src id vx*)
+  (let ((vocab=>x (env-ref env.src id)))
+    (unless vocab=>x (mistake 'env-vocabulary-set! "unbound identifier" id))
+    (env-set! env.dst id (vocab-dict-set* vocab=>x vx*))))
+(define (env-vocabulary-set! env.dst env.src id . vx*)
+  (env-vocabulary-set!* env.dst env.src id vx*))
+(define (env-vocabulary-introduce!* env id vx*)
+  (parse-undefined-identifier env id)
+  (env-vocabulary-bind!* env id vx*))
+(define (env-vocabulary-introduce! env id . vx*) (env-vocabulary-introduce!* env id vx*))
+(define (env-vocabulary-add!* env.dst env.src id vx*)
+  (let ((vocab=>x (env-ref env.src id)))
+    (unless vocab=>x (mistake 'env-vocabulary-add! "unbound identifier" id))
+    (for-each
+      (lambda (vocab)
+        (when (vocab-dict-ref vocab=>x vocab)
+          (mistake 'env-vocabulary-add! "identifier already bound with vocabulary" id vocab)))
+      (plist-key* vx*))
+    (env-set! env.dst id (vocab-dict-set* vocab=>x vx*))))
+(define (env-vocabulary-add! env.dst env.src id . vx*)
+  (env-vocabulary-add!* env.dst env.src id vx*))
+(define (env-vocabulary-remove!* env.dst env.src id vocab*)
+  (let ((vocab=>x (env-ref env.src id)))
+    (unless vocab=>x (mistake 'env-vocabulary-remove! "unbound identifier" id))
+    (for-each
+      (lambda (vocab)
+        (unless (vocab-dict-ref vocab=>x vocab)
+          (mistake 'env-vocabulary-remove! "identifier not bound with vocabulary" id vocab)))
+      vocab*)
+    (env-set! env.dst id (vocab-dict-remove* vocab=>x vocab*))))
+(define (env-vocabulary-remove! env.dst env.src id . vocab*)
+  (env-vocabulary-remove!* env.dst env.src id vocab*))
+(define (env-vocabulary-update!* env.dst env.src id vu*)
+  (let ((vocab=>x (env-ref env.src id)))
+    (unless vocab=>x (mistake 'env-vocabulary-update! "unbound identifier" id))
+    (let* ((vocab* (plist-key* vu*))
+           (x*     (map (lambda (vocab)
+                          (or (vocab-dict-ref vocab=>x vocab)
+                              (mistake 'env-vocabulary-update!
+                                       "identifier not bound with vocabulary" id vocab)))
+                        vocab*))
+           (x*     (map (lambda (update x) (update x)) (plist-value* vu*) x*)))
+      (env-set! env.dst id (vocab-dict-set** vocab=>x vocab* x*)))))
+(define (env-vocabulary-update! env.dst env.src id . vu*)
+  (env-vocabulary-update!* env.dst env.src id vu*))
+
+(define (env-extend env param* E*)
+  (parse-param* param*)
+  (env-conjoin (let ((env.scope (make-env)))
+                 (for-each (lambda (id E) (env-vocabulary-bind! env.scope id vocab.expression
+                                                                (parse/constant-expression E)))
+                           param* E*)
+                 (env-freeze env.scope))
+               env))
+
+(define (env-introduce-boxed! env id ^E.box)
+  (env-vocabulary-introduce!
+    env id
+    vocab.expression (lambda (env _) ($unbox (^E.box)))
+    vocab.set! (lambda (env stx.lhs E.rhs) ($set-box! ($source (^E.box) stx.lhs) E.rhs))))
+
+(define (env-add-alist! env a)
+  (alist-for-each a (lambda (id E) (env-vocabulary-bind!
+                                     env id vocab.expression (parse/constant-expression E)))))
+(define (alist->env a)
+  (let ((env (make-env)))
+    (env-add-alist! env a)
+    (env-freeze env)))
+(define (env-add-value-alist! env a) (env-add-alist! env (alist-map-value a $quote)))
+(define (value-alist->env a) (alist->env (alist-map-value a $quote)))
+(define (addr-alist->env  a) (alist->env (alist-map-value a $ref)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Syntax transformation ;;;
@@ -312,9 +338,8 @@
   (define ($d:end/expression D stx) (D:end/expression D stx))
   (define ($d:expression ^E)        (D:expression ^E))
   (define ($d:define env.d lhs ^rhs)
-    (env-introduce! env.d lhs)
     (let ((binding (box #f)))
-      (env-vocabulary-set!
+      (env-vocabulary-introduce!
         env.d lhs vocab.expression
         (lambda (env stx)
           (or (binding-ref binding)

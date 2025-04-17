@@ -53,7 +53,6 @@
                 lhs*))))
 
 (define (parse-mdefine env.d env id.lhs stx.rhs)
-  (parse-identifier id.lhs)
   (let ((env.local (make-env)))
     (env-introduce-boxed! env.d id.lhs (lambda () (parse-expression env.local id.lhs)))
     ($d:define env.local id.lhs (lambda () ($box (parse-expression env stx.rhs))))))
