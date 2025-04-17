@@ -77,9 +77,10 @@
 (define assv  (assoc/= eqv?))
 (define assoc (assoc/= equal?))
 
-(define (plist->alist kvs) (cond ((null? kvs) '())
-                                 (else        (cons (cons (car kvs) (cadr kvs))
-                                                    (plist->alist (cddr kvs))))))
+(define (plist->alist kvs) (if (null? kvs) '() (cons (cons (car kvs) (cadr kvs))
+                                                     (plist->alist (cddr kvs)))))
+(define (plist-key*   kvs) (if (null? kvs) '() (cons (car  kvs) (plist-key*   (cddr kvs)))))
+(define (plist-value* kvs) (if (null? kvs) '() (cons (cadr kvs) (plist-value* (cddr kvs)))))
 
 (define (atree-merge a b merge)
   (let loop ((a a) (b b))
