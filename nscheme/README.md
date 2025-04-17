@@ -142,9 +142,6 @@ Optionally move resulting artifacts from built/ to prebuilt/ to commit a snapsho
 
 ## TODO
 
-- improve environments
-  - attribute algebra for vocabularies
-  - better data structures: hash and/or trie
 - improved DSLs
   - text
     - scanner
@@ -167,50 +164,38 @@ Optionally move resulting artifacts from built/ to prebuilt/ to commit a snapsho
               wouldn't want for records?
   - match, qmatch, smatch, qsmatch
   - syntax-rules/case patterns and templates
-  - maybe ultimate conditional syntax: call it ucond?
   - general record update notation
     - how do we do this for immutable records without mutator?  do we need a built-in update operator?
   - logic programming: miniKanren, datalog
   - maybe probablistic programming
+  - low-level abstract or concrete machine code
+    - can be run as a simulator, or compiled and jumped to
+      - multiple kinds of simulations possible, for various levels of stepping and error checking, particularly for memory accesses
+    - use this to implement runtime, memory management, etc.
+  - low-level procedural language
+    - sits right above the machine code language
+    - used to implement C-like programs
 
 
 
-new environment algebra supporting both scalar and aggregate attributes on variables:
-- motivation: when adding match pattern operators, we only want to add them when the expected normal operator is bound
-  - if the normal binding has been shadowed, it's inconsistent to have the corresponding pattern operator be available
-- binding-identity: uid
-- entry: #(binding-identity optional-alias ((attr-key . attr-value) ...))
-- alias: #(identifier uid environment)
-- attributes for a particular binding may be distributed across multiple entries and multiple environments
-- search for attributes:
-  - scalar: first-found with a matching binding-identity
-  - aggregate: exhaustive for matching binding-identity, producing a list, ordered by search
-- binding-identity used in search:
-  - initially #f
-  - first hit for an identifier learns the binding-identity that will be used in the remainder of that search
-- alias search
-  - if the first hit during normal search includes an alias, we complete the normal search first, then
-    if necessary, continue with a fresh search using the alias identifier and environment
-    - the fresh search itself may hit another alias, and recurse in the expected way
-- use binding-identity for auxiliary literal recognition, and other `free-identifier=?`-like uses
-- redefine env-ref to return a stream of bindings for a particular identifier
-  - then we can implement arbitrary lookup policies without changing the implementation of environments
-  - and absence is the empty stream, rather than ad-hoc #f
-    - which means we should have some form of env-hide or env-remove to interrupt the streaming for deleted ids
-    - we should be able to express deletion both of specific attributes, and of entire bindings
-  - we can use this to enumerate bound identifiers and their attributes
-  - we can remove env-describe
-  - we can use this to define an env-freeze that produces a new env capturing an immutable snapshot of another env
-- prefer monotonic environment updates: add-vocabulary instead of set-vocabulary-value!
-  - and rename define-vocabulary-value to define-with-vocabulary aka define/vocabulary
+implement alternative parsing of unbound identifiers via an environment that catches and records them?
+- use env:ref/k
 
+
+- improve environments
+  - better data structures: hash and/or trie
+  - port dbk's 2-3 btree, old hamt, and/or other efficient data structures
 
 
 - nscheme stage/unstage macro
 
 
+```
+((alambda (k1 k2 ...) body ...) `((k1 . ,v1) (k2 . ,v2) ...))
+((plambda (k1 k2 ...) body ...) k1 v1 k2 v2 ...)
+and case-lambda variants
+```
 
-port dbk's 2-3 btree, old hamt, and/or other efficient data structures
 
 consider bytevector-u64le-ref etc.
 - conversions like `u64<->s64` are also possible
