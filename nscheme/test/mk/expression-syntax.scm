@@ -117,12 +117,12 @@
 
 (define-syntax (fresh stx)
   (match (syntax->list stx)
-    ((list  _ '() fm)           fm)
-    ((list  _ '() fm1 fm2)      (quasiquote-syntax (conj #,fm1 #,fm2)))
-    ((cons* _ '() fm1 fm2 fm*)  (quasiquote-syntax (fresh () (conj #,fm1 #,fm2) . #,fm*)))
-    ((cons* _ x*  fm*)          (match (syntax->list x*)
-                                  ((cons* x x*)
-                                   (quasiquote-syntax (call/fresh (lambda (#,x) (fresh #,x* . #,fm*)))))))))
+    ((list  _ '() fm)          fm)
+    ((list  _ '() fm1 fm2)     (quasiquote-syntax (conj #,fm1 #,fm2)))
+    ((cons* _ '() fm1 fm2 fm*) (quasiquote-syntax (fresh () (conj #,fm1 #,fm2) . #,fm*)))
+    ((cons* _ x*  fm*)         (match (syntax->list x*)
+                                 ((cons* x x*)
+                                  (quasiquote-syntax (call/fresh (lambda (#,x) (fresh #,x* . #,fm*)))))))))
 
 (define-syntax (conde stx)
   (match (syntax->list stx)
