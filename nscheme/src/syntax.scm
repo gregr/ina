@@ -6,6 +6,7 @@
 (splicing-local
   ((define-values (unused-subtype-mark make-mark mark? access-mark unused-mutate-mark!)
      (make-record-type 'mark 1 '() #t #f #f))
+   (define (fresh-mark) (make-mark (current-mark-level)))
    (define (mark-level m) (access-mark m 0))
    (define mark=? eqv?)
    (define (mark*=? a* b*)
@@ -50,8 +51,6 @@
      (identifier?! id)
      (let ((m* (syntax-mark* id)))
        (and (pair? m*) (mark=? (car m*) m) (marked (cdr m*) (marked-form id))))))
-
-  (define (fresh-mark) (make-mark (current-mark-level)))
 
   (define (syntax-note     s)       (annotated-note (if (marked? s) (marked-form s) s)))
   (define (syntax-note-set s note) (marked (syntax-mark* s) (annotated (syntax-form s) note)))
@@ -98,10 +97,6 @@
     (identifier?! a) (identifier?! b)
     (and (eqv? (syntax-form a) (syntax-form b))
          (mark*=? (syntax-mark* a) (syntax-mark* b))))
-
-  (define (transcribe op m env stx)
-    (let ((result (op (syntax-add-mark stx m))))
-      (syntax-add-mark (if (procedure? result) (result (env-unmark env m)) result) m)))
 
   ;;;;;;;;;;;;;;;;;;;;
   ;;; Environments ;;;
@@ -209,49 +204,56 @@
             ((read-only?) #t)
             (else         (env method))))))
 
-  (define (env-unmark env.m m)
-    (mlet ((frozen? #f))
-      (define (self method)
-        (case method
-          ((ref/k)      (lambda (id kf k) ((env.m 'ref/k) (syntax-add-mark id m) kf k)))
-          ((set!)       (lambda (id x)    ((env.m 'set!) (syntax-add-mark id m) x)))
-          ((freeze!)    (unless frozen?
-                          (env.m 'freeze!)
-                          (set! frozen? #t)))
-          ((freeze)     (if frozen? self (let ((new (env-unmark (env.m 'freeze) m)))
-                                           (when (env.m 'frozen?) (set! frozen? #t))
-                                           new)))
-          ((frozen?)    frozen?)
-          ((read-only?) frozen?)
-          ((describe)   '())
-          (else         (mistake "invalid environment operation" method))))
-      self))
-
-  (define (env-disjoin env.mark m env.no-mark)
-    (mlet ((frozen? #f))
-      (define (self method)
-        (case method
-          ((ref/k)      (lambda (id kf k)
-                          (let ((i (identifier-remove-mark id m)))
-                            (if i ((env.mark 'ref/k) i kf k) ((env.no-mark 'ref/k) id kf k)))))
-          ((set!)       (lambda (id x)
-                          (let ((i (identifier-remove-mark id m)))
-                            (if i ((env.mark 'set!) i x) ((env.no-mark 'set!) id x)))))
-          ((freeze!)    (unless frozen?
-                          (env.mark 'freeze!)
-                          (env.no-mark 'freeze!)
-                          (set! frozen? #t)))
-          ((freeze)     (if frozen?
-                            self
-                            (let ((new (env-disjoin (env.mark 'freeze) m (env.no-mark 'freeze))))
-                              (when (and (env.mark 'frozen?) (env.no-mark 'frozen?)) (set! frozen? #t))
-                              new)))
-          ((frozen?)    frozen? (or frozen? (and (env.mark 'frozen?) (env.no-mark 'frozen?)
-                                                 (begin (set! frozen? #t) #t))))
-          ((read-only?) frozen?)
-          ((describe)   (env.no-mark 'describe))
-          (else         (mistake "invalid environment operation" method))))
-      self))
+  (splicing-local
+    ((define (env-unmark env.m m)
+       (mlet ((frozen? #f))
+         (define (self method)
+           (case method
+             ((ref/k)      (lambda (id kf k) ((env.m 'ref/k) (syntax-add-mark id m) kf k)))
+             ((set!)       (lambda (id x)    ((env.m 'set!) (syntax-add-mark id m) x)))
+             ((freeze!)    (unless frozen?
+                             (env.m 'freeze!)
+                             (set! frozen? #t)))
+             ((freeze)     (if frozen? self (let ((new (env-unmark (env.m 'freeze) m)))
+                                              (when (env.m 'frozen?) (set! frozen? #t))
+                                              new)))
+             ((frozen?)    frozen?)
+             ((read-only?) frozen?)
+             ((describe)   '())
+             (else         (mistake "invalid environment operation" method))))
+         self))
+     (define (env-disjoin env.mark m env.no-mark)
+       (mlet ((frozen? #f))
+         (define (self method)
+           (case method
+             ((ref/k)      (lambda (id kf k)
+                             (let ((i (identifier-remove-mark id m)))
+                               (if i ((env.mark 'ref/k) i kf k) ((env.no-mark 'ref/k) id kf k)))))
+             ((set!)       (lambda (id x)
+                             (let ((i (identifier-remove-mark id m)))
+                               (if i ((env.mark 'set!) i x) ((env.no-mark 'set!) id x)))))
+             ((freeze!)    (unless frozen?
+                             (env.mark 'freeze!)
+                             (env.no-mark 'freeze!)
+                             (set! frozen? #t)))
+             ((freeze)     (if frozen?
+                               self
+                               (let ((new (env-disjoin (env.mark 'freeze) m (env.no-mark 'freeze))))
+                                 (when (and (env.mark 'frozen?) (env.no-mark 'frozen?)) (set! frozen? #t))
+                                 new)))
+             ((frozen?)    frozen? (or frozen? (and (env.mark 'frozen?) (env.no-mark 'frozen?)
+                                                    (begin (set! frozen? #t) #t))))
+             ((read-only?) frozen?)
+             ((describe)   (env.no-mark 'describe))
+             (else         (mistake "invalid environment operation" method))))
+         self)))
+    (define (syntax-transcribe stx op env.op env.use env.d.op env.d.use)
+      (let* ((m      (fresh-mark))
+             (env    (env-disjoin env.op m env.use))
+             (env.d  (and env.d.op env.d.use (env-disjoin env.d.op m env.d.use)))
+             (result (op (syntax-add-mark stx m)))
+             (result (if (procedure? result) (result (env-unmark env m)) result)))
+        (values (syntax-add-mark result m) env env.d))))
 
   (define (env:ref/k ref/k)
     (mlet ((frozen? #f))

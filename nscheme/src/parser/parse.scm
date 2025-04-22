@@ -155,16 +155,14 @@
 ;;; Syntax transformation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (transcribe-and-parse-expression op env.op env.use stx)
-  (let* ((m   (fresh-mark))
-         (env (env-disjoin env.op m env.use)))
-    (parse-expression env (transcribe op m env stx))))
+  (let-values (((stx env _) (syntax-transcribe stx op env.op env.use #f #f)))
+    (parse-expression env stx)))
 
 (define (transcribe-and-parse-definition op env.op env.d.use env.use stx)
-  (let* ((m        (fresh-mark))
-         (env.d.op (make-env))
-         (env.d    (env-disjoin env.d.op m env.d.use))
-         (env      (env-disjoin (env-conjoin env.d.op env.op) m env.use)))
-    (parse-definition env.d env (transcribe op m env stx))))
+  (let ((env.d.op (make-env)))
+    (let-values (((stx env env.d)
+                  (syntax-transcribe stx op (env-conjoin env.d.op env.op) env.use env.d.op env.d.use)))
+      (parse-definition env.d env stx))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Expression construction ;;;
