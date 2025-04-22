@@ -45,12 +45,10 @@
 
 (define ((parse-modify-vocabulary! plist? env-vocabulary-modify!*) env.d env id.lhs . stx*)
   (parse-identifier id.lhs)
-  (let ((vocab=>v (env-ref env.d id.lhs)))
-    (unless (or (not plist?) (even? (length stx*)))
-      (raise-parse-error "not a list of alternating vocabularies and values" stx*))
-    (env-vocabulary-modify!*
-      env.d env id.lhs (with-higher-mark-level
-                         (lambda () (map E-eval (parse-expression* env stx*))))))
+  (unless (or (not plist?) (even? (length stx*)))
+    (raise-parse-error "not a list of alternating vocabularies and values" stx*))
+  (env-vocabulary-modify!*
+    env.d env id.lhs (with-higher-mark-level (lambda () (map E-eval (parse-expression* env stx*)))))
   ($d:begin))
 (define parse-define-vocabulary  (parse-modify-vocabulary! #t (lambda (env.dst env.src id vx*)
                                                                 (env-vocabulary-introduce!* env.dst id vx*))))
