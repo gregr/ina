@@ -154,11 +154,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Syntax transformation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (transcribe-and-parse-expression op env.op env.use stx)
-  (let-values (((stx env) (syntax-transcribe stx op env.op env.use)))
-    (parse-expression env stx)))
+(define ((syntax-transcribe/parse parse) stx op env.op env.use)
+  (let-values (((stx env) (syntax-transcribe stx op env.op env.use))) (parse env stx)))
 
-(define (transcribe-and-parse-definition op env.op env.d.use env.use stx)
+(define ((syntax-transcribe/parse-definition parse-definition) stx op env.op env.use env.d.use)
   (let* ((env.d.op (make-env)) (env.op (env-conjoin env.d.op env.op)))
     (let-values (((stx env env.d) (syntax-transcribe stx op env.op env.use env.d.op env.d.use)))
       (parse-definition env.d env stx))))

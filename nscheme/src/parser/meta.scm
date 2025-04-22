@@ -64,10 +64,10 @@
       (env-vocabulary-bind!
         env.d id.lhs
         vocab.expression-operator
-        (lambda (env.use stx) (transcribe-and-parse-expression op env.op env.use stx))
+        (lambda (env.use stx) ((syntax-transcribe/parse parse-expression) stx op env.op env.use))
         vocab.definition-operator
         (lambda (env.d.use env.use stx)
-          (transcribe-and-parse-definition op env.op env.d.use env.use stx))))
+          ((syntax-transcribe/parse-definition parse-definition) stx op env.op env.use env.d.use))))
     ($d:begin))
   (parse-operator-binding finish stx.lhs stx*.rhs))
 
