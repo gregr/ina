@@ -1,6 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing helpers ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;
+(define-values (parse-error:kind parse-error? parse-error-syntax)
+  (make-exception-kind-etc error:kind 'parse-error '#(syntax)))
+(define (make-parse-error desc stx) (make-exception parse-error:kind (vector desc stx)))
+(define (raise-parse-error . arg*) (raise (apply make-parse-error arg*)))
+
 (define (syntax->improper-list s)
   (let ((x (syntax-unwrap s)))
     (if (pair? x)
@@ -11,6 +16,12 @@
   (let ((x*~ (syntax->improper-list s)))
     (unless (list? x*~) (raise-parse-error "not a syntax list" s))
     x*~))
+
+(define ((syntax->operand*/minmax argc.min argc.max) stx)
+  (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
+    (unless (<= argc.min argc)           (raise-parse-error "too few operator arguments"  stx))
+    (unless (<= argc (or argc.max argc)) (raise-parse-error "too many operator arguments" stx))
+    (cdr stx*)))
 
 (define (parse-identifier id) (unless (identifier? id) (raise-parse-error "not an identifier" id)))
 
@@ -143,7 +154,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Syntax transformation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (define (transcribe-and-parse-expression op env.op env.use stx)
   (let* ((m   (fresh-mark))
          (env (env-disjoin env.op m env.use)))
@@ -159,7 +169,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Expression construction ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (define ($source E stx) ($annotate E stx))
 (splicing-local
   ((define (convert-body env param*~ env->body)
@@ -267,7 +276,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Definition contexts ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (splicing-local
   ((define (D:begin          D*)        (vector 'D:begin          D*))
    (define (D:definition     id b ^rhs) (vector 'D:definition     id b ^rhs))
@@ -359,7 +367,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
 
 (define ((auxiliary?/vocab vocab) a env stx.id)
@@ -367,11 +374,6 @@
 (define expression-auxiliary? (auxiliary?/vocab vocab.expression-auxiliary))
 
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
-
-(define-values (parse-error:kind parse-error? parse-error-syntax)
-  (make-exception-kind-etc error:kind 'parse-error '#(syntax)))
-(define (make-parse-error desc stx) (make-exception parse-error:kind (vector desc stx)))
-(define (raise-parse-error . arg*) (raise (apply make-parse-error arg*)))
 
 (define-values (unbound-identifier-parse-error:kind
                  unbound-identifier-parse-error?
@@ -414,17 +416,13 @@
     stx))
 
 (define ((expression-operator-parser parser argc.min argc.max) env stx)
-  (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
-    (unless (<= argc.min argc)           (raise-parse-error "too few operator arguments"  stx))
-    (unless (<= argc (or argc.max argc)) (raise-parse-error "too many operator arguments" stx))
-    (apply parser env (cdr stx*))))
+  (apply parser env ((syntax->operand*/minmax argc.min argc.max) stx)))
 
 (define ((parse/constant-expression E) env _) E)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (define (parse-definition env.d env stx)
   (define (default) (parse-definition-expression env.d env stx))
   (let ((x (syntax-unwrap stx)))
@@ -442,15 +440,11 @@
   ($d:expression (lambda () (parse-expression env stx))))
 
 (define ((definition-operator-parser parser argc.min argc.max) env.d env stx)
-  (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
-    (unless (<= argc.min argc)           (raise-parse-error "too few operator arguments"  stx))
-    (unless (<= argc (or argc.max argc)) (raise-parse-error "too many operator arguments" stx))
-    (apply parser env.d env (cdr stx*))))
+  (apply parser env.d env ((syntax->operand*/minmax argc.min argc.max) stx)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing assignments ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (define (parse-set! env stx.lhs stx.rhs)
   (define (fail) (raise-parse-error "not assignable" stx.lhs))
   (define (^rhs) (parse-expression env stx.rhs))
