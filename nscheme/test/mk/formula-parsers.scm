@@ -99,16 +99,8 @@
   (define vocab.formula 'formula)
   (define (parse-formula* env stx*) (map (lambda (stx) (parse-formula env stx)) stx*))
   (define (parse-formula env stx)
-    ($source
-      (let ((x (syntax-unwrap stx)))
-        (cond
-          ((and (pair? x)
-                (let* ((e.op (car x))
-                       (op   (and (identifier? e.op) (env-vocabulary-ref env e.op vocab.formula))))
-                  (and (procedure? op) op)))
-           => (lambda (op) (op env stx)))
-          (else (raise-parse-error "not a formula" stx))))
-      stx))
+    (define (^default) (raise-parse-error (list vocab.formula "not a formula") stx))
+    ($source (((vocabulary-parser vocab.formula ^default) env stx) env stx) stx))
   (define $==          ($quote ==))
   (define $disj        ($quote disj))
   (define $conj        ($quote conj))
@@ -194,19 +186,19 @@
                                               ($conj* (parse-formula* env fm*))))))))))
 
 (define-vocabulary define-relation
-  'definition (operator-parser parse-define-relation 2 #f))
+  vocab.definition (operator-parser parse-define-relation 2 #f))
 (define-vocabulary defrel
-  'definition (operator-parser parse-define-relation 2 #f))
+  vocab.definition (operator-parser parse-define-relation 2 #f))
 (define-vocabulary run
-  'expression (operator-parser parse-run 3 #f))
+  vocab.expression (operator-parser parse-run 3 #f))
 (define-vocabulary run*
-  'expression (operator-parser parse-run* 2 #f))
+  vocab.expression (operator-parser parse-run* 2 #f))
 (define-vocabulary fresh
-  'formula (operator-parser parse-fresh 2 #f))
+  vocab.formula (operator-parser parse-fresh 2 #f))
 (define-vocabulary conde
-  'formula (operator-parser parse-conde 1 #f))
+  vocab.formula (operator-parser parse-conde 1 #f))
 (add-vocabulary! ==
-  'formula (operator-parser parse-== 2 2))
+  vocab.formula (operator-parser parse-== 2 2))
 
 (define-vocabulary test
   'expression

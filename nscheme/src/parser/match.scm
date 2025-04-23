@@ -361,20 +361,13 @@
                 (else (cons P (loop (car stx*) (cdr stx*)))))))))
 
 (define (parse-pattern env stx)
-  ($p:source
-    (let ((x (syntax-unwrap stx)))
-      (cond
-        ((identifier? stx) (let ((op (env-vocabulary-ref env stx vocab.pattern)))
-                             (if (procedure? op) (op env stx) ($p:var stx))))
-        ((pair?    x)      (let ((e.op (car x)))
-                             (parse-identifier e.op)
-                             (let ((op (env-vocabulary-ref env e.op vocab.pattern)))
-                               (unless (procedure? op)
-                                 (raise-parse-error (list 'pattern "not a pattern operator") e.op))
-                               (op env stx))))
-        ((literal? x)      ($p:quote x))
-        (else              (raise-parse-error "not a pattern" stx))))
-    stx))
+  (define ((^default) env stx)
+    (let* ((x (syntax-unwrap stx)))
+      (cond ((symbol?  x) ($p:var stx))
+            ((literal? x) ($p:quote x))
+            (else         (raise-parse-error (list vocab.pattern "not a pattern") stx)))))
+  ($p:source (((vocabulary-parser vocab.pattern ^default) env stx) env stx) stx))
+
 (define (parse-pattern-quasiquote env stx.qq)
   (define (operand qq) (car (syntax-unwrap (cdr qq))))
   (define (operation? qq tag)

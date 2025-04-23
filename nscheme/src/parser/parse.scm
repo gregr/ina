@@ -50,6 +50,12 @@
       (cons (car e*) (cadr e*))))
   (map parse-binding-pair (syntax->list e.bpairs)))
 
+(define ((vocabulary-parser vocab ^default) env stx)
+  (define (syntax-operator stx) (and (identifier? stx) (env-vocabulary-ref env stx vocab)))
+  (or (syntax-operator stx)
+      (let ((x (syntax-unwrap stx))) (and (pair? x) (syntax-operator (car x))))
+      (^default)))
+
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Vocabularies ;;;
 ;;;;;;;;;;;;;;;;;;;;
@@ -289,20 +295,13 @@
       (raise-parse-error (if (env-ref env id) "invalid identifier" "unbound identifier") id))))
 
 (define (parse-expression env stx)
-  ($source
-    (let ((x (syntax-unwrap stx)))
-      (cond
-        ((identifier? stx)
-         (let ((op (env-vocabulary-ref env stx vocab.expression)))
-           (if (procedure? op) (op env stx) ((current-parse-free-variable) env stx))))
-        ((pair? x)
-         (let* ((e.op (car x))
-                (op   (and (identifier? e.op)
-                           (env-vocabulary-ref env e.op vocab.expression))))
-           (if (procedure? op) (op env stx) (parse-call env e.op (cdr x)))))
-        ((literal? x) ($quote x))
-        (else (raise-parse-error "not an expression" stx))))
-    stx))
+  (define ((^default) env stx)
+    (let* ((x (syntax-unwrap stx)))
+      (cond ((pair?    x) ($call* (parse-expression env (car x)) (parse-expression* env (syntax->list (cdr x)))))
+            ((literal? x) ($quote x))
+            ((symbol?  x) ((current-parse-free-variable) env stx))
+            (else         (raise-parse-error (list vocab.expression "invalid syntax") stx)))))
+  ($source (((vocabulary-parser vocab.expression ^default) env stx) env stx) stx))
 
 (define (parse-call env stx.op stx.rand*)
   ($call* (parse-expression env stx.op) (parse-expression* env (syntax->list stx.rand*))))
@@ -315,45 +314,24 @@
 (define (parse/constant-expression E) (expression-identifier-parser (lambda (env stx) E)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Parsing definitions ;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (parse-definition env.d env stx)
-  (define (default) (parse-definition-expression env.d env stx))
-  (let ((x (syntax-unwrap stx)))
-    (cond ((identifier? stx)
-           (let ((op (env-vocabulary-ref env stx vocab.definition)))
-             (if (procedure? op) (op env.d env stx) (default))))
-          ((pair? x)
-           (let* ((stx.op (car x))
-                  (op     (and (identifier? stx.op)
-                               (env-vocabulary-ref env stx.op vocab.definition))))
-             (if (procedure? op) (op env.d env stx) (default))))
-          (else (default)))))
-
-(define (parse-definition-expression env.d env stx)
-  ($d:expression (lambda () (parse-expression env stx))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing assignments ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (parse-set! env stx.lhs stx.rhs)
   (define (fail) (raise-parse-error "not assignable" stx.lhs))
-  (define (^rhs) (parse-expression env stx.rhs))
-  (let ((x.lhs (syntax-unwrap stx.lhs)))
-    (cond
-      ((identifier? stx.lhs) (let ((op (env-vocabulary-ref env stx.lhs vocab.set!)))
-                               (unless (procedure? op) (fail))
-                               (op env stx.lhs (^rhs))))
-      ((pair? x.lhs)
-       (let* ((stx.op (car x.lhs))
-              (op     (and (identifier? stx.op) (env-vocabulary-ref env stx.op vocab.set!))))
-         (unless (procedure? op) (fail))
-         (op env stx.lhs (^rhs))))
-      (else (fail)))))
+  (((vocabulary-parser vocab.set! fail) env stx.lhs) env stx.lhs (parse-expression env stx.rhs)))
 
 (define ((set!-identifier-parser parse) env stx.lhs E.rhs)
-  (unless (identifier? stx.lhs) (raise-parse-error (list 'set! "not an identifier") stx.lhs))
+  (unless (identifier? stx.lhs) (raise-parse-error (list vocab.set! "not an identifier") stx.lhs))
   (parse env stx.lhs E.rhs))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Parsing definitions ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define (parse-definition env.d env stx)
+  (((vocabulary-parser vocab.definition (lambda () parse-definition-expression)) env stx) env.d env stx))
+
+(define (parse-definition-expression env.d env stx)
+  ($d:expression (lambda () (parse-expression env stx))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Definition contexts ;;;

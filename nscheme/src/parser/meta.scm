@@ -14,7 +14,6 @@
 ;; Other vocabulary ideas
 ;(define vocab.module  'module)
 ;(define vocab.grammar 'grammar)
-;(define vocab.formula 'formula)
 ;(define vocab.term    'term)
 
 (define (with-higher-mark-level thunk) (current-mark-level (+ (current-mark-level) 1) thunk))
