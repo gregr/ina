@@ -110,12 +110,6 @@
            => (lambda (op) (op env stx)))
           (else (raise-parse-error "not a formula" stx))))
       stx))
-  (define ((formula-operator-parser parser argc.min argc.max) env stx)
-    (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
-      (unless (<= argc.min argc)           (raise-parse-error "too few operator arguments"  stx))
-      (unless (<= argc (or argc.max argc)) (raise-parse-error "too many operator arguments" stx))
-      (apply parser env (cdr stx*))))
-
   (define $==          ($quote ==))
   (define $disj        ($quote disj))
   (define $conj        ($quote conj))
@@ -201,19 +195,19 @@
                                               ($conj* (parse-formula* env fm*))))))))))
 
 (define-vocabulary define-relation
-  'definition-operator (definition-operator-parser parse-define-relation 2 #f))
+  'definition-operator (operator-parser parse-define-relation 2 #f))
 (define-vocabulary defrel
-  'definition-operator (definition-operator-parser parse-define-relation 2 #f))
+  'definition-operator (operator-parser parse-define-relation 2 #f))
 (define-vocabulary run
-  'expression-operator (expression-operator-parser parse-run 3 #f))
+  'expression-operator (operator-parser parse-run 3 #f))
 (define-vocabulary run*
-  'expression-operator (expression-operator-parser parse-run* 2 #f))
+  'expression-operator (operator-parser parse-run* 2 #f))
 (define-vocabulary fresh
-  'formula-operator (formula-operator-parser parse-fresh 2 #f))
+  'formula-operator (operator-parser parse-fresh 2 #f))
 (define-vocabulary conde
-  'formula-operator (formula-operator-parser parse-conde 1 #f))
+  'formula-operator (operator-parser parse-conde 1 #f))
 (add-vocabulary! ==
-  'formula-operator (formula-operator-parser parse-== 2 2))
+  'formula-operator (operator-parser parse-== 2 2))
 
 (define-vocabulary test
   'expression-operator

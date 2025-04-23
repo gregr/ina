@@ -37,8 +37,7 @@
 (define (parse-begin-meta-expression* env stx*)
   (apply/values $quote-values
                 (with-higher-mark-level
-                  (lambda ()
-                    (E-eval ((expression-operator-parser parse-begin-expression 1 #f) env stx*))))))
+                  (lambda () (E-eval ((operator-parser parse-begin-expression 1 #f) env stx*))))))
 (define (parse-begin-meta-expression env . stx*) (parse-begin-meta-expression* env stx*))
 
 (define (parse-current-environment env) ($quote env))
@@ -116,24 +115,24 @@
   (let ((env (make-env))
         (b*.def
           (list
-            (cons 'set-vocabulary!    (definition-operator-parser parse-set-vocabulary!    3 #f))
-            (cons 'add-vocabulary!    (definition-operator-parser parse-add-vocabulary!    3 #f))
-            (cons 'update-vocabulary! (definition-operator-parser parse-update-vocabulary! 3 #f))
-            (cons 'remove-vocabulary! (definition-operator-parser parse-remove-vocabulary! 2 #f))
-            (cons 'define-vocabulary  (definition-operator-parser parse-define-vocabulary  3 #f))
-            (cons 'define-syntax      (definition-operator-parser parse-define-syntax      2 #f))))
+            (cons 'set-vocabulary!    (operator-parser parse-set-vocabulary!    3 #f))
+            (cons 'add-vocabulary!    (operator-parser parse-add-vocabulary!    3 #f))
+            (cons 'update-vocabulary! (operator-parser parse-update-vocabulary! 3 #f))
+            (cons 'remove-vocabulary! (operator-parser parse-remove-vocabulary! 2 #f))
+            (cons 'define-vocabulary  (operator-parser parse-define-vocabulary  3 #f))
+            (cons 'define-syntax      (operator-parser parse-define-syntax      2 #f))))
         (b*.expr
           (list
-            (cons 'quote-syntax        (expression-operator-parser parse-quote-syntax        1 1))
-            (cons 'current-environment (expression-operator-parser parse-current-environment 0 0))))
+            (cons 'quote-syntax        (operator-parser parse-quote-syntax        1 1))
+            (cons 'current-environment (operator-parser parse-current-environment 0 0))))
         (b*.qqs '(unsyntax unsyntax-splicing))
         (b*.qqs-and-expr
-          (list (cons 'quasiquote-syntax (expression-operator-parser parse-quasiquote-syntax 1 1))))
+          (list (cons 'quasiquote-syntax (operator-parser parse-quasiquote-syntax 1 1))))
         (b*.def-and-expr
           (list
             (list 'begin-meta
-                  (definition-operator-parser parse-begin-meta-definition 0 #f)
-                  (expression-operator-parser parse-begin-meta-expression 1 #f)))))
+                  (operator-parser parse-begin-meta-definition 0 #f)
+                  (operator-parser parse-begin-meta-expression 1 #f)))))
     (for-each (lambda (id op.def op.expr) (env-vocabulary-bind! env id
                                                                 vocab.definition-operator op.def
                                                                 vocab.expression-operator op.expr))

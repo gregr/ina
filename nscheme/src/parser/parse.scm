@@ -18,10 +18,15 @@
     x*~))
 
 (define ((syntax->operand*/minmax argc.min argc.max) stx)
+  (when (identifier? stx) (raise-parse-error "operator identifier not used in an operation" stx))
   (let* ((stx* (syntax->list stx)) (argc (- (length stx*) 1)))
     (unless (<= argc.min argc)           (raise-parse-error "too few operator arguments"  stx))
     (unless (<= argc (or argc.max argc)) (raise-parse-error "too many operator arguments" stx))
     (cdr stx*)))
+
+(define ((operator-parser parser argc.min argc.max) . x*)
+  (let* ((x* (reverse x*)) (stx* ((syntax->operand*/minmax argc.min argc.max) (car x*))))
+    (apply parser (append (reverse (cdr x*)) stx*))))
 
 (define (parse-identifier id) (unless (identifier? id) (raise-parse-error "not an identifier" id)))
 
@@ -320,9 +325,6 @@
         (else (raise-parse-error "not an expression" stx))))
     stx))
 
-(define ((expression-operator-parser parser argc.min argc.max) env stx)
-  (apply parser env ((syntax->operand*/minmax argc.min argc.max) stx)))
-
 (define ((parse/constant-expression E) env _) E)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -343,9 +345,6 @@
 
 (define (parse-definition-expression env.d env stx)
   ($d:expression (lambda () (parse-expression env stx))))
-
-(define ((definition-operator-parser parser argc.min argc.max) env.d env stx)
-  (apply parser env.d env ((syntax->operand*/minmax argc.min argc.max) stx)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing assignments ;;;

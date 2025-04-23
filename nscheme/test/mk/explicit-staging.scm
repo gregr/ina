@@ -177,10 +177,10 @@
   (let ((env.scope (make-env))
         (b*.expr-op
           (list
-            (cons 'fresh (expression-operator-parser parse-fresh 2 #f))
-            (cons 'conde (expression-operator-parser parse-conde 1 #f))
-            (cons 'run   (expression-operator-parser parse-run   3 #f))
-            (cons 'run*  (expression-operator-parser parse-run*  2 #f)))))
+            (cons 'fresh (operator-parser parse-fresh 2 #f))
+            (cons 'conde (operator-parser parse-conde 1 #f))
+            (cons 'run   (operator-parser parse-run   3 #f))
+            (cons 'run*  (operator-parser parse-run*  2 #f)))))
     (for-each (lambda (id op) (env-vocabulary-bind! env.scope id vocab.expression-operator op))
               (map car b*.expr-op) (map cdr b*.expr-op))
     (env-vocabulary-bind! env.scope '== vocab.expression (parse/constant-expression $==))
