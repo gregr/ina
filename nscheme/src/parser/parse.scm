@@ -286,11 +286,9 @@
    (define (D:end/expression-D      D) (vector-ref D 1))
    (define (D:end/expression-syntax D) (vector-ref D 2))
    (define (D-tagged? D tag) (eqv? (D-tag D) tag))
-   (define (binding-set! binding E) (set-box! binding E))
-   (define (binding-ref  binding)   (unbox binding))
    (define (definition id b ^E)  (vector id b ^E))
    (define (definition-id   entry) (vector-ref entry 0))
-   (define (definition-b    entry) (vector-ref entry 1))
+   (define (definition-E!   entry) (vector-ref entry 1))
    (define (definition-^rhs entry) (vector-ref entry 2))
    (define (D-compile D publish-values?)
      (mlet ((rdef* '()) (^E.current #f))
@@ -318,24 +316,24 @@
          (if (null? rdef*)
              (^E)
              (let* ((id*   (map definition-id   def*))
-                    (b*    (map definition-b    def*))
+                    (E!*   (map definition-E!   def*))
                     (^rhs* (map definition-^rhs def*))
-                    (^E    (if publish-values?
-                               (lambda ()
+                    (E*->E (if publish-values?
+                               (lambda (E*)
                                  (define (publish-rhs*! rhs*)
-                                   (for-each binding-set! b* (map $quote rhs*)))
+                                   (for-each (lambda (E! rhs) (E! ($quote rhs))) E!* rhs*))
                                  ($let '(result* rhs*)
                                        (list ($apply/values
                                                ($lambda 'result* (lambda ($result*) $result*))
                                                (^E))
-                                             (apply $list (map binding-ref b*)))
+                                             (apply $list E*))
                                        (lambda ($result* $rhs*)
-                                         ($begin ($call ($quote publish-rhs*!) $rhs*)
+                                         ($begin ($pcall publish-rhs*! $rhs*)
                                                  ($pcall apply ($quote values) $result*)))))
-                               ^E)))
+                               (lambda (E*) (^E)))))
                ($letrec id* (lambda E*
-                              (for-each binding-set! b* E*)
-                              (values (map (lambda (^rhs) (^rhs)) ^rhs*) (^E))))))))))
+                              (for-each (lambda (E! E) (E! E)) E!* E*)
+                              (values (map (lambda (^rhs) (^rhs)) ^rhs*) (E*->E E*))))))))))
   (define (D->E         D) (D-compile D #f))
   (define (D->E/publish D) (D-compile D #t))
   (define ($d:begin . D*)           (D:begin D*))
@@ -343,7 +341,7 @@
   (define ($d:expression ^E)        (D:expression ^E))
   (define ($d:define/vocabulary . vp*) ($d:define/vocabulary* vp*))
   (define (($d:define/vocabulary* vp*) env.d lhs ^rhs)
-    (let ((binding (box #f)))
+    (mlet ((E #f))
       (env-vocabulary-introduce!*
         env.d lhs
         (alist->plist
@@ -353,12 +351,11 @@
               (cons vocab
                     (lambda (env stx)
                       ((parse/binding
-                         (or (binding-ref binding)
-                             (raise-parse-error
-                               "parsed identifier reference before completing its definition" stx)))
+                         (or E (raise-parse-error
+                                 "parsed identifier reference before completing its definition" stx)))
                        env stx)))))))
-      (D:definition lhs binding ^rhs)))
-  (define $d:define ($d:define/vocabulary vocab.expression (lambda ($x) (lambda (env stx) $x)))))
+      (D:definition lhs (lambda (E.new) (set! E E.new)) ^rhs)))
+  (define $d:define ($d:define/vocabulary vocab.expression (lambda (E) (lambda (env stx) E)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
