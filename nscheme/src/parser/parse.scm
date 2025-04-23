@@ -283,26 +283,10 @@
 
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
 
-(define-values (unbound-identifier-parse-error:kind
-                 unbound-identifier-parse-error?
-                 unbound-identifier-parse-error-vocab
-                 unbound-identifier-parse-error-env)
-  (make-exception-kind-etc parse-error:kind 'unbound-identifier-parse-error '#(vocab env)))
-(define (make-unbound-identifier-parse-error desc stx vocab env)
-  (make-exception unbound-identifier-parse-error:kind (vector desc stx vocab env)))
-(define (raise-unbound-identifier-parse-error . arg*)
-  (raise (apply make-unbound-identifier-parse-error arg*)))
-
-(define (parse-free-variable-reference env stx)
-  (let ((desc "identifier is not bound as an expression"))
-    (with-use-value
-      '(replace unbound-variable-reference)
-      (lambda ()
-        (with-continue
-          '(return unbound-variable-reference)
-          (lambda () (raise-unbound-identifier-parse-error desc stx vocab.expression env)))
-        ($mistake ($quote 'unbound-variable-reference)
-                  ($quote (list desc stx vocab.expression env)))))))
+(define current-parse-free-variable
+  (make-parameter
+    (lambda (env id)
+      (raise-parse-error (if (env-ref env id) "invalid identifier" "unbound identifier") id))))
 
 (define (parse-expression env stx)
   ($source
@@ -310,7 +294,7 @@
       (cond
         ((identifier? stx)
          (let ((op (env-vocabulary-ref env stx vocab.expression)))
-           (if (procedure? op) (op env stx) (parse-free-variable-reference env stx))))
+           (if (procedure? op) (op env stx) ((current-parse-free-variable) env stx))))
         ((pair? x)
          (let* ((e.op (car x))
                 (op   (and (identifier? e.op)

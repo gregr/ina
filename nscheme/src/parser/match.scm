@@ -370,8 +370,7 @@
                              (parse-identifier e.op)
                              (let ((op (env-vocabulary-ref env e.op vocab.pattern)))
                                (unless (procedure? op)
-                                 (raise-unbound-identifier-parse-error
-                                   "not a pattern operator" e.op vocab.pattern env))
+                                 (raise-parse-error (list 'pattern "not a pattern operator") e.op))
                                (op env stx))))
         ((literal? x)      ($p:quote x))
         (else              (raise-parse-error "not a pattern" stx))))
