@@ -313,7 +313,11 @@
             (else (mistake 'linear-pattern-compile "not a compilable linear P" P)))))
       id*)))
 
-(define (parse-pattern-any    _ __)                $p:any)
+(define ((pattern-identifier-parser parse) env stx)
+  (unless (identifier? stx) (raise-parse-error (list 'pattern "identifier misused as an operator" stx)))
+  (parse env stx))
+
+(define parse-pattern-any (pattern-identifier-parser (lambda (env stx) $p:any)))
 (define (parse-pattern-var    _ stx.id)            ($p:var stx.id))
 (define (parse-pattern-quote  _ stx.value)         ($p:quote (syntax->datum stx.value)))
 (define (parse-pattern-vector env . stx*)          ($p:vector (parse-pattern* env stx*)))

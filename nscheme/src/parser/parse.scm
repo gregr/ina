@@ -142,8 +142,9 @@
 (define (env-introduce-boxed! env id ^E.box)
   (env-vocabulary-introduce!
     env id
-    vocab.expression (lambda (env _) ($unbox (^E.box)))
-    vocab.set! (lambda (env stx.lhs E.rhs) ($set-box! ($source (^E.box) stx.lhs) E.rhs))))
+    vocab.expression (expression-identifier-parser (lambda (env _) ($unbox (^E.box))))
+    vocab.set!       (set!-identifier-parser (lambda (env stx.lhs E.rhs)
+                                               ($set-box! ($source (^E.box) stx.lhs) E.rhs)))))
 
 (define (env-add-alist! env a)
   (alist-for-each a (lambda (id E) (env-vocabulary-bind!
@@ -317,15 +318,20 @@
          (let* ((e.op (car x))
                 (op   (and (identifier? e.op)
                            (env-vocabulary-ref env e.op vocab.expression-operator))))
-           (if (procedure? op)
-               (op env stx)
-               ($call* (parse-expression env e.op)
-                       (parse-expression* env (syntax->list (cdr x)))))))
+           (if (procedure? op) (op env stx) (parse-call env e.op (cdr x)))))
         ((literal? x) ($quote x))
         (else (raise-parse-error "not an expression" stx))))
     stx))
 
-(define ((parse/constant-expression E) env _) E)
+(define (parse-call env stx.op stx.rand*)
+  ($call* (parse-expression env stx.op) (parse-expression* env (syntax->list stx.rand*))))
+
+(define ((expression-identifier-parser parse) env stx)
+  (if (identifier? stx)
+      (parse env stx)
+      (let ((x (syntax-unwrap stx))) (parse-call env (car x) (cdr x)))))
+
+(define (parse/constant-expression E) (expression-identifier-parser (lambda (env stx) E)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;
@@ -364,6 +370,10 @@
          (unless (procedure? op) (fail))
          (op env stx.lhs (^rhs))))
       (else (fail)))))
+
+(define ((set!-identifier-parser parse) env stx.lhs E.rhs)
+  (unless (identifier? stx.lhs) (raise-parse-error (list 'set! "not an identifier") stx.lhs))
+  (parse env stx.lhs E.rhs))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Definition contexts ;;;
