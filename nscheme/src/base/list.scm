@@ -77,10 +77,12 @@
 (define assv  (assoc/= eqv?))
 (define assoc (assoc/= equal?))
 
-(define (plist->alist kvs) (if (null? kvs) '() (cons (cons (car kvs) (cadr kvs))
-                                                     (plist->alist (cddr kvs)))))
-(define (plist-key*   kvs) (if (null? kvs) '() (cons (car  kvs) (plist-key*   (cddr kvs)))))
-(define (plist-value* kvs) (if (null? kvs) '() (cons (cadr kvs) (plist-value* (cddr kvs)))))
+(define (plist->alist    p)   (if (null? p) '() (cons (cons (car p) (cadr p))
+                                                      (plist->alist (cddr p)))))
+(define (plist-key*      p)   (if (null? p) '() (cons (car  p) (plist-key*   (cddr p)))))
+(define (plist-value*    p)   (if (null? p) '() (cons (cadr p) (plist-value* (cddr p)))))
+(define (plist-map       p f) (alist-map (plist->alist p) f))
+(define (plist-map-value p f) (alist->plist (alist-map-value (plist->alist p) f)))
 
 (define (alist->plist a) (if (null? a)
                              '()
