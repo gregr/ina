@@ -96,7 +96,7 @@
   ;;;;;;;;;;;;;;;;;;
   ;;; miniKanren ;;;
   ;;;;;;;;;;;;;;;;;;
-  (define vocab.formula-operator 'formula-operator)
+  (define vocab.formula 'formula)
   (define (parse-formula* env stx*) (map (lambda (stx) (parse-formula env stx)) stx*))
   (define (parse-formula env stx)
     ($source
@@ -104,8 +104,7 @@
         (cond
           ((and (pair? x)
                 (let* ((e.op (car x))
-                       (op   (and (identifier? e.op)
-                                  (env-vocabulary-ref env e.op vocab.formula-operator))))
+                       (op   (and (identifier? e.op) (env-vocabulary-ref env e.op vocab.formula))))
                   (and (procedure? op) op)))
            => (lambda (op) (op env stx)))
           (else (raise-parse-error "not a formula" stx))))
@@ -180,7 +179,7 @@
         (parse-identifier rid)
         (parse-param* param*)
         (($d:define/vocabulary
-           vocab.formula-operator
+           vocab.formula
            (lambda ($rel)
              (lambda (env stx)
                (let ((arg* (cdr (syntax->list stx))))
@@ -195,22 +194,22 @@
                                               ($conj* (parse-formula* env fm*))))))))))
 
 (define-vocabulary define-relation
-  'definition-operator (operator-parser parse-define-relation 2 #f))
+  'definition (operator-parser parse-define-relation 2 #f))
 (define-vocabulary defrel
-  'definition-operator (operator-parser parse-define-relation 2 #f))
+  'definition (operator-parser parse-define-relation 2 #f))
 (define-vocabulary run
-  'expression-operator (operator-parser parse-run 3 #f))
+  'expression (operator-parser parse-run 3 #f))
 (define-vocabulary run*
-  'expression-operator (operator-parser parse-run* 2 #f))
+  'expression (operator-parser parse-run* 2 #f))
 (define-vocabulary fresh
-  'formula-operator (operator-parser parse-fresh 2 #f))
+  'formula (operator-parser parse-fresh 2 #f))
 (define-vocabulary conde
-  'formula-operator (operator-parser parse-conde 1 #f))
+  'formula (operator-parser parse-conde 1 #f))
 (add-vocabulary! ==
-  'formula-operator (operator-parser parse-== 2 2))
+  'formula (operator-parser parse-== 2 2))
 
 (define-vocabulary test
-  'expression-operator
+  'expression
   (lambda (env stx)
     (apply $begin
            (map (lambda (expr)

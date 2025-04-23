@@ -24,7 +24,7 @@
 ;         (vector 'thing: thing)))
 ;(test '(let ()
 ;         (define-vocabulary
-;          thing 'expression-operator
+;          thing 'expression
 ;          (lambda (env stx)
 ;            ($quote (vector 'thing-syntax: stx))))
 ;         (vector 'thing: (thing 1 2 3))))
@@ -33,7 +33,7 @@
 ;(test '(let ()
 ;         (define-vocabulary
 ;          example-or
-;          'expression-operator
+;          'expression
 ;          (lambda (env stx)
 ;            (parse-expression
 ;             env
@@ -423,7 +423,7 @@
              'stx (quote-syntax x)))
          (splicing-let ((x 6))
            (define-vocabulary m
-             'expression-operator
+             'expression
              (lambda (env stx)
                (parse-expression
                 (env-vocabulary-ref env (quote-syntax foo) 'env)
@@ -442,7 +442,7 @@
              'stx (quote-syntax x)))
          (splicing-let ((x 6))
            (define-vocabulary m
-             'expression-operator
+             'expression
              (lambda (env stx)
                (match (syntax->list stx)
                  ((list _ arg)

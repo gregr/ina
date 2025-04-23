@@ -132,7 +132,7 @@
         (unless (text? path) (raise-parse-error (list 'load "not a path") stx.path))
         (parse-begin-definition* env.d env (posix-read-file-annotated path))))
     (env-vocabulary-bind!
-      env.import 'load vocab.definition-operator (operator-parser parse-load 1 1))
+      env.import 'load vocab.definition (operator-parser parse-load 1 1))
     (define (parse-include env.d env stx.path)
       (let ((path (syntax-unwrap stx.path)))
         (unless (text? path) (raise-parse-error (list 'include "not a path") stx.path))
@@ -143,7 +143,7 @@
             (path-directory path)
             (lambda () (parse-begin-definition* env.d env def*))))))
     (env-vocabulary-bind!
-      env.import 'include vocab.definition-operator (operator-parser parse-include 1 1))
+      env.import 'include vocab.definition (operator-parser parse-include 1 1))
     (env-freeze env.import)))
 
 (if (null? compiler-output*)

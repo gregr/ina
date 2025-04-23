@@ -317,17 +317,14 @@
                   (operator-parser parse-begin-definition 0 #f)
                   (operator-parser parse-begin-expression 1 #f)))))
     (for-each (lambda (id) (env-vocabulary-bind! env id vocab.expression-auxiliary id)) b*.expr-aux)
-    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.definition-operator op))
+    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.definition op))
               (map car b*.def) (map cdr b*.def))
-    (for-each (lambda (id op.def op.expr) (env-vocabulary-bind! env id
-                                                                vocab.definition-operator op.def
-                                                                vocab.expression-operator op.expr))
+    (for-each (lambda (id op.def op.expr)
+                (env-vocabulary-bind! env id vocab.definition op.def vocab.expression op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
     (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote id)) b*.qq)
-    (for-each (lambda (id op) (env-vocabulary-bind! env id
-                                                    vocab.expression-operator op
-                                                    vocab.quasiquote          id))
+    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression op vocab.quasiquote id))
               (map car b*.qq-and-expr) (map cdr b*.qq-and-expr))
-    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression-operator op))
+    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression op))
               (map car b*.expr) (map cdr b*.expr))
     (env-freeze env)))

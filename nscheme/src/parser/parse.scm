@@ -54,12 +54,9 @@
 ;;; Vocabularies ;;;
 ;;;;;;;;;;;;;;;;;;;;
 (define vocab.definition           'definition)
-(define vocab.definition-operator  'definition-operator)
 (define vocab.expression           'expression)
-(define vocab.expression-operator  'expression-operator)
 (define vocab.expression-auxiliary 'expression-auxiliary)
 (define vocab.set!                 'set!)
-(define vocab.set!-operator        'set!-operator)
 
 (define vocab-dict.empty '())
 (define (vocab-dict-ref    vocab=>x vocab)    (let ((vx (assv vocab vocab=>x))) (and vx (cdr vx))))
@@ -317,7 +314,7 @@
         ((pair? x)
          (let* ((e.op (car x))
                 (op   (and (identifier? e.op)
-                           (env-vocabulary-ref env e.op vocab.expression-operator))))
+                           (env-vocabulary-ref env e.op vocab.expression))))
            (if (procedure? op) (op env stx) (parse-call env e.op (cdr x)))))
         ((literal? x) ($quote x))
         (else (raise-parse-error "not an expression" stx))))
@@ -345,7 +342,7 @@
           ((pair? x)
            (let* ((stx.op (car x))
                   (op     (and (identifier? stx.op)
-                               (env-vocabulary-ref env stx.op vocab.definition-operator))))
+                               (env-vocabulary-ref env stx.op vocab.definition))))
              (if (procedure? op) (op env.d env stx) (default))))
           (else (default)))))
 
@@ -365,8 +362,7 @@
                                (op env stx.lhs (^rhs))))
       ((pair? x.lhs)
        (let* ((stx.op (car x.lhs))
-              (op     (and (identifier? stx.op)
-                           (env-vocabulary-ref env stx.op vocab.set!-operator))))
+              (op     (and (identifier? stx.op) (env-vocabulary-ref env stx.op vocab.set!))))
          (unless (procedure? op) (fail))
          (op env stx.lhs (^rhs))))
       (else (fail)))))

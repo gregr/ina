@@ -1,5 +1,4 @@
 (define vocab.pattern           'pattern)
-(define vocab.pattern-operator  'pattern-operator)
 (define vocab.pattern-auxiliary 'pattern-auxiliary)
 
 (define pattern-auxiliary? (auxiliary?/vocab vocab.pattern-auxiliary))
@@ -369,10 +368,10 @@
                              (if (procedure? op) (op env stx) ($p:var stx))))
         ((pair?    x)      (let ((e.op (car x)))
                              (parse-identifier e.op)
-                             (let ((op (env-vocabulary-ref env e.op vocab.pattern-operator)))
+                             (let ((op (env-vocabulary-ref env e.op vocab.pattern)))
                                (unless (procedure? op)
                                  (raise-unbound-identifier-parse-error
-                                   "not a pattern operator" e.op vocab.pattern-operator env))
+                                   "not a pattern operator" e.op vocab.pattern env))
                                (op env stx))))
         ((literal? x)      ($p:quote x))
         (else              (raise-parse-error "not a pattern" stx))))
@@ -469,12 +468,11 @@
            (list (cons 'match  (operator-parser parse-match  1 #f))
                  (cons 'qmatch (operator-parser parse-qmatch 1 #f))))
          (b*.match-pattern
-           (list (cons '_ parse-pattern-any)))
-         (b*.match-pattern-operator.new
-           (list (cons 'var (operator-parser parse-pattern-var 1 1))
+           (list (cons '_   parse-pattern-any)
+                 (cons 'var (operator-parser parse-pattern-var 1 1))
                  (cons 'app (operator-parser parse-pattern-app 2 #f))
                  (cons '?   (operator-parser parse-pattern-?   1 #f))))
-         (b*.match-pattern-operator.extend
+         (b*.match-pattern.extend
            (list (cons 'quote      (operator-parser parse-pattern-quote      1 1))
                  (cons 'quasiquote (operator-parser parse-pattern-quasiquote 1 1))
                  (cons 'and        (operator-parser parse-pattern-and        0 #f))
@@ -488,13 +486,11 @@
               b*.expr-aux)
     (for-each (lambda (id) (env-vocabulary-bind! env.scope id vocab.pattern-auxiliary id))
               b*.pattern-aux)
-    (for-each (lambda (id op) (env-vocabulary-bind! env.scope id vocab.expression-operator op))
+    (for-each (lambda (id op) (env-vocabulary-bind! env.scope id vocab.expression op))
               (map car b*.expr) (map cdr b*.expr))
     (for-each (lambda (id op) (env-vocabulary-bind! env.scope id vocab.pattern op))
               (map car b*.match-pattern) (map cdr b*.match-pattern))
-    (for-each (lambda (id op) (env-vocabulary-bind! env.scope id vocab.pattern-operator op))
-              (map car b*.match-pattern-operator.new) (map cdr b*.match-pattern-operator.new))
     (for-each (lambda (id op) (when (env-ref env id)
-                                (env-vocabulary-add! env.scope env id vocab.pattern-operator op)))
-              (map car b*.match-pattern-operator.extend) (map cdr b*.match-pattern-operator.extend))
+                                (env-vocabulary-add! env.scope env id vocab.pattern op)))
+              (map car b*.match-pattern.extend) (map cdr b*.match-pattern.extend))
     (env-conjoin (env-freeze env.scope) env)))
