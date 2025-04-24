@@ -256,19 +256,6 @@
              (result  (if (procedure? result) (result (env-unmark env m)) result)))
         (apply values (syntax-add-mark result m) env env*))))
 
-  (define (env:ref/k ref/k)
-    (mlet ((frozen? #f))
-      (lambda (method)
-        (case method
-          ((ref/k)      (lambda (id kf k) (if frozen? (kf) (ref/k id kf k))))
-          ((set!)       (lambda (id x) (mistake "cannot set! env:ref/k environment" id)))
-          ((freeze!)    (set! frozen? #t))
-          ((freeze)     env.empty)
-          ((frozen?)    frozen?)
-          ((read-only?) #t)
-          ((describe)   '())
-          (else         (mistake "invalid environment operation" method))))))
-
   (define (env-remove env id*)
     (mlet ((frozen? #f))
       (define (self method)
