@@ -1,5 +1,3 @@
-(define vocab.quasiquote-syntax 'quasiquote-syntax)
-
 ;; TODO:
 ;; - match
 ;;   - match-define match-lambda match-lambda* match-lambda** match-let match-let*
@@ -17,12 +15,6 @@
 ;(define vocab.term    'term)
 
 (define (with-higher-mark-level thunk) (current-mark-level (+ (current-mark-level) 1) thunk))
-
-(define (parse-quote-syntax env stx) ($quote (syntax-prune-level stx (current-mark-level))))
-
-(define parse-quasiquote-syntax
-  (parse-quasiquote-X vocab.quasiquote-syntax 'quasiquote-syntax 'unsyntax 'unsyntax-splicing
-                      parse-quote-syntax))
 
 (define (parse-begin-meta-definition* env.d env stx*)
   (let ((E (apply/values $quote-values
@@ -118,11 +110,6 @@
             (cons 'remove-vocabulary! (operator-parser parse-remove-vocabulary! 2 #f))
             (cons 'define-vocabulary  (operator-parser parse-define-vocabulary  3 #f))
             (cons 'define-syntax      (operator-parser parse-define-syntax      2 #f))))
-        (b*.expr
-          (list (cons 'quote-syntax      (operator-parser parse-quote-syntax      1 1))))
-        (b*.qqs '(unsyntax unsyntax-splicing))
-        (b*.qqs-and-expr
-          (list (cons 'quasiquote-syntax (operator-parser parse-quasiquote-syntax 1 1))))
         (b*.def-and-expr
           (list
             (list 'begin-meta
@@ -133,10 +120,4 @@
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
     (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.definition op))
               (map car b*.def) (map cdr b*.def))
-    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote-syntax id)) b*.qqs)
-    (for-each (lambda (id op)
-                (env-vocabulary-bind! env id vocab.expression op vocab.quasiquote-syntax id))
-              (map car b*.qqs-and-expr) (map cdr b*.qqs-and-expr))
-    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression op))
-              (map car b*.expr) (map cdr b*.expr))
     (env-freeze env)))
