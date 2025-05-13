@@ -39,8 +39,6 @@
                   (lambda () (E-eval ((operator-parser parse-begin-expression 1 #f) env stx*))))))
 (define (parse-begin-meta-expression env . stx*) (parse-begin-meta-expression* env stx*))
 
-(define (parse-current-environment env) ($quote env))
-
 (define ((parse-modify-vocabulary! plist? env-vocabulary-modify!*) env.d env id.lhs . stx*)
   (parse-identifier id.lhs)
   (unless (or (not plist?) (even? (length stx*)))
@@ -121,9 +119,7 @@
             (cons 'define-vocabulary  (operator-parser parse-define-vocabulary  3 #f))
             (cons 'define-syntax      (operator-parser parse-define-syntax      2 #f))))
         (b*.expr
-          (list
-            (cons 'quote-syntax        (operator-parser parse-quote-syntax        1 1))
-            (cons 'current-environment (operator-parser parse-current-environment 0 0))))
+          (list (cons 'quote-syntax      (operator-parser parse-quote-syntax      1 1))))
         (b*.qqs '(unsyntax unsyntax-splicing))
         (b*.qqs-and-expr
           (list (cons 'quasiquote-syntax (operator-parser parse-quasiquote-syntax 1 1))))
