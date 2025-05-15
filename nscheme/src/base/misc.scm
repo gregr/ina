@@ -24,9 +24,14 @@
               (else        (super a b))))))
 (define equal? (make-equal? (lambda (a b) #f)))
 
+(define (rcompose . f*) (rcompose* f*))
+(define (rcompose*  f*) (compose* (reverse f*)))
+(define (compose*   f*) (apply compose f*))
 (define compose (case-lambda
+                  (()         values)
                   ((f)        f)
                   ((f g . h*) (let loop ((f f) (g g) (h* h*))
-                                (if (null? h*)
-                                    (lambda x* (f (apply g x*)))
-                                    (loop (lambda (x) (f (g x))) (car h*) (cdr h*)))))))
+                                (let ((f (lambda x* (apply/values f (apply g x*)))))
+                                  (if (null? h*)
+                                      f
+                                      (loop f (car h*) (cdr h*))))))))
