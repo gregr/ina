@@ -187,8 +187,9 @@
                      stx))
                  ($call* $rel (parse-expression* env arg*))))))
          env.d rid
-         (lambda () ($lambda/env env param* (lambda (env)
-                                              ($conj* (parse-formula* env fm*))))))))))
+         (let ((env (env-read-only env)))
+           (lambda () ($lambda/env env param* (lambda (env)
+                                                ($conj* (parse-formula* env fm*)))))))))))
 
 (define-vocabulary define-relation
   vocab.definition (operator-parser parse-define-relation 2 #f))
