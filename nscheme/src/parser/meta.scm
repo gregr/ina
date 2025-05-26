@@ -16,14 +16,12 @@
 
 (define (with-higher-mark-level thunk) (current-mark-level (+ (current-mark-level) 1) thunk))
 
-(define (parse-begin-meta-definition* env.d env stx*)
+(define (parse-begin-meta-definition* env stx*)
   (let ((E (apply/values $quote-values
                          (with-higher-mark-level
-                           (lambda ()
-                             (E-eval (D->E/publish (parse-begin-definition* env.d env stx*))))))))
+                           (lambda () (E-eval (D->E/publish (parse-begin-definition* env stx*))))))))
     ($d:expression (lambda () E))))
-(define (parse-begin-meta-definition env.d env . stx*)
-  (parse-begin-meta-definition* env.d env stx*))
+(define (parse-begin-meta-definition env . stx*) (parse-begin-meta-definition* env stx*))
 
 (define (parse-begin-meta-expression* env stx*)
   (apply/values $quote-values
@@ -31,12 +29,12 @@
                   (lambda () (E-eval ((operator-parser parse-begin-expression 1 #f) env stx*))))))
 (define (parse-begin-meta-expression env . stx*) (parse-begin-meta-expression* env stx*))
 
-(define ((parse-modify-vocabulary! plist? env-vocabulary-modify!*) env.d env id.lhs . stx*)
+(define ((parse-modify-vocabulary! plist? env-vocabulary-modify!*) env id.lhs . stx*)
   (parse-identifier id.lhs)
   (unless (or (not plist?) (even? (length stx*)))
     (raise-parse-error "not a list of alternating vocabularies and values" stx*))
   (env-vocabulary-modify!*
-    env.d env id.lhs (with-higher-mark-level (lambda () (map E-eval (parse-expression* env stx*)))))
+    env env id.lhs (with-higher-mark-level (lambda () (map E-eval (parse-expression* env stx*)))))
   ($d:begin))
 (define parse-define-vocabulary  (parse-modify-vocabulary! #t (lambda (env.dst env.src id vx*)
                                                                 (env-vocabulary-introduce!* env.dst id vx*))))
@@ -45,17 +43,16 @@
 (define parse-update-vocabulary! (parse-modify-vocabulary! #t env-vocabulary-update!*))
 (define parse-remove-vocabulary! (parse-modify-vocabulary! #f env-vocabulary-remove!*))
 
-(define (parse-define-syntax env.d env.op stx.lhs . stx*.rhs)
+(define (parse-define-syntax env.op stx.lhs . stx*.rhs)
   (define (finish id.lhs ^rhs)
     (parse-identifier id.lhs)
     (let ((op (with-higher-mark-level (lambda () (E-eval (^rhs env.op))))))
       (env-vocabulary-bind!
-        env.d id.lhs
+        env.op id.lhs
         vocab.expression
-        (lambda (env.use stx) ((syntax-transcribe/parse parse-expression) stx op env.op env.use))
+        (lambda (env.use stx) ((syntax-transcribe/parse #f parse-expression) stx op env.op env.use))
         vocab.definition
-        (lambda (env.d.use env.use stx)
-          ((syntax-transcribe/parse-definition parse-definition) stx op env.op env.use env.d.use))))
+        (lambda (env.use stx) ((syntax-transcribe/parse #t parse-definition) stx op env.op env.use))))
     ($d:begin))
   (parse-operator-binding finish stx.lhs stx*.rhs))
 

@@ -10,12 +10,13 @@
 (define (program->E         p) (p 'D->E))
 (define (program->E/publish p) (p 'D->E/publish))
 
-(define (program-parse-definition*/env.d p env.d env stx*.def)
-  ((p 'add!) (parse-begin-definition* env.d (env-conjoin env.d env) stx*.def)))
+(define (program-parse-definition*/env p env stx*.def)
+  ((p 'add!) (parse-begin-definition* env stx*.def)))
 
 (define (program-parse-definition* p env stx*.def)
-  (let ((env.d (make-env)))
-    (program-parse-definition*/env.d p env.d env stx*.def)
+  (let* ((env.d (make-env))
+         (env   (env-read-and-write (env-conjoin env.d env) env.d)))
+    (program-parse-definition*/env p env stx*.def)
     (env-freeze! env.d)
     env.d))
 

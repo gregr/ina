@@ -127,13 +127,13 @@
 (define current-include-directory (make-parameter #f))
 (define env.import
   (let ((env.import (make-env)))
-    (define (parse-load env.d env stx.path)
+    (define (parse-load env stx.path)
       (let ((path (syntax-unwrap stx.path)))
         (unless (text? path) (raise-parse-error (list 'load "not a path") stx.path))
-        (parse-begin-definition* env.d env (posix-read-file-annotated path))))
+        (parse-begin-definition* env (posix-read-file-annotated path))))
     (env-vocabulary-bind!
       env.import 'load vocab.definition (operator-parser parse-load 1 1))
-    (define (parse-include env.d env stx.path)
+    (define (parse-include env stx.path)
       (let ((path (syntax-unwrap stx.path)))
         (unless (text? path) (raise-parse-error (list 'include "not a path") stx.path))
         (let* ((path (let ((dir (current-include-directory)))
@@ -141,7 +141,7 @@
                (def* (posix-read-file-annotated path)))
           (current-include-directory
             (path-directory path)
-            (lambda () (parse-begin-definition* env.d env def*))))))
+            (lambda () (parse-begin-definition* env def*))))))
     (env-vocabulary-bind!
       env.import 'include vocab.definition (operator-parser parse-include 1 1))
     (env-freeze env.import)))

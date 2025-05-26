@@ -170,7 +170,7 @@
 
     (define (parse-== env lhs rhs) ($== (parse-expression env lhs) (parse-expression env rhs)))
 
-    (define (parse-define-relation env.d env stx.rhead . fm*)
+    (define (parse-define-relation env stx.rhead . fm*)
       (let ((rhead (syntax->list stx.rhead)))
         (when (null? rhead) (raise-parse-error "empty relation head" stx.rhead))
         (let ((rid (car rhead)) (param* (cdr rhead)))
@@ -187,7 +187,7 @@
                              'relation rhead 'given (length arg*) 'expected (length param*))
                        stx))
                    ($call* $rel (parse-expression* env arg*))))))
-           env.d rid
+           env rid
            (let ((env (env-read-only env)))
              (lambda () ($lambda/env env param* (lambda (env)
                                                   ($conj* (parse-formula* env fm*))))))))))))

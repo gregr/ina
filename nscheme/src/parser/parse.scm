@@ -160,13 +160,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Syntax transformation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define ((syntax-transcribe/parse parse) stx op env.op env.use)
-  (let-values (((stx env) (syntax-transcribe stx op env.op env.use))) (parse env stx)))
-
-(define ((syntax-transcribe/parse-definition parse-definition) stx op env.op env.use env.d.use)
-  (let* ((env.d.op (make-env)) (env.op (env-conjoin env.d.op env.op)))
-    (let-values (((stx env env.d) (syntax-transcribe stx op env.op env.use env.d.op env.d.use)))
-      (parse-definition env.d env stx))))
+(define ((syntax-transcribe/parse introduce-definitions? parse) stx op env.op env.use)
+  (let ((env.op (if introduce-definitions?
+                    (let ((env.d.op (make-env)))
+                      (env-read-and-write (env-conjoin env.d.op env.op) env.d.op))
+                    env.op)))
+    (let-values (((stx env) (syntax-transcribe stx op env.op env.use))) (parse env stx))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Expression construction ;;;
@@ -324,11 +323,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (parse-definition env.d env stx)
-  (((vocabulary-parser vocab.definition (lambda () parse-definition-expression)) env stx) env.d env stx))
+(define (parse-definition env stx)
+  (((vocabulary-parser vocab.definition (lambda () parse-definition-expression)) env stx) env stx))
 
-(define (parse-definition-expression env.d env stx)
-  ($d:expression (lambda () (parse-expression env stx))))
+(define (parse-definition-expression env stx) ($d:expression (lambda () (parse-expression env stx))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Definition contexts ;;;
@@ -401,11 +399,11 @@
   (define ($d:end/expression D stx) (D:end/expression D stx))
   (define ($d:expression ^E)        (D:expression ^E))
   (define ($d:define/vocabulary . vp*) ($d:define/vocabulary* vp*))
-  (define (($d:define/vocabulary* vp*) env.d lhs ^rhs)
+  (define (($d:define/vocabulary* vp*) env lhs ^rhs)
     (mlet ((E #f))
       (define ((make-parser E->parse) env stx)
         ((E->parse (or E (raise-parse-error "parsed identifier before completing its definition" stx)))
          env stx))
-      (env-vocabulary-introduce!* env.d lhs (plist-map-value vp* make-parser))
+      (env-vocabulary-introduce!* env lhs (plist-map-value vp* make-parser))
       (D:definition lhs (lambda (E.new) (set! E E.new)) ^rhs)))
   (define $d:define ($d:define/vocabulary vocab.expression parse/constant-expression)))
