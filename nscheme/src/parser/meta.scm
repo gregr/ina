@@ -97,7 +97,7 @@
       current-mark-level syntax-prune-level syntax-transcribe
       syntax-note syntax-note-set syntax-note-add syntax-unwrap syntax->datum datum->syntax
       identifier? identifier?! identifier=?
-      env.empty make-env env-read-only env-conjoin env-remove env-freeze
+      env.empty make-env env-read-only env-read-and-write env-conjoin env-remove env-freeze
       env-describe env-ref/k env-ref env-bind!/k env-bind! env-freeze!)))
 
 (define env.meta
