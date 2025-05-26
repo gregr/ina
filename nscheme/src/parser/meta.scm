@@ -98,7 +98,7 @@
       syntax-note syntax-note-set syntax-note-add syntax-unwrap syntax->datum datum->syntax
       identifier? identifier?! identifier=?
       env.empty make-env env-read-only env-conjoin env-remove env-freeze
-      env-describe env-ref/k env-ref env-set! env-bind!/k env-bind! env-freeze!)))
+      env-describe env-ref/k env-ref env-bind!/k env-bind! env-freeze!)))
 
 (define env.meta
   (let ((env (make-env))

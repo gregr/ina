@@ -18,7 +18,7 @@
   (parse-identifier id.rhs)
   (let ((v=>v (env-ref env id.rhs)))
     (unless v=>v (raise-parse-error "unbound identifier" id.rhs))
-    (env-set! env.d id.lhs v=>v))
+    (env-bind! env.d id.lhs v=>v))
   ($d:begin))
 
 (define (parse-operator-binding finish stx.lhs stx*.rhs)
