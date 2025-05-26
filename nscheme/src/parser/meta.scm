@@ -34,10 +34,9 @@
   (unless (or (not plist?) (even? (length stx*)))
     (raise-parse-error "not a list of alternating vocabularies and values" stx*))
   (env-vocabulary-modify!*
-    env env id.lhs (with-higher-mark-level (lambda () (map E-eval (parse-expression* env stx*)))))
+    env id.lhs (with-higher-mark-level (lambda () (map E-eval (parse-expression* env stx*)))))
   ($d:begin))
-(define parse-define-vocabulary  (parse-modify-vocabulary! #t (lambda (env.dst env.src id vx*)
-                                                                (env-vocabulary-introduce!* env.dst id vx*))))
+(define parse-define-vocabulary  (parse-modify-vocabulary! #t env-vocabulary-introduce!*))
 (define parse-set-vocabulary!    (parse-modify-vocabulary! #t env-vocabulary-set!*))
 (define parse-add-vocabulary!    (parse-modify-vocabulary! #t env-vocabulary-add!*))
 (define parse-update-vocabulary! (parse-modify-vocabulary! #t env-vocabulary-update!*))
