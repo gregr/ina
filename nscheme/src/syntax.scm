@@ -153,9 +153,6 @@
            (case method
              ((ref/k)      (lambda (id kf k) (let ((x (id-dict-ref id=>x id)))
                                                (if x (k x) (kf)))))
-             ((set!)       (lambda (id x)
-                             (when frozen? (mistake "cannot set! frozen environment" id))
-                             (set! id=>x (id-dict-set id=>x id x))))
              ((bind!/k)    (lambda (id x kf k)
                              (when frozen? (mistake "cannot bind!/k frozen environment" id))
                              (let ((x.existing (id-dict-ref id=>x id)))
@@ -184,7 +181,6 @@
                                         (if (null? env*)
                                             (kf)
                                             (((car env*) 'ref/k) id (lambda () (loop (cdr env*))) k)))))
-                      ((set!)       (lambda (id x) (mistake "cannot set! env-conjoin environment" id)))
                       ((bind!/k)    (lambda (id x kf k) (mistake "cannot bind!/k env-conjoin environment" id)))
                       ;; TODO: combine dictionaries when possible
                       ((freeze!)    (unless frozen?
@@ -207,7 +203,6 @@
         env
         (lambda (method)
           (case method
-            ((set!)       (lambda (id x) (mistake "cannot set! read-only environment" id)))
             ((bind!/k)    (lambda (id x kf k) (mistake "cannot bind!/k read-only environment" id)))
             ((read-only?) #t)
             (else         (env method))))))
@@ -218,7 +213,6 @@
          (define (self method)
            (case method
              ((ref/k)      (lambda (id kf k) ((env.m 'ref/k) (syntax-add-mark id m) kf k)))
-             ((set!)       (lambda (id x)    ((env.m 'set!) (syntax-add-mark id m) x)))
              ((bind!/k)    (lambda (id x kf k) ((env.m 'bind!/k) (syntax-add-mark id m) x kf k)))
              ((freeze!)    (unless frozen?
                              (env.m 'freeze!)
@@ -238,9 +232,6 @@
              ((ref/k)      (lambda (id kf k)
                              (let ((i (identifier-remove-mark id m)))
                                (if i ((env.mark 'ref/k) i kf k) ((env.no-mark 'ref/k) id kf k)))))
-             ((set!)       (lambda (id x)
-                             (let ((i (identifier-remove-mark id m)))
-                               (if i ((env.mark 'set!) i x) ((env.no-mark 'set!) id x)))))
              ((bind!/k)    (lambda (id x kf k)
                              (let ((i (identifier-remove-mark id m)))
                                (if i ((env.mark 'bind!/k) i x kf k) ((env.no-mark 'bind!/k) id x kf k)))))
@@ -273,7 +264,6 @@
       (define (self method)
         (case method
           ((ref/k)      (lambda (id kf k) (if (memv id id*) (kf) ((env 'ref/k) id kf k))))
-          ((set!)       (lambda (id x) (mistake "cannot set! env-remove environment" id)))
           ((bind!/k)    (lambda (id x kf k) (mistake "cannot bind!/k env-remove environment" id)))
           ((freeze!)    (unless frozen? (env 'freeze!) (set! frozen? #t)))
           ((freeze)     (if frozen? self (let ((new (env-remove (env 'freeze) id*)))
@@ -287,14 +277,12 @@
 
   (define env.empty (let ((env (make-env))) (env 'freeze!) env))
 
-  (define (env-ref      env id)      (env-ref/k    env id (lambda () #f) values))
-  (define (env-ref/k    env id kf k) ((env 'ref/k) id kf k))
-  (define (env-set!     env id x)    ((env 'set!)  id x))
-  (define (env-freeze!  env)         (env 'freeze!))
-  (define (env-freeze   env)         (env 'freeze))
+  (define (env-ref      env id)        (env-ref/k    env id (lambda () #f) values))
+  (define (env-ref/k    env id kf k)   ((env 'ref/k) id kf k))
+  (define (env-freeze!  env)           (env 'freeze!))
+  (define (env-freeze   env)           (env 'freeze))
   ;; TODO: sort and remove duplicates
-  (define (env-describe env)         (env 'describe)))
-
+  (define (env-describe env)           (env 'describe)))
   (define (env-bind!/k  env id x kf k) ((env 'bind!/k) id x kf k))
   (define (env-bind!    env id x)
     (env-bind!/k env id x (lambda (x) (mistake 'env-bind! "already bound" id x)) values))
