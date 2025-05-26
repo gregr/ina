@@ -30,10 +30,6 @@
 
 (define (parse-identifier id) (unless (identifier? id) (raise-parse-error "not an identifier" id)))
 
-(define (parse-undefined-identifier env id)
-  (parse-identifier id)
-  (when (env-ref env id) (raise-parse-error "name defined multiple times" id)))
-
 (define (parse-param* param*)
   (for-each parse-identifier param*)
   (let loop ((id* param*))
@@ -94,7 +90,7 @@
 (define (env-vocabulary-set! env.dst env.src id . vx*)
   (env-vocabulary-set!* env.dst env.src id vx*))
 (define (env-vocabulary-introduce!* env id vx*)
-  (parse-undefined-identifier env id)
+  (parse-identifier id)
   (env-vocabulary-bind!* env id vx*))
 (define (env-vocabulary-introduce! env id . vx*) (env-vocabulary-introduce!* env id vx*))
 (define (env-vocabulary-add!* env.dst env.src id vx*)

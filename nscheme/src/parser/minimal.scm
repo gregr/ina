@@ -14,7 +14,7 @@
 (define (parse-begin-definition env.d env . stx*) (parse-begin-definition* env.d env stx*))
 
 (define (parse-define-alias env.d env id.lhs id.rhs)
-  (parse-undefined-identifier env.d id.lhs)
+  (parse-identifier id.lhs)
   (parse-identifier id.rhs)
   (let ((v=>v (env-ref env id.rhs)))
     (unless v=>v (raise-parse-error "unbound identifier" id.rhs))

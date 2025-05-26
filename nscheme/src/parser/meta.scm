@@ -47,7 +47,7 @@
 
 (define (parse-define-syntax env.d env.op stx.lhs . stx*.rhs)
   (define (finish id.lhs ^rhs)
-    (parse-undefined-identifier env.d id.lhs)
+    (parse-identifier id.lhs)
     (let ((op (with-higher-mark-level (lambda () (E-eval (^rhs env.op))))))
       (env-vocabulary-bind!
         env.d id.lhs
