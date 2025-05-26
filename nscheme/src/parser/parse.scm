@@ -146,8 +146,9 @@
   (env-vocabulary-introduce!
     env id
     vocab.expression (expression-identifier-parser (lambda (env _) ($unbox (^E.box))))
-    vocab.set!       (set!-identifier-parser (lambda (env stx.lhs E.rhs)
-                                               ($set-box! ($source (^E.box) stx.lhs) E.rhs)))))
+    vocab.set!       (set!-identifier-parser (lambda (env stx.lhs)
+                                               (lambda (E.rhs)
+                                                 ($set-box! ($source (^E.box) stx.lhs) E.rhs))))))
 
 (define (env-add-alist! env a)
   (alist-for-each a (lambda (id E) (env-vocabulary-bind!
@@ -318,11 +319,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (parse-set! env stx.lhs stx.rhs)
   (define (fail) (raise-parse-error "not assignable" stx.lhs))
-  (((vocabulary-parser vocab.set! fail) env stx.lhs) env stx.lhs (parse-expression env stx.rhs)))
+  ((((vocabulary-parser vocab.set! fail) env stx.lhs) env stx.lhs) (parse-expression env stx.rhs)))
 
-(define ((set!-identifier-parser parse) env stx.lhs E.rhs)
+(define ((set!-identifier-parser parse) env stx.lhs)
   (unless (identifier? stx.lhs) (raise-parse-error (list vocab.set! "not an identifier") stx.lhs))
-  (parse env stx.lhs E.rhs))
+  (parse env stx.lhs))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing definitions ;;;
