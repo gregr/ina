@@ -366,7 +366,7 @@
       (cond ((symbol?  x) ($p:var stx))
             ((literal? x) ($p:quote x))
             (else         (raise-parse-error (list vocab.pattern "not a pattern") stx)))))
-  ($p:source (((vocabulary-parser vocab.pattern ^default) env stx) env stx) stx))
+  ($p:source ((vocabulary-parser vocab.pattern ^default) env stx) stx))
 
 (define (parse-pattern-quasiquote env stx.qq)
   (define (operand qq) (car (syntax-unwrap (cdr qq))))

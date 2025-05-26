@@ -48,9 +48,10 @@
 
 (define ((vocabulary-parser vocab ^default) env stx)
   (define (syntax-operator stx) (and (identifier? stx) (env-vocabulary-ref env stx vocab)))
-  (or (syntax-operator stx)
-      (let ((x (syntax-unwrap stx))) (and (pair? x) (syntax-operator (car x))))
-      (^default)))
+  ((or (syntax-operator stx)
+       (let ((x (syntax-unwrap stx))) (and (pair? x) (syntax-operator (car x))))
+       (^default))
+   env stx))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Vocabularies ;;;
@@ -297,7 +298,7 @@
             ((literal? x) ($quote x))
             ((symbol?  x) ((current-parse-free-variable) env stx))
             (else         (raise-parse-error (list vocab.expression "invalid syntax") stx)))))
-  ($source (((vocabulary-parser vocab.expression ^default) env stx) env stx) stx))
+  ($source ((vocabulary-parser vocab.expression ^default) env stx) stx))
 
 (define (parse-call env stx.op stx.rand*)
   ($call* (parse-expression env stx.op) (parse-expression* env (syntax->list stx.rand*))))
@@ -314,7 +315,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (parse-set! env stx.lhs stx.rhs)
   (define (fail) (raise-parse-error "not assignable" stx.lhs))
-  ((((vocabulary-parser vocab.set! fail) env stx.lhs) env stx.lhs) (parse-expression env stx.rhs)))
+  (((vocabulary-parser vocab.set! fail) env stx.lhs) (parse-expression env stx.rhs)))
 
 (define ((set!-identifier-parser parse) env stx.lhs)
   (unless (identifier? stx.lhs) (raise-parse-error (list vocab.set! "not an identifier") stx.lhs))
@@ -324,7 +325,7 @@
 ;;; Parsing definitions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (parse-definition env stx)
-  (((vocabulary-parser vocab.definition (lambda () parse-definition-expression)) env stx) env stx))
+  ((vocabulary-parser vocab.definition (lambda () parse-definition-expression)) env stx))
 
 (define (parse-definition-expression env stx) ($d:expression (lambda () (parse-expression env stx))))
 

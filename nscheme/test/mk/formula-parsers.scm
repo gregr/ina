@@ -101,7 +101,7 @@
     (define (parse-formula* env stx*) (map (lambda (stx) (parse-formula env stx)) stx*))
     (define (parse-formula env stx)
       (define (^default) (raise-parse-error (list vocab.formula "not a formula") stx))
-      ($source (((vocabulary-parser vocab.formula ^default) env stx) env stx) stx))
+      ($source ((vocabulary-parser vocab.formula ^default) env stx) stx))
     (splicing-let (($$==         ($quote ==))
                    ($$disj       ($quote disj))
                    ($$conj       ($quote conj))
