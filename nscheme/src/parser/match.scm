@@ -438,11 +438,10 @@
                                                                        (eqv? (keyword (car fender)) 'guard)
                                                                        (syntax->list (cdr fender))))))
                                                     (cond ((not test*) (parse-body env stx.body))
-                                                          ((pair? test*)
-                                                           ($if (apply $and (parse-expression* env test*))
-                                                                (parse-body env (cdr body))
-                                                                ($call $fail)))
-                                                          (else (raise-parse-error "not a guard" (car body)))))))
+                                                          ((null? test*) (raise-parse-error "empty guard" (car body)))
+                                                          (else ($if (apply $and (parse-expression* env test*))
+                                                                     (parse-body env (cdr body))
+                                                                     ($call $fail)))))))
                                               (lambda ($succeed)
                                                 ($source
                                                   (^pattern
