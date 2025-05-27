@@ -98,22 +98,19 @@
 
 (define env.meta
   (let ((env (make-env))
-        (b*.def
-          (list
-            (cons 'set-vocabulary!    (operator-parser parse-set-vocabulary!    3 #f))
+        (b*.def-and-expr
+          (list (list 'begin-meta
+                      (operator-parser parse-begin-meta-definition 0 #f)
+                      (operator-parser parse-begin-meta-expression 1 #f)))))
+    (for-each (lambda (id op.def op.expr)
+                (env-vocabulary-bind! env id vocab.definition op.def vocab.expression op.expr))
+              (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
+    (alist-for-each
+      (list (cons 'set-vocabulary!    (operator-parser parse-set-vocabulary!    3 #f))
             (cons 'add-vocabulary!    (operator-parser parse-add-vocabulary!    3 #f))
             (cons 'update-vocabulary! (operator-parser parse-update-vocabulary! 3 #f))
             (cons 'remove-vocabulary! (operator-parser parse-remove-vocabulary! 2 #f))
             (cons 'define-vocabulary  (operator-parser parse-define-vocabulary  3 #f))
-            (cons 'define-syntax      (operator-parser parse-define-syntax      2 #f))))
-        (b*.def-and-expr
-          (list
-            (list 'begin-meta
-                  (operator-parser parse-begin-meta-definition 0 #f)
-                  (operator-parser parse-begin-meta-expression 1 #f)))))
-    (for-each (lambda (id op.def op.expr)
-                (env-vocabulary-bind! env id vocab.definition op.def vocab.expression op.expr))
-              (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
-    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.definition op))
-              (map car b*.def) (map cdr b*.def))
+            (cons 'define-syntax      (operator-parser parse-define-syntax      2 #f)))
+      (lambda (id op) (env-vocabulary-bind! env id vocab.definition op)))
     (env-freeze env)))

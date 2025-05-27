@@ -275,10 +275,18 @@
 
 (define env.minimal
   (let ((env (make-env))
-        (b*.cond-case '(=> else))
-        (b*.def
-          (list
-            (cons 'define                  (operator-parser parse-define                  2 #f))
+        (b*.def-and-expr
+          (list (list 'expression
+                      (operator-parser parse-definition-expression 1 1)
+                      (operator-parser parse-expression            1 1))
+                (list 'begin
+                      (operator-parser parse-begin-definition 0 #f)
+                      (operator-parser parse-begin-expression 1 #f)))))
+    (for-each (lambda (id op.def op.expr)
+                (env-vocabulary-bind! env id vocab.definition op.def vocab.expression op.expr))
+              (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
+    (alist-for-each
+      (list (cons 'define                  (operator-parser parse-define                  2 #f))
             (cons 'mdefine                 (operator-parser parse-mdefine                 2 2))
             (cons 'define-values           (operator-parser parse-define-values           2 #f))
             (cons 'define-alias            (operator-parser parse-define-alias            2 2))
@@ -289,10 +297,17 @@
             (cons 'splicing-letrec*        (operator-parser parse-splicing-letrec*        2 #f))
             (cons 'splicing-let-values     (operator-parser parse-splicing-let-values     2 #f))
             (cons 'splicing-let*-values    (operator-parser parse-splicing-let*-values    2 #f))
-            (cons 'splicing-letrec*-values (operator-parser parse-splicing-letrec*-values 2 #f))))
-        (b*.expr
-          (list
-            (cons 'quote          (operator-parser parse-quote          1 1))
+            (cons 'splicing-letrec*-values (operator-parser parse-splicing-letrec*-values 2 #f)))
+      (lambda (id op) (env-vocabulary-bind! env id vocab.definition op)))
+    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.cond id vocab.case id))
+              '(=> else))
+    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote id))
+              '(unquote unquote-splicing))
+    (alist-for-each
+      (list (cons 'quasiquote (operator-parser parse-quasiquote 1 1)))
+      (lambda (id op) (env-vocabulary-bind! env id vocab.expression op vocab.quasiquote id)))
+    (alist-for-each
+      (list (cons 'quote          (operator-parser parse-quote          1 1))
             (cons 'aquote         (operator-parser parse-aquote         0 #f))
             (cons 'if             (operator-parser parse-if             3 3))
             (cons 'and            (operator-parser parse-and            0 #f))
@@ -313,26 +328,6 @@
             (cons 'letrec*-values (operator-parser parse-letrec*-values 2 #f))
             (cons 'let            (operator-parser parse-let            2 #f))
             (cons 'mlet           (operator-parser parse-mlet           2 #f))
-            (cons 'set!           (operator-parser parse-set!           2 2))))
-        (b*.qq '(unquote unquote-splicing))
-        (b*.qq-and-expr (list (cons 'quasiquote (operator-parser parse-quasiquote 1 1))))
-        (b*.def-and-expr
-          (list
-            (list 'expression
-                  (operator-parser parse-definition-expression 1 1)
-                  (operator-parser parse-expression            1 1))
-            (list 'begin
-                  (operator-parser parse-begin-definition 0 #f)
-                  (operator-parser parse-begin-expression 1 #f)))))
-    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.cond id vocab.case id)) b*.cond-case)
-    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.definition op))
-              (map car b*.def) (map cdr b*.def))
-    (for-each (lambda (id op.def op.expr)
-                (env-vocabulary-bind! env id vocab.definition op.def vocab.expression op.expr))
-              (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
-    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.quasiquote id)) b*.qq)
-    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression op vocab.quasiquote id))
-              (map car b*.qq-and-expr) (map cdr b*.qq-and-expr))
-    (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.expression op))
-              (map car b*.expr) (map cdr b*.expr))
+            (cons 'set!           (operator-parser parse-set!           2 2)))
+      (lambda (id op) (env-vocabulary-bind! env id vocab.expression op)))
     (env-freeze env)))

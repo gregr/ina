@@ -174,16 +174,14 @@
   ($fresh env param* (lambda (env) ($conj* (parse-expression* env fm*)))))
 
 (define (env-conjoin/minikanren env)
-  (let ((env.scope (make-env))
-        (b*.expr-op
-          (list
-            (cons 'fresh (operator-parser parse-fresh 2 #f))
+  (let ((env.scope (make-env)))
+    (alist-for-each
+      (list (cons 'fresh (operator-parser parse-fresh 2 #f))
             (cons 'conde (operator-parser parse-conde 1 #f))
             (cons 'run   (operator-parser parse-run   3 #f))
             (cons 'run*  (operator-parser parse-run*  2 #f))
-            (cons '==    (parse/constant-expression $==)))))
-    (for-each (lambda (id op) (env-vocabulary-bind! env.scope id vocab.expression op))
-              (map car b*.expr-op) (map cdr b*.expr-op))
+            (cons '==    (parse/constant-expression $==)))
+      (lambda (id op) (env-vocabulary-bind! env.scope id vocab.expression op)))
     (env-conjoin (env-freeze env.scope) env)))
 
 (define env.mk (env-conjoin/minikanren env.test))
