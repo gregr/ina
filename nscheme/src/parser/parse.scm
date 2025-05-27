@@ -47,7 +47,11 @@
   (map parse-binding-pair (syntax->list e.bpairs)))
 
 (define ((vocabulary-parser vocab ^default) env stx)
-  (define (syntax-operator stx) (and (identifier? stx) (env-vocabulary-ref env stx vocab)))
+  (define (syntax-operator stx)
+    (let ((op (and (identifier? stx) (env-vocabulary-ref env stx vocab))))
+      (when (and op (not (procedure? op)))
+        (raise-parse-error (list "misplaced keyword" vocab op) stx))
+      op))
   ((or (syntax-operator stx)
        (let ((x (syntax-unwrap stx))) (and (pair? x) (syntax-operator (car x))))
        (^default))
@@ -98,10 +102,9 @@
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Vocabularies ;;;
 ;;;;;;;;;;;;;;;;;;;;
-(define vocab.definition           'definition)
-(define vocab.expression           'expression)
-(define vocab.expression-auxiliary 'expression-auxiliary)
-(define vocab.set!                 'set!)
+(define vocab.definition 'definition)
+(define vocab.expression 'expression)
+(define vocab.set!       'set!)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Environment helpers ;;;
@@ -163,6 +166,9 @@
 (define (env-add-value-alist! env a) (env-add-alist! env (alist-map-value a $quote)))
 (define (value-alist->env a) (alist->env (alist-map-value a $quote)))
 (define (addr-alist->env  a) (alist->env (alist-map-value a $ref)))
+
+(define (((keyword/env/vocabulary vocab) env) stx.id)
+  (and (identifier? stx.id) (env-vocabulary-ref env stx.id vocab)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Syntax transformation ;;;
@@ -286,17 +292,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
 
-(define ((auxiliary?/vocab vocab) a env stx.id)
-  (and (identifier? stx.id) (eqv? (env-vocabulary-ref env stx.id vocab) a)))
-(define expression-auxiliary? (auxiliary?/vocab vocab.expression-auxiliary))
-
-(define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
-
 (define current-parse-free-variable
   (make-parameter
     (lambda (env id)
       (raise-parse-error (if (env-ref env id) "invalid identifier" "unbound identifier") id))))
 
+(define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
 (define (parse-expression env stx)
   (define ((^default) env stx)
     (let* ((x (syntax-unwrap stx)))

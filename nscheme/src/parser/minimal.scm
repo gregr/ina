@@ -1,3 +1,5 @@
+(define vocab.cond       'cond)
+(define vocab.case       'case)
 (define vocab.quasiquote 'quasiquote)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -136,19 +138,20 @@
 (define (parse-unless env e.c . stx*.body) ($unless (parse-expression env e.c) (parse-body env stx*.body)))
 
 (define (parse-cond env clause . clause*)
+  (define keyword ((keyword/env/vocabulary vocab.cond) env))
   (let loop ((c* (cons clause clause*)))
     (cond ((null? c*) ($pcall values))
           (else (let* ((c (car c*)) (c* (cdr c*)) (e* (syntax->list c)))
                   (when (null? e*) (raise-parse-error "empty clause" c))
                   (let ((e.test (car e*)) (e* (cdr e*)))
-                    (cond ((expression-auxiliary? 'else env e.test)
+                    (cond ((eqv? (keyword e.test) 'else)
                            (when   (null? e*) (raise-parse-error "empty else clause" c))
                            (unless (null? c*) (raise-parse-error "else clause is not last" c))
                            (parse-body env e*))
                           ((null? e*)
                            ($let1 'test (parse-expression env e.test)
                                   (lambda ($test) ($if $test $test (loop c*)))))
-                          ((expression-auxiliary? '=> env (car e*))
+                          ((eqv? (keyword (car e*)) '=>)
                            (unless (and (pair? (cdr e*)) (null? (cddr e*)))
                              (raise-parse-error "=> is not followed by one procedure" c))
                            ($let1 'test (parse-expression env e.test)
@@ -161,6 +164,7 @@
                                      (loop c*))))))))))
 
 (define (parse-case env e clause . clause*)
+  (define keyword ((keyword/env/vocabulary vocab.case) env))
   ($let1 'x (parse-expression env e)
          (lambda ($x)
            (let loop ((c* (cons clause clause*)))
@@ -171,11 +175,11 @@
                        (let ((e.data (car e*)) (e* (cdr e*)))
                          (cond
                            ((null? e*) (raise-parse-error "empty clause body" c))
-                           ((expression-auxiliary? 'else env e.data)
+                           ((eqv? (keyword e.data) 'else)
                             (when   (null? e*) (raise-parse-error "empty else clause" c))
                             (unless (null? c*) (raise-parse-error "else clause is not last" c))
                             (parse-body env e*))
-                           ((expression-auxiliary? '=> env e.data)
+                           ((eqv? (keyword e.data) '=>)
                             (unless (null? (cdr e*))
                               (raise-parse-error "=> is not followed by one procedure" c))
                             (unless (null? c*) (raise-parse-error "=> clause is not last" c))
@@ -271,7 +275,7 @@
 
 (define env.minimal
   (let ((env (make-env))
-        (b*.expr-aux '(=> else))
+        (b*.cond-case '(=> else))
         (b*.def
           (list
             (cons 'define                  (operator-parser parse-define                  2 #f))
@@ -320,7 +324,7 @@
             (list 'begin
                   (operator-parser parse-begin-definition 0 #f)
                   (operator-parser parse-begin-expression 1 #f)))))
-    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.expression-auxiliary id)) b*.expr-aux)
+    (for-each (lambda (id) (env-vocabulary-bind! env id vocab.cond id vocab.case id)) b*.cond-case)
     (for-each (lambda (id op) (env-vocabulary-bind! env id vocab.definition op))
               (map car b*.def) (map cdr b*.def))
     (for-each (lambda (id op.def op.expr)
