@@ -29,6 +29,7 @@ and resuming snapshots of a running system.
       the operands are evaluated in the order they appear, from left to right.
   - Internal definitions may be interleaved with expressions
   - `letrec` is implemented as `letrec*`
+- `cond` and `case` do not allow falling through when an applicable clause is not found.
 - By default, all definition scopes behave the same way.  No distinct top-level is specified.
   However, code-processing tools, such as REPLs, are free to choose alternative, ad-hoc behaviors
   that better suit their purpose.  Anything is possible.

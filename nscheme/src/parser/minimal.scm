@@ -140,7 +140,7 @@
 (define (parse-cond env clause . clause*)
   (define keyword ((keyword/env/vocabulary vocab.cond) env))
   (let loop ((c* (cons clause clause*)))
-    (cond ((null? c*) ($pcall values))
+    (cond ((null? c*) ($mistake ($quote "no satisfied condition")))
           (else (let* ((c (car c*)) (c* (cdr c*)) (e* (syntax->list c)))
                   (when (null? e*) (raise-parse-error "empty clause" c))
                   (let ((e.test (car e*)) (e* (cdr e*)))
@@ -169,7 +169,7 @@
          (lambda ($x)
            (let loop ((c* (cons clause clause*)))
              (cond
-               ((null? c*) ($pcall values))
+               ((null? c*) ($mistake ($quote "no matching case") $x))
                (else (let* ((c (car c*)) (c* (cdr c*)) (e* (syntax->list c)))
                        (when (null? e*) (raise-parse-error "empty clause" c))
                        (let ((e.data (car e*)) (e* (cdr e*)))
