@@ -33,8 +33,7 @@
 (define (imemory-read-bytevector/k im pos count kf keof k)
   (let ((dst (make-mbytevector count 0)))
     (imemory-read/k im pos dst 0 count kf keof
-                    (lambda (amount)
-                      (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
+                    (lambda (amount) (k (mbytevector->bytevector dst 0 amount))))))
 (define (imemory-read-bytevector im pos count)
   (imemory-read-bytevector/k im pos count raise-io-error values values))
 ;; Returns the amount read, or a failure indication.
@@ -57,8 +56,7 @@
 (define (imemory-read*-bytevector/k im pos count kf k)
   (let ((dst (make-mbytevector count 0)))
     (imemory-read*/k im pos dst 0 count kf (lambda () (k #""))
-                     (lambda (amount)
-                       (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
+                     (lambda (amount) (k (mbytevector->bytevector dst 0 amount))))))
 (define (imemory-read*-bytevector im pos count)
   (imemory-read*-bytevector/k im pos count raise-io-error values))
 
@@ -113,8 +111,7 @@
 (define (iport-read-bytevector/k p count kf keof k)
   (let ((dst (make-mbytevector count 0)))
     (iport-read/k p dst 0 count kf keof
-                  (lambda (amount)
-                    (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
+                  (lambda (amount) (k (mbytevector->bytevector dst 0 amount))))))
 (define (iport-read-bytevector p count)
   (iport-read-bytevector/k p count raise-io-error values values))
 ;; Returns the amount read, or a failure indication.
@@ -137,8 +134,7 @@
 (define (iport-read*-bytevector/k p count kf k)
   (let ((dst (make-mbytevector count 0)))
     (iport-read*/k p dst 0 count kf (lambda () (k #""))
-                   (lambda (amount)
-                     (k (mbytevector->bytevector (mbytevector->bytevector dst 0 amount)))))))
+                   (lambda (amount) (k (mbytevector->bytevector dst 0 amount))))))
 (define (iport-read*-bytevector p count)
   (iport-read*-bytevector/k p count raise-io-error values))
 ;; Reverts the most recent read(s) of count bytes, provided by the mbytevector src.
