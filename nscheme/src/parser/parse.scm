@@ -24,9 +24,8 @@
     (unless (<= argc (or argc.max argc)) (raise-parse-error "too many operator arguments" stx))
     (cdr stx*)))
 
-(define ((operator-parser parser argc.min argc.max) . x*)
-  (let* ((x* (reverse x*)) (stx* ((syntax->operand*/minmax argc.min argc.max) (car x*))))
-    (apply parser (append (reverse (cdr x*)) stx*))))
+(define ((operator-parser parser argc.min argc.max) env stx)
+  (apply parser env ((syntax->operand*/minmax argc.min argc.max) stx)))
 
 (define (parse-identifier id) (unless (identifier? id) (raise-parse-error "not an identifier" id)))
 
