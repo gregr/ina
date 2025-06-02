@@ -59,10 +59,10 @@
 ;;;;;;;;;;;;;;;;
 ;;; Bindings ;;;
 ;;;;;;;;;;;;;;;;
-(define (make-binding id) (binding-identity-refresh '() id))
-(define (binding-identity         v=>x)        (binding-vocabulary-ref v=>x #f))
-(define (binding-identity-refresh v=>x id)     (binding-vocabulary-set v=>x id #f (mvector)))
-(define ((binding-identity-refresher id) v=>x) (binding-identity-refresh v=>x id))
+(define (make-binding id) (binding-create #f id))
+(define (binding-create           v=>x id) (binding-identity-refresh '() id))
+(define (binding-identity         v=>x)    (binding-vocabulary-ref v=>x #f))
+(define (binding-identity-refresh v=>x id) (binding-vocabulary-set v=>x id #f (mvector)))
 (define (binding-vocabulary-ref v=>x vocab) (let ((vx (assv vocab v=>x))) (and vx (cdr vx))))
 (define (binding-vocabulary-remove v=>x id . vocab*) (binding-vocabulary-remove* v=>x id vocab*))
 (define (binding-vocabulary-set    v=>x id . vx*)    (binding-vocabulary-set*    v=>x id vx*))
@@ -72,6 +72,8 @@
 (define (binding-vocabulary-setter  id . vx*) (binding-vocabulary-setter*  id vx*))
 (define (binding-vocabulary-adder   id . vx*) (binding-vocabulary-adder*   id vx*))
 (define (binding-vocabulary-updater id . vu*) (binding-vocabulary-updater* id vu*))
+(define ((binding-creator             id)        v=>x) (binding-create             v=>x id))
+(define ((binding-identity-refresher  id)        v=>x) (binding-identity-refresh   v=>x id))
 (define ((binding-vocabulary-remover* id vocab*) v=>x) (binding-vocabulary-remove* v=>x id vocab*))
 (define ((binding-vocabulary-setter*  id vx*)    v=>x) (binding-vocabulary-set*    v=>x id vx*))
 (define ((binding-vocabulary-adder*   id vx*)    v=>x) (binding-vocabulary-add*    v=>x id vx*))
