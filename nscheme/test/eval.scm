@@ -439,16 +439,10 @@
   ;  ==> 20)
 
   '(forced-expression
-    (let ((x (expression 5)))
-      x)
-    ==> 5
     (let ()
       (define x 5)
       (expression x))
     ==> 5
-    (let-values ((x* (expression (values 5 6))))
-      x*)
-    ==> (5 6)
     (let ()
       (define x 5)
       (expression (values x 6)))

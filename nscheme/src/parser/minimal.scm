@@ -276,10 +276,7 @@
 (define env.minimal
   (let ((env (make-env))
         (b*.def-and-expr
-          (list (list 'expression
-                      (operator-parser parse-definition-expression 1 1)
-                      (operator-parser parse-expression            1 1))
-                (list 'begin
+          (list (list 'begin
                       (operator-parser parse-begin-definition 0 #f)
                       (operator-parser parse-begin-expression 1 #f)))))
     (for-each (lambda (id op.def op.expr)
@@ -297,7 +294,8 @@
             (cons 'splicing-letrec*        (operator-parser parse-splicing-letrec*        2 #f))
             (cons 'splicing-let-values     (operator-parser parse-splicing-let-values     2 #f))
             (cons 'splicing-let*-values    (operator-parser parse-splicing-let*-values    2 #f))
-            (cons 'splicing-letrec*-values (operator-parser parse-splicing-letrec*-values 2 #f)))
+            (cons 'splicing-letrec*-values (operator-parser parse-splicing-letrec*-values 2 #f))
+            (cons 'expression              (operator-parser parse-definition-expression   1 1)))
       (lambda (id op) (env-vocabulary-bind! env id vocab.definition op)))
     (for-each (lambda (id) (env-vocabulary-bind! env id vocab.cond id vocab.case id))
               '(=> else))
