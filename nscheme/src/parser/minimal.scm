@@ -9,6 +9,9 @@
   (let ((env (let ((env.d (make-env))) (env-read-and-write (env-conjoin env.d env) env.d))))
     (D->E ($d:end/expression (parse-begin-definition* env (syntax->list stx.body)) stx.body))))
 
+(define (parse-definition-expression* env stx . stx*)
+  ($d:expression (lambda () (parse-begin-expression* env stx stx*))))
+
 (define (parse-begin-definition* env stx*)
   (apply $d:begin (map (lambda (stx) (parse-definition env stx)) stx*)))
 (define (parse-begin-definition env . stx*) (parse-begin-definition* env stx*))
@@ -295,7 +298,7 @@
             (cons 'splicing-let-values     (operator-parser parse-splicing-let-values     2 #f))
             (cons 'splicing-let*-values    (operator-parser parse-splicing-let*-values    2 #f))
             (cons 'splicing-letrec*-values (operator-parser parse-splicing-letrec*-values 2 #f))
-            (cons 'expression              (operator-parser parse-definition-expression   1 1)))
+            (cons 'expression              (operator-parser parse-definition-expression*  1 #f)))
       (lambda (id op) (env-vocabulary-bind! env id vocab.definition op)))
     (for-each (lambda (id) (env-vocabulary-bind! env id vocab.cond id vocab.case id))
               '(=> else))

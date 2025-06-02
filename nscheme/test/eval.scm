@@ -450,7 +450,13 @@
     (let ()
       (expression (define x 5))
       (expression x))
-    ==> error:parse)
+    ==> error:parse
+    (let ()
+      (mdefine x 5)
+      (expression
+        (set! x (+ x 1))
+        x))
+    ==> 6)
 
   '(letrec*
     (letrec* ((w (lambda () (y)))
