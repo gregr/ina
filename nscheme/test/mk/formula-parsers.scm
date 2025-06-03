@@ -192,22 +192,22 @@
              (lambda () ($lambda/env env param* (lambda (env)
                                                   ($conj* (parse-formula* env fm*))))))))))))
 
-(define-vocabulary define-relation
+(define-in-vocabulary define-relation
   vocab.definition (operator-parser parse-define-relation 2 #f))
-(define-vocabulary defrel
+(define-in-vocabulary defrel
   vocab.definition (operator-parser parse-define-relation 2 #f))
-(define-vocabulary run
+(define-in-vocabulary run
   vocab.expression (operator-parser parse-run 3 #f))
-(define-vocabulary run*
+(define-in-vocabulary run*
   vocab.expression (operator-parser parse-run* 2 #f))
-(define-vocabulary fresh
+(define-in-vocabulary fresh
   vocab.formula (operator-parser parse-fresh 2 #f))
-(define-vocabulary conde
+(define-in-vocabulary conde
   vocab.formula (operator-parser parse-conde 1 #f))
-(define-vocabulary ==
+(define-in-vocabulary ==
   vocab.formula (operator-parser parse-== 2 2))
 
-(define-vocabulary test
+(define-in-vocabulary test
   'expression
   (lambda (env stx)
     (apply $begin

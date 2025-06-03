@@ -17,13 +17,13 @@
 ;; Examples for other metaprogramming facilities
 ;(test '(current-environment))
 ;(test '(let ()
-;         (define-vocabulary
+;         (define-in-vocabulary
 ;          thing 'expression
 ;          (lambda (env stx)
 ;            ($quote (vector 'thing-syntax: stx))))
 ;         (vector 'thing: thing)))
 ;(test '(let ()
-;         (define-vocabulary
+;         (define-in-vocabulary
 ;          thing 'expression
 ;          (lambda (env stx)
 ;            ($quote (vector 'thing-syntax: stx))))
@@ -31,7 +31,7 @@
 
 ;; Example of unhygienic expansion leading to an incorrect result.
 ;(test '(let ()
-;         (define-vocabulary
+;         (define-in-vocabulary
 ;          example-or
 ;          'expression
 ;          (lambda (env stx)
@@ -404,7 +404,7 @@
 
 (test '(let ()
          (splicing-let ((x 5))
-           (define-vocabulary foo 'test (quote-syntax x)))
+           (define-in-vocabulary foo 'test (quote-syntax x)))
          (splicing-let ((x 6))
            (define-syntax (m stx)
              (lambda (env)
@@ -418,11 +418,11 @@
 
 (test '(let ()
          (splicing-let ((x 5))
-           (define-vocabulary foo
+           (define-in-vocabulary foo
              'env (current-environment)
              'stx (quote-syntax x)))
          (splicing-let ((x 6))
-           (define-vocabulary m
+           (define-in-vocabulary m
              'expression
              (lambda (env stx)
                (parse-expression
@@ -437,11 +437,11 @@
 
 (test '(let ()
          (splicing-let ((x 5))
-           (define-vocabulary foo
+           (define-in-vocabulary foo
              'env (current-environment)
              'stx (quote-syntax x)))
          (splicing-let ((x 6))
-           (define-vocabulary m
+           (define-in-vocabulary m
              'expression
              (lambda (env stx)
                (match (syntax->list stx)

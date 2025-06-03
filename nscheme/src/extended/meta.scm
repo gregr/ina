@@ -1,4 +1,4 @@
-(define-vocabulary current-environment
+(define-in-vocabulary current-environment
   vocab.expression
   (operator-parser (lambda (env) ($quote env)) 0 0))
 
@@ -6,13 +6,13 @@
   (define vocab.quasiquote-syntax 'quasiquote-syntax)
   (define (parse-quote-syntax env stx) ($quote (syntax-prune-level stx (current-mark-level)))))
 
-(define-vocabulary quote-syntax
+(define-in-vocabulary quote-syntax
   vocab.expression
   (operator-parser parse-quote-syntax 1 1))
 
-(define-vocabulary unsyntax          vocab.quasiquote-syntax 'unsyntax)
-(define-vocabulary unsyntax-splicing vocab.quasiquote-syntax 'unsyntax-splicing)
-(define-vocabulary quasiquote-syntax
+(define-in-vocabulary unsyntax          vocab.quasiquote-syntax 'unsyntax)
+(define-in-vocabulary unsyntax-splicing vocab.quasiquote-syntax 'unsyntax-splicing)
+(define-in-vocabulary quasiquote-syntax
   vocab.quasiquote-syntax 'quasiquote-syntax
   vocab.expression
   (operator-parser

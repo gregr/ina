@@ -156,16 +156,16 @@
       (parse-param* param*)
       ($fresh env param* (lambda (env) ($conj* (parse-expression* env fm*)))))))
 
-(define-vocabulary run
+(define-in-vocabulary run
   vocab.expression (operator-parser parse-run 3 #f))
-(define-vocabulary run*
+(define-in-vocabulary run*
   vocab.expression (operator-parser parse-run* 2 #f))
-(define-vocabulary fresh
+(define-in-vocabulary fresh
   vocab.expression (operator-parser parse-fresh 2 #f))
-(define-vocabulary conde
+(define-in-vocabulary conde
   vocab.expression (operator-parser parse-conde 1 #f))
 
-(define-vocabulary test
+(define-in-vocabulary test
   vocab.expression
   (lambda (env stx)
     (apply $begin
