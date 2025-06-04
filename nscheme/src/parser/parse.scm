@@ -292,7 +292,9 @@
 (define current-parse-free-variable
   (make-parameter
     (lambda (env id)
-      (raise-parse-error (if (env-ref env id) "misplaced keyword" "unbound identifier") id))))
+      (raise-parse-error
+        (if (env-ref env id) (list "misplaced keyword" vocab.expression) "unbound identifier")
+        id))))
 
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
 (define (parse-expression env stx)

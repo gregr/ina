@@ -250,7 +250,7 @@
                          (and (or a b) ($cons (finish a (car qq)) (finish b (cdr qq))))))))
               ((vector? qq)     (let ((e (loop (vector->list qq) level)))
                                   (and e ($pcall apply ($quote vector) e))))
-              ((keyword stx.qq) (raise-parse-error "misplaced keyword" stx.qq))
+              ((keyword stx.qq) (raise-parse-error (list "invalid use of keyword" vocab) stx.qq))
               (else             #f))))
     stx))
 (define parse-quasiquote
