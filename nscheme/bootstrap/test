@@ -19,3 +19,4 @@ racket "$here/run-file.rkt" "$here/../src/run-cli.scm" "$here/../test/mk/explici
 racket "$here/run-file.rkt" "$here/../src/run-cli.scm" "$here/../test/mk/expression-parsers.scm"
 racket "$here/run-file.rkt" "$here/../src/run-cli.scm" "$here/../test/mk/formula-parsers.scm"
 racket "$here/run-file.rkt" "$here/../src/run-cli.scm" "$here/../test/mk/expression-syntax.scm"
+racket "$here/run-file.rkt" "$here/../src/run-cli.scm" "$here/../test/mk/formula-syntax.scm"
