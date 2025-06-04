@@ -177,7 +177,7 @@
    (define-in-vocabulary disj
      vocab.formula (operator-parser parse-disj 2 2)))
 
-  (define-syntax (define-relation stx)
+  (define-definition-syntax (define-relation stx)
     (match (syntax->list stx)
       ((cons* _ rhead fm*)
        (quasiquote-syntax (define-relation0 #,rhead (fresh () . #,fm*))))))
@@ -213,7 +213,7 @@
       ((cons* _ fm* fm**)
        (quasiquote-syntax (disj (fresh () . #,fm*) (conde . #,fm**)))))))
 
-(define-syntax (defrel stx)
+(define-definition-syntax (defrel stx)
   (match (syntax->list stx)
     ((cons* _ stx*)
      (quasiquote-syntax (define-relation . #,stx*)))))

@@ -44,3 +44,6 @@
                         (current-environment) #,(car rhs*)))))
                   (match (syntax->list lhs)
                     ((cons lhs param) (loop lhs (list (quasiquote-syntax (lambda #,param . #,rhs*)))))))))))))))
+
+(define-vocabulary-syntax-binder define-definition-syntax define-in-vocabulary vocab.definition #t parse-definition)
+(define-vocabulary-syntax-binder define-expression-syntax define-in-vocabulary vocab.expression #f parse-expression)
