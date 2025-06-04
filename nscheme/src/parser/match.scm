@@ -480,4 +480,4 @@
             (cons 'cons*      (operator-parser parse-pattern-cons*      1 #f))
             (cons 'list       (operator-parser parse-pattern-list       0 #f)))
       (lambda (id op) (when (env-ref env id) (env-vocabulary-add! env id vocab.match-pattern op))))
-    (env-freeze env)))
+    (env-read-only env)))

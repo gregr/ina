@@ -1,6 +1,3 @@
-;; TODO: redefine match.scm to eliminate the need for this explicit staging
-(E-eval (parse-expression (env-conjoin/match (alist-ref library=>env 'large))
-  '(let ()
 ;;;;;;;;;;;;;;;;;;;
 ;;; microKanren ;;;
 ;;;;;;;;;;;;;;;;;;;
@@ -211,4 +208,3 @@
 
 (test
   (run 1 e (evalo e e)))
-)))
