@@ -8,9 +8,9 @@
 
 (define (syntax->improper-list s)
   (let ((x (syntax-unwrap s)))
-    (if (pair? x)
-        (cons (car x) (syntax->improper-list (cdr x)))
-        x)))
+    (cond ((pair? x) (cons (car x) (syntax->improper-list (cdr x))))
+          ((null? x) '())
+          (else      s))))
 
 (define (syntax->list s)
   (let ((x*~ (syntax->improper-list s)))
