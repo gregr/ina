@@ -24,7 +24,6 @@
       "compiler/backend/rkt.scm"
       "compiler/target/racket.scm")
     (parser
-      "parser/stage.scm"
       "parser/parse.scm"
       "parser/minimal.scm"
       "parser/match.scm"

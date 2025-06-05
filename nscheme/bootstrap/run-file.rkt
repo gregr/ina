@@ -50,7 +50,6 @@
 (include "../src/compiler/high-level-passes.scm")
 (include "../src/compiler/backend/rkt.scm")
 (include/reader "../src/compiler/target/racket.scm" read-syntax-extended)
-(include "../src/parser/stage.scm")
 (include "../src/parser/parse.scm")
 (include "../src/parser/minimal.scm")
 (include "../src/parser/match.scm")
