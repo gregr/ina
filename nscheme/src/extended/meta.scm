@@ -26,25 +26,27 @@
       (lambda (env.use stx) (transcribe stx op env.op env.use)))))
 
 (define-syntax (define-vocabulary-syntax-binder stx)
-  (match (syntax->list stx)
-    ((list _ name bind-in-vocabulary vocabulary-name introduce-definitions? vocabulary-parser)
-     (quasiquote-syntax
-       (define-syntax (#,name stx)
-         (match (syntax->list stx)
-           ((cons* _ lhs rhs*)
-            (unless (pair? rhs*) (raise-parse-error "missing right-hand-side expression" stx))
-            (when (identifier? lhs)
-              (unless (null? (cdr rhs*)) (raise-parse-error "too many right-hand-side expressions" stx)))
-            (let loop ((lhs lhs) (rhs* rhs*))
-              (if (identifier? lhs)
-                  (quasiquote-syntax
-                    (#,(quote-syntax #,bind-in-vocabulary) #,lhs
-                     #,(quote-syntax #,vocabulary-name)
-                     ((macro-parser/parse #,(quote-syntax #,introduce-definitions?)
-                                          #,(quote-syntax #,vocabulary-parser))
-                      (current-environment) #,(car rhs*))))
-                  (match (syntax->list lhs)
-                    ((cons lhs param) (loop lhs (list (quasiquote-syntax (lambda #,param . #,rhs*)))))))))))))))
+  (apply (lambda (_ name bind-in-vocabulary vocabulary-name introduce-definitions? vocabulary-parser)
+           (quasiquote-syntax
+             (define-syntax (#,name stx)
+               (apply (lambda (_ lhs . rhs*)
+                        (unless (pair? rhs*)
+                          (raise-parse-error "missing right-hand-side expression" stx))
+                        (when (and (identifier? lhs) (not (null? (cdr rhs*))))
+                          (raise-parse-error "too many right-hand-side expressions" stx))
+                        (let loop ((lhs lhs) (rhs* rhs*))
+                          (if (identifier? lhs)
+                              (quasiquote-syntax
+                                (#,(quote-syntax #,bind-in-vocabulary) #,lhs
+                                 #,(quote-syntax #,vocabulary-name)
+                                 ((macro-parser/parse #,(quote-syntax #,introduce-definitions?)
+                                                      #,(quote-syntax #,vocabulary-parser))
+                                  (current-environment) #,(car rhs*))))
+                              (apply (lambda (lhs . param)
+                                       (loop lhs (list (quasiquote-syntax (lambda #,param . #,rhs*)))))
+                                     (syntax->list lhs)))))
+                      (syntax->list stx)))))
+         (syntax->list stx)))
 
 (define-vocabulary-syntax-binder define-definition-syntax define-in-vocabulary vocab.definition #t parse-definition)
 (define-vocabulary-syntax-binder define-expression-syntax define-in-vocabulary vocab.expression #f parse-expression)
