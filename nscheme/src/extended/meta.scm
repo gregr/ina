@@ -21,7 +21,7 @@
     1 1))
 
 (begin-meta
-  (define ((macro-parser/parse introduce-definitions? parse) env.op op)
+  (define ((make-macro-parser introduce-definitions? parse) env.op op)
     (let ((transcribe (syntax-transcribe/parse introduce-definitions? parse)))
       (lambda (env.use stx) (transcribe stx op env.op env.use)))))
 
@@ -39,8 +39,8 @@
                               (quasiquote-syntax
                                 (#,(quote-syntax #,bind-in-vocabulary) #,lhs
                                  #,(quote-syntax #,vocabulary-name)
-                                 ((macro-parser/parse #,(quote-syntax #,introduce-definitions?)
-                                                      #,(quote-syntax #,vocabulary-parser))
+                                 ((make-macro-parser #,(quote-syntax #,introduce-definitions?)
+                                                     #,(quote-syntax #,vocabulary-parser))
                                   (current-environment) #,(car rhs*))))
                               (apply (lambda (lhs . param)
                                        (loop lhs (list (quasiquote-syntax (lambda #,param . #,rhs*)))))
