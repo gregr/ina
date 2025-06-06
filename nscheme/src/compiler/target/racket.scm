@@ -148,8 +148,8 @@ racket-primitive-definition-text))
             (and mutable-field-position* (not (null? mutable-field-position*))
                  (lambda (r i v) (mutate! r i v) (values))))))
 
-(struct mbytevector (bv) #:name mbytevector-struct #:constructor-name mbytevector:new #:prefab)
-(struct mvector (v) #:name mvector-struct #:constructor-name mvector:new #:prefab)
+(struct mbytevector (bv) #:name mbytevector-struct #:constructor-name mbytevector:new #:mutable #:prefab)
+(struct mvector (v) #:name mvector-struct #:constructor-name mvector:new #:mutable #:prefab)
 
 (define (make-mvector    len x)  (mvector:new   (make-vector len x)))
 (define (mvector-length  mv)     (vector-length (mvector-v mv)))
