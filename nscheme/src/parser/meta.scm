@@ -37,7 +37,7 @@
     env id.lhs (with-higher-mark-level (lambda () (map E-eval (parse-expression* env stx*)))))
   ($d:begin))
 (define parse-define-in-vocabulary (parse-modify-in-vocabulary env-vocabulary-introduce!*))
-(define parse-extend-in-vocabulary (parse-modify-in-vocabulary env-vocabulary-add!*))
+(define parse-add-in-vocabulary    (parse-modify-in-vocabulary env-vocabulary-add!*))
 
 (define (parse-define-syntax env.op stx.lhs . stx*.rhs)
   (define (finish id.lhs ^rhs)
@@ -104,7 +104,7 @@
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
     (alist-for-each
       (list (cons 'define-in-vocabulary (operator-parser parse-define-in-vocabulary 1 #f))
-            (cons 'extend-in-vocabulary (operator-parser parse-extend-in-vocabulary 1 #f))
+            (cons 'add-in-vocabulary    (operator-parser parse-add-in-vocabulary    1 #f))
             (cons 'define-syntax        (operator-parser parse-define-syntax        2 #f)))
       (lambda (id op) (env-vocabulary-bind! env id vocab.definition op)))
     (env-freeze env)))
