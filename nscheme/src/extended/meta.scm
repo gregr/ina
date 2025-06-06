@@ -37,7 +37,12 @@
                      (unless (pair? lhs*~) (raise-parse-error "not a definable form" lhs))
                      (let ((lhs (car lhs*~)) (param (cdr lhs*~)))
                        (loop lhs (list (quasiquote-syntax (lambda #,param . #,rhs*)))))))))
-           (syntax->list stx))))
+           (syntax->list stx)))
+  (define ((identifier-syntax op) stx)
+    (let ((x (syntax-unwrap stx)))
+      (cond ((symbol? x) (op stx))
+            ((and (pair? x) (identifier? (car x))) (cons (op (car x)) (cdr x)))
+            (else (raise-parse-error "not an identifier-syntax form" stx))))))
 
 (define-syntax (define-vocabulary-syntax-binder stx)
   (apply (lambda (_ name bind-in-vocabulary vocabulary-name introduce-definitions? vocabulary-parser)
@@ -54,3 +59,16 @@
 
 (define-vocabulary-syntax-binder define-definition-syntax define-in-vocabulary vocab.definition #t parse-definition)
 (define-vocabulary-syntax-binder define-expression-syntax define-in-vocabulary vocab.expression #f parse-expression)
+
+(define-syntax (define-identifier-syntax stx)
+  (let-values (((lhs rhs) (dismantle-operator-binding stx)))
+    (quasiquote-syntax (define-syntax #,lhs (identifier-syntax #,rhs)))))
+
+(define-syntax (identifier-syntax-rule stx)
+  (apply (lambda (_ rhs) (quasiquote-syntax (identifier-syntax (lambda (_) (quote-syntax #,rhs)))))
+         (syntax->list stx)))
+
+(define-syntax (define-identifier-syntax-rule stx)
+  (apply (lambda (_ lhs rhs)
+           (quasiquote-syntax (define-syntax #,lhs (identifier-syntax-rule #,rhs))))
+         (syntax->list stx)))
