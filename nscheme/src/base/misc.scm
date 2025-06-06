@@ -10,6 +10,8 @@
 (define (box        x) (make-mvector 1 x))
 (define (unbox      b) (mvector-ref  b 0))
 (define (set-box! b x) (mvector-set! b 0 x))
+(define ((box-setter b) x) (set-box! b x))
+(define ((box-getter b))   (unbox b))
 
 (define ((make-equal? super) a b)
   (let ? ((a a) (b b))
