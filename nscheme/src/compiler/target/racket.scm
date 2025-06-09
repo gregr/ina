@@ -133,28 +133,18 @@ racket-primitive-definition-text))
   (let ((q (rkt:floor (/ dividend divisor))))
     (values q (- dividend (* q divisor)))))
 
-(define-values (prop:metadata metadata? metadata-ref) (make-struct-type-property 'metadata))
-(define (make-record-type . x*) (apply (make-record-type/super-type #f) x*))
-(define ((make-record-type/super-type super-type)
-         name field-count mutable-field-position* final? proc-spec? metadata)
+(define (make-record-type name field-count mutable?)
   (let-values (((stype construct ? access mutate!)
-                (make-struct-type
-                 name super-type field-count 0 #f
-                 (append (if final? (list (cons prop:sealed #t)) '())
-                         (list (cons prop:metadata metadata)))
-                 #f proc-spec?
-                 (set-subtract (range field-count) (or mutable-field-position* '())) #f #f)))
-    (values (and (not final?) (make-record-type/super-type stype)) construct ? access
-            (and mutable-field-position* (not (null? mutable-field-position*))
-                 (lambda (r i v) (mutate! r i v) (values))))))
+                (make-struct-type name #f field-count 0 #f (list (cons prop:sealed #t)) #f #f '() #f #f)))
+    (values construct ? access (and mutable? (lambda (r i v) (mutate! r i v) (values))))))
 
 (struct mbytevector (bv) #:name mbytevector-struct #:constructor-name mbytevector:new #:mutable #:prefab)
 (struct mvector (v) #:name mvector-struct #:constructor-name mvector:new #:mutable #:prefab)
 
-(define (make-mvector    len x)  (mvector:new   (make-vector len x)))
-(define (mvector-length  mv)     (vector-length (mvector-v mv)))
-(define (mvector-ref     mv i)   (vector-ref    (mvector-v mv) i))
-(define (mvector-set!    mv i x) (vector-set!   (mvector-v mv) i x) (values))
+(define (make-mvector   len x)  (mvector:new   (make-vector len x)))
+(define (mvector-length mv)     (vector-length (mvector-v mv)))
+(define (mvector-ref    mv i)   (vector-ref    (mvector-v mv) i))
+(define (mvector-set!   mv i x) (vector-set!   (mvector-v mv) i x) (values))
 (define mvector->vector
   (case-lambda
     ((mv)             (vector-copy (mvector-v mv)))
@@ -165,10 +155,10 @@ racket-primitive-definition-text))
 (define (bytevector-length bv)   (bytes-length bv))
 (define (bytevector-ref    bv i) (bytes-ref bv i))
 
-(define (make-mbytevector        len n)   (mbytevector:new (make-bytes len n)))
-(define (mbytevector-length      mbv)     (bytevector-length (mbytevector-bv mbv)))
-(define (mbytevector-ref         mbv i)   (bytevector-ref    (mbytevector-bv mbv) i))
-(define (mbytevector-set!        mbv i n) (bytes-set!        (mbytevector-bv mbv) i n) (values))
+(define (make-mbytevector   len n)   (mbytevector:new (make-bytes len n)))
+(define (mbytevector-length mbv)     (bytevector-length (mbytevector-bv mbv)))
+(define (mbytevector-ref    mbv i)   (bytevector-ref    (mbytevector-bv mbv) i))
+(define (mbytevector-set!   mbv i n) (bytes-set!        (mbytevector-bv mbv) i n) (values))
 (define mbytevector->bytevector
   (case-lambda
     ((mbv)             (bytes-copy (mbytevector-bv mbv)))

@@ -4,8 +4,8 @@
 (define current-mark-level (make-parameter 0))
 
 (splicing-local
-  ((define-values (unused-subtype-mark make-mark mark? access-mark unused-mutate-mark!)
-     (make-record-type 'mark 1 '() #t #f #f))
+  ((define-values (make-mark mark? access-mark unused-mutate-mark!)
+     (make-record-type 'mark 1 #f))
    (define (fresh-mark) (make-mark (current-mark-level)))
    (define (mark-level m) (access-mark m 0))
    (define mark=? eqv?)
@@ -30,13 +30,13 @@
                                (if (null? m*.outer)
                                    m*
                                    (loop (cdr m*.outer) (cons (car m*.outer) m*))))))))))
-   (define-values (unused-subtype-annotated make-annotated annotated? access-annotated unused-mutate-annotated!)
-     (make-record-type 'syntax:annotated 2 #f #t #f #f))
+   (define-values (make-annotated annotated? access-annotated unused-mutate-annotated!)
+     (make-record-type 'syntax:annotated 2 #f))
    (define (annotated form note) (if (null? note) form (make-annotated form note)))
    (define (annotated-form s) (if (annotated? s) (access-annotated s 0) s))
    (define (annotated-note s) (if (annotated? s) (access-annotated s 1) '()))
-   (define-values (unused-subtype-marked make-marked marked? access-marked unused-mutate-marked!)
-     (make-record-type 'syntax:marked 2 #f #t #f #f))
+   (define-values (make-marked marked? access-marked unused-mutate-marked!)
+     (make-record-type 'syntax:marked 2 #f))
    (define (marked mark* form) (if (null? mark*) form (make-marked mark* form)))
    (define (marked-form  s) (access-marked s 1))
    (define (syntax-form  s) (annotated-form (if (marked? s) (marked-form s) s)))
