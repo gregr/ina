@@ -59,9 +59,10 @@
                   lhs*)))))
 
 (define (parse-mdefine env id.lhs stx.rhs)
+  (parse-identifier id.lhs)
   (let ((env.local (make-env)))
-    (env-introduce-boxed! env id.lhs (let ((env.local (env-read-only env.local)))
-                                       (lambda () (parse-expression env.local id.lhs))))
+    (env-bind-boxed! env id.lhs (let ((env.local (env-read-only env.local)))
+                                  (lambda () (parse-expression env.local id.lhs))))
     ($d:define env.local id.lhs (let ((env (env-read-only env)))
                                   (lambda () ($box (parse-expression env stx.rhs)))))))
 
@@ -213,7 +214,7 @@
                 (let ((env.boxed (make-env)))
                   (for-each (lambda (id)
                               (let ((E.boxed (parse-expression env.unboxed id)))
-                                (env-introduce-boxed! env.boxed id (lambda () E.boxed))))
+                                (env-bind-boxed! env.boxed id (lambda () E.boxed))))
                             param*)
                   (parse-body (env-conjoin (env-freeze env.boxed) env) stx*.body))))))
 

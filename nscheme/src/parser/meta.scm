@@ -36,7 +36,7 @@
   (env-vocabulary-modify!*
     env id.lhs (with-higher-mark-level (lambda () (map E-eval (parse-expression* env stx*)))))
   ($d:begin))
-(define parse-define-in-vocabulary (parse-modify-in-vocabulary env-vocabulary-introduce!*))
+(define parse-define-in-vocabulary (parse-modify-in-vocabulary env-vocabulary-bind!*))
 (define parse-add-in-vocabulary    (parse-modify-in-vocabulary env-vocabulary-add!*))
 
 (define (parse-define-syntax env.op stx.lhs . stx*.rhs)

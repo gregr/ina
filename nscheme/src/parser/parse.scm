@@ -125,10 +125,6 @@
   (env-bind! env id (binding-vocabulary-set* (make-binding id) id vx*)))
 (define (env-vocabulary-set!* env id vx*)
   (env-bind! env id (binding-vocabulary-set* (env-ref env id) id vx*)))
-(define (env-vocabulary-introduce!* env id vx*)
-  (parse-identifier id)
-  (env-vocabulary-bind!* env id vx*))
-(define (env-vocabulary-introduce! env id . vx*) (env-vocabulary-introduce!* env id vx*))
 (define (env-vocabulary-add!* env id vx*)
   (env-bind! env id (binding-vocabulary-add* (env-ref env id) id vx*)))
 (define (env-vocabulary-remove!* env id vocab*)
@@ -145,8 +141,8 @@
                  (env-freeze env.scope))
                env))
 
-(define (env-introduce-boxed! env id ^E.box)
-  (env-vocabulary-introduce!
+(define (env-bind-boxed! env id ^E.box)
+  (env-vocabulary-bind!
     env id
     vocab.expression (expression-identifier-parser (lambda (env _) ($unbox (^E.box))))
     vocab.set!       (set!-identifier-parser
@@ -438,10 +434,11 @@
   (define ($d:expression ^E)        (D:expression ^E))
   (define ($d:define/vocabulary . vp*) ($d:define/vocabulary* vp*))
   (define (($d:define/vocabulary* vp*) env lhs ^rhs)
+    (parse-identifier lhs)
     (mlet ((E #f))
       (define ((make-parser E->parse) env stx)
         ((E->parse (or E (raise-parse-error "parsed identifier before completing its definition" stx)))
          env stx))
-      (env-vocabulary-introduce!* env lhs (plist-map-value vp* make-parser))
+      (env-vocabulary-bind!* env lhs (plist-map-value vp* make-parser))
       (D:definition lhs (lambda (E.new) (set! E E.new)) ^rhs)))
   (define $d:define ($d:define/vocabulary vocab.expression parse/constant-expression)))
