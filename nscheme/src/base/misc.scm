@@ -37,3 +37,13 @@
                                   (if (null? h*)
                                       f
                                       (loop f (car h*) (cdr h*))))))))
+
+(define (make-rtd name field-count mutable?)
+  (let-values (((constructor predicate accessor mutator) (make-record-type name field-count mutable?)))
+    (vector (list (cons 'name name) (cons 'field-count field-count) (cons 'mutable? mutable?))
+            constructor predicate accessor mutator)))
+(define (rtd-metadata    rtd) (vector-ref rtd 0))
+(define (rtd-constructor rtd) (vector-ref rtd 1))
+(define (rtd-predicate   rtd) (vector-ref rtd 2))
+(define (rtd-accessor    rtd) (vector-ref rtd 3))
+(define (rtd-mutator     rtd) (vector-ref rtd 4))
