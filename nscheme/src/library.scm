@@ -42,7 +42,8 @@
       "posix/terminal/text.scm")
     (extended
       "extended/meta.scm"
-      "extended/match.scm")
+      "extended/match.scm"
+      "extended/record.scm")
     (library "library.scm")
     (build "build.scm")
     (run-cli "run-cli.scm")))
