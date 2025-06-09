@@ -52,7 +52,6 @@
 (include/reader "../src/compiler/target/racket.scm" read-syntax-extended)
 (include "../src/parser/parse.scm")
 (include "../src/parser/minimal.scm")
-(include "../src/parser/match.scm")
 (include "../src/parser/program.scm")
 (include "../src/parser/meta.scm")
 (include "../src/posix/platform.scm")

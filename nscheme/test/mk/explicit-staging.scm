@@ -1,4 +1,4 @@
-(define env.test (env-conjoin/match (env-conjoin env.minimal env.common)))
+(define env.test (alist-ref library=>env 'large))
 
 (define def*.microkanren
   '(;;;;;;;;;;;;;;;;;

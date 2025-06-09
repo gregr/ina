@@ -2,9 +2,10 @@
 (define verbosity 0)
 (define show-compiled-racket? (and #t (< 0 verbosity)))
 
+(define env.tiny   (alist-ref library=>env 'tiny))
 (define env.medium (alist-ref library=>env 'medium))
-(define env.large (alist-ref library=>env 'large))
-(define env.test.tiny (env-conjoin/match (env-conjoin env.minimal env.medium)))
+(define env.test.tiny env.tiny)
+(define env.test.match (env-conjoin (alist-ref library=>env 'extended) env.test.tiny))
 
 (define (error:parse c) (vector 'error:parse c))
 (define (error:eval  c) (vector 'error:eval  c))
@@ -120,7 +121,7 @@
     (display-border)))
 
 (test-evaluation
- env.test.tiny
+  env.test.tiny
 
  '(constants
    5         ==> 5
@@ -649,7 +650,10 @@
     ``(7 ,@(cons 8 (cons 9 '())) 10)    ==> `(7 ,@(cons 8 (cons 9 '())) 10)
     ``(7 ,@',(cons 8 (cons 9 '())) 10)  ==> `(7 ,@'(8 9) 10)
     ``#(7 ,@(cons 8 (cons 9 '())) 10)   ==> `#(7 ,@(cons 8 (cons 9 '())) 10)
-    ``#(7 ,@',(cons 8 (cons 9 '())) 10) ==> `#(7 ,@'(8 9) 10))
+    ``#(7 ,@',(cons 8 (cons 9 '())) 10) ==> `#(7 ,@'(8 9) 10)))
+
+(test-evaluation
+  env.test.match
 
   '(match
      (match 5 (6 'six)) ==> error:eval
@@ -1445,7 +1449,7 @@
     (lambda () (panic 'a 'b 'c)))
    ==> error:eval))
 
-(define env.test.posix env.large)
+(define env.test.posix env.medium)
 
 (test-evaluation
  env.test.posix

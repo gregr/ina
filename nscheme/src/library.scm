@@ -26,7 +26,6 @@
     (parser
       "parser/parse.scm"
       "parser/minimal.scm"
-      "parser/match.scm"
       "parser/program.scm"
       "parser/meta.scm")
     (posix
@@ -42,7 +41,8 @@
       "posix/terminal/tty.scm"
       "posix/terminal/text.scm")
     (extended
-      "extended/meta.scm")
+      "extended/meta.scm"
+      "extended/match.scm")
     (library "library.scm")
     (build "build.scm")
     (run-cli "run-cli.scm")))
@@ -119,10 +119,10 @@
          (env.compiler (load-library env.tiny 'compiler))
          (env.parser   (load-library (env-conjoin env.tiny env.syntax env.compiler) 'parser))
          (env.medium   (env-conjoin env.small env.parser env.syntax env.compiler))
-         (env.extended (load-library (env-conjoin/match (env-conjoin env.medium env.meta)) 'extended))
+         (env.extended (load-library (env-conjoin env.medium env.meta) 'extended))
          (env.library  (load-library env.medium 'library))
          (menv.persist (make-env))
-         (env.large    (env-conjoin/match (env-conjoin env.extended env.medium env.meta env.library menv.persist)))
+         (env.large    (env-conjoin env.extended env.medium env.meta env.library menv.persist))
          (library=>env
            (list (cons 'large    env.large)
                  (cons 'medium   env.medium)
