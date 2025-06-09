@@ -457,14 +457,13 @@
 (define-in-vocabulary match  vocab.expression (operator-parser parse-match  1 #f))
 (define-in-vocabulary qmatch vocab.expression (operator-parser parse-qmatch 1 #f))
 
-(define-in-vocabulary guard vocab.match-guard 'guard)
+(add-in-vocabulary guard vocab.match-guard 'guard)
 
-(define-in-vocabulary ... vocab.match-pattern '...)
-(define-in-vocabulary _   vocab.match-pattern parse-pattern-any)
-(define-in-vocabulary var vocab.match-pattern (operator-parser parse-pattern-var 1 1))
-(define-in-vocabulary app vocab.match-pattern (operator-parser parse-pattern-app 2 #f))
-(define-in-vocabulary ?   vocab.match-pattern (operator-parser parse-pattern-?   1 #f))
-
+(add-in-vocabulary ...        vocab.match-pattern '...)
+(add-in-vocabulary _          vocab.match-pattern parse-pattern-any)
+(add-in-vocabulary var        vocab.match-pattern (operator-parser parse-pattern-var        1 1))
+(add-in-vocabulary app        vocab.match-pattern (operator-parser parse-pattern-app        2 #f))
+(add-in-vocabulary ?          vocab.match-pattern (operator-parser parse-pattern-?          1 #f))
 (add-in-vocabulary quote      vocab.match-pattern (operator-parser parse-pattern-quote      1 1))
 (add-in-vocabulary quasiquote vocab.match-pattern (operator-parser parse-pattern-quasiquote 1 1))
 (add-in-vocabulary and        vocab.match-pattern (operator-parser parse-pattern-and        0 #f))
