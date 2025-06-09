@@ -59,10 +59,7 @@
 ;;;;;;;;;;;;;;;;
 ;;; Bindings ;;;
 ;;;;;;;;;;;;;;;;
-(define (make-binding id) (binding-create #f id))
-(define (binding-create           v=>x id) (binding-identity-refresh '() id))
-(define (binding-identity         v=>x)    (binding-vocabulary-ref v=>x #f))
-(define (binding-identity-refresh v=>x id) (binding-vocabulary-set v=>x id #f (mvector)))
+(define (make-binding id) '())
 (define (binding-vocabulary-ref v=>x vocab) (let ((vx (assv vocab v=>x))) (and vx (cdr vx))))
 (define (binding-vocabulary-remove v=>x id . vocab*) (binding-vocabulary-remove* v=>x id vocab*))
 (define (binding-vocabulary-set    v=>x id . vx*)    (binding-vocabulary-set*    v=>x id vx*))
@@ -72,8 +69,6 @@
 (define (binding-vocabulary-setter  id . vx*) (binding-vocabulary-setter*  id vx*))
 (define (binding-vocabulary-adder   id . vx*) (binding-vocabulary-adder*   id vx*))
 (define (binding-vocabulary-updater id . vu*) (binding-vocabulary-updater* id vu*))
-(define ((binding-creator             id)        v=>x) (binding-create             v=>x id))
-(define ((binding-identity-refresher  id)        v=>x) (binding-identity-refresh   v=>x id))
 (define ((binding-vocabulary-remover* id vocab*) v=>x) (binding-vocabulary-remove* v=>x id vocab*))
 (define ((binding-vocabulary-setter*  id vx*)    v=>x) (binding-vocabulary-set*    v=>x id vx*))
 (define ((binding-vocabulary-adder*   id vx*)    v=>x) (binding-vocabulary-add*    v=>x id vx*))
@@ -84,13 +79,13 @@
 (define (binding-vocabulary-set* v=>x id vx*)
   (unless v=>x (mistake 'binding-vocabulary-set* "unbound identifier" id))
   (let ((v&x* (plist->alist vx*)))
-    (append v&x* ((binding-vocabulary-remover* id (map car v&x*)) v=>x))))
+    (append v&x* (binding-vocabulary-remove* v=>x id (map car v&x*)))))
 (define (binding-vocabulary-add* v=>x id vx*)
   (unless v=>x (mistake 'binding-vocabulary-add* "unbound identifier" id))
   (for-each
     (lambda (vocab)
       (when (binding-vocabulary-ref v=>x vocab)
-        (mistake 'binding-vocabulary-adder* "identifier already bound with vocabulary" id vocab)))
+        (mistake 'binding-vocabulary-add* "identifier already bound with vocabulary" id vocab)))
     (plist-key* vx*))
   (binding-vocabulary-set* v=>x id vx*))
 (define (binding-vocabulary-update* v=>x id vu*)
@@ -98,7 +93,7 @@
   (let* ((vocab* (plist-key* vu*))
          (x*     (map (lambda (vocab)
                         (or (binding-vocabulary-ref v=>x vocab)
-                            (mistake 'binding-vocabulary-updater*
+                            (mistake 'binding-vocabulary-update*
                                      "identifier not bound with vocabulary" id vocab)))
                       vocab*))
          (x*     (map (lambda (update x) (update x)) (plist-value* vu*) x*)))
