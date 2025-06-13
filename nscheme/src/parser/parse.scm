@@ -238,6 +238,7 @@
 (define ($cons              a b) ($pcall cons    a b))
 (define ($car               x)   ($pcall car     x))
 (define ($cdr               x)   ($pcall cdr     x))
+(define ($list->vector      x)   ($pcall apply ($quote vector) x))
 (define ($vector-ref        v i) ($pcall vector-ref    v i))
 (define ($vector-length     v)   ($pcall vector-length v))
 (define ($vector           . x*) (apply $pcall vector x*))
