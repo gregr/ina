@@ -130,6 +130,7 @@
 (define mvector->vector
   (case-lambda
     ((mv)             (vector-copy (mvector-v mv)))
+    ((mv start)       (vector-copy (mvector-v mv) start))
     ((mv start count) (vector-copy (mvector-v mv) start (+ start count)))))
 
 (define (bytevector        . x*) (apply bytes x*))
@@ -144,6 +145,7 @@
 (define mbytevector->bytevector
   (case-lambda
     ((mbv)             (bytes-copy (mbytevector-bv mbv)))
+    ((mbv start)       (subbytes   (mbytevector-bv mbv) start))
     ((mbv start count) (subbytes   (mbytevector-bv mbv) start (+ start count)))))
 
 ;(define (f32?      x) (single-flonum? x))
