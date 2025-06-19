@@ -13,34 +13,26 @@
     ;; - use E-note to provide source location for error messages
     ;; - optionally build a stack trace that retains thread lineage unless explicitly isolated
     ;;   - stack trace of a new thread should begin at the parent thread's current trace
-    (cond
-      ((E:quote?        E) (list 'quote (E:quote-value E)))
-      ((E:ref?          E) (cenv-ref cenv (E:ref-address E)))
-      ((E:if?           E) (list 'if (loop (E:if-condition E)) (loop (E:if-consequent E))
-                                 (loop (E:if-alternative E))))
-      ((E:call?         E) (cons (loop (E:call-operator E)) (map loop (E:call-operand* E))))
-      ((E:apply/values? E) (list 'call-with-values
-                                 (list 'lambda '() (loop (E:apply/values-operand E)))
-                                 (loop (E:apply/values-operator E))))
+    (E-case
+      E (lambda (E) (mistake 'E-compile-rkt "not an E" E))
+      E:quote?        (lambda (v)     (list 'quote v))
+      E:ref?          (lambda (addr)  (cenv-ref cenv addr))
+      E:if?           (lambda (c t f) (list 'if (loop c) (loop t) (loop f)))
+      E:call?         (lambda (rator rand*) (cons (loop rator) (map loop rand*)))
+      E:apply/values? (lambda (rator vrand) (list 'call-with-values (list 'lambda '() (loop vrand))
+                                                  (loop rator)))
       ;; TODO: generate Racket code to wrap case-lambda with inspector-compatible metadata
-      ((E:case-lambda?  E) (let* ((param*~* (E:case-lambda-param*~* E))
-                                  (^body*   (map (lambda (addr* body)
-                                                   (lambda id*
-                                                     (loop/env body (cenv-extend cenv addr* id*))))
-                                                 (map improper-list->list param*~*)
-                                                 (E:case-lambda-body* E))))
-                             (let* ((id*~* (map (lambda (param*~)
-                                                  (improper-list-map address->fresh-id param*~))
-                                                param*~*))
-                                    (body* (map apply ^body* (map improper-list->list id*~*))))
-                               (cons 'case-lambda (map list id*~* body*)))))
-      ((E:letrec?       E) (let* ((lhs*       (E:letrec-binding-left* E))
-                                  (^rhs*&body (lambda id*
-                                                (let ((cenv (cenv-extend cenv lhs* id*)))
-                                                  (values (map (lambda (rhs) (loop/env rhs cenv))
-                                                               (E:letrec-binding-right* E))
-                                                          (loop/env (E:letrec-body E) cenv))))))
-                             (let ((id* (map address->fresh-id lhs*)))
-                               (let-values (((rhs* body) (apply ^rhs*&body id*)))
-                                 (list 'letrec (map list id* rhs*) body)))))
-      (else                (mistake 'E-compile-rkt "not an E" E)))))
+      E:case-lambda?  (lambda (param*~* body*)
+                        (cons 'case-lambda
+                              (map (lambda (param*~ body)
+                                     (let ((id*~ (improper-list-map address->fresh-id param*~)))
+                                       (list id*~ (loop/env body (cenv-extend cenv
+                                                                              (improper-list->list param*~)
+                                                                              (improper-list->list id*~))))))
+                                   param*~* body*)))
+      E:letrec?       (lambda (lhs* rhs* body)
+                        (let ((id* (map address->fresh-id lhs*)))
+                          (let-values (((rhs* body) (let ((cenv (cenv-extend cenv lhs* id*)))
+                                                      (values (map (lambda (rhs) (loop/env rhs cenv)) rhs*)
+                                                              (loop/env body cenv)))))
+                            (list 'letrec (map list id* rhs*) body)))))))
