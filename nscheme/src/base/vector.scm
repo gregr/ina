@@ -1,11 +1,15 @@
 (define (list->vector x*) (apply vector x*))
 
-(define (vector-take x n)
-  (let ((len (min (vector-length x) n)))
-    (let loop ((i 0))
-      (if (< i len) (cons (vector-ref x i) (loop (+ i 1))) '()))))
+(define vector->list
+  (case-lambda
+    ((v)             (vector->list v 0     (vector-length v)))
+    ((v start)       (vector->list v start (- (vector-length v) start)))
+    ((v start count) (let loop ((i (- (+ start count) 1)) (result '()))
+                       (if (< i start)
+                           result
+                           (loop (- i 1) (cons (vector-ref v i) result)))))))
 
-(define (vector->list x) (vector-take x (vector-length x)))
+(define (vector-take x n) (vector->list x 0 (min (vector-length x) n)))
 
 (define (vector-append . x*) (list->vector (append* (map vector->list x*))))
 

@@ -3,11 +3,16 @@
 (define (make-bytevector n b) (mbytevector->bytevector (make-mbytevector n b)))
 (define (list->bytevector x*) (apply bytevector x*))
 
-(define (bytevector->list x) (bytevector-take x (bytevector-length x)))
-(define (bytevector-take x n)
-  (let ((len (min (bytevector-length x) n)))
-    (let loop ((i 0))
-      (if (< i len) (cons (bytevector-ref x i) (loop (+ i 1))) '()))))
+(define bytevector->list
+  (case-lambda
+    ((bv)             (bytevector->list bv 0     (bytevector-length bv)))
+    ((bv start)       (bytevector->list bv start (- (bytevector-length bv) start)))
+    ((bv start count) (let loop ((i (- (+ start count) 1)) (result '()))
+                        (if (< i start)
+                            result
+                            (loop (- i 1) (cons (bytevector-ref bv i) result)))))))
+
+(define (bytevector-take x n) (bytevector->list x 0 (min (bytevector-length x) n)))
 
 (define (bytevector-append . x*) (bytevector-append* x*))
 (define (bytevector-append* x*)
