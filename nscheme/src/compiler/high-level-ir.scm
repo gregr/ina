@@ -6,13 +6,13 @@
   (let ((gensym (make-local-gensym)))
     (lambda (addr) (gensym (or (address-name addr) name.default)))))
 
-(define (E:quote        note v)              (vector 'E:quote        note v))
-(define (E:ref          note address)        (vector 'E:ref          note address))
-(define (E:if           note c t f)          (vector 'E:if           note c t f))
-(define (E:call         note rator rand*)    (vector 'E:call         note rator rand*))
-(define (E:apply/values note rator vrand)    (vector 'E:apply/values note rator vrand))
-(define (E:case-lambda  note param*~* body*) (vector 'E:case-lambda  note param*~* body*))
-(define (E:letrec       note lhs* rhs* body) (vector 'E:letrec       note lhs* rhs* body))
+(define (E:quote        v)              (vector 'E:quote        #f v))
+(define (E:ref          address)        (vector 'E:ref          #f address))
+(define (E:if           c t f)          (vector 'E:if           #f c t f))
+(define (E:call         rator rand*)    (vector 'E:call         #f rator rand*))
+(define (E:apply/values rator vrand)    (vector 'E:apply/values #f rator vrand))
+(define (E:case-lambda  param*~* body*) (vector 'E:case-lambda  #f param*~* body*))
+(define (E:letrec       lhs* rhs* body) (vector 'E:letrec       #f lhs* rhs* body))
 
 (splicing-local
   ((define (E-tagged? E len tag)

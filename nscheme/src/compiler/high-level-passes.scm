@@ -21,25 +21,26 @@
 
 (define (E-map-quote E f)
   (let loop ((E E))
-    (E-case
-      E (lambda (E) (mistake 'E-map-quote "not an E" E))
-      E:quote?        (lambda (v)              (E-annotate (f v) (E-note E)))
-      E:ref?          (lambda (_)              E)
-      E:if?           (lambda (c t f)          (E:if (E-note E) (loop c) (loop t) (loop f)))
-      E:call?         (lambda (rator rand*)    (E:call (E-note E) (loop rator) (map loop rand*)))
-      E:apply/values? (lambda (rator vrand)    (E:apply/values (E-note E) (loop rator) (loop vrand)))
-      E:case-lambda?  (lambda (param*~* body*) (E:case-lambda (E-note E) param*~* (map loop body*)))
-      E:letrec?       (lambda (lhs* rhs* body) (E:letrec (E-note E) lhs* (map loop rhs*) (loop body))))))
+    (E-annotate
+      (E-case
+        E (lambda (E) (mistake 'E-map-quote "not an E" E))
+        E:quote?        f
+        E:ref?          (lambda (_)              E)
+        E:if?           (lambda (c t f)          (E:if           (loop c) (loop t) (loop f)))
+        E:call?         (lambda (rator rand*)    (E:call         (loop rator) (map loop rand*)))
+        E:apply/values? (lambda (rator vrand)    (E:apply/values (loop rator) (loop vrand)))
+        E:case-lambda?  (lambda (param*~* body*) (E:case-lambda  param*~* (map loop body*)))
+        E:letrec?       (lambda (lhs* rhs* body) (E:letrec       lhs* (map loop rhs*) (loop body))))
+      (E-note E))))
 
 (define (E-simplify-quote E)
   (E-map-quote
     E
     (lambda (v)
       (let loop ((v v))
-        (cond ((pair?   v) (E:call #f (E:quote #f cons) (list (loop (car v)) (loop (cdr v)))))
-              ((vector? v) (E:call #f (E:quote #f vector) (map loop (vector->list v))))
-              (else        (E:quote #f v)))))))
+        (cond ((pair?   v) (E:call (E:quote cons) (list (loop (car v)) (loop (cdr v)))))
+              ((vector? v) (E:call (E:quote vector) (map loop (vector->list v))))
+              (else        (E:quote v)))))))
 
 (define (E-replace-primitive E primitive=>addr)
-  (E-map-quote E (lambda (v) (alist-ref/k primitive=>addr v (lambda () (E:quote #f v))
-                                          (lambda (addr) (E:ref #f addr))))))
+  (E-map-quote E (lambda (v) (alist-ref/k primitive=>addr v (lambda () (E:quote v)) E:ref))))

@@ -165,11 +165,11 @@
 ;;; Expression construction ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define ($annotate     E note)        (E-annotate E note))
-(define ($quote        value)         (E:quote        #f value))
-(define ($ref          addr)          (E:ref          #f addr))
-(define ($if           c t f)         (E:if           #f c t f))
-(define ($apply/values rator vrand)   (E:apply/values #f rator vrand))
-(define ($call*        rator rand*)   (E:call         #f rator rand*))
+(define ($quote        value)         (E:quote        value))
+(define ($ref          addr)          (E:ref          addr))
+(define ($if           c t f)         (E:if           c t f))
+(define ($apply/values rator vrand)   (E:apply/values rator vrand))
+(define ($call*        rator rand*)   (E:call         rator rand*))
 (define ($call         rator . rand*) ($call* rator rand*))
 
 (splicing-local
@@ -182,11 +182,11 @@
            (body*   (map (lambda (addr*~ ^body)
                            (apply ^body (map $ref (improper-list->list addr*~))))
                          addr*~* ^body*)))
-      (E:case-lambda #f addr*~* body*)))
+      (E:case-lambda addr*~* body*)))
   (define ($letrec param* ^rhs*&body)
     (let ((addr* (map param->address param*)))
       (let-values (((rhs* body) (apply ^rhs*&body (map $ref addr*))))
-        (E:letrec #f addr* rhs* body)))))
+        (E:letrec addr* rhs* body)))))
 
 (define ($lambda param*~     ^body) ($case-lambda (list param*~) (list ^body)))
 (define ($let    param* rhs* ^body) ($call* ($lambda param* ^body) rhs*))
