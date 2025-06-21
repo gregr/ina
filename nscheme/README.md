@@ -127,59 +127,118 @@ Optionally move resulting artifacts from built/ to prebuilt/ to commit a snapsho
 
 ## TODO
 
-- improved DSLs
+- implement syntax-pattern / syntax-template language in extended/meta.scm
+  - if we're going to bother with pattern/template style macros at all, we really should add ellipsis to general quasi-X language parsers
+    - it corresponds to $append-map
+  - then implement: syntax quasisyntax syntax-case syntax-rules
+  - we also might want to add an optional "quote" auxiliary to quasi-X that forces quoting below it
+    - syntax-pattern/templates won't use this, but a dmatch-style pattern matcher could use it
+      - maybe call this qmatch, replacing the current qmatch
+      - in contrast to a pmatch-style matcher that uses unquote to explicitly indicate variables
+      - sqmatch and spmatch variants where the quoted ids are implicitly literal ids used as auxiliaries
+        - so, they don't use a literal list, but still require an environment for auxiliary comparison
+
+
+
+- low-level abstract or concrete machine code
+  - can be run as a simulator, or compiled and jumped to
+    - multiple kinds of simulations possible, for various levels of stepping and error checking, particularly for memory accesses
+  - use this to implement runtime, memory management, etc.
+
+
+
+- optional: low-level procedural language
+  - sits right above the machine code language
+  - used to implement C-like programs
+  - leaf calls allowed, but no non-tail recursion
+    - explicit stack allocation and switching
+    - can inspect a procedure to dynamically determine how much stack space it requires
+
+
+
+- Implement a runtime system for low-level targets
+  - system calls
+  - concurrency
+  - memory management
+  - privileged, regional garbage collection and arena allocation interface
+  - reflection
+    - inspection of arbitrary objects
+    - inspection of control stack
+    - concurrency-aware, stepping debugger
+    - snapshotting
+  - see below: simulator/virtual-machine
+
+
+
+- more compiler backends
+  - JS
+  - C
+  - x86-64
+  - aarch64
+  - wasm
+  - riscv
+
+
+
+- other DSLs
   - text
     - scanner
     - read / iterative denotate
     - e.g., automatic nline, source location support (buffer abstraction over a port)
     - layout via constraints?
-  - better support for auxiliaries
-  - quasiquote
-    - a quasiquote intermediate language that can be used both for expressions and patterns?
-    - it would embed unquoted syntax fragments to be dealt with by the IR's consumer
-    - ellipsis too?
-    - should we introduce a similar "constructors" intermediate language?
-      - for cons, list, vector, bytevector, records, etc.
-      - is this too trivial?
-      - even if it is too trivial, a sublanguage for record construction with named fields might still be worthwhile
-        - though it could just be a higher-order utility that takes a subparser (e.g., parse-expression) for the field arguments
-          - seems more reasonable than implementing a new language
-          - should the same be true for quasiquote?
-            - the value of a sublanguage is that it can be extended with additional operators, which we might want for qq, but
-              wouldn't want for records?
-  - match, qmatch, smatch, qsmatch
-  - syntax-rules/case patterns and templates
-  - general record update notation
-    - how do we do this for immutable records without mutator?  do we need a built-in update operator?
   - logic programming: miniKanren, datalog
-  - maybe probablistic programming
-  - low-level abstract or concrete machine code
-    - can be run as a simulator, or compiled and jumped to
-      - multiple kinds of simulations possible, for various levels of stepping and error checking, particularly for memory accesses
-    - use this to implement runtime, memory management, etc.
-  - low-level procedural language
-    - sits right above the machine code language
-    - used to implement C-like programs
+  - maybe later:
+    - miniCurry
+    - probablistic programming
+    - automatic differentiation
+    - array programming
+    - theorem proving
+      - first-order untyped w/ implicit quantification
+      - dependently typed
 
 
 
-implement alternative parsing of unbound identifiers via an environment that catches and records them?
-- use env:ref/k
+more mk metaprogramming examples:
+- formula-staging
+  - just like formula-parsers, but using a stage/unstage macro for improved readability
+- formula-compiler
+  - formula-parsers produce formula code, which is later compiled to expression code
 
 
-- improve environments
+
+extended:
+```
+(apply (alambda (k1 k2 ...) body ...) `((k1 . ,v1) (k2 . ,v2) ...))
+((plambda (k1 k2 ...) body ...) 'k1 v1 'k2 v2 ...)
+((alambda* (k1 k2 ...) body ...) `((k1 . ,v1) (k2 . ,v2) ...))
+((plambda* (k1 k2 ...) body ...) (list 'k1 v1 'k2 v2 ...))
+```
+
+
+
+- can we decouple the definition vocabulary from the expression vocabulary?
+  - and decouple the D language from what it builds
+  - instead of $d:expression, we would have something like a $d:other
+
+
+
+- improve description for io-error so that it can be informative on its own, without io-error-specific details
+- raise-parse-error should include an optional who/where ?
+  - be more consistent in how the expected vocabulary name is indicated in error messages
+- an interactive unhandled error handler should avoid dumping large amounts of text
+  - instead, allow the user to carefully explore diagnostic output
+  - for structures whose size is above a certain threshold, provide a summary, with an option to gradually expand
+
+
+
+can we adapt layered computation for syntax and other annotations / notes?
+
+
+
+- improve environment worst-case performance
   - better data structures: hash and/or trie
   - port dbk's 2-3 btree, old hamt, and/or other efficient data structures
 
-
-- nscheme stage/unstage macro
-
-
-```
-((alambda (k1 k2 ...) body ...) `((k1 . ,v1) (k2 . ,v2) ...))
-((plambda (k1 k2 ...) body ...) k1 v1 k2 v2 ...)
-and case-lambda variants
-```
 
 
 consider bytevector-u64le-ref etc.
@@ -203,6 +262,8 @@ consider bytevector-u64le-ref etc.
           (loop (+ i 8) (+ acc (integer-bytes->integer bv #f #f i (+ i 8))))
           acc))))
 ```
+- revocable m[byte]vector read-write slice capabilities for use with port-like interfaces
+  - no need, we can use double-buffering (a trusted, intermediate port adapter whose buffer is safe to leak) to keep our real buffer safe
 
 
 
@@ -210,6 +271,7 @@ redesign `make-library=>env` to eagerly build libraries given by name, and their
 - can make both persistent and reboot variants of all relevant libraries, where reboot status is part of name?
 - NOTE: the bootstrapped environment is only insufficient when we want to use env.meta facilities, or persist syntax/env/expr-code
 
+OLD:
 create and persist e.scm (or expr.scm), which defines address and E data types
 - only need construtors, predicates, and accessors
 - no need to define E-pretty or E-eval there
@@ -217,32 +279,11 @@ create and persist e.scm (or expr.scm), which defines address and E data types
   - possibly move them to a new subdirectory
     - what name? persistent/ cross-phase/ meta/ boot/ ?
 
+OLD:
 - separate env.meta into declarative and procedural portions
   - the declarative portion is useful in smaller languages that don't have the syntax / expr / parser / compiler  interface yet
     - it is also safe to use across phases, such as in a rebooted environment
   - the procedural portion has more dependencies, and is not safe across phases
-
-
-
-- improve description for io-error so that it can be informative on its own, without io-error-specific details
-- raise-parse-error should include an optional who/where ?
-- an interactive unhandled error handler should avoid dumping large amounts of text
-  - instead, allow the user to carefully explore diagnostic output
-  - for structures whose size is above a certain threshold, provide a summary, with an option to gradually expand
-
-
-
-define make-record-type as a non-primitive that returns a type descriptor or controller that
-captures the multi-value return of the primitive
-- maybe rename the underlying multi-value-returning primitive to raw-make-record-type
-
-should we add basic define-record-type syntax to env.minimal ?
-- and how would subclassing work via syntax?
-- defining a non-final record type would also define a new subclassing definition operator
-- we can have define-record-type bundle a record type descriptor object, representing it as an alist
-  - it would contain a subclassing operator, among other things
-  - then you could pass this rtd to define-record-[sub]type to indicate inheritance
-- we would want match pattern syntax too
 
 
 
@@ -428,6 +469,29 @@ inspector method interface:
 
 
 
+in E-eval-direct, when evaluating a E:letrec that appears outside of any E:case-lambda, each of its bindings can be
+directly translated to a box value that is stored in the cenv such that a E:ref can unbox it without
+an intervening runtime env lookup
+- since it is outside E:case-lambda, each binding maps 1-to-1 to a box because each binding is only ever evaluated once
+
+
+
+consider including dynamic parameter manipulation in E to improve specialization
+```
+(E:parameter E.initial-value)
+(E:pref E.parameter)
+(E:plet E*.lhs E*.rhs E.body)
+```
+- for known procedures, we should be able to convert to passing explicit arguments or the equivalent
+- should we similarly make E aware of threads and custodians?
+  - and synchronization?
+- while there are specializaton and analysis upsides to all of this, the downside is it makes it much more tedious to implement E
+- an alternative is to attempt specialization without extending E
+  - have the specializer look for, and track use of, relevant primitive values such as
+    `make-parameter`, `make-custodian`, `thread`, `sync`, etc.
+
+
+
 separate mutable primitives from the other common ones
 - not all effects have to move: can leave panic, since panicking is equivalent to any other mistake
 
@@ -544,6 +608,7 @@ what if a program obtains new platform-specific capabilities at runtime?  how do
       - the handler decides when we want to do extreme things like this
       - platform can provide some default handlers, and users can override and augment this set of handlers
         - default reinstantiation handler for an open file might just say, "sorry, can't reinstantiate this without more context"
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1008,6 +1073,7 @@ start working on an initial optimization pass inspired by cp0
 
 ## May 2024
 
+```
 [1.2K May  8 16:45]  include/
 ├── [ 800 May  8 16:42]  base/
 │   ├── [ 335 Jan 24  2023]  bytevector.scm
@@ -1046,6 +1112,7 @@ start working on an initial optimization pass inspired by cp0
 ├── [7.6K Apr  4  2021]  tty.scm
 ├── [6.1K Jan 26  2023]  unicode.scm
 └── [8.4K Jan 26  2023]  write.scm
+```
 
 4 directories, 34 files
 
@@ -1154,6 +1221,7 @@ implementation complexity cost:
 - all of bootstrap parsing at the moment: (+ 195 70 336 871) = 1472 lines
 - all of bootstrap compiler at the moment: (+ 50 195 70 336 871) = 1522 lines
 
+```
 include
 ├── [ 476 Mar  1  9:46]  base/
 │   ├── [ 335 Jan 24 12:08]  bytevector.scm
@@ -1181,6 +1249,7 @@ include
 ├── [7.6K Apr  4  2021]  tty.scm
 ├── [6.1K Jan 26 12:34]  unicode.scm
 └── [8.4K Jan 26 12:37]  write.scm
+```
 
 2 directories, 24 files
 
