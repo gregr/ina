@@ -58,28 +58,12 @@ and resuming snapshots of a running system.
     disjoint from the s-expression types.
   - Records are distinct, immutable, vector-like types.  They are disjoint from the s-expression
     types.
-- Unlike Scheme, record type descriptors (RTDs) are normal vectors with the following layout:
-  - `(vector field-count optional-user-defined-metadata ...)`
-  - The field count always comes first so that the system (particularly the garbage collector) can
-    find it easily.
-  - It can also include user-specified metadata.  For instance, this could be used to list parent
-    types for implementing some variant of inheritance.  It could also be used to list field names
-    for dynamic field lookup.
 - Equality and identity:
-  - Every mutable value and instance of an opaque type, such as a record or procedure, has an
-    identity.  An instance of an immutable transparent type, particularly a pair or vector, is not
-    guaranteed to have an identity.
-  - Structurally equal values with an identity may share that identity, except for mutable values,
-    which are always constructed with a unique identity.  Mutable values include all mvectors and
-    mbytevectors, even empty ones, as well as record instances whose type was created with a non-#f
-    `mutable-field-position*` list, even if the list is empty, and even if the record has no fields.
-  - Procedures that have indistinguishable application behavior, i.e., they are extensionally equal,
-    are considered structurally equal, even if they appear to close over distinct mutable values.
-    (An optimizer may recognize that the mutable value does not impact the procedure's behavior.)
-    - If a procedure's behavior can be distinguished from all others, then it effectively has a
-      unique identity.
+  - Every instance of an opaque type, such as a record or procedure, and every value of a mutable
+    type, such as an mvector or mbytevector, including empty ones, has a unique identity.
+  - For two values of types that should have a unique identity, `eqv?` returns `#t` if and only if
+    the values have the same identity.
   - For any two values that are not structurally equal, `eqv?` returns `#f`.
-  - For two values with an identity, `eqv?` returns `#t` if the values have the same identity.
   - For any two values that are `()`, `#t`, `#f`, numbers, symbols, strings, or bytevectors, `eqv?`
     returns `#t` if the two values are structurally equal.
   - For two structurally equal values of all other types, `eqv?` may nondeterministically return
