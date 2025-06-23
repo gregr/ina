@@ -128,15 +128,7 @@ Optionally move resulting artifacts from built/ to prebuilt/ to commit a snapsho
 ## TODO
 
 - implement syntax-pattern / syntax-template language in extended/meta.scm
-  - if we're going to bother with pattern/template style macros at all, we really should add ellipsis to general quasi-X language parsers
-    - it corresponds to $append-map
   - then implement: syntax quasisyntax syntax-case syntax-rules
-  - we also might want to add an optional "quote" auxiliary to quasi-X that forces quoting below it
-    - syntax-pattern/templates won't use this, but a dmatch-style pattern matcher could use it
-      - maybe call this qmatch, replacing the current qmatch
-      - in contrast to a pmatch-style matcher that uses unquote to explicitly indicate variables
-      - sqmatch and spmatch variants where the quoted ids are implicitly literal ids used as auxiliaries
-        - so, they don't use a literal list, but still require an environment for auxiliary comparison
 
 
 
