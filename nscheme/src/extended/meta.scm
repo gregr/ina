@@ -16,8 +16,8 @@
   vocab.quasiquote-syntax 'quasiquote-syntax
   vocab.expression
   (operator-parser
-    (make-parse-quasi vocab.quasiquote-syntax 'quasiquote-syntax 'unsyntax 'unsyntax-splicing
-                      parse-expression parse-quote-syntax $cons $list->vector $append)
+    (make-parse-quasi vocab.quasiquote-syntax 'quasiquote-syntax 'unsyntax 'unsyntax-splicing #f
+                      parse-expression parse-quote-syntax $cons $list->vector $append #f)
     1 1))
 
 (begin-meta

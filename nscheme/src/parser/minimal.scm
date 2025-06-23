@@ -224,10 +224,13 @@
           (else       ($begin (parse-expression env e) (loop (car e*) (cdr e*)))))))
 (define (parse-begin-expression env e . e*) (parse-begin-expression* env e e*))
 
-(define ((make-parse-quasi vocabulary-name tag.qq tag.unq tag.unq-splicing parse-unquote parse-quote $cons $list->vector $append) env stx)
-  (define (keyword stx) (and (identifier? stx) (env-vocabulary-ref env stx vocabulary-name)))
+(define ((make-parse-quasi vocabulary-name tag.qq tag.unq tag.unq-splicing tag.ellipsis
+                           parse-unquote parse-quote $cons $list->vector $append $map) env stx)
   (define ($quote stx) (parse-quote env stx))
-  (let loop ((stx stx) (level 0) (k (lambda (q) q)) (k-splice #f) (k-quote (lambda () ($quote stx))))
+  (let loop ((stx stx) (level 0) (quote-ellipsis? (not tag.ellipsis)) (k (lambda (q) q)) (k-splice #f) (k-quote (lambda () ($quote stx))))
+    (define (keyword stx)
+      (let ((tag (and (identifier? stx) (env-vocabulary-ref env stx vocabulary-name))))
+        (and (not (and quote-ellipsis? (eqv? tag tag.ellipsis))) tag)))
     (define (fail msg) (raise-parse-error (list vocabulary-name msg) stx))
     (when (keyword stx) (fail "invalid use of keyword"))
     (let ((form (syntax-unwrap stx)))
@@ -238,21 +241,33 @@
                    (let ((body (syntax-unwrap (cdr form))))
                      (unless (pair? body)                       (fail "misapplied operator"))
                      (unless (null? (syntax-unwrap (cdr body))) (fail "too many operands"))
-                     (cond ((eqv? tag tag.qq)           (loop body (+ level 1) k-embed #f k-quote))
-                           ((< 0 level)                 (loop body (- level 1) k-embed #f k-quote))
+                     (cond ((eqv? tag tag.ellipsis)     (loop (car body) level #t k k-splice (lambda () (k ($quote (car body))))))
+                           ((eqv? tag tag.qq)           (loop body (+ level 1) quote-ellipsis? k-embed #f k-quote))
+                           ((< 0 level)                 (loop body (- level 1) quote-ellipsis? k-embed #f k-quote))
                            ((eqv? tag tag.unq)          (k (parse-unquote env (car body))))
                            ((eqv? tag tag.unq-splicing) (unless k-splice (fail "not a splicing position"))
                                                         (k-splice (parse-unquote env (car body))))
-                           (else                         (fail "unknown operation"))))
+                           (else                        (fail "unknown operation"))))
                    (let ((a (car form)) (b (cdr form)))
-                     (define (($Q->k $Q) q.a) (k ($Q q.a (loop b level (lambda (q) q) #f (lambda () ($quote b))))))
-                     (loop a level ($Q->k $cons) ($Q->k $append)
-                           (lambda () (loop b level (lambda (q.b) (k ($cons ($quote a) q.b))) #f k-quote)))))))
-            ((vector? form) (loop (vector->list form) level (lambda (q) (k ($list->vector q))) #f k-quote))
+                     (let ((form.b (and (not quote-ellipsis?) (syntax-unwrap b))))
+                       (if (and (pair? form.b) (eqv? (keyword (car form.b)) tag.ellipsis))
+                           (let ((finish (let ((b (cdr form.b)))
+                                           (lambda ($Q q.a) (k ($Q q.a (loop b level #f (lambda (q) q) #f (lambda () ($quote b)))))))))
+                             (loop a level #f
+                                   (lambda (q.a) (finish $cons   ($map q.a)))
+                                   (lambda (q.a) (finish $append ($map q.a)))
+                                   (lambda ()    (finish $cons   ($map ($quote a))))))
+                           (let ((finish (lambda ($Q q.a) (k ($Q q.a (loop b level quote-ellipsis? (lambda (q) q) #f (lambda () ($quote b))))))))
+                             (loop a level quote-ellipsis?
+                                   (lambda (q.a) (finish $cons   q.a))
+                                   (lambda (q.a) (finish $append q.a))
+                                   (lambda ()    (loop b level quote-ellipsis? (lambda (q.b) (k ($cons ($quote a) q.b))) #f k-quote))))))))))
+            ((vector? form) (loop (vector->list form) level quote-ellipsis? (lambda (q) (k ($list->vector q))) #f k-quote))
             (else           (k-quote))))))
 
 (define parse-quasiquote
-  (make-parse-quasi vocab.quasiquote 'quasiquote 'unquote 'unquote-splicing parse-expression parse-quote $cons $list->vector $append))
+  (make-parse-quasi vocab.quasiquote 'quasiquote 'unquote 'unquote-splicing
+                    #f parse-expression parse-quote $cons $list->vector $append #f))
 
 (splicing-local
   ((define ((binder-parser $binder) env stx.def* . stx*)
