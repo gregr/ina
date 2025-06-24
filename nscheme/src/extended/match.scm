@@ -428,21 +428,22 @@
 (add-in-vocabulary guard vocab.match-guard 'guard)
 
 (add-in-vocabulary unquote vocab.match-pattern-quasiquote 'unquote)
-(splicing-local
-  ((add-in-vocabulary ...        vocab.match-pattern-quasiquote '...)
-   (add-in-vocabulary quasiquote vocab.match-pattern-quasiquote 'quasiquote))
-  (add-in-vocabulary ...        vocab.match-pattern '...)
-  (add-in-vocabulary quasiquote vocab.match-pattern (operator-parser parse-pattern-quasiquote 1 1)))
+(add-in-vocabulary ...
+  vocab.match-pattern-quasiquote '...
+  vocab.match-pattern '...)
+(add-in-vocabulary quasiquote
+  vocab.match-pattern-quasiquote 'quasiquote
+  vocab.match-pattern (operator-parser parse-pattern-quasiquote 1 1))
 
-(add-in-vocabulary _          vocab.match-pattern parse-pattern-any)
-(add-in-vocabulary var        vocab.match-pattern (operator-parser parse-pattern-var        1 1))
-(add-in-vocabulary app        vocab.match-pattern (operator-parser parse-pattern-app        2 #f))
-(add-in-vocabulary ?          vocab.match-pattern (operator-parser parse-pattern-?          1 #f))
-(add-in-vocabulary quote      vocab.match-pattern (operator-parser parse-pattern-quote      1 1))
-(add-in-vocabulary and        vocab.match-pattern (operator-parser parse-pattern-and        0 #f))
-(add-in-vocabulary or         vocab.match-pattern (operator-parser parse-pattern-or         0 #f))
-(add-in-vocabulary not        vocab.match-pattern (operator-parser parse-pattern-not        1 1))
-(add-in-vocabulary cons       vocab.match-pattern (operator-parser parse-pattern-cons       2 2))
-(add-in-vocabulary vector     vocab.match-pattern (operator-parser parse-pattern-vector     0 #f))
-(add-in-vocabulary cons*      vocab.match-pattern (operator-parser parse-pattern-cons*      1 #f))
-(add-in-vocabulary list       vocab.match-pattern (operator-parser parse-pattern-list       0 #f))
+(add-in-vocabulary _      vocab.match-pattern parse-pattern-any)
+(add-in-vocabulary var    vocab.match-pattern (operator-parser parse-pattern-var        1 1))
+(add-in-vocabulary app    vocab.match-pattern (operator-parser parse-pattern-app        2 #f))
+(add-in-vocabulary ?      vocab.match-pattern (operator-parser parse-pattern-?          1 #f))
+(add-in-vocabulary quote  vocab.match-pattern (operator-parser parse-pattern-quote      1 1))
+(add-in-vocabulary and    vocab.match-pattern (operator-parser parse-pattern-and        0 #f))
+(add-in-vocabulary or     vocab.match-pattern (operator-parser parse-pattern-or         0 #f))
+(add-in-vocabulary not    vocab.match-pattern (operator-parser parse-pattern-not        1 1))
+(add-in-vocabulary cons   vocab.match-pattern (operator-parser parse-pattern-cons       2 2))
+(add-in-vocabulary vector vocab.match-pattern (operator-parser parse-pattern-vector     0 #f))
+(add-in-vocabulary cons*  vocab.match-pattern (operator-parser parse-pattern-cons*      1 #f))
+(add-in-vocabulary list   vocab.match-pattern (operator-parser parse-pattern-list       0 #f))
