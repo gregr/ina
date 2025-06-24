@@ -79,8 +79,8 @@
 
 (define-syntax (define-ref&set!-syntax stx)
   (apply (lambda (_ name transform-ref transform-set!)
-           (quasiquote-syntax (splicing-local ((define-expression-syntax #,name #,transform-ref))
-                                (add-set!-syntax #,name #,transform-set!))))
+           (quasiquote-syntax (begin (define-expression-syntax #,name #,transform-ref)
+                                     (add-set!-syntax #,name #,transform-set!))))
          (syntax->list stx)))
 (define-syntax (define-ref&set!-identifier-syntax stx)
   (apply (lambda (_ name transform-ref transform-set!)

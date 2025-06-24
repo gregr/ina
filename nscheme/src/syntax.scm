@@ -162,7 +162,7 @@
              ((bind!/k)    (lambda (id x kf k)
                              (when frozen? (mistake "cannot bind!/k frozen environment" id))
                              (let ((x.existing (id-dict-ref id=>x id)))
-                               (if x.existing
+                               (if (and x.existing kf)
                                    (kf x.existing)
                                    (begin (set! id=>x (id-dict-set id=>x id x)) (k))))))
              ((freeze!)    (set! frozen? id=>x))
@@ -315,5 +315,6 @@
   ;; TODO: sort and remove duplicates
   (define (env-describe env)           (env 'describe)))
   (define (env-bind!/k  env id x kf k) ((env 'bind!/k) id x kf k))
+  (define (env-rebind!  env id x)      (env-bind!/k env id x #f values))
   (define (env-bind!    env id x)
     (env-bind!/k env id x (lambda (x) (mistake 'env-bind! "already bound" id x)) values))
