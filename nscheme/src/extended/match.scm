@@ -118,7 +118,7 @@
         (cond
           ((or (P:any? P) (P:none? P) (P:?? P)) (values P id*))
           ((P:var? P)   (let ((id (P:var-identifier P)))
-                          (unless id* (raise-parse-error "disallowed pattern variable" id))
+                          (unless id* (raise-parse-error "cannot use variable under or pattern" id))
                           (when (id-set-member? id* id)
                             (raise-parse-error "duplicate pattern variable" id))
                           (values P (id-set-add id* id))))
