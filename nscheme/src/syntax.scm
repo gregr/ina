@@ -161,8 +161,8 @@
                                                (if x (k x) (kf)))))
              ((bind!/k)    (lambda (id x kf k)
                              (when frozen? (mistake "cannot bind!/k frozen environment" id))
-                             (let ((x.existing (id-dict-ref id=>x id)))
-                               (if (and x.existing kf)
+                             (let ((x.existing (and kf (id-dict-ref id=>x id))))
+                               (if x.existing
                                    (kf x.existing)
                                    (begin (set! id=>x (id-dict-set id=>x id x)) (k))))))
              ((freeze!)    (set! frozen? id=>x))
