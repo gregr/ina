@@ -379,7 +379,7 @@
             (cond ((P:quote? P) (map $p:quote (P:quote-value P)))
                   ((P:cons?  P) (cons (P:cons-car P) (loop (P:cons-cdr P))))
                   (else         (mistake 'parse-pattern-quasiquote "not a list pattern" P))))))
-      #f $p:ellipsis))
+      #f (lambda (p stx) ($p:ellipsis p))))
 
   (define ((parse-match/parse-pattern parse-pattern) env stx.e . stx*.clause*)
     ($let1 'x (parse-expression env stx.e)
