@@ -251,12 +251,21 @@
                    (let ((a (car form)) (b (cdr form)))
                      (let ((form.b (and (not quote-ellipsis?) (syntax-unwrap b))))
                        (if (and (pair? form.b) (eqv? (keyword (car form.b)) tag.ellipsis))
-                           (let ((finish (let ((b (cdr form.b)))
-                                           (lambda ($Q q.a) (k ($Q q.a (loop b level #f (lambda (q) q) #f (lambda () ($quote b)))))))))
-                             (loop a level #f
-                                   (lambda (q.a) (finish $cons   ($map q.a)))
-                                   (lambda (q.a) (finish $append ($map q.a)))
-                                   (lambda ()    (finish $cons   ($map ($quote a))))))
+                           (let loop-ellipsis ((b (cdr form.b)) (ellipsis-count 1))
+                             (let ((form.b (syntax-unwrap b)))
+                               (if (and (pair? form.b) (eqv? (keyword (car form.b)) tag.ellipsis))
+                                   (loop-ellipsis (cdr form.b) (+ ellipsis-count 1))
+                                   (let ((finish
+                                           (lambda ($Q q.a)
+                                             (let loop-map ((q.a q.a) (ellipsis-count ellipsis-count))
+                                               (let ((q.a ($map q.a)))
+                                                 (if (< 1 ellipsis-count)
+                                                     (loop-map q.a (- ellipsis-count 1))
+                                                     (k ($Q q.a (loop b level #f (lambda (q) q) #f (lambda () ($quote b)))))))))))
+                                     (loop a level #f
+                                           (lambda (q.a) (finish $cons   q.a))
+                                           (lambda (q.a) (finish $append q.a))
+                                           (lambda ()    (finish $cons   ($quote a))))))))
                            (let ((finish (lambda ($Q q.a) (k ($Q q.a (loop b level quote-ellipsis? (lambda (q) q) #f (lambda () ($quote b))))))))
                              (loop a level quote-ellipsis?
                                    (lambda (q.a) (finish $cons   q.a))
