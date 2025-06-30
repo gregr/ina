@@ -16,8 +16,10 @@
        sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
        make-channel channel-get channel-put channel-put-evt
        current-platform)))
-  (define addr=>primitive-id (map (lambda (n) (cons (make-address n #f) n)) (map car name=>primitive)))
-  (define primitive=>addr (map cons (map cdr name=>primitive) (map car addr=>primitive-id))))
+  (define (addr=>primitive-id&primitive=>addr)
+    (let* ((addr=>primitive-id (map (lambda (n) (cons (make-address n #f) n)) (map car name=>primitive)))
+           (primitive=>addr    (map cons (map cdr name=>primitive) (map car addr=>primitive-id))))
+      (values addr=>primitive-id primitive=>addr))))
 
 (define (E-map-quote E f)
   (let loop ((E E))

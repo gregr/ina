@@ -1,6 +1,7 @@
-(define (E-compile-rkt-text E)
-  (rkt-expr->rkt-text (E-compile-rkt (E-replace-primitive (E-simplify-quote E) primitive=>addr)
-                                     addr=>primitive-id)))
+(define E-compile-rkt-text
+  (let-values (((addr=>primitive-id primitive=>addr) (addr=>primitive-id&primitive=>addr)))
+    (lambda (E) (rkt-expr->rkt-text (E-compile-rkt (E-replace-primitive (E-simplify-quote E) primitive=>addr)
+                                                   addr=>primitive-id)))))
 (define (E-compile-racket-program E) (rkt-text->racket-program (E-compile-rkt-text E)))
 
 (define (rkt-expr->rkt-text form) (call/oport:bytevector (lambda (out) (compact-write form out))))
