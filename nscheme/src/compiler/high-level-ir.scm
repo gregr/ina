@@ -14,6 +14,9 @@
 (define (E:case-lambda  param*~* body*) (vector 'E:case-lambda  #f param*~* body*))
 (define (E:letrec       lhs* rhs* body) (vector 'E:letrec       #f lhs* rhs* body))
 
+(define (E:lambda param*~ body)   (E:case-lambda (list param*~) (list body)))
+(define (E:let    lhs* rhs* body) (E:call (E:lambda lhs* body) rhs*))
+
 (splicing-local
   ((define (E-tagged? E len tag)
      (and (vector? E) (= (vector-length E) len) (eqv? (vector-ref E 0) tag))))
