@@ -314,8 +314,17 @@
   (define (env-freeze!  env)           (env 'freeze!))
   (define (env-freeze   env)           (env 'freeze))
   ;; TODO: sort and remove duplicates
-  (define (env-describe env)           (env 'describe)))
+  (define (env-describe env)           (env 'describe))
   (define (env-bind!/k  env id x kf k) ((env 'bind!/k) id x kf k))
   (define (env-rebind!  env id x)      (env-bind!/k env id x #f values))
   (define (env-bind!    env id x)
     (env-bind!/k env id x (lambda (x) (mistake 'env-bind! "already bound" id x)) values))
+  (define (env-identifier=? env a b)
+    (or (identifier=? a b)
+        (env-ref/k env a
+                   (lambda ()  (env-ref/k env b
+                                          (lambda () (eqv? (syntax-unwrap a) (syntax-unwrap b)))
+                                          (lambda (b) #f)))
+                   (lambda (a) (env-ref/k env b
+                                          (lambda () #f)
+                                          (lambda (b) (equal? a b))))))))
