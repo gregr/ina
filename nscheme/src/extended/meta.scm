@@ -274,7 +274,7 @@
 (define-syntax (with-syntax stx)
   (syntax-case stx ()
     ((_ ((pattern rhs) ...) . body)
-     #'((syntax-case (list rhs ...) () ((pattern ...) (let () . body))) #f))))
+     #'(syntax-case (list rhs ...) () ((pattern ...) (let () . body))))))
 
 (begin-meta
   (define (generate-temporaries x*)
