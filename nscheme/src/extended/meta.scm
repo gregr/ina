@@ -262,7 +262,28 @@
   vocab.quasisyntax 'quasisyntax
   vocab.expression  (operator-parser parse-quasisyntax 1 1))
 
+(define-syntax (syntax-rules stx)
+  (syntax-case stx ()
+    ((_ literal* ((keyword . pattern) template) ...)
+     (begin (for-each parse-identifier (syntax->list #'(keyword ...)))
+            #'(lambda (stx) (syntax-case stx literal* ((_ . pattern) #'template) ...))))))
+(define-syntax define-syntax-rule
+  (syntax-rules ()
+    ((_ (keyword . pattern) template)
+     (define-syntax keyword (syntax-rules () ((keyword . pattern) template))))))
+(define-syntax (with-syntax stx)
+  (syntax-case stx ()
+    ((_ ((pattern rhs) ...) . body)
+     #'((syntax-case (list rhs ...) () ((pattern ...) (let () . body))) #f))))
+
 (begin-meta
+  (define (generate-temporaries x*)
+    (let ((x* (map (let ((gensym (make-local-gensym)))
+                     (lambda (x) (let ((x (syntax-unwrap x)))
+                                   (gensym (if (text? x) x '_)))))
+                   (syntax->list x*))))
+      (let-values (((stx _) (syntax-transcribe #t (lambda (_) x*) env.empty env.empty)))
+        (syntax->list stx))))
   (define ((make-macro-parser introduce-definitions? parse) env.op op)
     (let ((transcribe (syntax-transcribe/parse introduce-definitions? parse)))
       (lambda (env.use stx) (transcribe stx op env.op env.use))))
@@ -286,6 +307,21 @@
             ((and (pair? x) (identifier? (car x))) (cons (op (car x)) (cdr x)))
             (else (raise-parse-error "not an identifier-syntax form" stx)))))
   (define ((identifier-only-syntax op) stx) (parse-identifier stx) (op stx)))
+
+(define-syntax (letrec-syntax stx)
+  (syntax-case stx ()
+    ((_ ((x e) ...) . body)
+     #'(let ()
+         (define-syntax x e) ...
+         (let () . body)))))
+(define-syntax (let-syntax stx)
+  (syntax-case stx ()
+    ((_ ((x e) ...) . body)
+     (with-syntax (((t ...) (generate-temporaries #'(x ...))))
+       #'(let ()
+           (begin-meta (define t e) ...)
+           (define-syntax x t) ...
+           (let () . body))))))
 
 (define-syntax (define-vocabulary-syntax-binder stx)
   (apply (lambda (_ name bind-in-vocabulary vocabulary-name introduce-definitions? vocabulary-parser)
