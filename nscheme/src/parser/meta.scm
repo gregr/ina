@@ -1,19 +1,3 @@
-;; TODO:
-;; - match
-;;   - match-define match-lambda match-lambda* match-lambda** match-let match-let*
-;;     match-letrec match-letrec*?
-;;   - Maybe: syntax-match and/or syntax-rewrite
-;; - Maybe: syntax quasisyntax syntax-dismantle syntax-case
-
-;(define vocab.syntax-pattern  'syntax-pattern)  ; e.g., literals and the wildcard _
-;(define vocab.syntax-template 'syntax-template) ; e.g., bound template variables
-;; TODO: unsyntax and unsyntax-splicing as quasisyntax-template auxiliaries?
-
-;; Other vocabulary ideas
-;(define vocab.module  'module)
-;(define vocab.grammar 'grammar)
-;(define vocab.term    'term)
-
 (define (with-higher-mark-level thunk) (current-mark-level (+ (current-mark-level) 1) thunk))
 
 (define (parse-begin-meta-definition* env stx*)
@@ -51,38 +35,6 @@
         (lambda (env.use stx) ((syntax-transcribe/parse #t parse-definition) stx op env.op env.use))))
     ($d:begin))
   (parse-operator-binding finish stx.lhs stx*.rhs))
-
-;; Would syntax-dismantle be helpful enough to justify implementing it?
-;(define-syntax syntax-dismantle
-;  (syntax-rules ()
-;    ((_ x skip clause ...)
-;     (let* ((y x) (ex (syntax-unwrap y)))
-;       (syntax-dismantle-clauses y ex skip clause ...)))))
-;
-;(define-syntax syntax-dismantle-clauses
-;  (syntax-rules ()
-;    ((_ x ex skip) (raise-parse-error "no matching clause" x))
-;    ((_ x ex skip (pattern body ...) clause ...)
-;     (let ((skip (lambda () (syntax-dismantle-clauses x ex skip clause ...))))
-;       (syntax-dismantle-clause x ex skip pattern body ...)))))
-;
-;(define-syntax (syntax-dismantle-clause stx)
-;  (syntax-case stx ()
-;    ((_ x ex skip (p.a . p.d) body ...) #'(if (pair? ex)
-;                                              (let ((a (car ex))
-;                                                    (d (cdr ex)))
-;                                                (let ((ex.a (syntax-unwrap a))
-;                                                      (ex.d (syntax-unwrap d)))
-;                                                  (syntax-dismantle-clause
-;                                                    a ex.a skip p.a (syntax-dismantle-clause
-;                                                                      d ex.d skip p.d body ...))))
-;                                              (skip)))
-;    ((_ x ex skip p.var       body ...) (identifier? #'p.var)
-;                                        #'(let ((p.var x)) body ...))
-;    ((_ x ex skip literal     body ...) (not (vector? (syntax-e #'literal)))
-;                                        #'(if (equal? ex 'literal)
-;                                              (begin body ...)
-;                                              (skip)))))
 
 (define env.syntax
   (value-alist->env
