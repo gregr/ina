@@ -276,6 +276,11 @@
     ((_ ((pattern rhs) ...) . body)
      #'(syntax-case (list rhs ...) () ((pattern ...) (let () . body))))))
 
+(define-syntax-rule (syntax-case-simple stx . clause)
+  ((syntax-case stx () . clause) #f))
+(define-syntax-rule (syntax-rules-simple . clause)
+  ((syntax-rules () . clause) #f))
+
 (begin-meta
   (define (generate-temporaries x*)
     (let ((x* (map (let ((gensym (make-local-gensym)))
