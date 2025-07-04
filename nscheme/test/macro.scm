@@ -1,6 +1,6 @@
 (mdefine at-least-one-test-failed? #f)
-(define verbosity 1)
-(define show-compiled-racket? (and #t (< 0 verbosity)))
+(mdefine verbosity 1)
+(define (show-compiled-racket?) (and #t (< 0 verbosity)))
 
 (define (error:parse c) (vector 'error:parse c))
 (define (error:eval  c) (vector 'error:eval  c))
@@ -29,7 +29,7 @@
        (when (< 1 verbosity)
          (displayln "PRETTY PARSED:")
          (pretty-write (E-pretty E)))
-       (when show-compiled-racket?
+       (when (show-compiled-racket?)
          (displayln "EQUIVALENT RACKET CODE:")
          (pretty-write (E-compile-rkt E '())))
        (call/escape
@@ -156,7 +156,7 @@
 (define env.test (alist-ref library=>env 'large))
 (test-evaluation
   env.test
- '(macros
+ '(macro-hygiene
     (let ()
       (define-syntax-rule (or a b)
         (let ((tmp a))
@@ -554,6 +554,137 @@
            (m3))))
      (m))
    ==> 55
+   ))
+
+(set! verbosity 0)
+(test-evaluation
+  env.test
+ '(syntax-case
+   (let ()
+     (define-syntax (my-case stx)
+       (syntax-case stx (else =>)
+         ((_ e ((value ...) body ...) ... (else default))
+          #'(let ((x e))
+              (cond ((member x '(value ...)) body ...) ...
+                    (else default))))
+         ((_ e bad-clause ... (else default))
+          (raise-parse-error "invalid my-case clause(s)" stx))
+         ((_ e clause ... (=> default))
+          #'(let ((x e)) (my-case x clause ... (else (default x)))))
+         ((_ e clause ...)
+          #'(let ((x e)) (my-case x clause ... (else (mistake "no matching case in my-case" x)))))))
+     (list (my-case (+ 0 1)
+                    ((0 1) 'zero-or-one)
+                    ((2 3) 'two-or-three))
+           (my-case (+ 1 1)
+                    ((0 1) 'zero-or-one)
+                    ((2 3) 'two-or-three))
+           (my-case (+ 1 2)
+                    ((0 1) 'zero-or-one)
+                    ((2 3) 'two-or-three))
+           (my-case (+ 2 2)
+                    ((0 1) 'zero-or-one)
+                    ((2 3) 'two-or-three)
+                    (else  'other))
+           (my-case (+ 2 2)
+                    ((0 1) 'zero-or-one)
+                    ((2 3) 'two-or-three)
+                    (=> (lambda (n) `(other: ,n))))))
+   ==> (zero-or-one two-or-three two-or-three other (other: 4))
+   (let ()
+     (define-syntax (my-case stx)
+       (syntax-case stx (else =>)
+         ((_ e ((value ...) body ...) ... (else default))
+          #'(let ((x e))
+              (cond ((member x '(value ...)) body ...) ...
+                    (else default))))
+         ((_ e bad-clause ... (else default))
+          (raise-parse-error "invalid my-case clause(s)" stx))
+         ((_ e clause ... (=> default))
+          #'(let ((x e)) (my-case x clause ... (else (default x)))))
+         ((_ e clause ...)
+          #'(let ((x e)) (my-case x clause ... (else (mistake "no matching case in my-case" x)))))))
+     (my-case (+ 2 2)
+              ((0 1) 'zero-or-one)
+              ((2 3) 'two-or-three)))
+   ==> error:eval
+   (let ()
+     (define-syntax (my-case stx)
+       (syntax-case stx (else =>)
+         ((_ e ((value ...) body ...) ... (else default))
+          #'(let ((x e))
+              (cond ((member x '(value ...)) body ...) ...
+                    (else default))))
+         ((_ e bad-clause ... (else default))
+          (raise-parse-error "invalid my-case clause(s)" stx))
+         ((_ e clause ... (=> default))
+          #'(let ((x e)) (my-case x clause ... (else (default x)))))
+         ((_ e clause ...)
+          #'(let ((x e)) (my-case x clause ... (else (mistake "no matching case in my-case" x)))))))
+     (my-case (+ 2 2)
+              ((0 1) 'zero-or-one)
+              (else 'out-of-order)
+              ((2 3) 'two-or-three)))
+   ==> error:parse
+
+   (let ()
+     (define-syntax (my-let stx)
+       (syntax-case stx ()
+         ((_ ((x e) ...) . body)
+          #'((lambda (x ...) . body) e ...))
+         ((_ name ((x e) ...) . body)
+          #'((letrec* ((name (lambda (x ...) . body))) name) e ...))))
+     (list (my-let ((x 1) (y 2)) (+ x y))
+           (my-let loop ((x* (range 11)))
+                   (if (null? x*)
+                       0
+                       (+ (car x*) (loop (cdr x*)))))))
+   ==> (3 55)
+
+   (syntax->datum
+     (syntax-case-simple #'()
+       ((x ...) #'(got x ...))))
+   ==> (got)
+   (syntax->datum
+     (syntax-case-simple #'(1 2 3)
+       ((x ...) #'(got x ...))))
+   ==> (got 1 2 3)
+   (syntax->datum
+     (syntax-case-simple #'((1 2 3) (4 5 6))
+       (((x ...) ...) #'(got x ... ...))))
+   ==> (got 1 2 3 4 5 6)
+   (syntax->datum
+     (syntax-case-simple #'((1 2 3) (4 5 6))
+       (((x ...) ...) #'(got (x ...) ...))))
+   ==> (got (1 2 3) (4 5 6))
+   (syntax->datum
+     (syntax-case-simple #'(((a 1) (b 2) (c 3)) ((x 4) (y 5) (z 6)))
+       ((((lhs rhs) ...) ...) #'(got (lhs ... ...) (rhs ... ...)))))
+   ==> (got (a b c x y z) (1 2 3 4 5 6))
+   (syntax->datum
+     (syntax-case-simple #'(((a #t 1) (b #t 2) (c #t 3)) ((x #t 4) (y #t 5) (z #t 6)))
+       ((((lhs #t rhs) ...) ...) #'(got (lhs ... ...) (rhs ... ...)))))
+   ==> (got (a b c x y z) (1 2 3 4 5 6))
+   (syntax->datum
+     (syntax-case-simple #'(((a #t 1) (b #t 2) (c #t 3)) ((x #t 4) (y #t 5) (z #t 6)))
+       ((((lhs #f rhs) ...) ...) #'(false (lhs ... ...) (rhs ... ...)))
+       ((((lhs #t rhs) ...) ...) #'(true (lhs ... ...) (rhs ... ...)))))
+   ==> (true (a b c x y z) (1 2 3 4 5 6))
+   (syntax->datum
+     (syntax-case-simple #'(((a #t 1) (b #t 2) (c #t 3) . 111) ((x #t 4) (y #t 5) (z #t 6) . 111) 222)
+       ((((lhs #f rhs) ... . 111) ... 222) #'(false (lhs ... ...) (rhs ... ...)))
+       ((((lhs #t rhs) ... . 111) ... 222) #'(true (lhs ... ...) (rhs ... ...)))))
+   ==> (true (a b c x y z) (1 2 3 4 5 6))
+   (syntax->datum
+     (syntax-case-simple #'(((a #t 1) (b #t 2) (c #t 3) . 111) ((x #t 4) (y #t 5) (z #t 6) . 111) 222 . 333)
+       ((((lhs #t rhs) ... . 111) ... 222)       #'(false (lhs ... ...) ((rhs ...) ...)))
+       ((((lhs #t rhs) ... . 111) ... 222 . 333) #'(true  (lhs ... ...) ((rhs ...) ...)))))
+   ==> (true (a b c x y z) ((1 2 3) (4 5 6)))
+   (syntax->datum
+     (syntax-case-simple #'(((a #t 1) (b #t 2) (c #t 3) . 111) ((x #t 4) (y #t 5) (z #t 6) . 111) 222 . 333)
+       ((((lhs #t rhs) ... . 111) ... 222)       #'(false (lhs ... ...) (((rhs lhs) ...) ...)))
+       ((((lhs #t rhs) ... . 111) ... 222 . 333) #'(true  (lhs ... ...) (((rhs lhs) ...) ...)))))
+   ==> (true (a b c x y z) (((1 a) (2 b) (3 c)) ((4 x) (5 y) (6 z))))
    ))
 
 (exit (if at-least-one-test-failed? 1 0))
