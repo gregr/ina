@@ -157,32 +157,20 @@
 (test-evaluation
   env.test
  '(macros
-    ;(begin
-    ;  (define-syntax-rule (or a b)
-    ;    (let ((tmp a))
-    ;      (if tmp
-    ;          tmp
-    ;          b)))
-    ;  (let ((if #f)
-    ;        (tmp 5))
-    ;    (or if tmp)))
+    (let ()
+      (define-syntax-rule (or a b)
+        (let ((tmp a))
+          (if tmp
+              tmp
+              b)))
+      (let ((if #f)
+            (tmp 5))
+        (or if tmp)))
     ;==>
     ;(let ((tmp_i if_u))
     ;  (if_i tmp_i
     ;        tmp_i
     ;        tmp_u))
-    (let ()
-      (define-syntax (example-or stx)
-        (match (syntax->list stx)
-          ((list _ a b)
-           (quasiquote-syntax
-             (let ((tmp #,a))
-               (if tmp
-                   tmp
-                   #,b))))))
-      (let ((if #f)
-            (tmp 5))
-        (example-or if tmp)))
     ;EQUIVALENT RACKET CODE:
     ;((case-lambda
     ;  (()
@@ -190,60 +178,24 @@
     ;     ((if.0 tmp.1) ((case-lambda ((tmp.2) (if tmp.2 tmp.2 tmp.1))) if.0)))
     ;    (quote #f)
     ;    (quote 5)))))
-    ;; Same example using case-lambda instead of match:
-    ;(let ()
-    ;  (define-syntax (example-or stx)
-    ;    (apply
-    ;     (case-lambda
-    ;       ((_ a b)
-    ;        (quasiquote-syntax
-    ;         (let ((tmp #,a))
-    ;           (if tmp
-    ;               tmp
-    ;               #,b))))
-    ;       (_ (raise-parse-error "bad syntax" stx)))
-    ;     (syntax->list stx)))
-    ;  (let ((if #f)
-    ;        (tmp 5))
-    ;    (example-or if tmp)))
     ==> 5
 
-   ;(begin
-   ;  (define-syntax-rule (bar)
-   ;    (define x 42))
-   ;  (bar)
-   ;  x)
    (let ((x 'not-42))
-     (define-syntax (bar stx)
-       (match (syntax->list stx)
-         ((list _) '(define x 42))))
+     (define-syntax-rule (bar)
+       (define x 42))
      (bar)
      x)
    ;EQUIVALENT RACKET CODE:
    ;((case-lambda ((x.0) (letrec ((x.1 (quote 42))) x.0))) (quote not-42))
    ==> not-42
 
-   ;(begin
-   ;  (define x 'bad)
-   ;  (define-syntax-rule (bar stmt)
-   ;    (begin
-   ;      (define x 42)
-   ;      stmt
-   ;      x))
-   ;  (let ()
-   ;    (bar (define y 5))
-   ;    y
-   ;    x))
    (mlet ((cell #f))
      (define x 'bad)
-     (define-syntax (bar stx)
-       (match (syntax->list stx)
-         ((list _ stmt)
-          (quasiquote-syntax
-            (begin
-              (define x 42)
-              #,stmt
-              (set! cell x))))))
+     (define-syntax-rule (bar stmt)
+       (begin
+         (define x 42)
+         stmt
+         (set! cell x)))
      (let ()
        (bar (define y 5))
        (vector
@@ -268,27 +220,13 @@
    ; ((quote #<procedure:make-mvector>) (quote 1) (quote #f)))
    ==> #(42 5 bad)
 
-   ;(begin
-   ;  (define x 'bad)
-   ;  (define-syntax-rule (bar baz)
-   ;    (begin
-   ;      (define x 'good)
-   ;      (define-syntax-rule (baz)
-   ;        x)))
-   ;  (let ()
-   ;    (bar baz)
-   ;    (baz)))
    (let ()
      (define x 'bad)
-     (define-syntax (bar stx)
-       (match (syntax->list stx)
-         ((list _ baz)
-          (quasiquote-syntax
-            (begin
-              (define x 'good)
-              (define-syntax (#,baz stx)
-                (match (syntax->list stx)
-                  ((list _) (quote-syntax x)))))))))
+     (define-syntax-rule (bar baz)
+       (begin
+         (define x 'good)
+         (define-syntax-rule (baz)
+           x)))
      (let ()
        (bar baz)
        (baz)))
@@ -299,28 +237,15 @@
    ;     ((case-lambda (() (letrec ((x.1 (quote good))) x.1))))))))
    ==> good
 
-   ;(begin
-   ;  (define x 'bad)
-   ;  (define y 'outer)
-   ;  (let ()
-   ;    (define-syntax-rule (bar arg)
-   ;      (begin
-   ;        (define y 'inner)
-   ;        (define arg 'good)
-   ;        x))
-   ;    (bar x)))
    (let ()
      (define x 'bad)
      (define y 'outer)
      (let ()
-       (define-syntax (bar stx)
-         (match (syntax->list stx)
-           ((list _ arg)
-            (quasiquote-syntax
-              (begin
-                (define y 'inner)
-                (define #,arg 'good)
-                x)))))
+       (define-syntax-rule (bar arg)
+         (begin
+           (define y 'inner)
+           (define arg 'good)
+           x))
        (bar x)))
    ;EQUIVALENT RACKET CODE:
    ;((case-lambda
@@ -330,27 +255,14 @@
    ;       (() (letrec ((y.2 (quote inner)) (x.3 (quote good))) x.3))))))))
    ==> good
 
-   ;(block
-   ; (define x 5)
-   ; (block
-   ;  (define-syntax m
-   ;    (syntax-rules ()
-   ;      ((_ def) (begin
-   ;                 (define x 7)
-   ;                 def))))
-   ;  (m (define y (lambda () x)))
-   ;  (define x 6)
-   ;  (y)))
    (let ()
      (define x 5)
      (let ()
-       (define-syntax (m stx)
-         (match (syntax->list stx)
-           ((list _ def)
-            (quasiquote-syntax
-              (begin
-                (define x 7)
-                #,def)))))
+       (define-syntax m
+         (syntax-rules ()
+           ((_ def) (begin
+                      (define x 7)
+                      def))))
        (m (define y (lambda () x)))
        (define x 6)
        (y)))
@@ -364,19 +276,11 @@
    ;            (y.2)))))))))
    ==> 6
 
-   ;(block
-   ; (define x 4)
-   ; (define-syntax intro-ref
-   ;   (syntax-rules ()
-   ;     ((_ v) (define v x))))
-   ; (block
-   ;  (define x 5)
-   ;  (intro-ref y)))
    (let ()
      (define x 4)
-     (define-syntax (intro-ref stx)
-       (match (syntax->list stx)
-         ((list _ v) (quasiquote-syntax (define #,v x)))))
+     (define-syntax intro-ref
+       (syntax-rules ()
+         ((_ v) (define v x))))
      (let ()
        (define x 5)
        (intro-ref y)
@@ -388,23 +292,12 @@
    ;      ((case-lambda (() (letrec ((x.1 (quote 5)) (y.2 x.0)) y.2))))))))
    ==> 4
 
-   ;(let ((x 5))
-   ;  (let-syntax ((let-m (syntax-rules () ((_ m b)
-   ;                                        (let-syntax ((m (syntax-rules () ((_) x))))
-   ;                                          b)))))
-   ;    (let ((x 4))
-   ;      (let-m m (m)))))
    (let ((x 5))
-     (define-syntax (let-m stx)
-       (match (syntax->list stx)
-         ((list _ m b)
-          (quasiquote-syntax
-            (let ()
-              (define-syntax (#,m stx)
-                (quote-syntax x))
-              #,b)))))
-     (let ((x 4))
-       (let-m m (m))))
+     (let-syntax ((let-m (syntax-rules () ((_ m b)
+                                           (let-syntax ((m (syntax-rules () ((_) x))))
+                                             b)))))
+       (let ((x 4))
+         (let-m m (m)))))
    ;EQUIVALENT RACKET CODE:
    ;((case-lambda
    ;   ((x.0) ((case-lambda ((x.1) ((case-lambda (() x.0))))) (quote 4))))
@@ -416,11 +309,9 @@
        (splicing-let ((x 5))
          (define foo (quote-syntax x))))
      (define-syntax (m stx)
-       (match (syntax->list stx)
-         ((list _)
-          (quasiquote-syntax
-            (let ((#,foo 7))
-              #,foo)))))
+       (syntax-case stx ()
+         ((_) #`(let ((#,foo 7))
+                  #,foo))))
      (splicing-let ((x 6))
        (m)))
    ;EQUIVALENT RACKET CODE:
@@ -438,11 +329,9 @@
        (splicing-let ((x 5))
          (define foo (quote-syntax x))))
      (define-syntax (m stx)
-       (match (syntax->list stx)
-         ((list _ arg)
-          (quasiquote-syntax
-            (let ((#,arg 7))
-              #,arg)))))
+       (syntax-case stx ()
+         ((_ arg) #'(let ((arg 7))
+                      arg))))
      (splicing-let ((x 6))
        (m foo)))
    ;EQUIVALENT RACKET CODE:
@@ -460,9 +349,8 @@
        (splicing-let ((x 5))
          (define foo (quote-syntax x))))
      (define-syntax (m stx)
-       (match (syntax->list stx)
-         ((list _ arg)
-          (quasiquote-syntax #,arg))))
+       (syntax-case stx ()
+         ((_ arg) #'arg)))
      (splicing-let ((x 6))
        (m foo)))
    ;EQUIVALENT RACKET CODE:
@@ -546,11 +434,10 @@
        (define-in-vocabulary m
          'expression
          (lambda (env stx)
-           (match (syntax->list stx)
-             ((list _ arg)
-              (parse-expression
-                (env-vocabulary-ref env arg 'env)
-                (env-vocabulary-ref env arg 'stx)))))))
+           (syntax-case-simple stx
+             ((_ arg) (parse-expression
+                        (env-vocabulary-ref env #'arg 'env)
+                        (env-vocabulary-ref env #'arg 'stx)))))))
      (splicing-let ((x 7))
        (m foo)))
    ;EQUIVALENT RACKET CODE:
@@ -559,42 +446,29 @@
    ==> 5
 
    (let ((x 88))
-     (define-syntax (m stx)
-       (match (syntax->list stx)
-         ((list _ a)
-          (quasiquote-syntax
-            (begin
-              (define #,a 77)
-              x)))))
+     (define-syntax-rule (m a)
+       (begin (define a 77)
+              x))
      (m x))
    ;EQUIVALENT RACKET CODE:
    ;((case-lambda ((x.0) (letrec ((x.1 (quote 77))) x.1))) (quote 88))
    ==> 77
 
    (let ((x 88))
-     (define-syntax (m stx)
-       (match (syntax->list stx)
-         ((list _ a)
-          (quasiquote-syntax
-            (let ((#,a 77))
-              x)))))
+     (define-syntax-rule (m a)
+       (let ((a 77))
+         x))
      (m x))
    ;EQUIVALENT RACKET CODE:
    ;((case-lambda ((x.0) ((case-lambda ((x.1) x.0)) (quote 77)))) (quote 88))
    ==> 88
 
    (let ()
-     (define-syntax (m stx)
-       (match (syntax->list stx)
-         ((list _ a b)
-          (quasiquote-syntax
-            (begin
-              (define #,a 1)
-              #,b)))))
-     (define-syntax (n stx)
-       (match (syntax->list stx)
-         ((list _ id)
-          (quasiquote-syntax (m #,id x)))))
+     (define-syntax-rule (m a b)
+       (begin (define a 1)
+              b))
+     (define-syntax-rule (n id)
+       (m id x))
      (n x))
    ;EQUIVALENT RACKET CODE:
    ;((case-lambda (() (letrec ((x.0 (quote 1))) x.0))))
