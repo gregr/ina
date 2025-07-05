@@ -177,56 +177,37 @@
    (define-in-vocabulary disj
      vocab.formula (operator-parser parse-disj 2 2)))
 
-  (define-definition-syntax (define-relation stx)
-    (match (syntax->list stx)
-      ((cons* _ rhead fm*)
-       (quasiquote-syntax (define-relation0 #,rhead (fresh () . #,fm*))))))
+  (define-definition-syntax define-relation
+    (syntax-rules () ((_ rhead . fm*) (define-relation0 rhead (fresh () . fm*)))))
 
-  (define-syntax (run stx)
-    (match (syntax->list stx)
-      ((cons* _ count param body*)
-       (if (identifier? param)
-           (quasiquote-syntax
-             (run0 #,count #,param (fresh () . #,body*)))
-           (quasiquote-syntax
-             (run0 #,count q (fresh #,param (== q (list . #,param)) . #,body*)))))))
+  (define-syntax run
+    (syntax-rules ()
+      ((_ count (param ...) . body*) (run0 count q (fresh (param ...) (== q (list param ...)) . body*)))
+      ((_ count param . body*)       (run0 count param (fresh () . body*)))))
 
-  (define-syntax (run* stx)
-    (match (syntax->list stx)
-      ((cons* _ param body*)
-       (quasiquote-syntax (run #f #,param . #,body*)))))
+  (define-syntax-rule (run* param . body*) (run #f param . body*))
 
-  (define-formula-syntax (fresh stx)
-    (match (syntax->list stx)
-      ((cons* _ param* body)
-       (match (cons (syntax->list param*) body)
-         ((list  '() fm)          fm)
-         ((list  '() fm1 fm2)     (quasiquote-syntax (conj #,fm1 #,fm2)))
-         ((cons* '() fm1 fm2 fm*) (quasiquote-syntax (fresh () (conj #,fm1 #,fm2) . #,fm*)))
-         ((cons* x*  fm*)         (match (syntax->list x*)
-                                    ((cons* x x*)
-                                     (quasiquote-syntax (fresh0 #,x (fresh #,x* . #,fm*))))))))))
+  (define-formula-syntax fresh
+    (syntax-rules ()
+      ((_ () fm)            fm)
+      ((_ () fm1 fm2 . fm*) (fresh () (conj fm1 fm2) . fm*))
+      ((_ (x . x*) . fm*)   (fresh0 x (fresh x* . fm*)))))
 
-  (define-formula-syntax (conde stx)
-    (match (syntax->list stx)
-      ((list  _ fm*)      (quasiquote-syntax (fresh () . #,fm*)))
-      ((cons* _ fm* fm**)
-       (quasiquote-syntax (disj (fresh () . #,fm*) (conde . #,fm**)))))))
+  (define-formula-syntax conde
+    (syntax-rules ()
+      ((_ fm*)        (fresh () . fm*))
+      ((_ fm* . fm**) (disj (fresh () . fm*) (conde . fm**))))))
 
-(define-definition-syntax (defrel stx)
-  (match (syntax->list stx)
-    ((cons* _ stx*)
-     (quasiquote-syntax (define-relation . #,stx*)))))
+(define-definition-syntax defrel
+  (syntax-rules () ((_ . stx*) (define-relation . stx*))))
 
-(define-syntax (test stx)
-  (match (syntax->list stx)
-    ((list _) (quote-syntax (values)))
-    ((cons* _ expr expr*)
-     (quasiquote-syntax
-       (begin (pretty-write '#,expr)
-              (pretty-write (with-milliseconds displayln (lambda () #,expr)))
-              (newline)
-              (test . #,expr*))))))
+(define-syntax test
+  (syntax-rules ()
+    ((_)              (values))
+    ((_ expr . expr*) (begin (pretty-write 'expr)
+                             (pretty-write (with-milliseconds displayln (lambda () expr)))
+                             (newline)
+                             (test . expr*)))))
 
 (test
   (run 1 q (== 5 5))

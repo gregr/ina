@@ -95,48 +95,33 @@
 ;;;;;;;;;;;;;;;;;;
 ;;; miniKanren ;;;
 ;;;;;;;;;;;;;;;;;;
-(define-syntax (run stx)
-  (match (syntax->list stx)
-    ((cons* _ count param body*)
-     (quasiquote-syntax
-       (map (lambda (st) (reify var.initial st))
-            (s-take #,count
-                    (pause state.empty
-                           #,(if (identifier? param)
-                                 (quasiquote-syntax (let ((#,param var.initial)) . #,body*))
-                                 (quasiquote-syntax
-                                   (fresh #,param (== var.initial (list . #,param)) . #,body*))))))))))
+(define-syntax run
+  (syntax-rules ()
+    ((_ count (param ...) . body*) (run count q (fresh (param ...) (== q (list param ...)) . body*)))
+    ((_ count param . body*)       (map (lambda (st) (reify var.initial st))
+                                        (s-take count (pause state.empty (let ((param var.initial))
+                                                                           . body*)))))))
 
-(define-syntax (run* stx)
-  (match (syntax->list stx)
-    ((cons* _ param body*)
-     (quasiquote-syntax (run #f #,param . #,body*)))))
+(define-syntax-rule (run* param . body*) (run #f param . body*))
 
-(define-syntax (fresh stx)
-  (match (syntax->list stx)
-    ((cons* _ param* body)
-     (match (cons (syntax->list param*) body)
-       ((list  '() fm)          fm)
-       ((list  '() fm1 fm2)     (quasiquote-syntax (conj #,fm1 #,fm2)))
-       ((cons* '() fm1 fm2 fm*) (quasiquote-syntax (fresh () (conj #,fm1 #,fm2) . #,fm*)))
-       ((cons* x*  fm*)         (match (syntax->list x*)
-                                  ((cons* x x*)
-                                   (quasiquote-syntax (call/fresh (lambda (#,x) (fresh #,x* . #,fm*)))))))))))
+(define-syntax fresh
+  (syntax-rules ()
+    ((_ () fm)            fm)
+    ((_ () fm1 fm2 . fm*) (fresh () (conj fm1 fm2) . fm*))
+    ((_ (x . x*) . fm*)   (call/fresh (lambda (x) (fresh x* . fm*))))))
 
-(define-syntax (conde stx)
-  (match (syntax->list stx)
-    ((list  _ fm*)      (quasiquote-syntax (fresh () . #,fm*)))
-    ((cons* _ fm* fm**) (quasiquote-syntax (disj (fresh () . #,fm*) (conde . #,fm**))))))
+(define-syntax conde
+  (syntax-rules ()
+    ((_ fm*)        (fresh () . fm*))
+    ((_ fm* . fm**) (disj (fresh () . fm*) (conde . fm**)))))
 
-(define-syntax (test stx)
-  (match (syntax->list stx)
-    ((list _) (quote-syntax (values)))
-    ((cons* _ expr expr*)
-     (quasiquote-syntax
-       (begin (pretty-write '#,expr)
-              (pretty-write (with-milliseconds displayln (lambda () #,expr)))
-              (newline)
-              (test . #,expr*))))))
+(define-syntax test
+  (syntax-rules ()
+    ((_)              (values))
+    ((_ expr . expr*) (begin (pretty-write 'expr)
+                             (pretty-write (with-milliseconds displayln (lambda () expr)))
+                             (newline)
+                             (test . expr*)))))
 
 (test
   (run 1 q (== 5 5))
