@@ -23,12 +23,13 @@
 (define parse-define-in-vocabulary (parse-modify-in-vocabulary env-vocabulary-bind!*))
 (define parse-add-in-vocabulary    (parse-modify-in-vocabulary env-vocabulary-add!*))
 
-(define (parse-define-syntax env.op stx.lhs . stx*.rhs)
+(define (parse-define-syntax env stx.lhs . stx*.rhs)
   (define (finish id.lhs ^rhs)
     (parse-identifier id.lhs)
-    (let ((op (with-higher-mark-level (lambda () (E-eval (^rhs env.op))))))
+    (let* ((env.op (env-read-only env))
+           (op     (with-higher-mark-level (lambda () (E-eval (^rhs env.op))))))
       (env-vocabulary-bind!
-        env.op id.lhs
+        env id.lhs
         vocab.expression
         (lambda (env.use stx) ((syntax-transcribe/parse parse-expression) stx op env.op env.use))
         vocab.definition
