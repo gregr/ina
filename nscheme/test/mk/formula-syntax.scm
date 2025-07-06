@@ -160,7 +160,7 @@
            (let ((env (env-read-only env)))
              (lambda () ($lambda/env env param* (lambda (env) (parse-formula env fm)))))))))))
 
-(define-vocabulary-syntax-binder define-formula-syntax define-in-vocabulary vocab.formula #f parse-formula)
+(define-vocabulary-syntax-binder define-formula-syntax define-in-vocabulary vocab.formula parse-formula)
 
 (define-in-vocabulary ==
   vocab.formula (operator-parser parse-== 2 2))

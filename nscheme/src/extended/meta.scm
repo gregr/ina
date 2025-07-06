@@ -289,8 +289,8 @@
                    (syntax->list x*))))
       (let-values (((stx _) (syntax-transcribe #t (lambda (_) x*) env.empty env.empty)))
         (syntax->list stx))))
-  (define ((make-macro-parser introduce-definitions? parse) env.op op)
-    (let ((transcribe (syntax-transcribe/parse introduce-definitions? parse)))
+  (define ((make-macro-parser parse) env.op op)
+    (let ((transcribe (syntax-transcribe/parse parse)))
       (lambda (env.use stx) (transcribe stx op env.op env.use))))
   (define ((identifier-syntax op) stx)
     (let ((x (syntax-unwrap stx)))
@@ -314,16 +314,16 @@
            (define-syntax x t) ...
            (let () . body))))))
 
-(define-syntax-rule (define-vocabulary-syntax-binder name bind-in-vocabulary vocabulary-name introduce-definitions? vocabulary-parser)
+(define-syntax-rule (define-vocabulary-syntax-binder name bind-in-vocabulary vocabulary-name vocabulary-parser)
   (define-syntax name
     (syntax-rules ()
       ((_ (lhs . param*) . rhs*) (name lhs (lambda param* . rhs*)))
       ((_ lhs rhs)               (bind-in-vocabulary lhs vocabulary-name
-                                                     ((make-macro-parser introduce-definitions? vocabulary-parser)
+                                                     ((make-macro-parser vocabulary-parser)
                                                       (current-environment) rhs))))))
 
-(define-vocabulary-syntax-binder define-definition-syntax define-in-vocabulary vocab.definition #t parse-definition)
-(define-vocabulary-syntax-binder define-expression-syntax define-in-vocabulary vocab.expression #f parse-expression)
+(define-vocabulary-syntax-binder define-definition-syntax define-in-vocabulary vocab.definition parse-definition)
+(define-vocabulary-syntax-binder define-expression-syntax define-in-vocabulary vocab.expression parse-expression)
 
 (define-syntax define-identifier-syntax
   (syntax-rules ()
@@ -334,8 +334,8 @@
 (define-syntax-rule (identifier-only-syntax-rule   rhs)     (identifier-only-syntax (lambda (_) (quote-syntax rhs))))
 (define-syntax-rule (define-identifier-syntax-rule lhs rhs) (define-syntax lhs (identifier-syntax-rule rhs)))
 
-(define-vocabulary-syntax-binder define-set!-syntax define-in-vocabulary vocab.set! #f parse-expression)
-(define-vocabulary-syntax-binder add-set!-syntax    add-in-vocabulary    vocab.set! #f parse-expression)
+(define-vocabulary-syntax-binder define-set!-syntax define-in-vocabulary vocab.set! parse-expression)
+(define-vocabulary-syntax-binder add-set!-syntax    add-in-vocabulary    vocab.set! parse-expression)
 
 (define-syntax-rule (define-ref&set!-syntax name transform-ref transform-set!)
   (begin (define-expression-syntax name transform-ref)
