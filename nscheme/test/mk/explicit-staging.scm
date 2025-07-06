@@ -182,7 +182,8 @@
             (cons 'run*  (operator-parser parse-run*  2 #f))
             (cons '==    (parse/constant-expression $==)))
       (lambda (id op) (env-vocabulary-bind! env.scope id vocab.expression op)))
-    (env-conjoin (env-freeze env.scope) env)))
+    (env-read-only! env.scope)
+    (env-conjoin env.scope env)))
 
 (define env.mk (env-conjoin/minikanren env.test))
 

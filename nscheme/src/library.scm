@@ -143,7 +143,7 @@
                  (cons 'control  env.control)
                  (cons 'common   env.common))))
     (env-add-value-alist! menv.persist (aquote library=>text* library=>env))
-    (env-freeze! menv.persist)
+    (env-read-only! menv.persist)
     library=>env))
 
 (define (parse-bootstrapped-program-definition* library=>text* library=>def* def*.program)

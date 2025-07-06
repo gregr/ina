@@ -42,8 +42,8 @@
       current-mark-level syntax-prune-level syntax-transcribe
       syntax-note syntax-note-set syntax-note-add syntax-unwrap syntax->datum datum->syntax
       identifier? identifier?! identifier=? env-identifier=?
-      env.empty make-env env-read-only env-read-and-write env-conjoin env-remove env-freeze
-      env-describe env-ref/k env-ref env-bind!/k env-rebind! env-bind! env-freeze!)))
+      env.empty make-env env-read-only env-read-and-write env-conjoin env-remove
+      env-describe env-ref/k env-ref env-bind!/k env-rebind! env-bind! env-read-only!)))
 
 (define env.meta
   (let ((env (make-env))
@@ -59,4 +59,5 @@
             (cons 'add-in-vocabulary    (operator-parser parse-add-in-vocabulary    1 #f))
             (cons 'define-syntax        (operator-parser parse-define-syntax        2 #f)))
       (lambda (id op) (env-vocabulary-bind! env id vocab.definition op)))
-    (env-freeze env)))
+    (env-read-only! env)
+    env))

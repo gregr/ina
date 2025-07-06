@@ -17,7 +17,8 @@
   (let* ((env.d (make-env))
          (env   (env-read-and-write (env-conjoin env.d env) env.d)))
     (program-parse-definition*/env p env stx*.def)
-    (env-freeze! env.d)
+    (env-read-only! env.d)
+    (env-read-only! env)
     env.d))
 
 (define ((eval-definition*/yield yield) env stx*.def)

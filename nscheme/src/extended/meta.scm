@@ -120,7 +120,7 @@
     (define (parse-syntax-case env stx.x stx.literal* . clause*)
       (let ((literal* (syntax->list stx.literal*)) (env.literal (make-env)))
         (for-each (lambda (id) (parse-identifier id) (env-vocabulary-bind! env.literal id vocab.syntax-pattern 'literal)) literal*)
-        (env-freeze! env.literal)
+        (env-read-only! env.literal)
         (let ((env.literal (env-conjoin env.literal env)))
           ($lambda
             '(env)
@@ -140,7 +140,7 @@
                                                     ((parse-syntax-pattern/... env.literal pattern)
                                                      env.pattern $id=? $x $fail
                                                      (lambda ()
-                                                       (env-freeze! env.pattern)
+                                                       (env-read-only! env.pattern)
                                                        (let ((env (env-conjoin env.pattern env)))
                                                          ($if (^fender env) (parse-expression env body) $fail)))))))
                                             (do-clause

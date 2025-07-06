@@ -125,7 +125,8 @@
                  (for-each (lambda (id E) (env-vocabulary-bind! env.scope id vocab.expression
                                                                 (parse/constant-expression E)))
                            param* E*)
-                 (env-freeze env.scope))
+                 (env-read-only! env.scope)
+                 env.scope)
                env))
 
 (define (env-bind-boxed! env id ^E.box)
@@ -140,10 +141,7 @@
 (define (env-add-alist! env a)
   (alist-for-each a (lambda (id E) (env-vocabulary-bind!
                                      env id vocab.expression (parse/constant-expression E)))))
-(define (alist->env a)
-  (let ((env (make-env)))
-    (env-add-alist! env a)
-    (env-freeze env)))
+(define (alist->env a) (let ((env (make-env))) (env-add-alist! env a) (env-read-only! env) env))
 (define (env-add-value-alist! env a) (env-add-alist! env (alist-map-value a $quote)))
 (define (value-alist->env a) (alist->env (alist-map-value a $quote)))
 (define (addr-alist->env  a) (alist->env (alist-map-value a $ref)))
