@@ -207,16 +207,13 @@
   (case-lambda
     (()       ($quote #t))
     ((a . a*) (let loop ((a a) (a* a*))
-                (cond ((null? a*) a)
-                      (else       ($if a (loop (car a*) (cdr a*)) ($quote #f))))))))
+                (if (null? a*) a ($if a (loop (car a*) (cdr a*)) ($quote #f)))))))
 (define $or
   (case-lambda
     (()       ($quote #f))
     ((a . a*) (let loop ((a a) (a* a*))
-                (cond ((null? a*) a)
-                      (else ($let '(t ^rest)
-                                  (list a ($thunk (loop (car a*) (cdr a*))))
-                                  (lambda ($t $^rest) ($if $t $t ($call $^rest))))))))))
+                (if (null? a*) a ($let1 't a (lambda ($t)
+                                               ($if $t $t (loop (car a*) (cdr a*))))))))))
 (define ($not                 x) ($if x ($quote #f) ($quote #t)))
 (define ($when           c body) ($if c body ($values)))
 (define ($unless         c body) ($when ($not c) body))
