@@ -21,19 +21,22 @@
            (primitive=>addr    (map cons (map cdr name=>primitive) (map car addr=>primitive-id))))
       (values addr=>primitive-id primitive=>addr))))
 
-(define (E-map-quote E f)
+(define (E-fold E f)
   (let loop ((E E))
-    (E-annotate
-      (E-case
-        E (lambda (E) (mistake 'E-map-quote "not an E" E))
-        E:quote?        f
-        E:ref?          (lambda (_)              E)
-        E:if?           (lambda (c t f)          (E:if           (loop c) (loop t) (loop f)))
-        E:call?         (lambda (rator rand*)    (E:call         (loop rator) (map loop rand*)))
-        E:apply/values? (lambda (rator vrand)    (E:apply/values (loop rator) (loop vrand)))
-        E:case-lambda?  (lambda (param*~* body*) (E:case-lambda  param*~* (map loop body*)))
-        E:letrec?       (lambda (lhs* rhs* body) (E:letrec       lhs* (map loop rhs*) (loop body))))
-      (E-note E))))
+    (f (E-annotate
+         (E-case
+           E (lambda (E) (mistake 'E-fold "not an E" E))
+           E:quote?        (lambda (_)              E)
+           E:ref?          (lambda (_)              E)
+           E:if?           (lambda (c t f)          (E:if           (loop c) (loop t) (loop f)))
+           E:call?         (lambda (rator rand*)    (E:call         (loop rator) (map loop rand*)))
+           E:apply/values? (lambda (rator vrand)    (E:apply/values (loop rator) (loop vrand)))
+           E:case-lambda?  (lambda (param*~* body*) (E:case-lambda  param*~* (map loop body*)))
+           E:letrec?       (lambda (lhs* rhs* body) (E:letrec       lhs* (map loop rhs*) (loop body))))
+         (E-note E)))))
+
+(define (E-map-quote E f)
+  (E-fold E (lambda (E) (E-case E (lambda (E) E) E:quote? f))))
 
 (define (E-simplify-quote E)
   (E-map-quote
