@@ -16,6 +16,7 @@
 
 (define (E:lambda param*~ body)   (E:case-lambda (list param*~) (list body)))
 (define (E:let    lhs* rhs* body) (E:call (E:lambda lhs* body) rhs*))
+(define (E:seq    e0 e1)          (E:apply/values (E:lambda (make-address #f #f) e1) e0))
 
 (splicing-local
   ((define (E-tagged? E len tag)
