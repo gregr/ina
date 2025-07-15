@@ -51,7 +51,7 @@
 (define env.common
   (value-alist->env
     (aquote
-      panic apply values make-record-type
+      panic apply values make-record-type describe
       eqv? null? boolean? procedure? symbol? string? rational? integer?
       pair? vector? mvector? bytevector? mbytevector?
       bytevector->string string->bytevector string->symbol symbol->string

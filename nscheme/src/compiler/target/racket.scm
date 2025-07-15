@@ -16,7 +16,7 @@
   (bytevector-append
     #"#lang racket/base
 (provide
-  panic apply values make-record-type
+  panic apply values make-record-type describe
   eqv? null? boolean? procedure? symbol? string? rational? integer?
   pair? vector? mvector? bytevector? mbytevector?
   bytevector->string string->bytevector string->symbol symbol->string
@@ -134,6 +134,9 @@ racket-primitive-definition-text))
   (let ((q (rkt:floor (/ dividend divisor))))
     (values q (- dividend (* q divisor)))))
 
+(define (describe x)
+  (cond ((procedure? x) (object-name x))
+        (else           #f)))
 (define (make-record-type name field-count mutable? representer)
   (let-values (((stype construct ? access mutate!)
                 (make-struct-type name #f field-count 0 #f (list (cons prop:sealed #t)) #f #f '() #f #f)))
