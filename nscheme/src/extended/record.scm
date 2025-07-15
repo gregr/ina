@@ -30,7 +30,7 @@
                               ((2) (set! mutable? #t) (cons (car fdesc) (cadr fdesc)))
                               (else (raise-parse-error "not a record field description" stx))))))
                     (syntax->list #'field-desc*))))
-         #`(begin (define rtd (make-rtd 'constructor-name #,(length field-desc*) #,mutable?))
+         #`(begin (define rtd (make-rtd 'constructor-name #,(length field-desc*) #,mutable? #f))
                   (define constructor-name (rtd-constructor rtd))
                   (define predicate-name   (rtd-predicate   rtd))
                   (define-record-type-accessor* rtd . #,(map car field-desc*))

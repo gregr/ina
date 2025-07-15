@@ -38,7 +38,7 @@
                                       f
                                       (loop f (car h*) (cdr h*))))))))
 
-(define (make-rtd name field-count mutable?)
+(define (make-rtd name field-count mutable? representer)
   (let-values (((constructor predicate accessor mutator) (make-record-type name field-count mutable?)))
     (vector (list (cons 'name name) (cons 'field-count field-count))
             constructor predicate accessor mutator)))
