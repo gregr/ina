@@ -134,7 +134,7 @@ racket-primitive-definition-text))
   (let ((q (rkt:floor (/ dividend divisor))))
     (values q (- dividend (* q divisor)))))
 
-(define (make-record-type name field-count mutable?)
+(define (make-record-type name field-count mutable? representer)
   (let-values (((stype construct ? access mutate!)
                 (make-struct-type name #f field-count 0 #f (list (cons prop:sealed #t)) #f #f '() #f #f)))
     (values construct ? access (and mutable? (lambda (r i v) (mutate! r i v) (values))))))
