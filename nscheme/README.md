@@ -127,11 +127,6 @@ Optionally move resulting artifacts from built/ to prebuilt/ to commit a snapsho
 
 ## TODO
 
-- implement syntax-pattern / syntax-template language in extended/meta.scm
-  - then implement: syntax quasisyntax syntax-case syntax-rules
-
-
-
 - low-level abstract or concrete machine code
   - can be run as a simulator, or compiled and jumped to
     - multiple kinds of simulations possible, for various levels of stepping and error checking, particularly for memory accesses
@@ -150,6 +145,7 @@ Optionally move resulting artifacts from built/ to prebuilt/ to commit a snapsho
 
 - Implement a runtime system for low-level targets
   - system calls
+  - bignum/ratnum arithmetic
   - concurrency
   - memory management
   - privileged, regional garbage collection and arena allocation interface
@@ -487,6 +483,8 @@ consider including dynamic parameter manipulation in E to improve specialization
 separate mutable primitives from the other common ones
 - not all effects have to move: can leave panic, since panicking is equivalent to any other mistake
 
+maybe separate base/raise.scm from base/prompt.scm to separate the part that doesn't depend on concurrency?
+
 - subsets of base
   - this may be a waste of time, aside from identifying the definitely unsafe portion (time and io)
     - concurrency also allows crude timing, so it's not exactly safe either
@@ -808,6 +806,53 @@ start working on an initial optimization pass inspired by cp0
 - sub-zero cfa
 
 ### Implementation complexity notes
+
+## July 2025
+
+      61 ./src/posix/process.scm
+      16 ./src/posix/terminal/tty.scm
+      18 ./src/posix/terminal/text.scm
+      63 ./src/posix/terminal/csi.scm
+       4 ./src/posix/terminal/osc.scm
+      88 ./src/posix/terminal/sgr.scm
+       3 ./src/posix/network.scm
+      53 ./src/posix/cli.scm
+      21 ./src/posix/platform.scm
+     125 ./src/posix/filesystem.scm
+      11 ./src/posix/signal.scm
+     226 ./src/run-cli.scm
+     424 ./src/parser/parse.scm
+     359 ./src/parser/minimal.scm
+      30 ./src/parser/program.scm
+      64 ./src/parser/meta.scm
+      12 ./src/build.scm
+     328 ./src/syntax.scm
+     449 ./src/extended/match.scm
+      37 ./src/extended/record.scm
+     350 ./src/extended/meta.scm
+      51 ./src/compiler/high-level-passes.scm
+     135 ./src/compiler/high-level-ir.scm
+     689 ./src/compiler/target/racket.scm
+      38 ./src/compiler/backend/rkt.scm
+      11 ./src/base/coroutine.scm
+      52 ./src/base/mbytevector.scm
+     101 ./src/base/exception.scm
+      49 ./src/base/misc.scm
+      50 ./src/base/mvector.scm
+    1381 ./src/base/text.scm
+      21 ./src/base/generator.scm
+      97 ./src/base/number.scm
+     106 ./src/base/bytevector.scm
+     170 ./src/base/unicode.scm
+     136 ./src/base/prompt.scm
+      56 ./src/base/time.scm
+     500 ./src/base/port.scm
+      22 ./src/base/platform.scm
+     307 ./src/base/list.scm
+      49 ./src/base/io.scm
+      28 ./src/base/vector.scm
+     157 ./src/library.scm
+    6948 total
 
 ## April 2025
 
