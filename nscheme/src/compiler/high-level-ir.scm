@@ -2,9 +2,9 @@
 (define (address-name addr)      (vector-ref addr 1))
 (define (address-note addr)      (vector-ref addr 2))
 (define (address=?    a b)       (eqv? (vector-ref a 0) (vector-ref b 0)))
-(define (address->local-gensym/default name.default)
+(define (address->local-gensym/transform transform)
   (let ((gensym (make-local-gensym)))
-    (lambda (addr) (gensym (or (address-name addr) name.default)))))
+    (lambda (addr) (gensym (transform (address-name addr))))))
 
 (define (E:quote        v)              (vector 'E:quote        #f v))
 (define (E:ref          address)        (vector 'E:ref          #f address))
