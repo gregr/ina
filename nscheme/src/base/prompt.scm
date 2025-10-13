@@ -27,9 +27,8 @@
     on-panic
     (lambda ()
       (without-restarts-and-raise-handlers
-        (lambda () (current-platform
-                     platform.empty
-                     (lambda () (current-thread-group (make-thread-group) thunk))))))))
+        (lambda ()
+          (without-platform (lambda () (current-thread-group (make-thread-group) thunk))))))))
 
 (define (isolated-thread on-panic thunk)
   (thread (lambda () (with-isolation on-panic thunk))))

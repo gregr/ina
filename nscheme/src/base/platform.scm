@@ -20,3 +20,5 @@
 (define current-sleep-seconds-nanoseconds (make-platform-parameter '(time sleep-seconds-nanoseconds) platform.default))
 (define current-seconds-nanoseconds/type  (make-platform-parameter '(time seconds-nanoseconds/type)  platform.default))
 (define current-primitive-evaluate        (make-platform-parameter '(primitive-evaluate)             platform.default))
+
+(define (without-platform thunk) (current-platform platform.empty thunk))
