@@ -1419,11 +1419,11 @@
     (((continue (try the next alternative)))
      ((continue (try the next alternative)))
      ((continue (try the next alternative)))))
-   (with-isolation
+   (with-panic-catch
     (lambda x* `(got panic: . ,x*))
     (lambda () 'success))
    ==> success
-   (with-isolation
+   (with-panic-catch
     (lambda x* `(got panic: . ,x*))
     (lambda () (panic 'failure)))
    ==> (got panic: failure)

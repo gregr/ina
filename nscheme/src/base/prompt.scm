@@ -19,17 +19,17 @@
          (channel-get ch))))))
 (define call/escape call-with-escape)
 
+(define (with-panic-catch on-panic thunk)
+  (call/escape on-panic (lambda (escape) (current-panic-handler escape thunk))))
+
 (define (with-isolation on-panic thunk)
-  (call/escape
+  (with-panic-catch
     on-panic
-    (lambda (escape)
-      (current-panic-handler
-        escape
-        (lambda ()
-          (without-restarts-and-raise-handlers
-            (lambda () (current-platform
-                         platform.empty
-                         (lambda () (current-thread-group (make-thread-group) thunk))))))))))
+    (lambda ()
+      (without-restarts-and-raise-handlers
+        (lambda () (current-platform
+                     platform.empty
+                     (lambda () (current-thread-group (make-thread-group) thunk))))))))
 
 (define (isolated-thread on-panic thunk)
   (thread (lambda () (with-isolation on-panic thunk))))
