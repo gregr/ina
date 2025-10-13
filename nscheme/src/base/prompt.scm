@@ -22,16 +22,13 @@
 (define (with-panic-catch on-panic thunk)
   (call/escape on-panic (lambda (escape) (current-panic-handler escape thunk))))
 
-(define (with-isolation on-panic thunk)
-  (with-panic-catch
-    on-panic
-    (lambda ()
-      (without-restarts-and-raise-handlers
-        (lambda ()
-          (without-platform (lambda () (current-thread-group (make-thread-group) thunk))))))))
-
 (define (isolated-thread on-panic thunk)
-  (thread (lambda () (with-isolation on-panic thunk))))
+  (current-thread-group
+    (make-thread-group)
+    (lambda () (thread (lambda () (with-panic-catch
+                                    on-panic
+                                    (lambda () (without-restarts-and-raise-handlers
+                                                 (lambda () (without-platform thunk))))))))))
 
 (define (without-restarts-and-raise-handlers thunk)
   (without-restarts (lambda () (without-raise-handlers thunk))))
