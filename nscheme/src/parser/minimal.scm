@@ -6,8 +6,12 @@
 ;;; Parsing definitions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (parse-body env stx.body)
-  (let ((env (let ((env.d (make-env))) (env-read-and-write (env-conjoin env.d env) env.d))))
-    (D->E ($d:end/expression (parse-begin-definition* env (syntax->list stx.body)) stx.body))))
+  (let* ((env.d (make-env))
+         (env   (env-read-and-write (env-conjoin env.d env) env.d))
+         (D     (parse-begin-definition* env (syntax->list stx.body))))
+    (env-read-only! env.d)
+    (env-read-only! env)
+    (D->E ($d:end/expression D stx.body))))
 
 (define (parse-definition-expression* env stx . stx*)
   ($d:expression (lambda () (parse-begin-expression* env stx stx*))))

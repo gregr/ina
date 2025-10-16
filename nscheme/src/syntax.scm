@@ -114,13 +114,8 @@
   ;;;;;;;;;;;;;;;;;;;;
   ;;; Environments ;;;
   ;;;;;;;;;;;;;;;;;;;;
-  ;; NOTE: lookup is currently O(n^2), but may not be a problem in practice.  Consider more efficient
-  ;; dictionary data structures If we need to harden this.
-  ;;
-  ;; In order for a better dictionary structure to help, env-conjoin would have to combine
-  ;; sub-dictionaries.  But this is only possible if the sub-dictionaries are frozen.
-  ;;
-  ;; TODO: experiment with replacing higher order env representation with records.
+  ;; NOTE: lookup is currently O(n), but may not be a problem in practice.  Consider more efficient
+  ;; dictionary data structures if we need to harden this.
   (splicing-local
     ((define (alist-ref    kv* k)   (let ((kv (assv k kv*))) (and kv (cdr kv))))
      (define (alist-set    kv* k v) (cons (cons k v) (alist-remove kv* k)))
@@ -172,7 +167,9 @@
                                    (kf x.existing)
                                    (begin (set! id=>x (id-dict-set id=>x id x)) (k))))))
              ((read-only!) (set! frozen? id=>x))
-             ((read-only)  (if frozen? self (env:read-only self)))
+             ((read-only)  (if frozen? self (let ((env (env:mdict id=>x)))
+                                              (env-read-only! env)
+                                              env)))
              ((frozen?)    frozen?)
              ((writable)   (and (not frozen?) self))
              ((describe)   (id-dict-key* id=>x))
@@ -190,15 +187,9 @@
           ((describe)   '())
           (else         (mistake "invalid environment operation" method)))))
     (define (make-env) (env:mdict id-dict.empty))
-    (define (env:read-only env)
-      (define (self method)
-        (case method
-          ((bind!/k)    (lambda (id x kf k) (mistake "cannot bind!/k read-only environment" id)))
-          ((read-only!) (values))
-          ((read-only)  self)
-          ((writable)   #f)
-          (else         (env method))))
-      self)
+    ;; TODO: could combine adjacent frozen sub-dictionaries.  This will be rare in practice due to
+    ;; env-read-only! typically being used on components after env-conjoin* has already been called.
+    ;; We could mitigate bad timing by registering listeners that wait for an env to freeze.
     (define (env-conjoin* env*)
       (let ((env* (filter (lambda (env) (not (equal? (env 'frozen?) id-dict.empty))) env*)))
         (cond
@@ -248,7 +239,7 @@
            (case method
              ((ref/k)      (lambda (id kf k) ((env.m 'ref/k) (syntax-add-mark id m) kf k)))
              ((bind!/k)    (lambda (id x kf k)
-                             (unless (not read-only?) (mistake "cannot bind!/k read-only environment" id))
+                             (when read-only? (mistake "cannot bind!/k read-only environment" id))
                              ((env.m 'bind!/k) (syntax-add-mark id m) x kf k)))
              ((read-only!) (set! read-only? #t))
              ((read-only)  (if read-only? self (let ((env (env-unmark env.m m)))
@@ -267,7 +258,7 @@
                              (let ((i (identifier-remove-mark id m)))
                                (if i ((env.mark 'ref/k) i kf k) ((env.no-mark 'ref/k) id kf k)))))
              ((bind!/k)    (lambda (id x kf k)
-                             (unless (not read-only?) (mistake "cannot bind!/k read-only environment" id))
+                             (when read-only? (mistake "cannot bind!/k read-only environment" id))
                              (let ((i (identifier-remove-mark id m)))
                                (if i ((env.mark 'bind!/k) i x kf k) ((env.no-mark 'bind!/k) id x kf k)))))
              ((read-only!) (set! read-only? #t))
@@ -294,18 +285,17 @@
         (values (syntax-add-mark result m) env))))
 
   (define (env-remove env id*)
-    (mlet ((frozen? #f))
-      (define (self method)
-        (case method
-          ((ref/k)      (lambda (id kf k) (if (memv id id*) (kf) ((env 'ref/k) id kf k))))
-          ((bind!/k)    (lambda (id x kf k) (mistake "cannot bind!/k env-remove environment" id)))
-          ((read-only!) (values))
-          ((read-only)  self)
-          ((frozen?)    #f)
-          ((writable)   #f)
-          ((describe)   (filter (lambda (id) (not (memv id id*))) (env 'describe)))
-          (else         (mistake "invalid environment operation" method))))
-      self))
+    (define (self method)
+      (case method
+        ((ref/k)      (lambda (id kf k) (if (memv id id*) (kf) ((env 'ref/k) id kf k))))
+        ((bind!/k)    (lambda (id x kf k) (mistake "cannot bind!/k env-remove environment" id)))
+        ((read-only!) (values))
+        ((read-only)  self)
+        ((frozen?)    #f)
+        ((writable)   #f)
+        ((describe)   (filter (lambda (id) (not (memv id id*))) (env 'describe)))
+        (else         (mistake "invalid environment operation" method))))
+    self)
 
   (define (env-ref          env id)        (env-ref/k    env id (lambda () #f) values))
   (define (env-ref/k        env id kf k)   ((env 'ref/k) id kf k))

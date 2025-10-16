@@ -340,7 +340,8 @@
 (define (parse-definition env stx)
   ((vocabulary-parser vocab.definition (lambda () parse-definition-expression)) env stx))
 
-(define (parse-definition-expression env stx) ($d:expression (lambda () (parse-expression env stx))))
+(define (parse-definition-expression env stx) ($d:expression (let ((env (env-read-only env)))
+                                                               (lambda () (parse-expression env stx)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Definition contexts ;;;
