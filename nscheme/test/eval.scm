@@ -1376,6 +1376,39 @@
        (list a b c)))
    ==> (0 example-value 0))
 
+ '(unbound-variable-handling
+    (mlet ((missing '()) (count 0))
+      (let* ((env.global  (make-env))
+             (env.unbound (env:ref (lambda (id)
+                                     (set! missing (cons id missing))
+                                     (set! count   (+ count 1))
+                                     (env-vocabulary-bind!
+                                       env.global id vocab.expression
+                                       (parse/constant-expression ($quote `(REPLACED: ,id ,count))))
+                                     (env-ref env.global id))))
+             (env         (env-conjoin env.test env.global env.unbound)))
+        (list (parse-expression env '(foo 1 2))
+              (parse-expression env '(foo bar baz))
+              (parse-expression env '(bar baz foo))
+              count
+              (reverse missing))))
+    ==>
+    (#(E:call
+        (foo 1 2)
+        #(E:quote foo (REPLACED: foo 1))
+        (#(E:quote 1 1) #(E:quote 2 2)))
+     #(E:call
+        (foo bar baz)
+        #(E:quote foo (REPLACED: foo 1))
+        (#(E:quote bar (REPLACED: bar 2)) #(E:quote baz (REPLACED: baz 3))))
+     #(E:call
+        (bar baz foo)
+        #(E:quote bar (REPLACED: bar 2))
+        (#(E:quote baz (REPLACED: baz 3))
+         #(E:quote foo (REPLACED: foo 1))))
+     3
+     (foo bar baz)))
+
  '(exception-handling
    (mlet ((missing '()) (mistake* '()) (restart-binding* '()))
      (with-raise-handler

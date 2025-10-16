@@ -297,6 +297,19 @@
         (else         (mistake "invalid environment operation" method))))
     self)
 
+  (define (env:ref ref)
+    (define (self method)
+      (case method
+        ((ref/k)      (lambda (id kf k) (let ((x (ref id))) (if x (k x) (kf)))))
+        ((bind!/k)    (lambda (id x kf k) (mistake "cannot bind!/k read-only environment" id)))
+        ((read-only!) (values))
+        ((read-only)  self)
+        ((frozen?)    #f)
+        ((writable)   #f)
+        ((describe)   '())
+        (else         (mistake "invalid environment operation" method))))
+    self)
+
   (define (env-ref          env id)        (env-ref/k    env id (lambda () #f) values))
   (define (env-ref/k        env id kf k)   ((env 'ref/k) id kf k))
   (define (env-read-only!   env)           (env 'read-only!))
