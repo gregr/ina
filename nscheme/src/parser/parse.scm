@@ -47,10 +47,11 @@
 
 (define ((vocabulary-parser vocab ^default) env stx)
   (define (syntax-operator stx)
-    (let ((op (and (identifier? stx) (env-vocabulary-ref env stx vocab))))
-      (when (and op (not (procedure? op)))
-        (raise-parse-error (list "misplaced keyword" vocab op) stx))
-      op))
+    (and (identifier? stx)
+         (let ((op (env-vocabulary-ref env stx vocab)))
+           (and op (if (procedure? op)
+                       op
+                       (raise-parse-error (list vocab "misplaced keyword" op) stx))))))
   ((or (syntax-operator stx)
        (let ((x (syntax-unwrap stx))) (and (pair? x) (syntax-operator (car x))))
        (^default))
@@ -296,20 +297,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
 
-(define current-parse-free-variable
-  (make-parameter
-    (lambda (env id)
-      (raise-parse-error
-        (if (env-ref env id) (list "misplaced keyword" vocab.expression) "unbound identifier")
-        id))))
-
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
 (define (parse-expression env stx)
   (define ((^default) env stx)
     (let* ((x (syntax-unwrap stx)))
-      (cond ((pair?    x) ($call* (parse-expression env (car x)) (parse-expression* env (syntax->list (cdr x)))))
+      (cond ((pair?    x) ($call* (parse-expression env (car x))
+                                  (parse-expression* env (syntax->list (cdr x)))))
             ((literal? x) ($quote x))
-            ((symbol?  x) ((current-parse-free-variable) env stx))
+            ((symbol?  x) (raise-parse-error (list vocab.expression (if (env-ref env stx)
+                                                                        "misplaced keyword"
+                                                                        "unbound identifier"))
+                                             stx))
             (else         (raise-parse-error (list vocab.expression "invalid syntax") stx)))))
   ($source ((vocabulary-parser vocab.expression ^default) env stx) stx))
 

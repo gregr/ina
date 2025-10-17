@@ -1410,46 +1410,39 @@
      (foo bar baz)))
 
  '(exception-handling
-   (mlet ((missing '()) (mistake* '()) (restart-binding* '()))
+   (mlet ((mistake* '()) (restart-binding* '()))
      (with-raise-handler
        (lambda (exn)
          (set! restart-binding* (cons (current-restart*) restart-binding*))
          (when (parse-error? exn)
            (set! mistake* (cons (parse-error-syntax exn) mistake*)))
-         (use-value ($quote `(REPLACED: ,(parse-error-syntax exn))))
+         (use-value ($quote `(UNBOUND: ,(parse-error-syntax exn))))
          (continue))
        (lambda ()
-         (current-parse-free-variable
-           (lambda (env id)
-             (set! missing (cons id missing))
-             ($quote `(REPLACED: ,id)))
-           (lambda ()
-             (list
-               (parse-expression env.test '(foo 1 2))
-               (parse-expression env.test '(foo bar baz))
-               (with-continue-alternative*
-                 '(try the next alternative)
-                 (lambda () (parse-expression env.test '#(not-ok)))
-                 (lambda () (parse-expression env.test '#(also-not-ok)))
-                 (lambda () (parse-expression env.test '#(still-not-ok)))
-                 (lambda () 'final-alternative))
-               (reverse missing)
-               (reverse mistake*)
-               (map (lambda (r*) (map (lambda (r) (list (restart-name r) (restart-describe r))) r*))
-                    (reverse restart-binding*))))))))
+         (list
+           (with-use-value
+             '(catch unbound identifier)
+             (lambda () (parse-expression env.test '(foo 1 2))))
+           (with-use-value
+             '(catch unbound identifier)
+             (lambda () (parse-expression env.test '(foo bar baz))))
+           (with-continue-alternative*
+             '(try the next alternative)
+             (lambda () (parse-expression env.test '#(not-ok)))
+             (lambda () (parse-expression env.test '#(also-not-ok)))
+             (lambda () (parse-expression env.test '#(still-not-ok)))
+             (lambda () 'final-alternative))
+           (reverse mistake*)
+           (map (lambda (r*) (map (lambda (r) (list (restart-name r) (restart-describe r))) r*))
+                (reverse restart-binding*))))))
    ==>
-   (#(E:call
-      (foo 1 2)
-      #(E:quote foo (REPLACED: foo))
-      (#(E:quote 1 1) #(E:quote 2 2)))
-    #(E:call
-      (foo bar baz)
-      #(E:quote foo (REPLACED: foo))
-      (#(E:quote bar (REPLACED: bar)) #(E:quote baz (REPLACED: baz))))
+   (#(E:quote #f (UNBOUND: foo))
+    #(E:quote #f (UNBOUND: foo))
     final-alternative
-    (foo foo bar baz)
-    (#(not-ok) #(also-not-ok) #(still-not-ok))
-    (((continue (try the next alternative)))
+    (foo foo #(not-ok) #(also-not-ok) #(still-not-ok))
+    (((use-value (catch unbound identifier)))
+     ((use-value (catch unbound identifier)))
+     ((continue (try the next alternative)))
      ((continue (try the next alternative)))
      ((continue (try the next alternative)))))
    (with-panic-catch
