@@ -56,8 +56,8 @@ and resuming snapshots of a running system.
   - This even includes pairs, strings, bytevectors, and vectors.
   - Mutable vectors and bytevectors (i.e., mvectors and mbytevectors) are a distinct type of data,
     disjoint from the s-expression types.
-  - Records are distinct, immutable, vector-like types.  They are disjoint from the s-expression
-    types.
+  - Records are distinct, vector-like types whose fields can be mutable.  They are disjoint from the
+    s-expression types.
 - Equality and identity:
   - Every instance of an opaque type, such as a record or procedure, and every value of a mutable
     type, such as an mvector or mbytevector, including empty ones, has a unique identity.
@@ -100,9 +100,9 @@ and resuming snapshots of a running system.
   in: https://www.deinprogramm.de/sperber/papers/adding-threads.pdf
 - No primitive eof-object type: IO operations may return `#f` or `(values)` instead
 - Inspired by: https://www.deinprogramm.de/sperber/papers/numerical-tower.pdf
+  - All numeric literals describe exact numbers by default, for reproducibility and portability.
   - Inexact numbers are not s-expressions, and are not part of the base language.  But platforms
     can provide primitives for floating-point data and arithmetic when they support it.
-    - All numeric literals describe exact numbers by default, for reproducibility and portability.
   - Complex numbers are also not built in.
   - Exact/inexact arithmetic that emphasizes "exactness" on operators rather than values
   - The usual numeric operators will only be applicable to exact numbers.
@@ -1770,187 +1770,101 @@ x?!  = assert x        ; a predicate/guard that throws an error if false
 
 ## Possible low-level type tagging schemes
 
-One possible set of type-tagging scheme:
-- 16-byte-aligned, 64-bit
-  - 2 x fixnum
-  - small immediate constant
-  - other number
-  - closure
-  - code
-  - symbol
-  - cons
-  - string
-  - special-vector
-  - immutable-bytevector
-  - mutable-bytevector
-  - immutable-vector
-  - mutable-vector
-  - immutable-other
-  - mutable-other
-- 8-byte-aligned, 32-bit or 64-bit
-  - 2 x fixnum
-  - immediate constant
-    - () #t #f undefined etc.
-    - single-precision flonum
-    - gc-forwarding-mark
-      - possibly also a gc-locked-mark if we attempt parallel gc
-  - procedure
-    - always a closure, non-closure code will be wrapped like a 0-ary closure
-    - code pointer is tagged like an immediate and appears in 0th position
-      - code embeds closure payload size, among other things
-  - cons
-  - are these good choices?
-    - other number
-      - double-precision flonum
-      - bignum
-      - ratnum
-      - complex-exact
-      - complex-flonum
-    - immutable-other
-      - immutable-vector and special-vector
-        - tagged as 2 x fixnum
-      - string and immutable-bytevector
-        - using at least 2 non-immediate tags (safe because their segments won't be scavenged)
-          - using more tags can support larger lengths
-      - more, using immediate tags if they embed objects, otherwise could use remaining 4 non-immediate tags
-    - mutable-other (or more like, pointer-equivalent-other, or other-with-identity)
-      - mutable-vector
-      - symbol
-        - even though these are not mutable, they are compared via eq
-        - using the same non-immediate tag as a string
-      - mutable-bytevector
-- ideas for hardware-aligned array types (which fall under the "other" category):
-  - use double indirection to ensure data alignment
-    - first indirection finds description paired with data pointer
-    - second indirection into the aligned data pointer
-  - cache-line-aligned arrays
-    - allocated in multiples of cache lines
-  - page-aligned arrays
-    - allocated in multiples of pages
-  - optionally pinned to avoid GC copying
+A good scheme will:
+- allow eqv? to avoid accessing memory for all cases where primary handle inequality of two values
+  implies that eqv? should return `#f` for those two values
+  - This means that values that eqv? compares structurally, and which are larger than a primary
+    handle, should have primary tags that are different from the tags used for values where eqv? can
+    simply compare the primary handles.
+    - these are the large, structurally-compared values:
+      - larger text types: symbols, strings, bytevectors
+      - large integers, non-integers, large floating-point numbers
+    - these are the values where eqv? only needs to perform primary handle comparison:
+      - immediates, mutables, pairs, vectors, and all opaque values such as procedures and records
+- choose different primary tags for values whose secondary tags might overlap
+  - headers for these values can use smaller secondary tags, freeing up useful header bits
+- choose distinct primary tags for aggregates that would only need a header for a secondary tag
+  - this way they don't need a secondary tag, and can therefore eliminate the header
+- choose distinct primary tags for aggregates whose types can be changed without modifying payload
+- choose secondary tags that allow a garbage collector to safely treat a header as a primary handles
+  with the same tag
+  - not necessary when payloads do not need to be scanned by a gc, such as numbers and text
 
-Alternative, better type-tagging 8-byte-aligned scheme, both 32-bit and 64-bit:
-- 0-least-significant-bit
-  - 2 x fixnum
-  - small immediate constants
-    - () #t #f undefined etc.
-    - single (and maybe half) precision flonums
-  - cons
-- 1-least-significant-bit
-  - secondary type
-    - tertiary type
-      - for safe scavenging use 1 of a 16-byte-aligned-split immediate constant tag
-        - unless all code-headered procedures live in a separate segment, and can use a non-immediate tag
-      - gc-forwarding-mark
-        - possibly also a gc-locked-mark if we attempt parallel gc
-      - ratnum
-        - can we find a good way to promote this to an immediate secondary, stored like a pair?
-          - maybe lift to primary by taking the other split of the 16-byte-aligned-split immediate constant tag
-          - or lift to primary by splitting the cons tag
-        - components may be either fixnums or bignums
-      - high precision floating point numbers
-      - hardware-aligned array/struct types
-        - use double indirection to ensure data alignment
-          - first indirection finds description paired with data pointer
-          - second indirection into the aligned data pointer
-        - cache-line-aligned arrays
-          - allocated in multiples of cache lines
-        - page-aligned arrays
-          - allocated in multiples of pages
-        - optionally pinned to avoid GC copying
-    - code
-      - for safe scavenging use the other 1 of a 16-byte-aligned-split immediate constant tag
-        - or put code-headered procedures in a separate segment
-          - may make sense if the closure includes some untagged data that shouldn't be scavenged
-      - acts as the header of a closure
-        - points to both executable code and a header with closure layout information
-    - 4 x bytevector
-      - may use 4 non-immediate tags, which is safe because bytevector segments won't be scavenged
-        - using more tags supports larger lengths
-      - mutable unless primary tag is immutable, special, or symbol
-    - 1 x vector
-      - using one fixnum tag for safe scavenging
-      - mutable unless primary tag is immutable, or special
-    - non-code procedure
-      - are these even valid?
-        - if a procedure is well-known enough to not need a code pointer, it also shouldn't need dedicated tagging
-          - so it could just be a vector
-          - well, except in the case of storing non-scavengeable data, like unboxed double-precision floats ...
-            - but here we'd need layout info anyway, which might as well come from a code pointer
-      - using the other fixnum tag for safe scavenging
-      - closure length encoded in tag
-      - or put non-code-headered procedures in a separate segment (with code-headered procedures?)
-        - may make sense if the closure includes some untagged data that shouldn't be scavenged
-    - bignum
-      - may use 1 non-immediate tag, which is safe because bignum segments won't be scavenged
-      - encodes size in tag
-  - immutable
-    - signify that the secondary type vector or bytevector referred to is immutable
-    - possibly other uses
-  - special
-    - signifies that either
-      - the secondary type vector is immutable and intended to be interpreted like a record
-      - the secondary type bytevector is immutable and intended to be interpreted like a string
-        - must contain valid utf-8 data for this tagging to be possible
-    - possibly other uses
-  - symbol
-    - the bytevector pointed to is both a valid string, and is the backing data for a symbol
-
-- 8-byte-aligned, 64-bit, non-interned symbols, immediate short symbol/string/bytevector, emphasizing avoiding indirection for eq? and eqv?:
-  - 000: fixnum
-  - 001: small immediate
-    - LLLtt001 short symbol, string, bytevector
-      - LLL is a 3-bit length, tt is a subtag, top 56 bits are used to store up to 7 bytes
-      - LLL00001: short symbol
-      - LLL01001: short string
-      - LLL10001: short bytevector
-    - tt11001: other immediates
-    - 0011001: null
-    - 0111001: boolean
-      - 00111001: #f
-      - 10111001: #t
-    - 1011001: small flonum
-    - 1111001: ???
-      - maybe use this as a shared empty vector?
-  - 010: pair: no need for a secondary header
-  - 011
-    - mbytevector
-      - can live in an immediate-content heap page (gc does not need to scan)
-      - secondary header is a fixnum with a tag that isn't 000, 001, or 011 (011 indicates a code-or-rtd, used as a secondary header)
-        - being on an immediate-content heap page makes this safe since the header won't be scanned by the gc
-    - vector: secondary header is a fixnum
-    - mvector: secondary header is a fixnum with a small-immediate tag (001 instead of 000)
-    - procedure-or-record
-      - procedures and records will be represented similarly
-        - we might allow some records to be callable, and they might answer `#t` to `procedure?`
-      - secondary header is a code-or-rtd
-      - but may be part of a strongly-connected-component closure object
-        - so scavenging might first require looking backwards for an SCC header
-      - might mix boxed and immediate-content, but its code-or-rtd header indicates how to avoid immediate-content
-    - code-or-rtd
-      - might mix boxed and immediate-content
-      - this might need to live in a special kind of heap page for unusual gc scanning to avoid immediate-content
-        - or we could teach the normal gc scanning how to recognize markers for immediate-content regions
-      - a secondary header is needed because gc won't know what this is while scanning
-        - during normal computation we always know what this is because it always appears as a secondary header itself
-        - need to figure out a safe tag for this header, or use some other technique to avoid misinterpreting it
-          - for instance, we could steal a bit from the fixnum/small-immediate tags used by vectors/mvectors
-            - then they would only have 60-bit lengths, which is probably fine
-  - eqv? must look inside these: easy to test for 1 in third bit
-    - except for ratnum, all of these can live in an immediate-content heap page (gc does not need to scan)
-      - ratnum doesn't make things much harder because it can safely be eagerly scavenged, since its
-        contents are guaranteed to be fixnums or bigints: no arbitrary recursion
-    - each of these includes a fixnum length as secondary header, though the fixnum tagging isn't
-      important because it won't be scanned by the gc due to being in an immediate-content heap page
-      - 100 symbol
-      - 101 string
-      - 110 bytevector
-    - it doesn't really matter which of the three above tags these live under, as long as they use a
-      non-fixnum-tagged (i.e., non-000) secondary header
-      - bigint: secondary header is a fixnum length, but with a non-fixnum tag
-      - ratnum: distinct but arbitrary secondary header
-      - flonum: distinct but arbitrary secondary header
-  - 111 reserved for gc forwarding address
+8-byte-aligned 64-bit primary handles:
+- primary tags are the lowest 3 bits of the handle
+- If the lowest primary tag bit is 0, eqv? only needs to compare primary handles
+- 111: reserved for gc forwarding address
+- xx1: structurally-compared values
+  - payloads do not necessarily need to be scanned by a gc
+    - a ratnum can be safely allocated in an unscanned heap if we eagerly scan it during scavenging
+  - length headers have 100 secondary tags, taking the form: L ... 100, providing a 61-bit length
+    - the 100 secondary tag is safe in an unscanned heap
+  - 001: symbol
+    - L ...   100: length header
+  - 011: string or bigint or ratnum or bigflonum
+    - L ...   100: length header for string
+    - L ...   S01: bigint
+      - S=0: positive
+      - S=1: negative
+      - L ...: 61-bit size
+    - 0 ...    10: ratnum
+      - only requires a header to provide a secondary tag
+    - WWWWWWWW011: bigflonum
+      - WWWWWWWW: 8-bit bit width
+  - 101: bytevector
+    - L ...  100: length header
+- xx0:
+  - 0x0: immediate
+    - 000: 61-bit fixnum
+    - 010: other small immutable value
+      - 0 ... 00000010: null
+      - 0 ... B0100010: boolean
+        - B=0: #f
+        - B=1: #t
+      - 0 ...  1000010: empty vector
+      - N ...  1100010: small flonum
+      - C ... LLLtt010: short symbol, string, bytevector
+        - tt=01: symbol
+        - tt=10: string
+        - tt=11: bytevector
+        - LLL: 3-bit length
+        - C ...: 7 bytes of code units
+  - 100: pair
+    - no header needed
+  - 110:
+    - length headers
+      - L ... 0000: vector
+      - L ... 1000: mvector
+      - L ...  100: mbytevector
+        - can be allocated in an unscanned heap, so the 100 secondary tag is safe
+        - using the same secondary tag as other text values allows faster type conversion
+    - handle headers
+      - procedure
+        - header is a procedure-descriptor describing payload
+        - primary handle may point to the middle of a closure for a mutually recursive procedure
+          - SCC layout places procedure-descriptors contiguously, followed by captured variables
+          - Each primary handle then points to its own procedure-descriptor, treating it as a header
+      - procedure-descriptor
+        - needs to be allocated in a code heap for special treatment by the gc
+        - L ... 0010: length header ?
+          - what does the payload look like?
+          - responsible for describing:
+            - source info
+            - closure layout
+              - position within SCC for mutually recursive procedures
+                - when scavenging such a closure, we include everything starting from position 0
+                - and we place forwarding addresses over all procedure-descriptors in the closure
+                  - for parallel collection, this is safe to do gradually if we start at position 0
+              - number of captured variables
+            - inline values and their positions in the instruction stream
+            - instructions
+            - arity-specific code entry points
+            - stack frame layout
+      - record
+        - header is a record-type-descriptor describing payload
+      - record-type-descriptor
+        - L ... 1010: length header describing number of fields in each record instance
+          - payload is of fixed size, containing these entries: mutable?, name, representer
 
 ## Ideas about control-transfer conventions
 
