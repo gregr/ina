@@ -127,6 +127,117 @@ Optionally move resulting artifacts from built/ to prebuilt/ to commit a snapsho
 
 ## TODO
 
+;;;;;;;;;;;;;;;;;;
+;;; PRIMITIVES ;;;
+;;;;;;;;;;;;;;;;;;
+
+all platform capabilities should be procedures, so fix these:
+- description
+- posix
+  - pid via (getpid)
+  - argument*
+  - environment
+
+privileged procedures that should not be part of the platform parameter:
+- primitive-evaluate
+
+primitives for implementing dynamic parameters and high-level concurrency:
+- (start-host-thread thunk)
+  - no return value
+  - on posix this would use pthreads
+- virtual-registers
+  - specific to each pthread via thread-local-storage key
+- timer-interrupt-handler / set-timer
+- (make-coroutine thunk)
+  - coroutine logic is responsible for managing timer-interrupt and virtual registers
+
+sync, evts, custodians, etc. should typically not be primitive (outside of Racket platform):
+- custodian shutdown must be interruptible to avoid DoS attacks
+  - have to kill threads first, then close IO resources
+  - but if shutdown happens in a thread with low priority, can THAT be used as an attack?
+    - not if we allow multiple shutdown initiations that cooperate concurrently
+    - i.e., if two threads try to shutdown-all on the same custodian, they both contribute compute
+      time to the shutdown
+
+Racket's already-shutdown-custodian behavior is dangerous
+- trying to open a file or create a new thread will raise an exception
+  - vulnerable to race conditions
+- would be safer to silently produce an already-dead resource/thread instead
+
+platform capability availability during src library construction makes it possible for a library to
+stash capabilities
+- if we would like to guarantee that src libraries do not stash capabilities, we have to evaluate
+  these libraries with an empty platform parameter
+
+should stdio belong to posix?
+- this would be all of base/io too
+
+- generally, we should move away from text streams as the default io and send high-level data values as messages instead
+  - probably would be good to work on a simple, but general, document emission/building system, and have interacting with a document workspace be the default form of io
+    - the document system would have multiple rendering backends: render graphically, or as text using posix stdio, or as html, etc.
+    - the interface should facilitate simple horizontal and vertical composition of emitted values
+      - repeated use of display without newline is analogous to horizontal composition, displayln is analogous to vertical composition
+      - and provide an abstract way to prompt the user for input, without deciding how or where to render the prompt
+        - something like (let ((user-value (prompt-user PROMPT-MESSAGE))) etc. ...)
+  - maybe also something simple inspired by OCaml-EIO-style traceln for diagnostic logging?
+  - should we maintain a behavioral distinction analogous to that of display vs. write, for text values (symbols, strings, bytevectors)?
+    - i.e., whether to include delimiters such as double quotes, or encode tabs/newlines, or interpret the value as literal document text
+    - need to sanitize interpreted text to remove control characters such as escapes, to avoid interfering with chosen attributes
+      - should probably also add special processing for horizontal and vertical space characters
+      - see text.scm for printers and layouts
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; HIGH-LEVEL CONCURRENCY ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+unsafe primitives for implementing high-level concurrency?
+- see the PRIMITIVES section for more detail
+- starting OS threads
+- blocking, yielding
+  - via timer interrupt handling
+- need explicit stack allocation/management since we don't have delimited continuations
+  - via make-coroutine
+- custodians and thread-groups should probably not be primitive either, typically
+- sync needs access to a random number generator
+  - since there are lots of possibilities for PRNG design, sync should typically not be primitive
+
+(make-thread-group parent max-parallelism)
+- max-parallelism is >= 1, or #f for unlimited
+- max-parallelism allows precisely portioning the processing time given to sibling thread-groups
+- this is a request for some amount of parallelism, and the parent thread group (or platform) is not
+  obligated to provide it
+- at the outermost level, on supported platforms, a fulfilled max-parallelism will likely correspond
+  to the number of OS threads that service the thread-group
+
+consolidate thread and thread-dead-evt
+- special-case sync to use thread-wait when given just a thread-dead-evt
+- we can get rid of 7 out of 18 high-level concurrency primitives, leaving these:
+  - current-thread-group make-thread-group current-thread thread
+    sync/default handle-evt choice-evt nack-guard-evt replace-evt
+    make-channel channel-put-evt
+  - but we should probably add always-evt
+    - although, we could express always-evt and never-evt using thread-dead-evt
+      - (define always-evt (thread-dead-evt (thread (lambda () (values)))))
+      - (define never-evt (thread-dead-evt (thread (lambda () (sync)))))
+      - and after getting rid of thread-dead evt:
+      - (define always-evt (thread (lambda () (values))))
+      - (define never-evt (thread (lambda () (sync))))
+    - so, get rid of never-evt too
+
+Racket-specific implementation improvement:
+- wrap threads with a structure that provides a weak box containing the thread, along with its
+  thread-dead-evt
+- sync on a single wrapped thread argument can then try to thread-wait if the weak box isn't empty,
+  otherwise use thread-dead-evt
+  - workaround to Racket self-blocking thread gc issue for thread-dead-evt
+- current-thread should be changed to contain such a wrapped value
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; LOW-LEVEL MACHINE ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
 - low-level abstract or concrete machine code
   - can be run as a simulator, or compiled and jumped to
     - multiple kinds of simulations possible, for various levels of stepping and error checking, particularly for memory accesses
@@ -134,12 +245,23 @@ Optionally move resulting artifacts from built/ to prebuilt/ to commit a snapsho
 
 
 
+
+;;;;;;;;;;;;;;;;
+;;; PREVIOUS ;;;
+;;;;;;;;;;;;;;;;
+
 - optional: low-level procedural language
   - sits right above the machine code language
   - used to implement C-like programs
   - leaf calls allowed, but no non-tail recursion
     - explicit stack allocation and switching
     - can inspect a procedure to dynamically determine how much stack space it requires
+    - furthermore, all procedures are first-order, and call-sites are statically known
+      - a closure has to be built manually from a procedure pointer (or could just be a fp alone)
+      - invoking the procedure pointer stored in a closure uses a different syntactic form
+      - another syntactic form can create a procedure pointer from a normal first-order procedure
+  - no arbitrarily variadic procedures, but case-lambda style can be supported for fixed arities
+  - could support basic type checking with straightforward escape hatches to unsafely circumvent it
 
 
 
