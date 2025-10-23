@@ -354,18 +354,97 @@ can we adapt layered computation for syntax and other annotations / notes?
 consider bytevector-u64le-ref etc.
 - conversions like `u64<->s64` are also possible
 - naively compare performance with bytevector-ref
+- given the good performance of the second fastest variant (below) in terms of byte-level (u8)
+  access, it's hard to justify providing special primitives for u64le access
 ```
+(let ()
+   ;(define (bytes-u16le-ref bv i)
+   ; (+ (bytes-ref bv i)
+   ;  (arithmetic-shift (bytes-ref bv (+ i 1))  8)))
+   ;(define (bytes-u32le-ref bv i)
+   ; (+ (bytes-u16le-ref bv i)
+   ;  (arithmetic-shift (bytes-u16le-ref bv (+ i 2)) 16)))
+   ;(define (bytes-u64le-ref bv i)
+   ; (+ (bytes-u32le-ref bv i)
+   ;  (arithmetic-shift (bytes-u32le-ref bv (+ i 4)) 32)))
+   ;; second fastest variant ~382ms
+   (define (bytes-u64le-ref bv i)
+    (+ (+ (+ (bytes-ref bv i)
+           (arithmetic-shift (bytes-ref bv (+ i 1))  8))
+        (arithmetic-shift
+         (+ (bytes-ref bv (+ i 2))
+          (arithmetic-shift (bytes-ref bv (+ i 3))  8))
+         16))
+     (arithmetic-shift
+      (+ (+ (bytes-ref bv (+ i 4))
+          (arithmetic-shift (bytes-ref bv (+ i 5))  8))
+       (arithmetic-shift
+        (+ (bytes-ref bv (+ i 6))
+         (arithmetic-shift (bytes-ref bv (+ i 7))  8))
+        16))
+      32)
+    ))
+  ;(define (bytes-u64le-ref bv i)
+      ; (+ (bytes-ref bv i)
+        ;    (arithmetic-shift (bytes-ref bv (+ i 1))  8)
+        ;    (arithmetic-shift (bytes-ref bv (+ i 2)) 16)
+        ;    (arithmetic-shift (bytes-ref bv (+ i 3)) 24)
+        ;    (arithmetic-shift (bytes-ref bv (+ i 4)) 32)
+        ;    (arithmetic-shift (bytes-ref bv (+ i 5)) 40)
+        ;    (arithmetic-shift (bytes-ref bv (+ i 6)) 48)
+        ;    (arithmetic-shift (bytes-ref bv (+ i 7)) 56)))
+  (time
+   (let* ((len (expt 2 28))
+          (bv  (make-bytes len 0)))
+    (let loop ((i 0) (acc 0))
+     (if (< i len)
+      (loop (+ i 8) (+ acc (bytes-u64le-ref bv i)))
+      acc))))
+  )
+;; third fastest variant ~412ms
 (time
-  (let* ((len (expt 2 24))
+  (let* ((len (expt 2 28))
          (bv  (make-bytes len 0)))
     (let loop ((i 0) (acc 0))
       (if (< i len)
           (loop (+ i 8)
-                (+ acc (bytes-ref bv i) (bytes-ref bv (+ i 1)) (bytes-ref bv (+ i 2)) (bytes-ref bv (+ i 3))
-                       (bytes-ref bv (+ i 4)) (bytes-ref bv (+ i 5)) (bytes-ref bv (+ i 6)) (bytes-ref bv (+ i 7))))
+                (+ acc
+                   (+ (+ (+ (bytes-ref bv i)
+                          (arithmetic-shift (bytes-ref bv (+ i 1))  8))
+                       (arithmetic-shift
+                        (+ (bytes-ref bv (+ i 2))
+                         (arithmetic-shift (bytes-ref bv (+ i 3))  8))
+                        16))
+                    (arithmetic-shift
+                     (+ (+ (bytes-ref bv (+ i 4))
+                         (arithmetic-shift (bytes-ref bv (+ i 5))  8))
+                      (arithmetic-shift
+                       (+ (bytes-ref bv (+ i 6))
+                        (arithmetic-shift (bytes-ref bv (+ i 7))  8))
+                       16))
+                     32)
+                   )
+                   ))
           acc))))
 (time
-  (let* ((len (expt 2 24))
+  (let* ((len (expt 2 28))
+         (bv  (make-bytes len 0)))
+    (let loop ((i 0) (acc 0))
+      (if (< i len)
+          (loop (+ i 8)
+                (+ acc
+                   (bytes-ref bv i)
+                   (arithmetic-shift (bytes-ref bv (+ i 1))  8)
+                   (arithmetic-shift (bytes-ref bv (+ i 2)) 16)
+                   (arithmetic-shift (bytes-ref bv (+ i 3)) 24)
+                   (arithmetic-shift (bytes-ref bv (+ i 4)) 32)
+                   (arithmetic-shift (bytes-ref bv (+ i 5)) 40)
+                   (arithmetic-shift (bytes-ref bv (+ i 6)) 48)
+                   (arithmetic-shift (bytes-ref bv (+ i 7)) 56)))
+          acc))))
+;; fastest variant ~361ms
+(time
+  (let* ((len (expt 2 28))
          (bv  (make-bytes len 0)))
     (let loop ((i 0) (acc 0))
       (if (< i len)
