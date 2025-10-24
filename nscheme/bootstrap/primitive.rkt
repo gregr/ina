@@ -2,12 +2,12 @@
 (provide
   panic apply values make-record-type describe
   eqv? null? boolean? procedure? symbol? string? rational? integer?
-  pair? vector? mvector? bytevector? mbytevector?
-  bytevector->string string->bytevector string->symbol symbol->string
+  pair? vector? mvector?  bytes? mbytes?
+  bytes->string string->bytes string->symbol symbol->string
   cons car cdr vector vector-length vector-ref
   make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-  bytevector bytevector-length bytevector-ref
-  make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
+  bytes bytes-length bytes-ref
+  make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
   bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
   integer-floor-divmod numerator denominator = <= >= < > + - * /
   make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
@@ -82,19 +82,19 @@
     ((rkt:symbol?      x) (rkt:symbol->string x))
     ((non-utf8-symbol? x) (non-utf8-string (non-utf8-symbol-bv x)))
     (else                 (mistake 'symbol->string "not a symbol" x))))
-(define (string->bytevector x)
+(define (string->bytes x)
   (cond
     ((rkt:string?      x) (string->bytes/utf-8 x))
     ((non-utf8-string? x) (non-utf8-string-bv x))
-    (else                 (mistake 'string->bytevector "not a string" x))))
-(define (bytevector->string x)
-  (unless (bytes? x) (mistake 'bytevector->string "not a bytevector" x))
+    (else                 (mistake 'string->bytes "not a string" x))))
+(define (bytes->string x)
+  (unless (bytes? x) (mistake 'bytes->string "not a bytes" x))
   (with-handlers ((exn:fail:contract? (lambda (e) (non-utf8-string x)))) (bytes->string/utf-8 x)))
 
 (define (eqv? a b)
   (or (rkt:eqv? a b)
       (cond
-        ((bytevector?      a) (and (bytevector?      b) (bytes=? a b)))
+        ((bytes?           a) (and (bytes?           b) (bytes=? a b)))
         ((rkt:string?      a) (and (rkt:string?      b) (string=? a b)))
         ((non-utf8-string? a) (and (non-utf8-string? b) (bytes=? (non-utf8-string-bv a)
                                                                  (non-utf8-string-bv b))))
@@ -132,7 +132,7 @@
                   (make-struct-type name #f field-count 0 #f prop* #f #f '() #f #f)))
       (values construct ? access (and mutable? (lambda (r i v) (mutate! r i v) (values)))))))
 
-(struct mbytevector (bv) #:name mbytevector-struct #:constructor-name mbytevector:new #:mutable #:prefab)
+(struct mbytes (bv) #:name mbytes-struct #:constructor-name mbytes:new #:mutable #:prefab)
 (struct mvector (v) #:name mvector-struct #:constructor-name mvector:new #:mutable #:prefab)
 
 (define (make-mvector   len x)  (mvector:new   (make-vector len x)))
@@ -145,20 +145,15 @@
     ((mv start)       (vector-copy (mvector-v mv) start))
     ((mv start count) (vector-copy (mvector-v mv) start (+ start count)))))
 
-(define (bytevector        . x*) (apply bytes x*))
-(define (bytevector?       x)    (bytes?       x))
-(define (bytevector-length bv)   (bytes-length bv))
-(define (bytevector-ref    bv i) (bytes-ref bv i))
-
-(define (make-mbytevector   len n)   (mbytevector:new (make-bytes len n)))
-(define (mbytevector-length mbv)     (bytevector-length (mbytevector-bv mbv)))
-(define (mbytevector-ref    mbv i)   (bytevector-ref    (mbytevector-bv mbv) i))
-(define (mbytevector-set!   mbv i n) (bytes-set!        (mbytevector-bv mbv) i n) (values))
-(define mbytevector->bytevector
+(define (make-mbytes   len n)   (mbytes:new   (make-bytes len n)))
+(define (mbytes-length mbv)     (bytes-length (mbytes-bv mbv)))
+(define (mbytes-ref    mbv i)   (bytes-ref    (mbytes-bv mbv) i))
+(define (mbytes-set!   mbv i n) (bytes-set!   (mbytes-bv mbv) i n) (values))
+(define mbytes->bytes
   (case-lambda
-    ((mbv)             (bytes-copy (mbytevector-bv mbv)))
-    ((mbv start)       (subbytes   (mbytevector-bv mbv) start))
-    ((mbv start count) (subbytes   (mbytevector-bv mbv) start (+ start count)))))
+    ((mbv)             (bytes-copy (mbytes-bv mbv)))
+    ((mbv start)       (subbytes   (mbytes-bv mbv) start))
+    ((mbv start count) (subbytes   (mbytes-bv mbv) start (+ start count)))))
 
 ;(define (f32?      x) (single-flonum? x))
 ;(define (f64?      x) (double-flonum? x))
@@ -253,7 +248,7 @@
 (define (buffer-range?! buf start count)
   (nonnegative-integer?! start)
   (nonnegative-integer?! count)
-  (let ((len (if (mbytevector? buf) (mbytevector-length buf) (bytevector-length buf))))
+  (let ((len (if (mbytes? buf) (mbytes-length buf) (bytes-length buf))))
     (unless (<= (+ start count) len) (mistake "buffer range out of bounds" start count len))))
 
 (define (rkt:imemory partial-description port)
@@ -269,7 +264,7 @@
                            (io-guard
                             kf
                             (unless (eqv? pos.cached pos) (file-position port pos))
-                            (let ((amount (read-bytes-avail! (mbytevector-bv dst) port start
+                            (let ((amount (read-bytes-avail! (mbytes-bv dst) port start
                                                              (+ start count))))
                               (if (eof-object? amount)
                                   (keof)
@@ -297,7 +292,7 @@
                            (buffer-range?! src start count)
                            (io-guard kf
                                      (unless (eqv? pos.cached pos) (file-position port pos))
-                                     (write-bytes (if (mbytevector? src) (mbytevector-bv src) src)
+                                     (write-bytes (if (mbytes? src) (mbytes-bv src) src)
                                                   port start (+ start count))
                                      (set! pos.cached (+ pos count))
                                      (k))))
@@ -327,7 +322,7 @@
               (lambda (dst start count kf keof k)
                 (buffer-range?! dst start count)
                 (if (< 0 count)
-                    (let ((dst (mbytevector-bv dst)))
+                    (let ((dst (mbytes-bv dst)))
                       (io-guard
                        kf
                        (if buf.unread
@@ -353,7 +348,7 @@
                                              (cons 'position pos.unread) description))
                       (set! pos.unread pos))
                     (begin
-                      (set! buf.unread (subbytes (mbytevector-bv src) start (+ start count)))
+                      (set! buf.unread (subbytes (mbytes-bv src) start (+ start count)))
                       (set! pos.unread 0)))
                 (k)))
              ((close)    (lambda (kf k)     (io-guard kf (close-input-port port) (k))))
@@ -369,7 +364,7 @@
     (apply (case method
              ((write)    (lambda (src start count kf k)
                            (buffer-range?! src start count)
-                           (let ((src (if (mbytevector? src) (mbytevector-bv src) src))
+                           (let ((src (if (mbytes? src) (mbytes-bv src) src))
                                  (end (+ start count)))
                              (io-guard kf (write-bytes src port start end) (k)))))
              ((close)    (lambda (kf k)     (io-guard kf (close-output-port port) (k))))
@@ -391,8 +386,8 @@
 ;;; File IO ;;;
 ;;;;;;;;;;;;;;;
 (define (make-path path) (bytes->path (cond
-                                        ((string? path) (string->bytevector path))
-                                        ((symbol? path) (string->bytevector (symbol->string path)))
+                                        ((string? path) (string->bytes path))
+                                        ((symbol? path) (string->bytes (symbol->string path)))
                                         (else           path))))
 (define ((open-input/make-device make-device device-type) path)
   (lambda (kf k)
@@ -493,12 +488,12 @@
                         ((send-to/k)
                          (lambda (host port src start count kf k)
                            (buffer-range?! src start count)
-                           (let ((src (if (mbytevector? src) (mbytevector-bv src) src)))
+                           (let ((src (if (mbytes? src) (mbytes-bv src) src)))
                              (io-guard kf (udp-send-to socket host port src start (+ start count)) (k)))))
                         ((send/k)
                          (lambda (          src start count kf k)
                            (buffer-range?! src start count)
-                           (let ((src (if (mbytevector? src) (mbytevector-bv src) src)))
+                           (let ((src (if (mbytes? src) (mbytes-bv src) src)))
                              (io-guard kf (udp-send    socket           src start (+ start count)) (k)))))
                         ((address*/k)
                          (lambda (kf k)
@@ -541,8 +536,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; System processes ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
-(define posix-argument* (map string->bytevector (cons (path->string (find-system-path 'run-file))
-                                                      (vector->list (current-command-line-arguments)))))
+(define posix-argument* (map string->bytes (cons (path->string (find-system-path 'run-file))
+                                                 (vector->list (current-command-line-arguments)))))
 (define posix-environment (let ((env (current-environment-variables)))
                             (map (lambda (name) (cons name (environment-variables-ref env name)))
                                  (environment-variables-names env))))
@@ -632,7 +627,7 @@
     (lambda (stx) (rkt:eval stx ns))))
 (define (evaluate-rkt-text code)
   (let ((type 'rkt-text))
-    (unless (bytes? code) (mistake 'primitive-evaluate "code is not a bytevector" type code))
+    (unless (bytes? code) (mistake 'primitive-evaluate "code is not a bytes" type code))
     (call-with-input-bytes
      code
      (lambda (in)

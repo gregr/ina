@@ -22,10 +22,9 @@
   (define compact-write        (compact-write/notate notate)))
 
 (define display
-  (let ((go (lambda (x port)
-              (if (text? x)
-                  (oport-write-bytevector port (text->bytevector x))
-                  (write x port)))))
+  (let ((go (lambda (x port) (if (text? x)
+                                 (oport-write-bytes port (text->bytes x))
+                                 (write x port)))))
     (case-lambda
       ((x)      (go x (current-output-port)))
       ((x port) (go x port)))))

@@ -1,9 +1,9 @@
 (define (printer-decorate/sgr p)
-  (printer-map-text/attribute p (lambda (t sgr) (if sgr (bytevector-append sgr t #"\e[0m") t))))
+  (printer-map-text/attribute p (lambda (t sgr) (if sgr (bytes-append sgr t #"\e[0m") t))))
 (define (printer-sgr-default p sgr.default)
   (printer-map-attribute p (lambda (sgr) (or sgr sgr.default))))
 (define (printer-sgr-add p sgr.add)
-  (printer-map-attribute p (lambda (sgr) (if sgr (bytevector-append sgr sgr.add) sgr.add))))
+  (printer-map-attribute p (lambda (sgr) (if sgr (bytes-append sgr sgr.add) sgr.add))))
 
 (define (writer-decorate/sgr w sgr.prefix sgr.dot sgr.bracket atom->sgr)
   (define (decorate attr sgr) (or attr sgr))

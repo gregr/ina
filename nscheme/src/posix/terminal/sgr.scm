@@ -1,7 +1,6 @@
 ;;; Select Graphic Rendition (SGR) escapes and attributes (SGR is a type of CSI)
 (define (make-sgr . sgra*) (sgra*->sgr sgra*))
-(define (sgra*->sgr sgra*) (if (null? sgra*) #"" (bytevector-append
-                                                   #"\e[" (bytevector-join* #";" sgra*) #"m")))
+(define (sgra*->sgr sgra*) (if (null? sgra*) #"" (bytes-append #"\e[" (bytes-join* #";" sgra*) #"m")))
 
 (define sgra:reset      (number->utf8  0))
 (define sgra:bold+      (number->utf8  1))
@@ -75,8 +74,8 @@
 (define sgra:color-simple-bright-bg:cyan    (sgra:color-simple-bright-bg sgr-color-simple:cyan))
 (define sgra:color-simple-bright-bg:white   (sgra:color-simple-bright-bg sgr-color-simple:white))
 
-(define (sgra:color-256-fg c) (bytevector-append #"38;5;" (number->utf8 c)))
-(define (sgra:color-256-bg c) (bytevector-append #"48;5;" (number->utf8 c)))
+(define (sgra:color-256-fg c) (bytes-append #"38;5;" (number->utf8 c)))
+(define (sgra:color-256-bg c) (bytes-append #"48;5;" (number->utf8 c)))
 ;; r, g, b: 0 through 5
 (define (sgra:color-6cube-fg r g b) (sgra:color-256-fg (+ 16 (* 36 r) (* 6 g) b)))
 (define (sgra:color-6cube-bg r g b) (sgra:color-256-bg (+ 16 (* 36 r) (* 6 g) b)))
@@ -85,4 +84,4 @@
 (define (sgra:color-24gray-bg i) (sgra:color-256-bg (+ 232 i)))
 ;; r, g, b: 0 through 255
 (define (sgra:color-24bit-fg r g b)
-  (bytevector-append #"38;2;" (number->utf8 r) #";" (number->utf8 g) #";" (number->utf8 b)))
+  (bytes-append #"38;2;" (number->utf8 r) #";" (number->utf8 g) #";" (number->utf8 b)))

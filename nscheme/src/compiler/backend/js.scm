@@ -79,8 +79,8 @@
         'record': function(rtd,...args){return [rtd].concat(args);},
         'record-type-descriptor': function(x){be_record(x); return x[0];},
         'record-ref': function(x,i){be_record(x); return x[i+1];},
-        'string->bytevector':,
-        'bytevector->string':,
+        'string->bytes':,
+        'bytes->string':,
 
         'apply':,
         'call-with-values':,
@@ -92,7 +92,7 @@
         'values':, function(...args){},
 
         'eq?': function(a,b){return a===b;},
-        // TODO: bigint, rational, string, bytevector
+        // TODO: bigint, rational, string, bytes
         'eqv?': function(a,b){return (a===b)||false;},
         'null?': function(x){return x===null;},
         'boolean?': function(x){return (x===true)||(x===false);},
@@ -110,7 +110,7 @@
 
         'vector?': is_vector,
 
-        mvector? bytevector? mbytevector?
+        mvector? bytes? mbytes?
         string->symbol symbol->string
 
         'cons': function(a,b) {return [type_pair,a,b];},
@@ -131,9 +131,9 @@
 
         mvector->vector mvector-length mvector-ref mvector-set!
 
-        bytevector bytevector-length bytevector-u8-ref
-        make-mbytevector mbytevector->bytevector mbytevector-length
-        mbytevector-u8-ref mbytevector-u8-set!
+        bytes bytes-length bytes-u8-ref
+        make-mbytes mbytes->bytes mbytes-length
+        mbytes-u8-ref mbytes-u8-set!
 
         bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
         bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
@@ -166,7 +166,7 @@
   - fixnum: 32-bit integer
   - arrays where field 0 contains a type header
     - symbol bigint rational f32 f64 pair vector mvector closure record
-  - can bytevectors and mbytevectors go into a typed u8 array?
+  - can bytes and mbytes go into a typed u8 array?
     - first byte is a type header indicating whether it's mutable
 
 (define (E-compile-rkt E)

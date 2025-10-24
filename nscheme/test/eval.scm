@@ -1042,90 +1042,90 @@
 (test-evaluation
  env.test.medium
 
- '(bytevector-ports
-   (call/oport:bytevector
+ '(bytes-ports
+   (call/oport:bytes
     (lambda (out)
-      (let ((in (iport:bytevector #"testing 1 2 3")))
-        (let* ((buf   (make-mbytevector 18 0))
-               (count (- (mbytevector-length buf) 3)))
-          (for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (range (mbytevector-length buf)))
+      (let ((in (iport:bytes #"testing 1 2 3")))
+        (let* ((buf   (make-mbytes 18 0))
+               (count (- (mbytes-length buf) 3)))
+          (for-each (lambda (i) (mbytes-set! buf i (+ 65 i))) (range (mbytes-length buf)))
           (iport-read* in buf 5 6)
           (iport-read* in buf 11 5)
           (oport-write out buf 0 3)
           (oport-write out buf 3 count)))))
    ==>
    #"ABCDEtesting 1 2QR"
-   (call/oport:bytevector
+   (call/oport:bytes
     (lambda (out)
-      (let ((in (iport:bytevector #"testing")))
-        (let ((buf (make-mbytevector 20 0)))
-          (for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (range (mbytevector-length buf)))
+      (let ((in (iport:bytes #"testing")))
+        (let ((buf (make-mbytes 20 0)))
+          (for-each (lambda (i) (mbytes-set! buf i (+ 65 i))) (range (mbytes-length buf)))
           (iport-read* in buf 3 2)
-          (iport-read* in buf 5 (- (mbytevector-length buf) 5))
+          (iport-read* in buf 5 (- (mbytes-length buf) 5))
           (oport-write out buf 0 3)
-          (oport-write out buf 3 (- (mbytevector-length buf) 3))))))
+          (oport-write out buf 3 (- (mbytes-length buf) 3))))))
    ==>
    #"ABCtestingKLMNOPQRST"
-   (let* ((buf   (make-mbytevector 20 0))
-          (out   (oport:mbytevector buf))
+   (let* ((buf   (make-mbytes 20 0))
+          (out   (oport:mbytes buf))
           (src   #"testing 4 5 6 7 8 9 10 11")
-          (count (- (bytevector-length src) 10)))
+          (count (- (bytes-length src) 10)))
      (oport-write out src 0 8)
      (oport-write out src 10 count)
-     (mbytevector->bytevector buf))
+     (mbytes->bytes buf))
    ==>
    error:eval
    ;#(panic
    ;  raise
    ;  (#(error #(description) io-error #(tag context))
    ;   .
-   ;   #("IO error" no-space (#(#(omemory:mbytevector 20) write (8 10 15))))))
-   (let* ((buf   (make-mbytevector 20 0))
-          (out   (oport:mbytevector buf))
+   ;   #("IO error" no-space (#(#(omemory:mbytes 20) write (8 10 15))))))
+   (let* ((buf   (make-mbytes 20 0))
+          (out   (oport:mbytes buf))
           (src   #"testing 4 5 6 7 8 9 10 11")
-          (count (min (- (bytevector-length src) 10)
-                      (- (mbytevector-length buf) 8))))
+          (count (min (- (bytes-length src) 10)
+                      (- (mbytes-length buf) 8))))
      (oport-write out src 0 8)
      (oport-write out src 10 count)
-     (mbytevector->bytevector buf))
+     (mbytes->bytes buf))
    ==>
    #"testing 5 6 7 8 9 10")
 
  '(thread-safe-ports
-   (call/oport:bytevector
+   (call/oport:bytes
     (lambda (out)
-      (let ((in (iport:bytevector #"testing 1 2 3")))
+      (let ((in (iport:bytes #"testing 1 2 3")))
         (let* ((in    (thread-safe-iport in))
                (out   (thread-safe-oport out))
-               (buf   (make-mbytevector 18 0))
-               (count (- (mbytevector-length buf) 3)))
-          (for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (range (mbytevector-length buf)))
+               (buf   (make-mbytes 18 0))
+               (count (- (mbytes-length buf) 3)))
+          (for-each (lambda (i) (mbytes-set! buf i (+ 65 i))) (range (mbytes-length buf)))
           (iport-read* in buf 5 6)
           (iport-read* in buf 11 5)
           (oport-write out buf 0 3)
           (oport-write out buf 3 count)))))
    ==>
    #"ABCDEtesting 1 2QR"
-   (call/oport:bytevector
+   (call/oport:bytes
     (lambda (out)
-      (let ((in (iport:bytevector #"testing")))
+      (let ((in (iport:bytes #"testing")))
         (let* ((in  (thread-safe-iport in))
                (out (thread-safe-oport out))
-               (buf (make-mbytevector 20 0)))
-          (for-each (lambda (i) (mbytevector-set! buf i (+ 65 i))) (range (mbytevector-length buf)))
+               (buf (make-mbytes 20 0)))
+          (for-each (lambda (i) (mbytes-set! buf i (+ 65 i))) (range (mbytes-length buf)))
           (iport-read* in buf 3 2)
-          (iport-read* in buf 5 (- (mbytevector-length buf) 5))
+          (iport-read* in buf 5 (- (mbytes-length buf) 5))
           (oport-write out buf 0 3)
-          (oport-write out buf 3 (- (mbytevector-length buf) 3))))))
+          (oport-write out buf 3 (- (mbytes-length buf) 3))))))
    ==>
    #"ABCtestingKLMNOPQRST"
-   (let* ((buf   (make-mbytevector 20 0))
-          (out   (thread-safe-oport (oport:mbytevector buf)))
+   (let* ((buf   (make-mbytes 20 0))
+          (out   (thread-safe-oport (oport:mbytes buf)))
           (src   #"testing 4 5 6 7 8 9 10 11")
-          (count (- (bytevector-length src) 10)))
+          (count (- (bytes-length src) 10)))
      (oport-write out src 0 8)
      (oport-write out src 10 count)
-     (mbytevector->bytevector buf))
+     (mbytes->bytes buf))
    ==>
    error:eval
    ;#(panic
@@ -1134,15 +1134,15 @@
    ;   .
    ;   #("IO error"
    ;     no-space
-   ;     (#(#(omemory:mbytevector 20) write (8 10 15))))))
-   (let* ((buf   (make-mbytevector 20 0))
-          (out   (thread-safe-oport (oport:mbytevector buf)))
+   ;     (#(#(omemory:mbytes 20) write (8 10 15))))))
+   (let* ((buf   (make-mbytes 20 0))
+          (out   (thread-safe-oport (oport:mbytes buf)))
           (src   #"testing 4 5 6 7 8 9 10 11")
-          (count (min (- (bytevector-length src) 10)
-                      (- (mbytevector-length buf) 8))))
+          (count (min (- (bytes-length src) 10)
+                      (- (mbytes-length buf) 8))))
      (oport-write out src 0 8)
      (oport-write out src 10 count)
-     (mbytevector->bytevector buf))
+     (mbytes->bytes buf))
    ==>
    #"testing 5 6 7 8 9 10")
 
@@ -1489,7 +1489,7 @@
  ;  ==> (values)
  ;  (let ((standard-input-port (current-input-port))
  ;        (standard-error-port (current-error-port)))
- ;    (oport-write-bytevector standard-error-port #"Type 'x' and hit enter: ")
+ ;    (oport-write-bytes standard-error-port #"Type 'x' and hit enter: ")
  ;    (iport-read-byte standard-input-port))
  ;  ==> 120)
 
@@ -1504,7 +1504,7 @@
                     (case-values (oport:file/k fname 'create values values)
                       ((out) out)
                       ((tag d) (panic #f "oport:file failed" tag d))))))
-     (case-values (oport-write-bytevector/k out #"Hello world!" values values)
+     (case-values (oport-write-bytes/k out #"Hello world!" values values)
        (()       (values))
        ((tag d)  (panic #f "oport-write failed" tag d)))
      (oport-close out)
@@ -1522,7 +1522,7 @@
             (in     (case-values (iport:file/k fname2 values values)
                       ((in) in)
                       ((tag d) (panic #f "iport:file failed" tag d))))
-            (buf    (make-mbytevector size 0))
+            (buf    (make-mbytes size 0))
             (amount (case-values (iport-read*/k in buf 0 size values values)
                       ((amount) amount)
                       ((tag d) (panic #f "iport-read* failed" tag d)))))
@@ -1534,13 +1534,13 @@
          (() (values))
          ((tag d) (panic #f "delete-directory failed" tag d)))
        (list size amount dperm fperm (eqv? sec sec2) dtype ftype path* path*2
-             (mbytevector->bytevector buf))))
+             (mbytes->bytes buf))))
    ==> (12 12 #o755 #o644 #t directory file ("out.txt") ("out2.txt") #"Hello world!")
    (let* ((dir    "test-for-file-io-etc")
           (fname  (string-append dir "/out.txt"))
           (fname2 (string-append dir "/out2.txt"))
           (out    (begin (make-directory dir) (oport:file fname 'create))))
-     (oport-write-bytevector out #"Hello world!")
+     (oport-write-bytes out #"Hello world!")
      (oport-close out)
      (let* ((size   (file-size fname))
             (dperm  (file-permissions dir))
@@ -1552,19 +1552,18 @@
             (sec2   (begin (move-file fname fname2) (file-modified-seconds fname2)))
             (path*2 (directory-file* dir))
             (in     (iport:file fname2))
-            (buf    (make-mbytevector size 0))
+            (buf    (make-mbytes size 0))
             (amount (iport-read* in buf 0 size)))
        (iport-close in)
        (delete-file fname2)
        (delete-directory dir)
-       (list size amount dperm fperm (eqv? sec sec2) dtype ftype path* path*2
-             (mbytevector->bytevector buf))))
+       (list size amount dperm fperm (eqv? sec sec2) dtype ftype path* path*2 (mbytes->bytes buf))))
    ==> (12 12 #o755 #o644 #t directory file ("out.txt") ("out2.txt") #"Hello world!"))
 
  '(network-io
    (let ((ch.client (make-channel)))
      (define (iport->bv in)
-       (apply bytevector
+       (apply bytes
               (let loop ()
                 (case-values (iport-read-byte in)
                   (() '())
@@ -1577,7 +1576,7 @@
            (tcp-connect/k
             "127.0.0.1" 8765 #f #f raise-io-error
             (lambda (in out)
-              (oport-write-bytevector out #"ABC")
+              (oport-write-bytes out #"ABC")
               (oport-close out)
               (channel-put ch.client (iport->bv in))
               (iport-close in)))))
@@ -1586,13 +1585,13 @@
          (lambda (in out)
            (let ((result (iport->bv in)))
              (iport-close in)
-             (oport-write-bytevector out #"abc")
+             (oport-write-bytes out #"abc")
              (oport-close out)
              (values (list 'server result) (list 'client (channel-get ch.client)))))))))
    ==> (values (server #"ABC") (client #"abc")))
 
  '(posix-processes
-   (call/oport:bytevector
+   (call/oport:bytes
     (lambda (out)
       (let* ((p (posix-raw-process/k #f #f 'stdout (find-file "echo") '("hello world") panic values))
              (out.p.out (posix-process-out p)))
@@ -1604,18 +1603,18 @@
             ((b) (oport-write-byte out b) (loop)))))))
    ==>
    #"hello world\n0"
-   (let-values (((out current) (oport:bytevector&current)))
+   (let-values (((out current) (oport:bytes&current)))
      (let ((p (posix-process empty-iport out 'stdout (find-file "echo") '("hello world"))))
        (values (posix-process-wait p) (current))))
    ==>
    (values 0 #"hello world\n")
-   (call/oport:bytevector
+   (call/oport:bytes
     (lambda (out)
       (let* ((p (posix-raw-process/k #f #f 'stdout (find-file "cat") '() panic values))
              (in.p.in   (posix-process-in p))
              (out.p.out (posix-process-out p)))
         (thread (lambda ()
-                  (let ((in (iport:bytevector #"another example")))
+                  (let ((in (iport:bytes #"another example")))
                     (let loop ()
                       (case-values (iport-read-byte in)
                         (()  (oport-close in.p.in))
@@ -1626,13 +1625,13 @@
             ((b) (oport-write-byte out b) (loop)))))))
    ==>
    #"another example0"
-   (let-values (((out current) (oport:bytevector&current)))
-     (let* ((in (iport:bytevector #"another example"))
+   (let-values (((out current) (oport:bytes&current)))
+     (let* ((in (iport:bytes #"another example"))
             (p  (posix-process in out 'stdout (find-file "cat") '())))
        (values (posix-process-wait p) (current))))
    ==>
    (values 0 #"another example")
-   (call/oport:bytevector
+   (call/oport:bytes
     (lambda (result)
       (let* ((p1     (posix-raw-process/k #f #f 'stdout (find-file "echo") '("pipe test") panic values))
              (in1    (posix-process-out p1))
@@ -1647,7 +1646,7 @@
                  (oport-write-byte result (+ (posix-process-wait p2) 48)))
             ((b) (oport-write-byte result b) (loop)))))))
    ==> #"pipe test\n00"
-   (let-values (((result current) (oport:bytevector&current)))
+   (let-values (((result current) (oport:bytes&current)))
      (let* ((p1 (posix-process empty-iport #f 'stdout (find-file "echo") '("pipe test")))
             (p2 (posix-process (posix-process-out p1) result 'stdout (find-file "cat") '())))
        (values (posix-process-wait p1) (posix-process-wait p2) (current))))

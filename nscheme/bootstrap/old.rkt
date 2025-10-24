@@ -162,20 +162,20 @@
 ;(declare-primitives!
 ;  ;; privileged primitives
 ;  current-panic-handler
-;  bytevector->string string->bytevector
+;  bytes->string string->bytes
 ;  native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
 ;  current-raw-coroutine make-raw-coroutine
 ;  timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 ;
 ;  panic apply values
 ;  eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
-;  pair? vector? mvector? bytevector? mbytevector?
+;  pair? vector? mvector? bytes? mbytes?
 ;  string->symbol symbol->string
 ;  cons car cdr
 ;  vector vector-length vector-ref
 ;  make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-;  bytevector bytevector-length bytevector-ref
-;  make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
+;  bytes bytes-length bytes-ref
+;  make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
 ;  bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
 ;  integer-floor-divmod numerator denominator = <= >= < > + - * /
 ;
@@ -194,7 +194,7 @@
 ;    (match ast
 ;      (`#(quote ,value)            (if (ormap (lambda (?) (? value))
 ;                                              (list symbol? string? pair? vector?
-;                                                    record? mvector? mbytevector? procedure?))
+;                                                    record? mvector? mbytes? procedure?))
 ;                                     (value->ast value)
 ;                                     ast))
 ;      (`#(ref ,name)               ast)
@@ -324,16 +324,16 @@
 ;                                   ((cons v.a v.d) (ast:call (loop cons) (loop v.a) (loop v.d)))
 ;                                   ((? vector?)    (apply ast:call (loop vector)
 ;                                                          (map loop (vector->list value))))
-;                                   ((? mbytevector?)
+;                                   ((? mbytes?)
 ;                                    (set! initialization**
-;                                      (cons (map (lambda (i) (ast:call (loop mbytevector-set!)
+;                                      (cons (map (lambda (i) (ast:call (loop mbytes-set!)
 ;                                                                       (ast:ref name) (loop i)
-;                                                                       (loop (mbytevector-ref value i))))
-;                                                 (range (mbytevector-length value)))
+;                                                                       (loop (mbytes-ref value i))))
+;                                                 (range (mbytes-length value)))
 ;                                            initialization**))
-;                                    (ast:call (loop make-mbytevector)
-;                                              (loop (mbytevector-length value)) (loop 0)))
-;                                   ((or (? number?) (? symbol?) (? string?) (? bytevector?))
+;                                    (ast:call (loop make-mbytes)
+;                                              (loop (mbytes-length value)) (loop 0)))
+;                                   ((or (? number?) (? symbol?) (? string?) (? bytes?))
 ;                                    (ast:quote value)))))
 ;                        (push! other* name ast))))
 ;                 (ast:ref name))))))

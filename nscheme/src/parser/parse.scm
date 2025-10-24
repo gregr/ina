@@ -295,7 +295,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing expressions ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (literal? x) (or (boolean? x) (number? x) (string? x) (bytevector? x)))
+(define (literal? x) (or (boolean? x) (number? x) (string? x) (bytes? x)))
 
 (define (parse-expression* env stx*) (map (lambda (stx) (parse-expression env stx)) stx*))
 (define (parse-expression env stx)

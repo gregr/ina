@@ -53,12 +53,12 @@
     (aquote
       panic apply values make-record-type describe
       eqv? null? boolean? procedure? symbol? string? rational? integer?
-      pair? vector? mvector? bytevector? mbytevector?
-      bytevector->string string->bytevector string->symbol symbol->string
+      pair? vector? mvector? bytes? mbytes?
+      bytes->string string->bytes string->symbol symbol->string
       cons car cdr vector vector-length vector-ref
       make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-      bytevector bytevector-length bytevector-ref
-      make-mbytevector mbytevector->bytevector mbytevector-length mbytevector-ref mbytevector-set!
+      bytes bytes-length bytes-ref
+      make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
       bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
       integer-floor-divmod numerator denominator = <= >= < > + - * /)))
 (define env.control
@@ -79,7 +79,7 @@
      (reader:data/annotate
        (lambda (x loc text loc.end text.end)
          (syntax-note-set x (vector source loc text loc.end text.end)))))))
-(define ((text->definition*/read* read*) text) (read* (iport:bytevector text)))
+(define ((text->definition*/read* read*) text) (read* (iport:bytes text)))
 
 (define ((posix-read-file/annotate? annotate?) path)
   (call-with-iport:file
@@ -98,7 +98,7 @@
   (alist-map-value library=>path* (lambda (path*) (map p->text path*))))
 
 (define (posix-make-library=>text* out.verbose path.library)
-  (make-library=>text* out.verbose (lambda (p) (file->bytevector (path-append path.library p)))))
+  (make-library=>text* out.verbose (lambda (p) (file->bytes (path-append path.library p)))))
 
 (define (make-library=>def* out.verbose annotate? library=>text*)
   (when out.verbose (displayln "Reading library file definitions:" out.verbose))

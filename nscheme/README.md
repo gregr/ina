@@ -53,18 +53,18 @@ and resuming snapshots of a running system.
 - Variables are immutable by default.
   - `set!` is only supported for variables introduced by special binders.
 - All s-expression types are immutable.
-  - This even includes pairs, strings, bytevectors, and vectors.
-  - Mutable vectors and bytevectors (i.e., mvectors and mbytevectors) are a distinct type of data,
+  - This even includes pairs, strings, bytess, and vectors.
+  - Mutable vectors and bytess (i.e., mvectors and mbytess) are a distinct type of data,
     disjoint from the s-expression types.
   - Records are distinct, vector-like types whose fields can be mutable.  They are disjoint from the
     s-expression types.
 - Equality and identity:
   - Every instance of an opaque type, such as a record or procedure, and every value of a mutable
-    type, such as an mvector or mbytevector, including empty ones, has a unique identity.
+    type, such as an mvector or mbytes, including empty ones, has a unique identity.
   - For two values of types that should have a unique identity, `eqv?` returns `#t` if and only if
     the values have the same identity.
   - For any two values that are not structurally equal, `eqv?` returns `#f`.
-  - For any two values that are `()`, `#t`, `#f`, numbers, symbols, strings, or bytevectors, `eqv?`
+  - For any two values that are `()`, `#t`, `#f`, numbers, symbols, strings, or bytess, `eqv?`
     returns `#t` if the two values are structurally equal.
   - For two structurally equal values of all other types, `eqv?` may nondeterministically return
     `#t` or `#f`.  Even if a call to `eqv?` returns `#t` once, the same call could return `#f` in
@@ -72,22 +72,22 @@ and resuming snapshots of a running system.
     - For instance, `(list (eq? x x) (eq? x x))` for such values could theoretically return any of:
       `(#t #t)` `(#f #f)` `(#t #f)` `(#f #t)`
   - `eq?` is not provided.
-- There is no primitive character type: a string is indivisible until it is decoded as a bytevector
-  - e.g., `string->bytevector` and `bytevector->string`
+- There is no primitive character type: a string is indivisible until it is decoded as a bytes
+  - e.g., `string->bytes` and `bytes->string`
   - no `string-ref`, since basis of decomposition depends on context
   - code units (bytes) are not characters, but suffice for low-level string manipulation
   - code points are not characters, but suffice for some higher-level string manipulation
   - grapheme clusters (substrings) are the right notion of character for user interaction
-- Like Racket, bytevectors can be notated with a text body.  Unlike Racket, this text body always
+- Like Racket, bytess can be notated with a text body.  Unlike Racket, this text body always
   corresponds to the sequence of bytes given by UTF-8 encoding, except that individual bytes can be
   specified using the `\x` escape code.  For instance, `#"λ"`, `#"\u3BB;"`, `#"\xCE;\xBB;"`, and
-  `#vu8(206 187)` are all notations for the same length-2 bytevector.  Individually specified bytes
+  `#vu8(206 187)` are all notations for the same length-2 bytes.  Individually specified bytes
   do not have to form a legal UTF-8 sequence.
 - As a convention, strings and symbols are intended to correspond to unicode text, but this
-  correspondence is not enforced.  `bytevector->string` is defined as a UTF-8 encoding of the input
-  bytevector when possible, but will always succeed even in the presence of non-UTF-8 byte
-  sequences.  The string losslessly retains the sequence of bytes given by the bytevector, which can
-  be recovered using `string->bytevector`.  Like bytevector notation, both string and pipe-delimited
+  correspondence is not enforced.  `bytes->string` is defined as a UTF-8 encoding of the input
+  bytes when possible, but will always succeed even in the presence of non-UTF-8 byte
+  sequences.  The string losslessly retains the sequence of bytes given by the bytes, which can
+  be recovered using `string->bytes`.  Like bytes notation, both string and pipe-delimited
   symbol notation also allow individual bytes to be specified using the `\x` escape code, even when
   those bytes form a sequence that is not legal UTF-8.
 - Racket-like dynamically-scoped parameters are provided.  Unlike in Racket, the values of these
@@ -110,7 +110,7 @@ and resuming snapshots of a running system.
   - `integer?` `rational?` etc. must return `#f` for all inexact numbers.
 - Optional decimal representation for fractions, with repeating portion prefixed by ~
   - e.g., 0.~3 for 1/3, 0.~17 for 17/99, etc.
-- There are no operators that directly capture continuations.  First-class coroutines manipulate
+- There are no operators that directly capture continuations.  Symmetric coroutines manipulate
   disjoint call stacks, and avoid copying frames.  They have the same expressiveness as one-shot
   delimited continuations.
 - There is no prescribed object-level error handling model.
@@ -180,7 +180,7 @@ should stdio belong to posix?
       - and provide an abstract way to prompt the user for input, without deciding how or where to render the prompt
         - something like (let ((user-value (prompt-user PROMPT-MESSAGE))) etc. ...)
   - maybe also something simple inspired by OCaml-EIO-style traceln for diagnostic logging?
-  - should we maintain a behavioral distinction analogous to that of display vs. write, for text values (symbols, strings, bytevectors)?
+  - should we maintain a behavioral distinction analogous to that of display vs. write, for text values (symbols, strings, bytess)?
     - i.e., whether to include delimiters such as double quotes, or encode tabs/newlines, or interpret the value as literal document text
     - need to sanitize interpreted text to remove control characters such as escapes, to avoid interfering with chosen attributes
       - should probably also add special processing for horizontal and vertical space characters
@@ -351,9 +351,9 @@ can we adapt layered computation for syntax and other annotations / notes?
 
 
 
-consider bytevector-u64le-ref etc.
+consider bytes-u64le-ref etc.
 - conversions like `u64<->s64` are also possible
-- naively compare performance with bytevector-ref
+- naively compare performance with bytes-ref
 - given the good performance of the second fastest variant (below) in terms of byte-level (u8)
   access, it's hard to justify providing special primitives for u64le access
 ```
@@ -477,7 +477,7 @@ OLD:
 
 
 text document system:
-- atom: #(width style bytevector)
+- atom: #(width style bytes)
 - sequence types: #(width style type-tag vector-of-tdocs)
   - adjacent
   - space-separated
@@ -978,7 +978,7 @@ figure out JS representation strategy
   - fixnum: 32-bit integer
   - arrays where field 0 contains a type header
     - symbol bigint rational f32 f64 pair vector mvector closure record
-  - can bytevectors and mbytevectors go into a typed u8 array?
+  - can bytess and mbytess go into a typed u8 array?
     - first byte is a type header indicating whether it's mutable
 
 - the compiler should associate prim op names with general attribute flags (pure, terminates, etc.)
@@ -1562,7 +1562,7 @@ include
       - define-datatype
     - unprivileged:
       - env, parse
-      - number, list, vector, bytevector, string, hash, btree
+      - number, list, vector, bytes, string, hash, btree
       - comparison-and-equality
       - quasiquote, match
       - read, write  ; document-based rather than just s-expression-based?
@@ -1978,7 +1978,7 @@ A good scheme will:
     handle, should have primary tags that are different from the tags used for values where eqv? can
     simply compare the primary handles.
     - these are the large, structurally-compared values:
-      - larger text types: symbols, strings, bytevectors
+      - larger text types: symbols, strings, bytess
       - large integers, non-integers, large floating-point numbers
     - these are the values where eqv? only needs to perform primary handle comparison:
       - immediates, mutables, pairs, vectors, and all opaque values such as procedures and records
@@ -2012,7 +2012,7 @@ A good scheme will:
       - only requires a header to provide a secondary tag
     - WWWWWWWW011: bigflonum
       - WWWWWWWW: 8-bit bit width
-  - 101: bytevector
+  - 101: bytes
     - L ...  100: length header
 - xx0:
   - 0x0: immediate
@@ -2024,10 +2024,10 @@ A good scheme will:
         - B=1: #t
       - 0 ...  1000010: empty vector
       - N ...  1100010: small flonum
-      - C ... LLLtt010: short symbol, string, bytevector
+      - C ... LLLtt010: short symbol, string, bytes
         - tt=01: symbol
         - tt=10: string
-        - tt=11: bytevector
+        - tt=11: bytes
         - LLL: 3-bit length
         - C ...: 7 bytes of code units
   - 100: pair
@@ -2036,7 +2036,7 @@ A good scheme will:
     - length headers
       - L ... 0000: vector
       - L ... 1000: mvector
-      - L ...  100: mbytevector
+      - L ...  100: mbytes
         - can be allocated in an unscanned heap, so the 100 secondary tag is safe
         - using the same secondary tag as other text values allows faster type conversion
     - handle headers

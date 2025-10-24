@@ -25,13 +25,12 @@
 ;; Report 1-based cursor position <y-digits> <x-digits> on stdin as: \e[<y-digits>;<x-digits>R
 (define csi:cursor-report-position #"\e[6n")
 
-(define (csi:cursor-up     n) (bytevector-append #"\e[" (number->utf8 n) #"A"))
-(define (csi:cursor-down   n) (bytevector-append #"\e[" (number->utf8 n) #"B"))
-(define (csi:cursor-right  n) (bytevector-append #"\e[" (number->utf8 n) #"C"))
-(define (csi:cursor-left   n) (bytevector-append #"\e[" (number->utf8 n) #"D"))
+(define (csi:cursor-up     n) (bytes-append #"\e[" (number->utf8 n) #"A"))
+(define (csi:cursor-down   n) (bytes-append #"\e[" (number->utf8 n) #"B"))
+(define (csi:cursor-right  n) (bytes-append #"\e[" (number->utf8 n) #"C"))
+(define (csi:cursor-left   n) (bytes-append #"\e[" (number->utf8 n) #"D"))
 ;; y and x are 1-based coordinates
-(define (csi:cursor-move y x) (bytevector-append #"\e[" (number->utf8 y) #";"
-                                                 (number->utf8 x) #"H"))
+(define (csi:cursor-move y x) (bytes-append #"\e[" (number->utf8 y) #";" (number->utf8 x) #"H"))
 
 ;; NOTE: these are less standard
 ;\e[nE beginning of next line

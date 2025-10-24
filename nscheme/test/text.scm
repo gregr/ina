@@ -6,15 +6,15 @@
        ;(out (buffered-oport/buffer-size standard-output-port 100000))
        ;(out (buffered-oport/buffer-size (thread-safe-oport standard-output-port) 100000))
        (example
-         (append (list (bytevector->string (bytevector 0 15 16 31 127
-                                                       ;#x03BB
-                                                       #b11001110 #b10111011
-                                                       ;159
-                                                       #b11000010 #b10011111
-                                                       ;8192
-                                                       #b11100010 #b10000000 #b10000000
-                                                       ;8233
-                                                       #b11100010 #b10000000 #b10101001))
+         (append (list (bytes->string (bytes 0 15 16 31 127
+                                             ;#x03BB
+                                             #b11001110 #b10111011
+                                             ;159
+                                             #b11000010 #b10011111
+                                             ;8192
+                                             #b11100010 #b10000000 #b10000000
+                                             ;8233
+                                             #b11100010 #b10000000 #b10101001))
                        (string->symbol "ze\ro") (string->symbol "@zero") (string->symbol "ze#ro"))
                  '(() (0) 1 #('2 three "four" "\fou\r" #(100 101 102 103 104 105 106 107 108 109 110 111) #"\fi\ve" #"fiveeee") #(6 7 7 7) #t #f . 10)))
        (example-writer/sgr (lambda (l)
@@ -26,7 +26,7 @@
                                                         ((null? datum)    #"\e[32m")
                                                         (else             #"\e[36m"))))))
        (example-printer/out  (lambda () (printer:port out)))
-       (example-printer-fill (lambda (p) (printer-fill p 80 (bytevector-ref #"." 0) #f)))
+       (example-printer-fill (lambda (p) (printer-fill p 80 (bytes-ref #"." 0) #f)))
        (example-printer      (lambda () (example-printer-fill (example-printer/out))))
        (example-printer/sgr
          (lambda ()
@@ -37,7 +37,7 @@
                                       (abbreviate-pair? . #f)
                                       (bracket . #"[")
                                       (length-prefix? . #t)
-                                      (bytevector-numeric? . #t)))))
+                                      (bytes-numeric? . #t)))))
   (notate example (writer:layout (layout:single-line (printer-truncate (example-printer) 78))))
   (oport-write-byte out 10)
   (oport-write-byte out 10)
@@ -139,7 +139,7 @@
                 (lambda (loc c)                   (example-write (vector 'newline:              (list loc c))))
                 (lambda (loc)                     (example-write (vector 'eof:                  (list loc))) #f)
                 (lambda (loc text desc)           (example-write (vector 'error:                (list loc text desc))))))))
-         (text.example (call/oport:bytevector (x->write example)))
+         (text.example (call/oport:bytes (x->write example)))
          (text.another-example
            #"[#4{1 2} #vu8(50 51) #5vu8(100 110 120) #6\"abc\"
            #\"\\u03bb;\"
@@ -163,23 +163,23 @@
            #\"\\xcg;\\xbbb;\"
            ;; binary numbers:\n #b00 #b01 #b02 #;other-radixes: #xfg #d25a
            \"\\a\\b\\c unfinished")
-           (text.here-bytevector-example
-             ##test"##example"this here-bytevector contains literal text
+           (text.here-bytes-example
+             ##test"##example"this here-bytes contains literal text
              containing "embedded\ndouble quotes" etc.
              across multiple
              lines
-             and can be conveniently embedded in another here-bytevector without escapes"example##"test##)
+             and can be conveniently embedded in another here-bytes without escapes"example##"test##)
            (go (lambda (name text)
                  (example-write name)
                  (example-write text)
                  (example-write 'denotating:)
-                 (denotate 0 (iport:bytevector text) (make-example-reader))
+                 (denotate 0 (iport:bytes text) (make-example-reader))
                  (oport-write-byte out 10)))
            (example-read-write
              (lambda (text)
                (example-write
                  ((read/reader:data/k (compose (reader-track-line/start 0) reader:data))
-                  (iport:bytevector text)
+                  (iport:bytes text)
                   (compose raise
                            (make-read-error-location-update
                              (lambda (loc)
@@ -191,14 +191,14 @@
               (go 'example: text.example)
               (go 'another-example: text.another-example)
               (go 'failure-example: text.failure-example)
-              (go 'here-bytevector-example: text.here-bytevector-example)
+              (go 'here-bytes-example: text.here-bytes-example)
               (example-read-write text.example)
               (oport-write-byte out 10)
               (example-read-write text.another-example)
               (oport-write-byte out 10)
               ;(example-read-write text.failure-example)
               (oport-write-byte out 10)
-              (example-read-write text.here-bytevector-example)
+              (example-read-write text.here-bytes-example)
               (oport-write-byte out 10)
               ;(oport-close out)
               ))
