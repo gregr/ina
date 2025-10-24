@@ -4,7 +4,13 @@
                                                    addr=>primitive-id)))))
 (define (E-compile-racket-program E) (rkt-text->racket-program (E-compile-rkt-text E)))
 
+;; TODO: text values (symbol, string, bytes) need to be written differently for rkt
+;; - [compact-]write will escape non-printable bytes differently
+;; - so we need at least a limited rkt-specific writer for this
+;; - or we could restrict form to be safe to write naively
+;; - or we can use a general constructor form that is always safe
 (define (rkt-expr->rkt-text form) (call/oport:bytevector (lambda (out) (compact-write form out))))
+
 (define (rkt-text->racket-program text)
   (bytevector-append #"#lang racket/base\n"
                      racket-primitive-definition-text
