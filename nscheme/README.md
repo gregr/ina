@@ -700,12 +700,12 @@ maybe separate base/raise.scm from base/prompt.scm to separate the part that doe
       - for-each is not likely to be useful in a pure setting, though
     - pair.scm
     - vector.scm
-    - bytevector.scm
+    - bytes.scm
     - record.scm (but we're probably going to change this quite a bit)
     - exception.scm
   - procedural (mutable, sequential)
     - mvector.scm
-    - mbytevector.scm
+    - mbytes.scm
     - port.scm
     - unicode.scm
     - text.scm
