@@ -76,19 +76,19 @@
   (cond
     ((rkt:string?      x) (rkt:string->symbol x))
     ((non-utf8-string? x) (non-utf8-symbol (non-utf8-string-bv x)))
-    (else                 (mistake 'string->symbol "not a string" x))))
+    (else                 (mistake 'string->symbol #"not a string" x))))
 (define (symbol->string x)
   (cond
     ((rkt:symbol?      x) (rkt:symbol->string x))
     ((non-utf8-symbol? x) (non-utf8-string (non-utf8-symbol-bv x)))
-    (else                 (mistake 'symbol->string "not a symbol" x))))
+    (else                 (mistake 'symbol->string #"not a symbol" x))))
 (define (string->bytes x)
   (cond
     ((rkt:string?      x) (string->bytes/utf-8 x))
     ((non-utf8-string? x) (non-utf8-string-bv x))
-    (else                 (mistake 'string->bytes "not a string" x))))
+    (else                 (mistake 'string->bytes #"not a string" x))))
 (define (bytes->string x)
-  (unless (bytes? x) (mistake 'bytes->string "not a bytes" x))
+  (unless (bytes? x) (mistake 'bytes->string #"not a bytes" x))
   (with-handlers ((exn:fail:contract? (lambda (e) (non-utf8-string x)))) (bytes->string/utf-8 x)))
 
 (define (eqv? a b)
@@ -110,8 +110,8 @@
 (define (bitwise-length n) (integer-length n))
 
 (define (integer-floor-divmod dividend divisor)
-  (unless (integer? dividend) (mistake 'integer-floor-divmod "dividend is not an integer" dividend))
-  (unless (integer? divisor) (mistake 'integer-floor-divmod "divisor is not an integer" divisor))
+  (unless (integer? dividend) (mistake 'integer-floor-divmod #"dividend is not an integer" dividend))
+  (unless (integer? divisor) (mistake 'integer-floor-divmod #"divisor is not an integer" divisor))
   (let ((q (rkt:floor (/ dividend divisor))))
     (values q (- dividend (* q divisor)))))
 
@@ -221,7 +221,7 @@
                     ((thread)                 'time-thread)
                     ((garbage-collector-cpu)  'time-collector-cpu)
                     ((garbage-collector-real) 'time-collector-real)
-                    (else (mistake 'current-seconds-nanoseconds "not a time type" type)))))
+                    (else (mistake 'current-seconds-nanoseconds #"not a time type" type)))))
         (lambda () (let ((time (chez:current-time type)))
                      (values (chez:time-second time) (chez:time-nanosecond time))))))))
 (define platform.time (list (cons 'time (list (cons 'sleep-seconds-nanoseconds sleep-seconds-nanoseconds)
@@ -244,12 +244,12 @@
     (thunk)))
 (define-syntax-rule (io-guard kfail body ...) (with-io-guard kfail (lambda () body ...)))
 (define (nonnegative-integer?! x) (unless (exact-nonnegative-integer? x)
-                                    (mistake "not a nonnegative integer" x)))
+                                    (mistake #"not a nonnegative integer" x)))
 (define (buffer-range?! buf start count)
   (nonnegative-integer?! start)
   (nonnegative-integer?! count)
   (let ((len (if (mbytes? buf) (mbytes-length buf) (bytes-length buf))))
-    (unless (<= (+ start count) len) (mistake "buffer range out of bounds" start count len))))
+    (unless (<= (+ start count) len) (mistake #"buffer range out of bounds" start count len))))
 
 (define (rkt:imemory partial-description port)
   (file-stream-buffer-mode port 'none)
@@ -278,7 +278,7 @@
                                                     (k size)))))
              ((close)    (lambda (kf k) (io-guard kf (close-input-port port) (k))))
              ((describe) (lambda () description))
-             (else       (error "not an imemory method" method)))
+             (else       (mistake #"not an imemory method" method)))
            arg*)))
 (define (rkt:omemory partial-description port)
   (file-stream-buffer-mode port 'none)
@@ -307,7 +307,7 @@
                                                       (k))))
              ((close)    (lambda (kf k) (io-guard kf (close-output-port port) (k))))
              ((describe) (lambda () description))
-             (else       (error "not an omemory method" method)))
+             (else       (mistake #"not an omemory method" method)))
            arg*)))
 
 (define (rkt:iport partial-description port)
@@ -344,8 +344,8 @@
                 (buffer-range?! src start count)
                 (if buf.unread
                     (let ((pos (- pos.unread count)))
-                      (when (< pos 0) (error "too many bytes unread" count
-                                             (cons 'position pos.unread) description))
+                      (when (< pos 0) (mistake #"too many bytes unread" count
+                                               (cons 'position pos.unread) description))
                       (set! pos.unread pos))
                     (begin
                       (set! buf.unread (subbytes (mbytes-bv src) start (+ start count)))
@@ -353,7 +353,7 @@
                 (k)))
              ((close)    (lambda (kf k)     (io-guard kf (close-input-port port) (k))))
              ((describe) (lambda ()         description))
-             (else       (error "not an iport method" method description)))
+             (else       (mistake #"not an iport method" method description)))
            arg*)))
 (define (rkt:oport partial-description port)
   (file-stream-buffer-mode port 'none)
@@ -369,7 +369,7 @@
                              (io-guard kf (write-bytes src port start end) (k)))))
              ((close)    (lambda (kf k)     (io-guard kf (close-output-port port) (k))))
              ((describe) (lambda ()         description))
-             (else       (error "not an oport method" method description)))
+             (else       (mistake #"not an oport method" method description)))
            arg*)))
 
 ;;;;;;;;;;;;;;;;;;
@@ -401,7 +401,7 @@
                          ((create) 'error)
                          ((update) 'update)
                          ((#f)     'can-update)
-                         (else     (mistake "not an output-file modifier" mod)))))
+                         (else     (mistake #"not an output-file modifier" mod)))))
       (io-guard kf (k (make-device (list (cons 'type device-type) (cons 'path (path->bytes path)))
                                    (open-output-file path #:exists exists-flag)))))))
 (define (posix-filesystem method . arg*)
@@ -437,7 +437,7 @@
         (lambda (kf k)
           (nonnegative-integer?! seconds)
           (io-guard kf (file-or-directory-modify-seconds (make-path path) seconds) (k)))))
-     (else (mistake "not a posix-filesystem method" method)))
+     (else (mistake #"not a posix-filesystem method" method)))
    arg*))
 
 ;;;;;;;;;;;;;;;;;;
@@ -528,9 +528,9 @@
                         ((multicast-ttl)       (lambda () (udp-multicast-ttl socket)))
                         ((multicast-loopback?) (lambda () (udp-multicast-loopback? socket)))
                         ((multicast-interface) (lambda () (udp-multicast-interface socket)))
-                        (else                  (mistake "not a udp-socket method" method)))
+                        (else                  (mistake #"not a udp-socket method" method)))
                       arg*))))))))
-     (else (mistake "not a posix-network method" method)))
+     (else (mistake #"not a posix-network method" method)))
    arg*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -544,7 +544,7 @@
 (current-subprocess-custodian-mode 'kill)
 (define (posix-raw-process/k in out err path arg* env kf k)
   (define (fd->rkt-port fd name mode)
-    (and fd (unless (exact-nonnegative-integer? fd) (mistake "not a file descriptor" fd name))
+    (and fd (unless (exact-nonnegative-integer? fd) (mistake #"not a file descriptor" fd name))
          (unsafe-file-descriptor->port fd name mode)))
   (io-guard
    kf
@@ -574,7 +574,7 @@
               ((wait)      (subprocess-wait sp) (subprocess-status sp))
               ((kill)      (subprocess-kill sp #t) (values))
               ((interrupt) (subprocess-kill sp #f) (values))
-              (else        (mistake "not a posix-raw-process/k method" method)))))))))
+              (else        (mistake #"not a posix-raw-process/k method" method)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Posix signals ;;;
@@ -586,7 +586,7 @@
   (cond
     ((procedure? handler) (hash-set!    posix-signal=>handler signal handler))
     ((not        handler) (hash-remove! posix-signal=>handler signal))
-    (else                 (mistake 'posix-set-signal-handler! "not a procedure or #f" signal handler)))
+    (else                 (mistake 'posix-set-signal-handler! #"not a procedure or #f" signal handler)))
   (values))
 (define (with-native-signal-handling thunk)
   (parameterize-break
@@ -627,14 +627,14 @@
     (lambda (stx) (rkt:eval stx ns))))
 (define (evaluate-rkt-text code)
   (let ((type 'rkt-text))
-    (unless (bytes? code) (mistake 'primitive-evaluate "code is not a bytes" type code))
+    (unless (bytes? code) (mistake 'primitive-evaluate #"code is not a bytes" type code))
     (call-with-input-bytes
      code
      (lambda (in)
        (let ((stx (read in)))
-         (when (eof-object? stx) (mistake 'primitive-evaluate "empty code" type code))
+         (when (eof-object? stx) (mistake 'primitive-evaluate #"empty code" type code))
          (unless (eof-object? (read in))
-           (mistake 'primitive-evaluate "code contains more than one expression" type code))
+           (mistake 'primitive-evaluate #"code contains more than one expression" type code))
          (evaluate-rkt-expr stx))))))
 (define primitive-evaluate
   (case-lambda
