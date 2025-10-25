@@ -2,6 +2,7 @@
 (provide (all-defined-out))
 (module more racket/base
   (provide read-syntax-extended)
+  (require racket/syntax-srcloc)
   (define read-syntax-extended
     (let ((rt.extended
            (make-readtable
@@ -24,65 +25,75 @@
                     (loop (+ skip 1))))))))
       (lambda (source in)
         (parameterize ((current-readtable rt.extended))
-          (read-syntax source in))))))
+          (let loop ((s (read-syntax source in)))
+            (define (go x)
+              (cond
+                ((pair?   x) (cons (loop (car x)) (loop (cdr x))))
+                ((vector? x) (list->vector (map loop (vector->list x))))
+                ((string? x) (string->bytes/utf-8 x))
+                (else        x)))
+            (if (syntax? s) (datum->syntax s (go (syntax-e s)) (syntax-srcloc s)) (go s))))))))
 (require
   "primitive.rkt" "syntax-shim.rkt" 'more (for-syntax 'more)
   racket/include racket/local racket/runtime-path racket/splicing (prefix-in rkt: racket/base))
-(include "../src/base/misc.scm")
-(include "../src/base/list.scm")
-(include "../src/base/number.scm")
-(include "../src/base/mvector.scm")
-(include "../src/base/vector.scm")
-(include "../src/base/mbytes.scm")
-(include "../src/base/bytes.scm")
-(include "../src/base/unicode.scm")
-(include "../src/base/prompt.scm")
-(include "../src/base/exception.scm")
-(include "../src/base/coroutine.scm")
-(include "../src/base/generator.scm")
-(include "../src/base/port.scm")
-(include "../src/base/text.scm")
-(include "../src/base/platform.scm")
-(include "../src/base/time.scm")
-(include "../src/base/io.scm")
-(include "../src/syntax.scm")
-(include "../src/compiler/high-level-ir.scm")
-(include "../src/compiler/high-level-passes.scm")
-(include "../src/compiler/backend/rkt.scm")
-(include/reader "../src/compiler/target/racket.scm" read-syntax-extended)
-(include "../src/parser/parse.scm")
-(include "../src/parser/minimal.scm")
-(include "../src/parser/program.scm")
-(include "../src/parser/meta.scm")
-(include "../src/posix/platform.scm")
-(include "../src/posix/signal.scm")
-(include "../src/posix/filesystem.scm")
-(include "../src/posix/network.scm")
-(include "../src/posix/process.scm")
-(include "../src/posix/cli.scm")
-(include "../src/posix/terminal/osc.scm")
-(include "../src/posix/terminal/csi.scm")
-(include "../src/posix/terminal/sgr.scm")
-(include "../src/posix/terminal/tty.scm")
-(include "../src/posix/terminal/text.scm")
-(include "../src/library.scm")
-(define-runtime-path path.here ".")
-(define library=>text* (posix-make-library=>text* #f (path-append (rkt:path->string path.here) "../src")))
-(define library=>env (make-library=>env #f library=>text* (make-library=>def* #f #t library=>text*)))
-
-(module+ main
-  (define-namespace-anchor anchor.here)
-  (current-posix-argument*
-   (cdr (current-posix-argument*))
-   (lambda ()
-     (rkt:call-with-input-file
-      (bytes->string/utf-8 (car (current-posix-argument*)))
-      (lambda (in)
-        (let ((ns (namespace-anchor->namespace anchor.here))
-              (stx* (let loop ()
-                      (let ((x (read-syntax-extended #f in)))
-                        (if (eof-object? x) '() (cons x (loop)))))))
-          (with-native-signal-handling
-           (lambda ()
-             (with-panic-translation
-              (lambda () (rkt:for-each (lambda (stx) (rkt:eval stx ns)) stx*)))))))))))
+(define-syntax-rule (include-and-run path ...)
+  (begin
+    (include/reader path read-syntax-extended) ...
+    (define-runtime-path path.here ".")
+    (define library=>text* (posix-make-library=>text* #f (path-append (rkt:path->bytes path.here) #"../src")))
+    (define library=>env (make-library=>env #f library=>text* (make-library=>def* #f #t library=>text*)))
+    (module+ main
+      (define-namespace-anchor anchor.here)
+      (current-posix-argument*
+       (cdr (current-posix-argument*))
+       (lambda ()
+         (rkt:call-with-input-file
+          (bytes->string/utf-8 (car (current-posix-argument*)))
+          (lambda (in)
+            (let ((ns (namespace-anchor->namespace anchor.here))
+                  (stx* (let loop ()
+                          (let ((x (read-syntax-extended #f in)))
+                            (if (eof-object? x) '() (cons x (loop)))))))
+              (with-native-signal-handling
+               (lambda ()
+                 (with-panic-translation
+                  (lambda () (rkt:for-each (lambda (stx) (rkt:eval stx ns)) stx*)))))))))))))
+(include-and-run
+ "../src/base/misc.scm"
+ "../src/base/number.scm"
+ "../src/base/list.scm"
+ "../src/base/mvector.scm"
+ "../src/base/vector.scm"
+ "../src/base/mbytes.scm"
+ "../src/base/bytes.scm"
+ "../src/base/unicode.scm"
+ "../src/base/prompt.scm"
+ "../src/base/exception.scm"
+ "../src/base/coroutine.scm"
+ "../src/base/generator.scm"
+ "../src/base/port.scm"
+ "../src/base/text.scm"
+ "../src/base/platform.scm"
+ "../src/base/time.scm"
+ "../src/base/io.scm"
+ "../src/syntax.scm"
+ "../src/compiler/high-level-ir.scm"
+ "../src/compiler/high-level-passes.scm"
+ "../src/compiler/backend/rkt.scm"
+ "../src/compiler/target/racket.scm"
+ "../src/parser/parse.scm"
+ "../src/parser/minimal.scm"
+ "../src/parser/program.scm"
+ "../src/parser/meta.scm"
+ "../src/posix/platform.scm"
+ "../src/posix/signal.scm"
+ "../src/posix/filesystem.scm"
+ "../src/posix/network.scm"
+ "../src/posix/process.scm"
+ "../src/posix/cli.scm"
+ "../src/posix/terminal/osc.scm"
+ "../src/posix/terminal/csi.scm"
+ "../src/posix/terminal/sgr.scm"
+ "../src/posix/terminal/tty.scm"
+ "../src/posix/terminal/text.scm"
+ "../src/library.scm")

@@ -53,7 +53,7 @@ and resuming snapshots of a running system.
 - Variables are immutable by default.
   - `set!` is only supported for variables introduced by special binders.
 - All s-expression types are immutable.
-  - This even includes pairs, strings, bytess, and vectors.
+  - This even includes pairs, bytess, and vectors.
   - Mutable vectors and bytess (i.e., mvectors and mbytess) are a distinct type of data,
     disjoint from the s-expression types.
   - Records are distinct, vector-like types whose fields can be mutable.  They are disjoint from the
@@ -64,7 +64,7 @@ and resuming snapshots of a running system.
   - For two values of types that should have a unique identity, `eqv?` returns `#t` if and only if
     the values have the same identity.
   - For any two values that are not structurally equal, `eqv?` returns `#f`.
-  - For any two values that are `()`, `#t`, `#f`, numbers, symbols, strings, or bytess, `eqv?`
+  - For any two values that are `()`, `#t`, `#f`, numbers, symbols, or bytess, `eqv?`
     returns `#t` if the two values are structurally equal.
   - For two structurally equal values of all other types, `eqv?` may nondeterministically return
     `#t` or `#f`.  Even if a call to `eqv?` returns `#t` once, the same call could return `#f` in
@@ -72,24 +72,22 @@ and resuming snapshots of a running system.
     - For instance, `(list (eq? x x) (eq? x x))` for such values could theoretically return any of:
       `(#t #t)` `(#f #f)` `(#t #f)` `(#f #t)`
   - `eq?` is not provided.
-- There is no primitive character type: a string is indivisible until it is decoded as a bytes
-  - e.g., `string->bytes` and `bytes->string`
-  - no `string-ref`, since basis of decomposition depends on context
+- There is no primitive character type.  String and bytes are the same type, whose external
+  representation assumes a UTF-8 encoding when possible.
   - code units (bytes) are not characters, but suffice for low-level string manipulation
   - code points are not characters, but suffice for some higher-level string manipulation
-  - grapheme clusters (substrings) are the right notion of character for user interaction
-- Like Racket, bytess can be notated with a text body.  Unlike Racket, this text body always
+  - grapheme clusters (substrings) may be the right notion of character for user interaction
+- Like Racket, a bytes can be notated with a text body.  Unlike Racket, this text body always
   corresponds to the sequence of bytes given by UTF-8 encoding, except that individual bytes can be
   specified using the `\x` escape code.  For instance, `#"λ"`, `#"\u3BB;"`, `#"\xCE;\xBB;"`, and
   `#vu8(206 187)` are all notations for the same length-2 bytes.  Individually specified bytes
   do not have to form a legal UTF-8 sequence.
-- As a convention, strings and symbols are intended to correspond to unicode text, but this
-  correspondence is not enforced.  `bytes->string` is defined as a UTF-8 encoding of the input
-  bytes when possible, but will always succeed even in the presence of non-UTF-8 byte
-  sequences.  The string losslessly retains the sequence of bytes given by the bytes, which can
-  be recovered using `string->bytes`.  Like bytes notation, both string and pipe-delimited
-  symbol notation also allow individual bytes to be specified using the `\x` escape code, even when
-  those bytes form a sequence that is not legal UTF-8.
+- As a convention, symbols are intended to correspond to unicode text, but this correspondence is
+  not enforced.  `bytes->symbol` is defined as a UTF-8 encoding of the input bytes when possible,
+  but will always succeed even in the presence of non-UTF-8 byte sequences.  The symbol losslessly
+  retains the sequence of bytes, which can be recovered using `symbol->bytes`.  Like bytes notation,
+  pipe-delimited symbol notation also allow individual bytes to be specified using the `\x` escape
+  code, even when those bytes form a sequence that is not legal UTF-8.
 - Racket-like dynamically-scoped parameters are provided.  Unlike in Racket, the values of these
   parameters can only be modified through a parameterization, and the modification is only visible
   within the body of that parameterization.  That is, parameters are otherwise immutable.  As in
@@ -180,7 +178,7 @@ should stdio belong to posix?
       - and provide an abstract way to prompt the user for input, without deciding how or where to render the prompt
         - something like (let ((user-value (prompt-user PROMPT-MESSAGE))) etc. ...)
   - maybe also something simple inspired by OCaml-EIO-style traceln for diagnostic logging?
-  - should we maintain a behavioral distinction analogous to that of display vs. write, for text values (symbols, strings, bytess)?
+  - should we maintain a behavioral distinction analogous to that of display vs. write, for text values (symbols, bytess)?
     - i.e., whether to include delimiters such as double quotes, or encode tabs/newlines, or interpret the value as literal document text
     - need to sanitize interpreted text to remove control characters such as escapes, to avoid interfering with chosen attributes
       - should probably also add special processing for horizontal and vertical space characters
@@ -974,7 +972,6 @@ figure out JS representation strategy
 - values
   - null: null
   - boolean: true false
-  - string: string
   - fixnum: 32-bit integer
   - arrays where field 0 contains a type header
     - symbol bigint rational f32 f64 pair vector mvector closure record
@@ -1562,7 +1559,7 @@ include
       - define-datatype
     - unprivileged:
       - env, parse
-      - number, list, vector, bytes, string, hash, btree
+      - number, list, vector, bytes, hash, btree
       - comparison-and-equality
       - quasiquote, match
       - read, write  ; document-based rather than just s-expression-based?
@@ -1978,7 +1975,7 @@ A good scheme will:
     handle, should have primary tags that are different from the tags used for values where eqv? can
     simply compare the primary handles.
     - these are the large, structurally-compared values:
-      - larger text types: symbols, strings, bytess
+      - larger text types: symbols, bytess
       - large integers, non-integers, large floating-point numbers
     - these are the values where eqv? only needs to perform primary handle comparison:
       - immediates, mutables, pairs, vectors, and all opaque values such as procedures and records
@@ -2002,8 +1999,9 @@ A good scheme will:
     - the 100 secondary tag is safe in an unscanned heap
   - 001: symbol
     - L ...   100: length header
-  - 011: string or bigint or ratnum or bigflonum
-    - L ...   100: length header for string
+  - 011: bytes
+    - L ...   100: length header
+  - 101: bigint or ratnum or bigflonum
     - L ...   S01: bigint
       - S=0: positive
       - S=1: negative
@@ -2012,8 +2010,6 @@ A good scheme will:
       - only requires a header to provide a secondary tag
     - WWWWWWWW011: bigflonum
       - WWWWWWWW: 8-bit bit width
-  - 101: bytes
-    - L ...  100: length header
 - xx0:
   - 0x0: immediate
     - 000: 61-bit fixnum
@@ -2024,10 +2020,11 @@ A good scheme will:
         - B=1: #t
       - 0 ...  1000010: empty vector
       - N ...  1100010: small flonum
-      - C ... LLLtt010: short symbol, string, bytes
+        - TODO: bits that describe precision
+      - C ... LLLtt010: short symbol or bytes
         - tt=01: symbol
-        - tt=10: string
-        - tt=11: bytes
+        - tt=10: bytes
+        - TODO: tt=11 is available: is there a good way to use it?
         - LLL: 3-bit length
         - C ...: 7 bytes of code units
   - 100: pair

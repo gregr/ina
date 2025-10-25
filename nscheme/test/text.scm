@@ -6,15 +6,15 @@
        ;(out (buffered-oport/buffer-size standard-output-port 100000))
        ;(out (buffered-oport/buffer-size (thread-safe-oport standard-output-port) 100000))
        (example
-         (append (list (bytes->string (bytes 0 15 16 31 127
-                                             ;#x03BB
-                                             #b11001110 #b10111011
-                                             ;159
-                                             #b11000010 #b10011111
-                                             ;8192
-                                             #b11100010 #b10000000 #b10000000
-                                             ;8233
-                                             #b11100010 #b10000000 #b10101001))
+         (append (list (bytes 0 15 16 31 127
+                              ;#x03BB
+                              #b11001110 #b10111011
+                              ;159
+                              #b11000010 #b10011111
+                              ;8192
+                              #b11100010 #b10000000 #b10000000
+                              ;8233
+                              #b11100010 #b10000000 #b10101001)
                        (string->symbol "ze\ro") (string->symbol "@zero") (string->symbol "ze#ro"))
                  '(() (0) 1 #('2 three "four" "\fou\r" #(100 101 102 103 104 105 106 107 108 109 110 111) #"\fi\ve" #"fiveeee") #(6 7 7 7) #t #f . 10)))
        (example-writer/sgr (lambda (l)

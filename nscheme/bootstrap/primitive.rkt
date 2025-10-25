@@ -1,12 +1,11 @@
 #lang racket/base
 (provide
   panic apply values make-record-type describe
-  eqv? null? boolean? procedure? symbol? string? rational? integer?
-  pair? vector? mvector?  bytes? mbytes?
-  bytes->string string->bytes string->symbol symbol->string
+  eqv? null? boolean? procedure? symbol? rational? integer?
+  pair? vector? mvector? bytes? mbytes?
   cons car cdr vector vector-length vector-ref
   make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-  bytes bytes-length bytes-ref
+  bytes bytes-length bytes-ref bytes->symbol symbol->bytes
   make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
   bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
   integer-floor-divmod numerator denominator = <= >= < > + - * /
@@ -50,7 +49,7 @@
     ((error-display-handler) msg (make-exn:fail msg (current-continuation-marks))))
   (exit 1))
 (define (exn-context x)
-  (define (pretty-srcloc sl) (and sl (srcloc->string sl)))
+  (define (pretty-srcloc sl) (and sl (string->bytes/utf-8 (srcloc->string sl))))
   (map (lambda (frame)
          (cond
            ((pair?   frame) (list (car frame) (pretty-srcloc (cdr frame))))
@@ -68,36 +67,22 @@
 (define (mistake* detail*) (panic 'mistake detail*))
 (define (mistake . detail*) (mistake* detail*))
 
-(struct non-utf8-string (bv) #:prefab)
 (struct non-utf8-symbol (bv) #:prefab)
-(define (string? x) (or (rkt:string? x) (non-utf8-string? x)))
 (define (symbol? x) (or (rkt:symbol? x) (non-utf8-symbol? x)))
-(define (string->symbol x)
+(define (symbol->bytes x)
   (cond
-    ((rkt:string?      x) (rkt:string->symbol x))
-    ((non-utf8-string? x) (non-utf8-symbol (non-utf8-string-bv x)))
-    (else                 (mistake 'string->symbol #"not a string" x))))
-(define (symbol->string x)
-  (cond
-    ((rkt:symbol?      x) (rkt:symbol->string x))
-    ((non-utf8-symbol? x) (non-utf8-string (non-utf8-symbol-bv x)))
-    (else                 (mistake 'symbol->string #"not a symbol" x))))
-(define (string->bytes x)
-  (cond
-    ((rkt:string?      x) (string->bytes/utf-8 x))
-    ((non-utf8-string? x) (non-utf8-string-bv x))
-    (else                 (mistake 'string->bytes #"not a string" x))))
-(define (bytes->string x)
-  (unless (bytes? x) (mistake 'bytes->string #"not a bytes" x))
-  (with-handlers ((exn:fail:contract? (lambda (e) (non-utf8-string x)))) (bytes->string/utf-8 x)))
+    ((rkt:symbol?      x) (string->bytes/utf-8 (symbol->string x)))
+    ((non-utf8-symbol? x) (non-utf8-symbol-bv x))
+    (else                 (mistake 'symbol->bytes #"not a symbol" x))))
+(define (bytes->symbol x)
+  (unless (bytes? x) (mistake 'bytes->symbol #"not a bytes" x))
+  (with-handlers ((exn:fail:contract? (lambda (e) (non-utf8-symbol x))))
+    (string->symbol (bytes->string/utf-8 x))))
 
 (define (eqv? a b)
   (or (rkt:eqv? a b)
       (cond
         ((bytes?           a) (and (bytes?           b) (bytes=? a b)))
-        ((rkt:string?      a) (and (rkt:string?      b) (string=? a b)))
-        ((non-utf8-string? a) (and (non-utf8-string? b) (bytes=? (non-utf8-string-bv a)
-                                                                 (non-utf8-string-bv b))))
         ((non-utf8-symbol? a) (and (non-utf8-symbol? b) (bytes=? (non-utf8-symbol-bv a)
                                                                  (non-utf8-symbol-bv b))))
         (else                 #f))))
@@ -385,10 +370,7 @@
 ;;;;;;;;;;;;;;;
 ;;; File IO ;;;
 ;;;;;;;;;;;;;;;
-(define (make-path path) (bytes->path (cond
-                                        ((string? path) (string->bytes path))
-                                        ((symbol? path) (string->bytes (symbol->string path)))
-                                        (else           path))))
+(define (make-path path) (bytes->path (if (symbol? path) (symbol->bytes path) path)))
 (define ((open-input/make-device make-device device-type) path)
   (lambda (kf k)
     (let ((path (simple-form-path (make-path path))))
@@ -411,10 +393,10 @@
      ((open-omemory) (open-output/make-device rkt:omemory 'omemory:file))
      ((open-iport)   (open-input/make-device  rkt:iport   'iport:file))
      ((open-oport)   (open-output/make-device rkt:oport   'oport:file))
-     ((current-directory)  (lambda ()        (lambda (kf k)        (io-guard kf (k (path->bytes (rkt:current-directory)))))))
+     ((current-directory)  (lambda ()        (lambda (kf k)(io-guard kf (k (path->bytes (rkt:current-directory)))))))
      ((change-evt)         (lambda (path)    (lambda (kf k)(io-guard kf (k (filesystem-change-evt (make-path path)))))))
      ((change-directory)   (lambda (path)    (lambda (kf k)(io-guard kf (rkt:current-directory (make-path path)) (k)))))
-     ((list)               (lambda (path)    (lambda (kf k)(io-guard kf (k (map path->string (rkt:directory-list (make-path path))))))))
+     ((list)               (lambda (path)    (lambda (kf k)(io-guard kf (k (map path->bytes (rkt:directory-list (make-path path))))))))
      ((make-symbolic-link) (lambda (to path) (lambda (kf k)(io-guard kf (make-file-or-directory-link to (make-path path)) (k)))))
      ((make-directory)     (lambda (path)    (lambda (kf k)(io-guard kf (rkt:make-directory (make-path path)) (k)))))
      ((move)               (lambda (old new) (lambda (kf k)(io-guard kf (rename-file-or-directory (make-path old) (make-path new) #f) (k)))))
@@ -447,37 +429,39 @@
   (define (tcp-address-description p)
     (let-values (((local-host local-port remote-host remote-port) (tcp-addresses p #t)))
       (cons 'address*
-            (list (cons 'local  (list (cons 'host local-host)
+            (list (cons 'local  (list (cons 'host (s->b local-host))
                                       (cons 'port local-port)))
-                  (cons 'remote (list (cons 'host remote-host)
+                  (cons 'remote (list (cons 'host (s->b remote-host))
                                       (cons 'port remote-port)))))))
   (k (rkt:iport (list '(type . iport:tcp) (tcp-address-description in))  in)
      (rkt:oport (list '(type . oport:tcp) (tcp-address-description out)) out)))
+(define (b->s b) (bytes->string/utf-8 b))
+(define (s->b s) (string->bytes/utf-8 s))
 (define (posix-network method . arg*)
   (apply
    (case method
      ((tcp-listen)
       (lambda (host port reuse? max-backlog)
         (lambda (kf k)
-          (io-guard kf (let ((listener (tcp-listen port max-backlog reuse? host)))
+          (io-guard kf (let ((listener (tcp-listen port max-backlog reuse? (b->s host))))
                          (k (lambda (kf k) (io-guard kf (let-values (((in out) (tcp-accept listener)))
                                                           (make-socket-ports/k in out k))))
                             (lambda (kf k) (io-guard kf (tcp-close listener) (k)))))))))
      ((tcp-connect)
       (lambda (host port local-host local-port)
         (lambda (kf k)
-          (io-guard kf (let-values (((in out) (tcp-connect host port local-host local-port)))
+          (io-guard kf (let-values (((in out) (tcp-connect (b->s host) port local-host local-port)))
                          (make-socket-ports/k in out k))))))
      ((udp-open)
       (lambda (family-host family-port)
         (lambda (kf k)
           (io-guard
-           kf (k (let ((socket (udp-open-socket family-host family-port)))
+           kf (k (let ((socket (udp-open-socket (b->s family-host) family-port)))
                    (define (receive-from/k dst start count kf k)
                      (buffer-range?! dst start count)
                      (io-guard kf (let-values (((amount host port)
                                                 (udp-receive! socket dst start (+ start count))))
-                                    (k amount host port))))
+                                    (k amount (s->b host) port))))
                    (lambda (method . arg*)
                      (apply
                       (case method
@@ -489,7 +473,7 @@
                          (lambda (host port src start count kf k)
                            (buffer-range?! src start count)
                            (let ((src (if (mbytes? src) (mbytes-bv src) src)))
-                             (io-guard kf (udp-send-to socket host port src start (+ start count)) (k)))))
+                             (io-guard kf (udp-send-to socket (b->s host) port src start (+ start count)) (k)))))
                         ((send/k)
                          (lambda (          src start count kf k)
                            (buffer-range?! src start count)
@@ -499,14 +483,14 @@
                          (lambda (kf k)
                            (io-guard kf (let-values (((local-host local-port remote-host remote-port)
                                                       (udp-addresses socket #t)))
-                                          (k (list (cons 'local  (list (cons 'host local-host)
+                                          (k (list (cons 'local  (list (cons 'host (s->b local-host))
                                                                        (cons 'port local-port)))
-                                                   (cons 'remote (list (cons 'host remote-host)
+                                                   (cons 'remote (list (cons 'host (s->b remote-host))
                                                                        (cons 'port remote-port)))))))))
                         ((connect/k) (lambda (host port kf k)
-                                       (io-guard kf (udp-connect! socket host port) (k))))
+                                       (io-guard kf (udp-connect! socket (b->s host) port) (k))))
                         ((bind/k)    (lambda (host port reuse? kf k)
-                                       (io-guard kf (udp-bind! socket host port reuse?) (k))))
+                                       (io-guard kf (udp-bind! socket (b->s host) port reuse?) (k))))
                         ((close/k)   (lambda (kf k) (io-guard kf (udp-close socket) (k))))
                         ((set-receive-buffer-size!/k)
                          (lambda (amount kf k)
@@ -515,16 +499,16 @@
                         ((set-ttl!/k) (lambda (ttl kf k) (io-guard kf (udp-set-ttl! socket ttl) (k))))
                         ((multicast-join!/k)
                          (lambda (addr local-host kf k)
-                           (io-guard kf (udp-multicast-join-group!  socket addr local-host) (k))))
+                           (io-guard kf (udp-multicast-join-group!  socket addr (b->s local-host)) (k))))
                         ((multicast-leave!/k)
                          (lambda (addr local-host kf k)
-                           (io-guard kf (udp-multicast-leave-group! socket addr local-host) (k))))
+                           (io-guard kf (udp-multicast-leave-group! socket addr (b->s local-host)) (k))))
                         ((set-multicast-ttl!/k)
                          (lambda (ttl kf k) (io-guard kf (udp-multicast-set-ttl! socket ttl) (k))))
                         ((set-multicast-loopback!/k)
                          (lambda (loop? kf k) (io-guard kf (udp-multicast-set-loopback! socket loop?) (k))))
                         ((set-multicast-interface!/k)
-                         (lambda (host kf k) (io-guard kf (udp-multicast-set-interface! socket host) (k))))
+                         (lambda (host kf k) (io-guard kf (udp-multicast-set-interface! socket (b->s host)) (k))))
                         ((multicast-ttl)       (lambda () (udp-multicast-ttl socket)))
                         ((multicast-loopback?) (lambda () (udp-multicast-loopback? socket)))
                         ((multicast-interface) (lambda () (udp-multicast-interface socket)))
@@ -536,8 +520,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; System processes ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
-(define posix-argument* (map string->bytes (cons (path->string (find-system-path 'run-file))
-                                                 (vector->list (current-command-line-arguments)))))
+(define posix-argument* (cons (path->bytes (find-system-path 'run-file))
+                              (map string->bytes/utf-8
+                                   (vector->list (current-command-line-arguments)))))
 (define posix-environment (let ((env (current-environment-variables)))
                             (map (lambda (name) (cons name (environment-variables-ref env name)))
                                  (environment-variables-names env))))

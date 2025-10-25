@@ -2,12 +2,11 @@
   ((name=>primitive
      (aquote
        panic apply values make-record-type describe
-       eqv? null? boolean? procedure? symbol? string? rational? integer?
+       eqv? null? boolean? procedure? symbol? rational? integer?
        pair? vector? mvector? bytes? mbytes?
-       bytes->string string->bytes string->symbol symbol->string
        cons car cdr vector vector-length vector-ref
        make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-       bytes bytes-length bytes-ref
+       bytes bytes-length bytes-ref bytes->symbol symbol->bytes
        make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
        bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
        integer-floor-divmod numerator denominator = <= >= < > + - * /

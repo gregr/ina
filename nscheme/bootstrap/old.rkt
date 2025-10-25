@@ -162,19 +162,17 @@
 ;(declare-primitives!
 ;  ;; privileged primitives
 ;  current-panic-handler
-;  bytes->string string->bytes
 ;  native-thread-local-value with-raw-escape-prompt raw-escape-to-prompt
 ;  current-raw-coroutine make-raw-coroutine
 ;  timer-interrupt-handler set-timer enable-interrupts disable-interrupts
 ;
 ;  panic apply values
-;  eqv? null? boolean? procedure? symbol? string? rational? integer? f32? f64?
+;  eqv? null? boolean? procedure? symbol? rational? integer? f32? f64?
 ;  pair? vector? mvector? bytes? mbytes?
-;  string->symbol symbol->string
 ;  cons car cdr
 ;  vector vector-length vector-ref
 ;  make-mvector mvector->vector mvector-length mvector-ref mvector-set!
-;  bytes bytes-length bytes-ref
+;  bytes bytes-length bytes-ref bytes->symbol symbol->bytes
 ;  make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
 ;  bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
 ;  integer-floor-divmod numerator denominator = <= >= < > + - * /
@@ -193,7 +191,7 @@
 ;  (let loop ((ast ast))
 ;    (match ast
 ;      (`#(quote ,value)            (if (ormap (lambda (?) (? value))
-;                                              (list symbol? string? pair? vector?
+;                                              (list symbol? bytes? pair? vector?
 ;                                                    record? mvector? mbytes? procedure?))
 ;                                     (value->ast value)
 ;                                     ast))
@@ -333,7 +331,7 @@
 ;                                            initialization**))
 ;                                    (ast:call (loop make-mbytes)
 ;                                              (loop (mbytes-length value)) (loop 0)))
-;                                   ((or (? number?) (? symbol?) (? string?) (? bytes?))
+;                                   ((or (? number?) (? symbol?) (? bytes?))
 ;                                    (ast:quote value)))))
 ;                        (push! other* name ast))))
 ;                 (ast:ref name))))))

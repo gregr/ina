@@ -1,5 +1,3 @@
-(define (bytes->symbol x) (string->symbol (bytes->string x)))
-(define (symbol->bytes x) (string->bytes (symbol->string x)))
 (define (make-bytes n b) (mbytes->bytes (make-mbytes n b)))
 (define (list->bytes x*) (apply bytes x*))
 
@@ -104,3 +102,11 @@
 (define (bytes-rtrim1 bv b) ((bytes-rtrim1/byte b) bv))
 (define (bytes-rtrim  bv b) ((bytes-rtrim/byte b) bv))
 (define (bytes-ltrim  bv b) ((bytes-ltrim/byte b) bv))
+
+(define string?        bytes?)
+(define string->symbol bytes->symbol)
+(define symbol->string symbol->bytes)
+(define string-append* bytes-append*)
+(define string-append  bytes-append)
+(define string-join*   bytes-join*)
+(define string-join    bytes-join)

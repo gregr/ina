@@ -79,8 +79,6 @@
         'record': function(rtd,...args){return [rtd].concat(args);},
         'record-type-descriptor': function(x){be_record(x); return x[0];},
         'record-ref': function(x,i){be_record(x); return x[i+1];},
-        'string->bytes':,
-        'bytes->string':,
 
         'apply':,
         'call-with-values':,
@@ -92,15 +90,13 @@
         'values':, function(...args){},
 
         'eq?': function(a,b){return a===b;},
-        // TODO: bigint, rational, string, bytes
+        // TODO: bigint, rational, bytes
         'eqv?': function(a,b){return (a===b)||false;},
         'null?': function(x){return x===null;},
         'boolean?': function(x){return (x===true)||(x===false);},
 
         procedure?
         symbol?
-
-        'string?': function(x){return (typeof x)==='string';},
 
         rational?
         integer?
@@ -111,7 +107,6 @@
         'vector?': is_vector,
 
         mvector? bytes? mbytes?
-        string->symbol symbol->string
 
         'cons': function(a,b) {return [type_pair,a,b];},
 
@@ -162,7 +157,6 @@
 - values
   - null: null
   - boolean: true false
-  - string: string
   - fixnum: 32-bit integer
   - arrays where field 0 contains a type header
     - symbol bigint rational f32 f64 pair vector mvector closure record
