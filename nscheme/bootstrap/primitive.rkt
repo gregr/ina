@@ -20,6 +20,8 @@
   racket/list racket/path racket/port racket/set racket/tcp racket/udp racket/vector
   (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 
+(define (b->s b) (bytes->string/utf-8 b))
+(define (s->b s) (string->bytes/utf-8 s))
 (define (sync/default handle-default . evt*) (apply sync/timeout handle-default evt*))
 (define (make-parameter default)
   (let ((rkt-param (rkt:make-parameter default)))
@@ -49,7 +51,7 @@
     ((error-display-handler) msg (make-exn:fail msg (current-continuation-marks))))
   (exit 1))
 (define (exn-context x)
-  (define (pretty-srcloc sl) (and sl (string->bytes/utf-8 (srcloc->string sl))))
+  (define (pretty-srcloc sl) (and sl (s->b (srcloc->string sl))))
   (map (lambda (frame)
          (cond
            ((pair?   frame) (list (car frame) (pretty-srcloc (cdr frame))))
@@ -60,7 +62,7 @@
        (continuation-mark-set->context (exn-continuation-marks x))))
 (define (with-panic-translation thunk)
   (call-with-exception-handler (lambda (x) (if (exn? x)
-                                               (panic #f (exn-message x) (exn-context x))
+                                               (panic #f (s->b (exn-message x)) (exn-context x))
                                                (panic #f x)))
                                thunk))
 (define (thread thunk) (rkt:thread (lambda () (with-panic-translation thunk))))
@@ -71,13 +73,13 @@
 (define (symbol? x) (or (rkt:symbol? x) (non-utf8-symbol? x)))
 (define (symbol->bytes x)
   (cond
-    ((rkt:symbol?      x) (string->bytes/utf-8 (symbol->string x)))
+    ((rkt:symbol?      x) (s->b (symbol->string x)))
     ((non-utf8-symbol? x) (non-utf8-symbol-bv x))
     (else                 (mistake 'symbol->bytes #"not a symbol" x))))
 (define (bytes->symbol x)
   (unless (bytes? x) (mistake 'bytes->symbol #"not a bytes" x))
   (with-handlers ((exn:fail:contract? (lambda (e) (non-utf8-symbol x))))
-    (string->symbol (bytes->string/utf-8 x))))
+    (string->symbol (b->s x))))
 
 (define (eqv? a b)
   (or (rkt:eqv? a b)
@@ -216,7 +218,7 @@
 ;;; IO primitives ;;;
 ;;;;;;;;;;;;;;;;;;;;;
 (define (with-io-guard kfail thunk)
-  (define (exn-frame e) (vector (exn-message e) (exn-context e)))
+  (define (exn-frame e) (vector (s->b (exn-message e)) (exn-context e)))
   (with-handlers ((exn:fail:filesystem:exists? (lambda (e) (kfail 'exists (list (exn-frame e)))))
                   (exn:fail:filesystem:errno?  (lambda (e) (kfail (exn:fail:filesystem:errno-errno e)
                                                                   (list (exn-frame e)))))
@@ -435,8 +437,6 @@
                                       (cons 'port remote-port)))))))
   (k (rkt:iport (list '(type . iport:tcp) (tcp-address-description in))  in)
      (rkt:oport (list '(type . oport:tcp) (tcp-address-description out)) out)))
-(define (b->s b) (bytes->string/utf-8 b))
-(define (s->b s) (string->bytes/utf-8 s))
 (define (posix-network method . arg*)
   (apply
    (case method
@@ -521,8 +521,7 @@
 ;;; System processes ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
 (define posix-argument* (cons (path->bytes (find-system-path 'run-file))
-                              (map string->bytes/utf-8
-                                   (vector->list (current-command-line-arguments)))))
+                              (map s->b (vector->list (current-command-line-arguments)))))
 (define posix-environment (let ((env (current-environment-variables)))
                             (map (lambda (name) (cons name (environment-variables-ref env name)))
                                  (environment-variables-names env))))
