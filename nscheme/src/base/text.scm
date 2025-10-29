@@ -836,7 +836,7 @@
                                  ((40  #"(" "(" round)  0)
                                  ((91  #"[" "[" square) 1)
                                  ((123 #"{" "{" curly)  2)
-                                 (=> (lambda (b) "not a bracket" b))))
+                                 (else => (lambda (b) (mistake "not a bracket" b)))))
            (length-prefix?     (notation-ref notation '(length-prefix?)))
            (bytes-numeric?     (notation-ref notation '(bytes-numeric?)))
            (number-notation    (notation-ref notation '(number)))

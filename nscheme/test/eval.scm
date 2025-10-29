@@ -270,13 +270,19 @@
        ((1 2 3) 'a)
        ((4 5 6) 'b)
        ((7 8 9) 'c)
-       (=> (lambda (x) (+ x 1))))
+       (else => (lambda (x) (+ x 1))))
      ==> 16
+     (case 6
+       ((1 2 3) 'a)
+       ((4 5 6) => (lambda (x) (- x 1)))
+       ((7 8 9) 'c)
+       (else => (lambda (x) (+ x 1))))
+     ==> 5
      (case '(4 5 6)
        (((1 2 3)) 'top)
        (((4 5 6)) 'middle)
        (((7 8 9)) 'bottom)
-       (else 'other))
+       (else      'other))
      ==> middle)
 
   '(lambda

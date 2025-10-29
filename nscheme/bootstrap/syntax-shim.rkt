@@ -18,9 +18,9 @@
 (define-syntax case
   (syntax-rules (else =>)
     ((_ x)                              (values))
+    ((_ x (else => proc))               (proc x))
     ((_ x (else rhs ...))               (let () rhs ...))
-    ((_ x (=> proc))                    (proc x))
-    ((_ x ((d ...) rhs ...) clause ...) (if (rkt:memv x '(d ...))
+    ((_ x ((d ...) rhs ...) clause ...) (if (rkt:member x '(d ...))
                                             (let () rhs ...)
                                             (case x clause ...)))))
 
