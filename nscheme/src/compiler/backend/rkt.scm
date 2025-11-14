@@ -1,10 +1,26 @@
+(define (bytes-rkt-symbol-compatible? v)
+  (and (not (or (eqv? v "") (eqv? v ".") (= (bytes-ref v 0) (bytes-ref "@" 0)) (utf8->number v)))
+       (let ((len (bytes-length v)))
+         (let loop ((i 0))
+           (or (<= len i)
+               (let ((b0 (bytes-ref v i)))
+                 (utf8-decode-width/k
+                   b0 (lambda _ #f)
+                   (lambda (width)
+                     (utf8-ref/b0&width/k
+                       v i b0 width (lambda _ #f)
+                       (lambda (c) (and (not (or (unicode-control? c) (unicode-space? c)
+                                                 (memv c (bytes->list #"\"#'(),;[\\]`{|}"))))
+                                        (loop (+ i width)))))))))))))
+
 (define (E-compile-rkt E global-addr=>id)
   ;; NOTE: we assume that suffixing variable names with .N will prevent them from colliding with
   ;; any global names, such as the names of any primitives or special form keywords.
-  (define address->fresh-id (address->local-gensym/transform
-                              (lambda (name) (or (and name (let ((name (text->bytes name)))
-                                                             (and (utf8? name) name)))
-                                                 '_))))
+  (define address->fresh-id
+    (address->local-gensym/transform
+      (lambda (name) (or (and name (let ((name (text->bytes name)))
+                                     (and (bytes-rkt-symbol-compatible? name) name)))
+                         '_))))
   (define (cenv-extend cenv addr* id*) (append (map cons addr* id*) cenv))
   (define (cenv-ref cenv addr)
     (let ((addr&id (assv addr cenv)))
