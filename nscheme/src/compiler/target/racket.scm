@@ -1,15 +1,23 @@
 (define E-compile-rkt-text
   (let-values (((addr=>primitive-id primitive=>addr) (addr=>primitive-id&primitive=>addr)))
-    (lambda (E) (rkt-expr->rkt-text (E-compile-rkt (E-replace-primitive (E-simplify-quote E) primitive=>addr)
-                                                   addr=>primitive-id)))))
+    (define (rkt-expr->rkt-text form) (call/oport:bytes (lambda (out) (compact-write form out))))
+    (define (E:bytes v) (E:call (E:quote bytes) (map (lambda (n) (E:quote n)) (bytes->list v))))
+    (lambda (E)
+      (rkt-expr->rkt-text
+        (E-compile-rkt
+          (E-replace-primitive
+            (E-map-quote
+              (E-simplify-quote E)
+              (lambda (v)
+                (cond ((symbol? v) (let ((t (symbol->bytes v)))
+                                     (if (bytes-rkt-symbol-compatible? t)
+                                         (E:quote v)
+                                         (E:call (E:quote bytes->symbol) (list (E:bytes t))))))
+                      ((bytes? v) (E:bytes v))
+                      (else (E:quote v)))))
+            primitive=>addr)
+          addr=>primitive-id)))))
 (define (E-compile-racket-program E) (rkt-text->racket-program (E-compile-rkt-text E)))
-
-;; TODO: text values (symbol, bytes) need to be written differently for rkt
-;; - [compact-]write will escape non-printable bytes differently
-;; - so we need at least a limited rkt-specific writer for this
-;; - or we could restrict form to be safe to write naively
-;; - or we can use a general constructor form that is always safe
-(define (rkt-expr->rkt-text form) (call/oport:bytes (lambda (out) (compact-write form out))))
 
 (define (rkt-text->racket-program text)
   (bytes-append #"#lang racket/base\n"
