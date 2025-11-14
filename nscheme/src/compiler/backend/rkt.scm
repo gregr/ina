@@ -18,7 +18,7 @@
     ;;   - stack trace of a new thread should begin at the parent thread's current trace
     (E-case
       E (lambda (E) (mistake 'E-compile-rkt "not an E" E))
-      E:quote?        (lambda (v)     (list 'quote v))
+      E:quote?        (lambda (x) (if (or (boolean? x) (number? x) (bytes? x)) x (list 'quote x)))
       E:ref?          (lambda (addr)  (cenv-ref cenv addr))
       E:if?           (lambda (c t f) (list 'if (loop c) (loop t) (loop f)))
       E:call?         (lambda (rator rand*) (cons (loop rator) (map loop rand*)))
