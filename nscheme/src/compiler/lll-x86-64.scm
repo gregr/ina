@@ -1,0 +1,61 @@
+;;;;;;;;;;;;;;;;;;;;;;
+;;; LLL for x86-64 ;;;
+;;;;;;;;;;;;;;;;;;;;;;
+;; Statement ::= (begin Statement ...)
+;;             | (set! Register S64)
+;;             | (set! Register Register)
+;;             | (set! Register1 (Binary-op Register1 S32))
+;;             | (set! Register1 (Binary-op Register1 Register))
+;; Binary-op ::= + | - | *
+;; Register  ::= rax | rcx | rdx | rbx | rbp | rsi | rdi  ; omit rsp
+;;             | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
+;; S64       ::= <signed 64-bit integer>
+;; S32       ::= <signed 32-bit integer>
+(splicing-local
+  ((define register*.caller-saved '(rax rcx rdx rsi rdi r8 r9 r10 r11))
+   (define register*.callee-saved '(rbx rbp r12 r13 r14 r15))
+   (define register* (append register*.caller-saved register*.callee-saved))
+   (define (binop->op op) (case op ((+) "addq") ((-) "subq") ((*) "imulq") (else #f))))
+
+  (define (LLL-validate-x86-64 P)
+    (define (Register? x) (and (symbol? x) (memv x register*)))
+    (define (S32? x) (and (integer? x) (or (<= -2147483648 x 2147483647)
+                                           (mistake "not a signed 32-bit integer" x))))
+    (define (S64? x) (and (integer? x) (or (<= -9223372036854775808 x 9223372036854775807)
+                                           (mistake "not a signed 64-bit integer" x))))
+    (let loop ((S P))
+      (apply (case (car S)
+               ((set!)
+                (lambda (lhs rhs)
+                  (unless (Register? lhs) (mistake "not a register" lhs))
+                  (if (and (pair? rhs) (list? rhs))
+                      (begin (unless (binop->op (car rhs))
+                               (mistake "invalid binary operator" (car rhs)))
+                             (apply (lambda (a b)
+                                      (unless (equal? a lhs) (mistake "invalid binary operation" S))
+                                      (unless (or (Register? b) (S32? b))
+                                        (mistake "invalid argument to binary operation" b rhs)))
+                                    (cdr rhs)))
+                      (unless (or (Register? rhs) (S64? rhs))
+                        (mistake "invalid right-hand-side for set!" rhs)))))
+               ((begin) (lambda S* (for-each loop S*)))
+               (else (mistake "not a Statement" S)))
+             (cdr S))))
+
+  (define (LLL-emit-x86-64-at&t P)
+    (define emit (let ((out (current-output-port))) (lambda (line) (display line out))))
+    (define (Operand x) (cond ((integer? x) (string-append "$" (number->string x)))
+                              ((symbol? x) (string-append "%" (symbol->string x)))
+                              (else (mistake "not an operand" x))))
+    (define (Instruction op . rand*)
+      (string-append " " op " " (string-join* "," (map Operand rand*)) "\n"))
+    (let loop ((S P))
+      (apply (case (car S)
+               ((set!) (lambda (lhs rhs)
+                         (if (pair? rhs)
+                             (apply (lambda (a b) (emit (Instruction (binop->op (car rhs)) b a)))
+                                    (cdr rhs))
+                             (emit (Instruction "movq" rhs lhs)))))
+               ((begin) (lambda S* (for-each loop S*)))
+               (else (mistake "not a Statement" S)))
+             (cdr S)))))
