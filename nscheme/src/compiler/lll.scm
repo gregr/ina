@@ -8,7 +8,7 @@
 ;; Location  ::= Var | Memory
 ;; Var       ::= <symbol>
 ;; Memory    ::= (memory Width Expr)
-;; Width     ::= 8
+;; Width     ::= 1 | 2 | 4 | 8
 ;; Constant  ::= <integer>
 (splicing-local
   ((define binop=>procedure `((+ . ,+) (- . ,-) (* . ,*))))
@@ -16,7 +16,7 @@
   (define (LLL-validate P)
     (define (Memory? x) (and (pair? x) (eqv? (car x) 'memory) (list? (cdr x))
                              (apply (case-lambda
-                                      ((width expr) (unless (eqv? width 8)
+                                      ((width expr) (unless (memv width '(1 2 4 8))
                                                       (mistake "invalid memory width" width))
                                                     (Expr?! expr))
                                       (_ (mistake "memory arity mismatch" x)))
@@ -41,6 +41,7 @@
 
   (define (LLL-eval P loc=>x)
     (mlet ((loc=>x loc=>x))
+      (define (Memory->width x) (cadr x))
       (define (Memory->addr x) (let ((width (cadr x)) (addr (Expr (caddr x))))
                                  (unless (= (integer-floor-mod addr width) 0)
                                    (mistake "unaligned memory address for width" width addr))
@@ -50,11 +51,32 @@
                             (cdr entry)))
       (define (loc-set! l x) (set! loc=>x (cons (cons l x) (aremv l loc=>x))))
       (define (Binary-op op a b) ((cdr (assv op binop=>procedure)) (Expr a) (Expr b)))
-      (define (Expr x) (cond ((symbol? x) (loc-ref x))
-                             ((integer? x) x)
-                             ((eqv? (car x) 'memory) (loc-ref (Memory->addr x)))
-                             (else (apply (lambda (a b) (Binary-op (car x) a b)) (cdr x)))))
-      (define (Assign lhs rhs) (loc-set! (if (symbol? lhs) lhs (Memory->addr lhs)) (Expr rhs)))
+      (define (Expr x)
+        (cond ((symbol? x) (loc-ref x))
+              ((integer? x) x)
+              ((eqv? (car x) 'memory) (let ((width (Memory->width x)) (addr (Memory->addr x)))
+                                        (if (= width 8)
+                                            (loc-ref addr)
+                                            (let* ((mask   (- (expt 2 (* width 8)) 1))
+                                                   (offset (integer-floor-mod addr 8))
+                                                   (shift  (* offset 8))
+                                                   (v      (loc-ref (- addr offset))))
+                                              (bitwise-and (bitwise-asr v shift) mask)))))
+              (else (apply (lambda (a b) (Binary-op (car x) a b)) (cdr x)))))
+      (define (Assign lhs rhs)
+        (let ((rhs (Expr rhs)))
+          (if (symbol? lhs)
+              (loc-set! lhs rhs)
+              (let ((width (Memory->width lhs)) (addr (Memory->addr lhs)))
+                (if (= width 8)
+                    (loc-set! addr rhs)
+                    (let* ((mask   (- (expt 2 (* width 8)) 1))
+                           (offset (integer-floor-mod addr 8))
+                           (shift  (* offset 8))
+                           (v      (loc-ref (- addr offset))))
+                      (loc-set! (- addr offset)
+                                (bitwise-ior (bitwise-and (bitwise-not (bitwise-asl mask shift)) v)
+                                             (bitwise-asl rhs shift)))))))))
       (let loop ((S P))
         (apply (case (car S)
                  ((set!) Assign)
