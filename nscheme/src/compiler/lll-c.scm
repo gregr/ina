@@ -5,16 +5,25 @@
 ;;             | (set! Location Expr)
 ;; Expr      ::= Constant | Location | (Binary-op Expr Expr)
 ;; Binary-op ::= + | - | *
-;; Location  ::= Var
+;; Location  ::= Var | Memory
 ;; Var       ::= <symbol>
+;; Memory    ::= (memory Width Expr)
+;; Width     ::= 1 | 2 | 4 | 8
 ;; Constant  ::= S64
 ;; S64       ::= <signed 64-bit integer>
 (define (LLL-validate-C P)
-  (define (Location? x) (symbol? x))
+  (define (Memory? x) (and (pair? x) (eqv? (car x) 'memory) (list? (cdr x))
+                           (apply (case-lambda
+                                    ((width expr) (unless (memv width '(1 2 4 8))
+                                                    (mistake "invalid memory width" width))
+                                                  (Expr?! expr))
+                                    (_ (mistake "memory arity mismatch" x)))
+                                  (cdr x))))
+  (define (Location? x) (or (symbol? x) (Memory? x)))
   (define (Constant? x) (and (integer? x) (or (<= -9223372036854775808 x 9223372036854775807)
                                               (mistake "not a signed 64-bit integer" x))))
   (define (Binary-op? x) (and (pair? x) (memv (car x) '(+ - *))
-                              (or (list? x) (mistake "not a list" x))
+                              (or (list? (cdr x)) (mistake "not a list" x))
                               (apply (case-lambda ((a b) (and (Expr?! a) (Expr?! b)))
                                                   (_ (mistake "operator arity mismatch" x)))
                                      (cdr x))))
@@ -31,7 +40,15 @@
 
 (define (LLL-emit-C P)
   (define emit (let ((out (current-output-port))) (lambda (line) (display line out))))
-  (define (Location x) (and (symbol? x) (symbol->string x)))
+  (define (Location x) (if (symbol? x)
+                           (symbol->string x)
+                           (and (pair? x) (eqv? (car x) 'memory)
+                                (let ((type (case (cadr x)
+                                              ((1) "unsigned char")
+                                              ((2) "unsigned short")
+                                              ((4) "unsigned int")
+                                              (else "long"))))
+                                  (string-append "*(" type "*)(" (Expr (caddr x)) ")")))))
   (define (Expr x)
     (define (Subexpr x) (if (pair? x) (string-append "(" (Expr x) ")") (Expr x)))
     (cond ((Location x))
