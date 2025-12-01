@@ -9,15 +9,12 @@
 ;;             | (set! Memory Register)
 ;;             | (set! Register1 (Binary-op Register1 S32))
 ;;             | (set! Register1 (Binary-op Register1 Register))
-;;             | (set! Register1 (Binary-op Register1 Memory))
-;;             | (set! Memory1 (Binary-op Memory1 S32))
-;;             | (set! Memory1 (Binary-op Memory1 Register))
+;;             | (set! Register1 (Binary-op Register1 (memory 8 Address)))
 ;; Binary-op ::= + | - | *
 ;; Register  ::= rax | rcx | rdx | rbx | rbp | rsi | rdi  ; omit rsp
 ;;             | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
-;; Memory    ::= (memory Width Register)
-;;             | (memory Width (+ Register S32))
-;;             | (memory Width (+ Register Register))
+;; Memory    ::= (memory Width Address)
+;; Address   ::= Register | (+ Register S32) | (+ Register Register)
 ;; Width     ::= 8
 ;; S64       ::= <signed 64-bit integer>
 ;; S32       ::= <signed 32-bit integer>
@@ -58,14 +55,14 @@
                      (begin
                        (unless (binop->op (car rhs)) (mistake "invalid binary operator" (car rhs)))
                        (unless (list? rhs) (mistake "not a list" rhs))
+                       (unless (Register? lhs)
+                         (mistake "set! of non-register with binary operation" S))
                        (apply
                          (case-lambda
                            ((a b) (unless (equal? a lhs)
-                                    (mistake "invalid left-hand-side in binary operation" S))
+                                    (mistake "left-hand-side mismatch in binary operation" S))
                                   (unless (or (Register? b) (S32? b) (Memory? b))
-                                    (mistake "invalid argument to binary operation" b rhs))
-                                  (when (and (Memory? a) (Memory? b))
-                                    (mistake "too many memory operands" rhs)))
+                                    (mistake "invalid argument to binary operation" b rhs)))
                            (_ (mistake "operator arity mismatch" rhs)))
                          (cdr rhs))))
                  (unless (or (Register? rhs) (S64? rhs))
