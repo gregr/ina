@@ -3,13 +3,12 @@
 ;;;;;;;;;;;
 ;; Statement ::= (begin Statement ...)
 ;;             | (set! Location Expr)
-;; Expr      ::= Constant | Location | (Binary-op Expr Expr)
+;; Expr      ::= <integer> | Location | (Binary-op Expr Expr)
 ;; Binary-op ::= + | - | *
 ;; Location  ::= Var | Memory
 ;; Var       ::= <symbol>
 ;; Memory    ::= (memory Width Expr)
 ;; Width     ::= 1 | 2 | 4 | 8
-;; Constant  ::= <integer>
 (splicing-local
   ((define binop=>procedure `((+ . ,+) (- . ,-) (* . ,*))))
 
@@ -22,13 +21,12 @@
                                       (_ (mistake "memory arity mismatch" x)))
                                     (cdr x))))
     (define (Location? x) (or (symbol? x) (Memory? x)))
-    (define (Constant? x) (integer? x))
     (define (Binary-op? x) (and (pair? x) (assv (car x) binop=>procedure)
                                 (or (list? (cdr x)) (mistake "not a list" x))
                                 (apply (case-lambda ((a b) (and (Expr?! a) (Expr?! b)))
                                                     (_ (mistake "operator arity mismatch" x)))
                                        (cdr x))))
-    (define (Expr? x) (or (Location? x) (Constant? x) (Binary-op? x)))
+    (define (Expr? x) (or (Location? x) (integer? x) (Binary-op? x)))
     (define (Expr?! x) (or (Expr? x) (mistake "not an expression" x)))
     (let loop ((S P))
       (apply (case (car S)
