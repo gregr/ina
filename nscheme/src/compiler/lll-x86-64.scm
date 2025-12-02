@@ -7,13 +7,18 @@
 ;;             | (set! Register Memory)
 ;;             | (set! Memory S32)
 ;;             | (set! Memory Register)
-;;             | (set! Register1 (Binary-op Register1 S32))
-;;             | (set! Register1 (Binary-op Register1 Register))
-;;             | (set! Register1 (Binary-op Register1 (memory 8 Address)))
-;; Binary-op ::= + | - | *
+;;             | (set! Location1 (Binary-op Location1 S32))
+;;             | (set! Location1 (Binary-op Location1 Register))
+;;             | (set! Register1 (Binary-op Register1 Memory8))
+;;             | (set! Register1 (* Register1 S32))
+;;             | (set! Register1 (* Register1 Register))
+;;             | (set! Register1 (* Register1 Memory8))
+;; Binary-op ::= + | -  ; * destination must be a register
+;; Location  ::= Register | Memory8
 ;; Register  ::= rax | rcx | rdx | rbx | rbp | rsi | rdi  ; omit rsp
 ;;             | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
 ;; Memory    ::= (memory Width Address)
+;; Memory8   ::= (memory 8 Address)
 ;; Address   ::= Register | (+ Register S32) | (+ Register Register)
 ;; Width     ::= 1 | 2 | 4 | 8
 ;; S64       ::= <signed 64-bit integer>
@@ -82,8 +87,16 @@
       (apply
         (case (car S)
           ((set!) (lambda (lhs rhs)
-                    (cond ((Memory? lhs) (unless (or (Register? rhs) (S32? rhs))
-                                           (mistake "invalid set! right-hand-side for memory" S)))
+                    (cond ((Memory? lhs)
+                           (unless (or (Register? rhs) (S32? rhs)
+                                       (and (Binary-op?/lhs lhs rhs)
+                                            (or (eqv? (Memory-width lhs) 8)
+                                                (mistake "binary op set! memory width is not 8" S))
+                                            (or (not (eqv? (car rhs) '*))
+                                                (mistake "memory left-hand-side of *" S))
+                                            (or (not (Memory? (caddr rhs)))
+                                                (mistake "too many memory operands" S))))
+                             (mistake "invalid set! right-hand-side for memory" S)))
                           ((Register? lhs) (unless (or (Register? rhs) (S64? rhs) (Memory? rhs)
                                                        (Binary-op?/lhs lhs rhs))
                                              (mistake "invalid set! right-hand-side" rhs)))
