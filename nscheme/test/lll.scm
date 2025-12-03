@@ -59,4 +59,18 @@
       "middle"
       (set! rax (+ rax rdx))
       "end"
-      (set! rdx (+ rdx rax)))))
+      (set! rdx (+ rdx rax)))
+    (begin
+      (set! rcx 3)
+      (set! rax 127)
+      (set! rdx -64)
+      (set! rdi rdx)
+      (set! rsi rdx)
+      (set! rax (and rax #x3f))
+      (set! r8 rax)
+      (set! r9 rax)
+      (set! r8 (asr r8 3))
+      (set! r9 (lsr r9 2))
+      (set! rdx (asr rdx 2))
+      (set! rdi (lsr rdi rcx))
+      (set! rsi (asl rsi 2)))))

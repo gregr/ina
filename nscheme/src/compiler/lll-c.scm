@@ -29,8 +29,18 @@ typedef signed long long s64;
     (define (Subexpr x) (if (pair? x) (string-append "(" (Expr x) ")") (Expr x)))
     (cond ((Location x))
           ((integer? x) (string-append (number->string x) u64-suffix))
-          (else (string-append (Subexpr (cadr x)) " " (symbol->string (car x)) " "
-                               (Subexpr (caddr x))))))
+          (else (let ((op (car x)) (a (Subexpr (cadr x))) (b (Subexpr (caddr x))))
+                  (define (infix a op b) (string-append a " " op " " b))
+                  (case op
+                    ((+ - *)   (string-append a " " (symbol->string op) " " b))
+                    ((and)     (string-append a " & " b))
+                    ((ior)     (string-append a " | " b))
+                    ((xor)     (string-append a " ^ " b))
+                    ((asl lsl) (string-append a " << " b))
+                    ((lsr)     (string-append a " >> " b))
+                    ((asr)     (string-append "((s64)" a ") < 0 ? "
+                                              "~(~" a " >> " b ")" " : " a " >> " b))
+                    (else (mistake "invalid binary operator" x)))))))
   (let loop ((S P))
     (if (Label? S)
         (emit (string-append S ":\n"))

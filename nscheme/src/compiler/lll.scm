@@ -8,7 +8,7 @@
 ;;             | (jump Location)
 ;;             | Label
 ;; Expr      ::= S64 | Location | (Binary-op Expr Expr)
-;; Binary-op ::= + | - | *
+;; Binary-op ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Location  ::= Var | Memory
 ;; Var       ::= <symbol>
 ;; Memory    ::= (memory Width Expr)
@@ -17,7 +17,11 @@
 ;; Label     ::= <string>
 (splicing-local
   ((define Label? string?)
-   (define binop=>procedure `((+ . ,+) (- . ,-) (* . ,*))))
+   (define binop=>procedure
+     `((lsr . ,(lambda (n k) (bitwise-and (bitwise-asr n k) (- (bitwise-asl 1 (- 64 k)) 1))))
+       (lsl . ,bitwise-asl) (asr . ,bitwise-asr) (asl . ,bitwise-asl)
+       (and . ,bitwise-and) (ior . ,bitwise-ior) (xor . ,bitwise-xor)
+       (+ . ,+) (- . ,-) (* . ,*))))
 
   (define (LLL-validate P)
     (define (Memory? x) (and (pair? x) (eqv? (car x) 'memory) (list? (cdr x))

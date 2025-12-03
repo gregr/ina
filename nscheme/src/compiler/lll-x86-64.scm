@@ -10,6 +10,8 @@
 ;;             | (set! Location1 (Binary-op Location1 S32))
 ;;             | (set! Location1 (Binary-op Location1 Register))
 ;;             | (set! Register1 (Binary-op Register1 Memory8))
+;;             | (set! Location1 (Shift-op Location1 U6))
+;;             | (set! Location1 (Shift-op Location1 rcx))
 ;;             | (set! Register1 (* Register1 S32))
 ;;             | (set! Register1 (* Register1 Register))
 ;;             | (set! Register1 (* Register1 Memory8))
@@ -17,7 +19,8 @@
 ;;             | (jump Label)
 ;;             | (jump Location)
 ;;             | Label
-;; Binary-op ::= + | -  ; * destination must be a register
+;; Binary-op ::= + | - | and | ior | xor  ; * destination must be a register
+;; Shift-op  ::= asl | asr | lsl | lsr
 ;; Location  ::= Register | Memory8
 ;; Register  ::= rax | rcx | rdx | rbx | rbp | rsi | rdi  ; omit rsp
 ;;             | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
@@ -27,6 +30,7 @@
 ;; Width     ::= 1 | 2 | 4 | 8
 ;; S64       ::= <signed 64-bit integer>
 ;; S32       ::= <signed 32-bit integer>
+;; U6        ::= <unsigned 6-bit integer>  ; 0 through 63
 ;; Label     ::= <string>
 (splicing-local
   ((define Label? string?)
@@ -52,7 +56,11 @@
        ((r15) (case w ((1) 'r15b) ((2) 'r15w) ((4) 'r15d)))
        (else (mistake "not a register" r))))
    (define (x/width x w) (if (symbol? x) (register/width x w) x))
-   (define (binop->op op) (case op ((+) "addq") ((-) "subq") ((*) "imulq") (else #f)))
+   (define (Shift? op) (memv op '(asl asr lsl lsr)))
+   (define (binop->op op) (case op ((+) "addq") ((-) "subq") ((*) "imulq")
+                            ((and) "andq") ((ior) "orq") ((xor) "xorq")
+                            ((asl lsl) "salq") ((asr) "sarq") ((lsr) "shrq")
+                            (else #f)))
    (define (Memory-width x) (cadr x)))
 
   (define (LLL-validate-x86-64 P)
@@ -72,6 +80,7 @@
                                    (mistake "invalid memory address expression" x)))
                     (_ (mistake "memory arity mismatch" x)))
                   (cdr x))))
+    (define (U6? x) (and (integer? x) (or (<= 0 x 63) (mistake "not an unsigned 6-bit integer" x))))
     (define (S32? x) (and (integer? x) (or (<= -2147483648 x 2147483647)
                                            (mistake "not a signed 32-bit integer" x))))
     (define (S64? x) (and (integer? x) (or (<= -9223372036854775808 x 9223372036854775807)
@@ -86,7 +95,9 @@
                      (or (Register? b) (S32? b)
                          (and (Memory? b) (or (eqv? (Memory-width b) 8)
                                               (mistake "binary operand memory width is not 8" rhs)))
-                         (mistake "invalid argument to binary operation" b rhs)))
+                         (mistake "invalid argument to binary operation" b rhs))
+                     (or (not (Shift? (car rhs))) (U6? b) (eqv? b 'rcx)
+                         (mistake "shift operand is neither a 6-bit integer nor rcx" b rhs)))
                     (_ (mistake "operator arity mismatch" rhs)))
                   (cdr rhs))))
     (let loop ((S P))
@@ -150,7 +161,8 @@
           ((4) (Instruction "movl" (x/width rhs 4) lhs))
           ((2) (Instruction "movw" (x/width rhs 2) lhs))
           (else (Instruction "movb" (x/width rhs 1) lhs)))))
-    (define (Binary-op binop a b) (Instruction (binop->op binop) b a))
+    (define (Binary-op binop a b)
+      (Instruction (binop->op binop) (if (and (eqv? b 'rcx) (Shift? binop)) 'cl b) a))
     (let loop ((S P))
       (if (Label? S)
           (emit (string-append S ":\n"))
