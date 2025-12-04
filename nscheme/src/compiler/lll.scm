@@ -17,6 +17,12 @@
 ;; Label     ::= <string>
 (splicing-local
   ((define Label? string?)
+   (define s64-min -9223372036854775808)
+   (define s64-max 9223372036854775807)
+   (define 2^63 9223372036854775808)
+   (define 2^64 18446744073709551616)
+   (define (s64 x) (if (<= s64-min x s64-max) x (let ((x (integer-floor-mod x 2^64)))
+                                                  (if (< x 2^63) x (+ (- x 2^63) s64-min)))))
    (define binop=>procedure
      `((lsr . ,(lambda (n k) (bitwise-and (bitwise-asr n k) (- (bitwise-asl 1 (- 64 k)) 1))))
        (lsl . ,bitwise-asl) (asr . ,bitwise-asr) (asl . ,bitwise-asl)
@@ -32,7 +38,7 @@
                                       (_ (mistake "memory arity mismatch" x)))
                                     (cdr x))))
     (define (Location? x) (or (symbol? x) (Memory? x)))
-    (define (S64? x) (and (integer? x) (or (<= -9223372036854775808 x 9223372036854775807)
+    (define (S64? x) (and (integer? x) (or (<= s64-min x s64-max)
                                            (mistake "not a signed 64-bit integer" x))))
     (define (Binary-op? x) (and (pair? x) (assv (car x) binop=>procedure)
                                 (or (list? (cdr x)) (mistake "not a list" x))
@@ -64,8 +70,9 @@
       (define (loc-ref l) (let ((entry (assv l loc=>x)))
                             (unless entry (mistake "unassigned location" l))
                             (cdr entry)))
-      (define (loc-set! l x) (set! loc=>x (cons (cons l x) (aremv l loc=>x))))
-      (define (Binary-op op a b) ((cdr (assv op binop=>procedure)) (Expr a) (Expr b)))
+      (define (loc-set! l x)
+        (set! loc=>x (cons (cons l (if (integer? x) (s64 x) x)) (aremv l loc=>x))))
+      (define (Binary-op op a b) (s64 ((cdr (assv op binop=>procedure)) (Expr a) (Expr b))))
       (define (Expr x)
         (cond ((symbol? x) (loc-ref x))
               ((integer? x) x)
