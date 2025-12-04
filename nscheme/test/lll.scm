@@ -78,7 +78,7 @@
       (set! rdi 10)
       (set! rax 0)
       "loop"
-      (jump-when (= rdi 0) "end")
+      (jump-if (= rdi 0) "end")
       (set! rax (+ rax rdi))
       (set! rdi (- rdi 1))
       (jump "loop")
