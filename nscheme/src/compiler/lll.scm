@@ -1,20 +1,22 @@
 ;;;;;;;;;;;
 ;;; LLL ;;;
 ;;;;;;;;;;;
-;; Statement ::= (begin Statement ...)
-;;             | (set! Location Expr)
-;;             | (set! Location Label)
-;;             | (jump Label)
-;;             | (jump Location)
-;;             | Label
-;; Expr      ::= S64 | Location | (Binary-op Expr Expr)
-;; Binary-op ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
-;; Location  ::= Var | Memory
-;; Var       ::= <symbol>
-;; Memory    ::= (memory Width Expr)
-;; Width     ::= 1 | 2 | 4 | 8
-;; S64       ::= <signed 64-bit integer>
-;; Label     ::= <string>
+;; Statement  ::= (begin Statement ...)
+;;              | (set! Location Expr)
+;;              | (set! Location Label)
+;;              | (jump-when (Compare-op Expr Expr) Label)
+;;              | (jump Label)
+;;              | (jump Location)
+;;              | Label
+;; Expr       ::= S64 | Location | (Binary-op Expr Expr)
+;; Binary-op  ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
+;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
+;; Location   ::= Var | Memory
+;; Var        ::= <symbol>
+;; Memory     ::= (memory Width Expr)
+;; Width      ::= 1 | 2 | 4 | 8
+;; S64        ::= <signed 64-bit integer>
+;; Label      ::= <string>
 (splicing-local
   ((define Label? string?)
    (define s64-min -9223372036854775808)
@@ -23,6 +25,17 @@
    (define 2^64 18446744073709551616)
    (define (s64 x) (if (<= s64-min x s64-max) x (let ((x (integer-floor-mod x 2^64)))
                                                   (if (< x 2^63) x (+ (- x 2^63) s64-min)))))
+   (define (u64 x) (if (< x 0) (+ (- x s64-min) s64-max) x))
+   (define (cmp-nand a b) (= (bitwise-and a b) 0))
+   (define (cmp-and a b) (not (cmp-nand a b)))
+   (define (u< a b) (< (u64 a) (u64 b)))
+   (define (u<= a b) (<= (u64 a) (u64 b)))
+   (define (u> a b) (> (u64 a) (u64 b)))
+   (define (u>= a b) (>= (u64 a) (u64 b)))
+   (define cmpop=>procedure
+     `((and . ,cmp-and)
+       (nand . ,cmp-nand) (= . ,=) (=/= . ,(lambda (a b) (not (= a b))))
+       (< . ,<) (<= . ,<=) (> . ,>) (>= . ,>=) (u< . ,u<) (u<= . ,u<=) (u> . ,u>) (u>= . ,u>=)))
    (define binop=>procedure
      `((lsr . ,(lambda (n k) (bitwise-and (bitwise-asr n k) (- (bitwise-asl 1 (- 64 k)) 1))))
        (lsl . ,bitwise-asl) (asr . ,bitwise-asr) (asl . ,bitwise-asl)
@@ -40,11 +53,14 @@
     (define (Location? x) (or (symbol? x) (Memory? x)))
     (define (S64? x) (and (integer? x) (or (<= s64-min x s64-max)
                                            (mistake "not a signed 64-bit integer" x))))
-    (define (Binary-op? x) (and (pair? x) (assv (car x) binop=>procedure)
-                                (or (list? (cdr x)) (mistake "not a list" x))
-                                (apply (case-lambda ((a b) (and (Expr?! a) (Expr?! b)))
-                                                    (_ (mistake "operator arity mismatch" x)))
-                                       (cdr x))))
+    (define ((Arity2-op?/op=>procedure op=>procedure) x)
+      (and (pair? x) (assv (car x) op=>procedure)
+           (or (list? (cdr x)) (mistake "not a list" x))
+           (apply (case-lambda ((a b) (and (Expr?! a) (Expr?! b)))
+                               (_ (mistake "operator arity mismatch" x)))
+                  (cdr x))))
+    (define Binary-op? (Arity2-op?/op=>procedure binop=>procedure))
+    (define Comparison? (Arity2-op?/op=>procedure cmpop=>procedure))
     (define (Expr? x) (or (Location? x) (S64? x) (Binary-op? x)))
     (define (Expr?! x) (or (Expr? x) (mistake "not an expression" x)))
     (let loop ((S P))
@@ -54,6 +70,9 @@
                            (unless (Location? lhs) (mistake "not a location" lhs S))
                            (unless (or (Expr? rhs) (Label? rhs))
                              (mistake "not an expression or label" rhs S))))
+                 ((jump-when) (lambda (cmp label)
+                                (unless (Comparison? cmp) (mistake "not a comparison" cmp))
+                                (unless (Label? label) (mistake "not a label" label))))
                  ((jump) (lambda (target) (unless (or (Location? target) (Label? target))
                                             (mistake "not a location or label" target S))))
                  ((begin) (lambda S* (for-each loop S*)))
@@ -72,7 +91,10 @@
                             (cdr entry)))
       (define (loc-set! l x)
         (set! loc=>x (cons (cons l (if (integer? x) (s64 x) x)) (aremv l loc=>x))))
-      (define (Binary-op op a b) (s64 ((cdr (assv op binop=>procedure)) (Expr a) (Expr b))))
+      (define (Arity2-op op a b)
+        (cond ((assv op binop=>procedure) => (lambda (kop) (s64 ((cdr kop) (Expr a) (Expr b)))))
+              ((assv op cmpop=>procedure) => (lambda (kop) ((cdr kop) (Expr a) (Expr b))))
+              (else (mistake "invalid operator" op))))
       (define (Expr x)
         (cond ((symbol? x) (loc-ref x))
               ((integer? x) x)
@@ -84,7 +106,7 @@
                                                    (shift  (* offset 8))
                                                    (v      (loc-ref (- addr offset))))
                                               (bitwise-and (bitwise-asr v shift) mask)))))
-              (else (apply (lambda (a b) (Binary-op (car x) a b)) (cdr x)))))
+              (else (apply (lambda (a b) (Arity2-op (car x) a b)) (cdr x)))))
       (define (Assign lhs rhs)
         (let ((rhs (if (Label? rhs) rhs (Expr rhs))))
           (if (symbol? lhs)
@@ -109,15 +131,15 @@
                                               S*))
                                 ((eqv? (car S) 'begin) (loop (append (cdr S) S*)))
                                 (else (cons S (loop S*))))))))
+      (define (jump! x) (set! pc (cdr (or (assv x label=>S*) (mistake "missing jump target" x)))))
       (let loop ()
         (unless (null? pc)
           (let ((S (car pc)))
             (set! pc (cdr pc))
             (apply (case (car S)
                      ((set!) Assign)
-                     ((jump) (lambda (x) (let ((x (if (Label? x) x (Expr x))))
-                                           (set! pc (cdr (or (assv x label=>S*)
-                                                             (mistake "missing jump target" x)))))))
+                     ((jump-when) (lambda (cmp label) (when (Expr cmp) (jump! label))))
+                     ((jump) (lambda (x) (jump! (if (Label? x) x (Expr x)))))
                      ((begin) (lambda S* (for-each loop S*)))
                      (else (mistake "not a Statement" S)))
                    (cdr S)))

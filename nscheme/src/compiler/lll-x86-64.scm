@@ -1,37 +1,40 @@
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; LLL for x86-64 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;
-;; Statement ::= (begin Statement ...)
-;;             | (set! Register S64)
-;;             | (set! Register Register)
-;;             | (set! Register Memory)
-;;             | (set! Memory S32)
-;;             | (set! Memory Register)
-;;             | (set! Location1 (Binary-op Location1 S32))
-;;             | (set! Location1 (Binary-op Location1 Register))
-;;             | (set! Register1 (Binary-op Register1 Memory8))
-;;             | (set! Location1 (Shift-op Location1 U6))
-;;             | (set! Location1 (Shift-op Location1 rcx))
-;;             | (set! Register1 (* Register1 S32))
-;;             | (set! Register1 (* Register1 Register))
-;;             | (set! Register1 (* Register1 Memory8))
-;;             | (set! Location Label)
-;;             | (jump Label)
-;;             | (jump Location)
-;;             | Label
-;; Binary-op ::= + | - | and | ior | xor  ; * destination must be a register
-;; Shift-op  ::= asl | asr | lsl | lsr
-;; Location  ::= Register | Memory8
-;; Register  ::= rax | rcx | rdx | rbx | rbp | rsi | rdi  ; omit rsp
-;;             | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
-;; Memory    ::= (memory Width Address)
-;; Memory8   ::= (memory 8 Address)
-;; Address   ::= Register | (+ Register S32) | (+ Register Register)
-;; Width     ::= 1 | 2 | 4 | 8
-;; S64       ::= <signed 64-bit integer>
-;; S32       ::= <signed 32-bit integer>
-;; U6        ::= <unsigned 6-bit integer>  ; 0 through 63
-;; Label     ::= <string>
+;; Statement  ::= (begin Statement ...)
+;;              | (set! Register S64)
+;;              | (set! Register Register)
+;;              | (set! Register Memory)
+;;              | (set! Memory S32)
+;;              | (set! Memory Register)
+;;              | (set! Location1 (Binary-op Location1 S32))
+;;              | (set! Location1 (Binary-op Location1 Register))
+;;              | (set! Register1 (Binary-op Register1 Memory8))
+;;              | (set! Location1 (Shift-op Location1 U6))
+;;              | (set! Location1 (Shift-op Location1 rcx))
+;;              | (set! Register1 (* Register1 S32))
+;;              | (set! Register1 (* Register1 Register))
+;;              | (set! Register1 (* Register1 Memory8))
+;;              | (set! Location Label)
+;;              | (jump-when (Compare-op Location S32) Label)
+;;              | (jump-when (Compare-op Location Register) Label)
+;;              | (jump Label)
+;;              | (jump Location)
+;;              | Label
+;; Binary-op  ::= + | - | and | ior | xor  ; * destination must be a register
+;; Shift-op   ::= asl | asr | lsl | lsr
+;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
+;; Location   ::= Register | Memory8
+;; Register   ::= rax | rcx | rdx | rbx | rbp | rsi | rdi  ; omit rsp
+;;              | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
+;; Memory     ::= (memory Width Address)
+;; Memory8    ::= (memory 8 Address)
+;; Address    ::= Register | (+ Register S32) | (+ Register Register)
+;; Width      ::= 1 | 2 | 4 | 8
+;; S64        ::= <signed 64-bit integer>
+;; S32        ::= <signed 32-bit integer>
+;; U6         ::= <unsigned 6-bit integer>  ; 0 through 63
+;; Label      ::= <string>
 (splicing-local
   ((define Label? string?)
    (define register*.caller-saved '(rax rcx rdx rsi rdi r8 r9 r10 r11))
@@ -61,6 +64,10 @@
                             ((and) "andq") ((ior) "orq") ((xor) "xorq")
                             ((asl lsl) "salq") ((asr) "sarq") ((lsr) "shrq")
                             (else #f)))
+   (define (cmpop->jcc op) (case op ((and) "jnz") ((nand) "jz") ((=) "je") ((=/=)  "jne")
+                             ((<) "jl") ((<=) "jle") ((>) "jg") ((>=) "jge")
+                             ((u<) "jb") ((u<=) "jbe") ((u>) "ja") ((u>=) "jae")
+                             (else #f)))
    (define (Memory-width x) (cadr x)))
 
   (define (LLL-validate-x86-64 P)
@@ -94,12 +101,24 @@
                          (mistake "left-hand-side mismatch in binary operation" lhs rhs))
                      (or (Register? b) (S32? b)
                          (and (Memory? b) (or (eqv? (Memory-width b) 8)
-                                              (mistake "binary operand memory width is not 8" rhs)))
+                                              (mistake "memory width is not 8" b rhs)))
                          (mistake "invalid argument to binary operation" b rhs))
                      (or (not (Shift? (car rhs))) (U6? b) (eqv? b 'rcx)
                          (mistake "shift operand is neither a 6-bit integer nor rcx" b rhs)))
                     (_ (mistake "operator arity mismatch" rhs)))
                   (cdr rhs))))
+    (define (Comparison? x)
+      (and (pair? x) (or (cmpop->jcc (car x)) (mistake "invalid comparison operator" x))
+           (or (list? (cdr x)) (mistake "not a list" x))
+           (apply (case-lambda
+                    ((a b) (or (Register? a)
+                               (and (Memory? a) (or (eqv? (Memory-width a) 8)
+                                                    (mistake "memory width is not 8" a x)))
+                               (mistake "not a location" a x))
+                           (or (S32? b) (Register? b)
+                               (mistake "not a register or signed 32-bit integer" b x)))
+                    (_ (mistake "operator arity mismatch" x)))
+                  (cdr x))))
     (let loop ((S P))
       (unless (Label? S)
         (apply
@@ -122,6 +141,9 @@
                                                          (Memory? rhs) (Binary-op?/lhs lhs rhs))
                                                (mistake "invalid set! right-hand-side" rhs)))
                             (else (mistake "not a location" lhs)))))
+            ((jump-when) (lambda (cmp label)
+                           (unless (Comparison? cmp) (mistake "not a comparison" cmp))
+                           (unless (Label? label) (mistake "not a label" label))))
             ((jump) (lambda (x)
                       (unless (or (Label? x) (Register? x)
                                   (and (Memory? x)
@@ -138,6 +160,7 @@
     (define (Operand x)
       (cond ((integer? x) (string-append "$" (number->string x)))
             ((symbol? x) (Reg x))
+            ((string? x) x)
             ((eqv? (car x) 'memory)
              (let ((x (caddr x)))
                (if (symbol? x)
@@ -173,8 +196,13 @@
                                     ((and (pair? rhs) (not (eqv? (car rhs) 'memory)))
                                      (apply (lambda (a b) (Binary-op (car rhs) a b)) (cdr rhs)))
                                     (else (Assign lhs rhs))))))
+              ((jump-when) (lambda (cmp label)
+                             (let* ((cmpop (car cmp))
+                                    (tcop (case cmpop ((and nand) "testq") (else "cmpq"))))
+                               (emit (Instruction tcop (caddr cmp) (cadr cmp)))
+                               (emit (Instruction (cmpop->jcc cmpop) label)))))
               ((jump) (lambda (x) (emit (if (Label? x)
-                                            (string-append " jmp " x "\n")
+                                            (Instruction "jmp" x)
                                             (string-append " jmp *" (Operand x) "\n")))))
               ((begin) (lambda S* (for-each loop S*)))
               (else (mistake "not a Statement" S)))

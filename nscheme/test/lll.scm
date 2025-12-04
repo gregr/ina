@@ -73,4 +73,13 @@
       (set! r9 (lsr r9 2))
       (set! rdx (asr rdx 2))
       (set! rdi (lsr rdi rcx))
-      (set! rsi (asl rsi 2)))))
+      (set! rsi (asl rsi 2)))
+    (begin
+      (set! rdi 10)
+      (set! rax 0)
+      "loop"
+      (jump-when (= rdi 0) "end")
+      (set! rax (+ rax rdi))
+      (set! rdi (- rdi 1))
+      (jump "loop")
+      "end")))
