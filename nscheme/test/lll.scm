@@ -3,7 +3,7 @@
 (include "../src/compiler/lll-c.scm")
 (include "../src/compiler/lll-x86-64.scm")
 
-(define (LLL-test P)
+(define (LLL-test/eval P)
   (displayln "LLL:")
   (pretty-write P)
   (LLL-validate P)
@@ -18,8 +18,30 @@
   (LLL-emit-x86-64-at&t P)
   (newline))
 
+(define (LLL-test/no-eval P)
+  (displayln "LLL:")
+  (pretty-write P)
+  (LLL-validate P)
+  (newline)
+  (displayln "LLL C:")
+  (LLL-emit-C P)
+  (newline)
+  (displayln "LLL x86-64:")
+  (LLL-validate-x86-64 P)
+  (LLL-emit-x86-64-at&t P)
+  (newline))
+
+(define (LLL-test-C P)
+  (displayln "LLL:")
+  (pretty-write P)
+  (LLL-validate P)
+  (newline)
+  (displayln "LLL C:")
+  (LLL-emit-C P)
+  (newline))
+
 (for-each
-  LLL-test
+  LLL-test/eval
   '((begin
       (set! rax 55)
       (begin
@@ -83,3 +105,21 @@
       (set! rdi (- rdi 1))
       (jump "loop")
       "end")))
+
+(for-each
+  LLL-test-C
+  '((begin
+      (set! rdi 1)
+      (set! rsi 2)
+      (set! rax (call "foo" rdi rsi))
+      (set! rdi rax)
+      (call r15 rdi rsi))))
+
+(for-each
+  LLL-test/no-eval
+  '((begin
+      (set! rdi 1)
+      (set! rsi 2)
+      (call "foo")
+      (set! rdi rax)
+      (call r15))))

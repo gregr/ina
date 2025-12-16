@@ -31,6 +31,10 @@ typedef signed long long s64;
   (define (Expr x)
     (cond ((Location x))
           ((integer? x) (string-append (number->string x) u64-suffix))
+          ((and (pair? x) (eqv? (car x) 'call))
+           (let ((rator (cadr x)) (rand* (cddr x)))
+             (string-append (if (Label? rator) rator (Subexpr rator))
+                            "(" (string-join* "," (map Expr rand*)) ")")))
           (else (let ((op (car x)) (a (Subexpr (cadr x))) (b (Subexpr (caddr x))))
                   (case op
                     ((+ - *)   (string-append a " " (symbol->string op) " " b))
@@ -67,6 +71,7 @@ typedef signed long long s64;
                  ((jump) (lambda (x) (emit (if (Label? x)
                                                (string-append " goto " x ";\n")
                                                (string-append " goto *(void*)(" (Expr x) ");\n")))))
+                 ((call) (lambda _ (emit (string-append " " (Expr S) ";\n"))))
                  ((begin) (lambda S* (for-each loop S*)))
                  (else (mistake "not a Statement" S)))
                (cdr S)))))

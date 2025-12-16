@@ -7,8 +7,10 @@
 ;;              | (jump-if (Compare-op Expr Expr) Label)
 ;;              | (jump Label)
 ;;              | (jump Location)
+;;              | Call
 ;;              | Label
-;; Expr       ::= S64 | Location | (Binary-op Expr Expr)
+;; Expr       ::= S64 | Location | (Binary-op Expr Expr) | Call
+;; Call       ::= (call Label Expr ...) | (call Expr Expr ...)
 ;; Binary-op  ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
 ;; Location   ::= Var | Memory
@@ -65,10 +67,16 @@
                   (cdr x))))
     (define Binary-op? (Arity2-op?/op=>procedure binop=>procedure))
     (define Comparison? (Arity2-op?/op=>procedure cmpop=>procedure))
-    (define (Expr? x) (or (Location? x) (S64? x) (Binary-op? x)))
+    (define (Call? x) (and (pair? x) (eqv? (car x) 'call) (pair? (cdr x))
+                           (let ((rator (cadr x)) (rand* (cddr x)))
+                             (and (or (Label? rator) (Expr? rator) (mistake "not callable" rator x))
+                                  (or (list? rand*) (mistake "not a list" x))
+                                  (andmap Expr?! rand*)))))
+    (define (Expr? x) (or (Location? x) (S64? x) (Binary-op? x) (Call? x)))
     (define (Expr?! x) (or (Expr? x) (mistake "not an expression" x)))
     (let loop ((S P))
       (unless (Label? S)
+        (unless (and (pair? S) (list? (cdr S))) (mistake "not a Statement" S))
         (apply (case (car S)
                  ((set!) (lambda (lhs rhs)
                            (unless (Location? lhs) (mistake "not a location" lhs S))
@@ -79,6 +87,7 @@
                               (unless (Label? label) (mistake "not a label" label))))
                  ((jump) (lambda (target) (unless (or (Location? target) (Label? target))
                                             (mistake "not a location or label" target S))))
+                 ((call) (lambda _ (unless (Call? S) (mistake "invalid call" S))))
                  ((begin) (lambda S* (for-each loop S*)))
                  (else (or (Label? S) (mistake "not a Statement" S))))
                (cdr S)))))
@@ -111,6 +120,7 @@
                                       (shift  (* offset 8))
                                       (v      (loc-ref (- addr offset))))
                                  (bitwise-and (bitwise-asr v shift) mask)))))
+              ((eqv? (car x) 'call) (lambda _ (mistake 'LLL-eval "cannot evaluate call" x)))
               (else (apply (lambda (a b) (Arity2-op (car x) a b)) (cdr x)))))
       (define (Assign lhs rhs)
         (let ((rhs (if (Label? rhs) rhs (Expr rhs))))
@@ -145,6 +155,7 @@
                      ((set!) Assign)
                      ((jump-if) (lambda (cmp label) (when (Expr cmp) (jump! label))))
                      ((jump) (lambda (x) (jump! (if (Label? x) x (Expr x)))))
+                     ((call) (lambda _ (mistake 'LLL-eval "cannot evaluate call" S)))
                      ((begin) (lambda S* (for-each loop S*)))
                      (else (mistake "not a Statement" S)))
                    (cdr S)))
