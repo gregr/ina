@@ -104,7 +104,12 @@
       (set! rax (+ rax rdi))
       (set! rdi (- rdi 1))
       (jump "loop")
-      "end")))
+      "end")
+    (begin
+      (set! rdi 10)
+      (set! rsi 11)
+      (set! rax (= rdi 0))
+      (set! rdx (< rdi rsi)))))
 
 (for-each
   LLL-test-C

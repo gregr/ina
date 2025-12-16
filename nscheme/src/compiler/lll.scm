@@ -9,7 +9,7 @@
 ;;              | (jump Location)
 ;;              | Call
 ;;              | Label
-;; Expr       ::= S64 | Location | (Binary-op Expr Expr) | Call
+;; Expr       ::= S64 | Location | (Binary-op Expr Expr) | (Compare-op Expr Expr) | Call
 ;; Call       ::= (call Label Expr ...) | (call Expr Expr ...)
 ;; Binary-op  ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
@@ -72,7 +72,7 @@
                              (and (or (Label? rator) (Expr? rator) (mistake "not callable" rator x))
                                   (or (list? rand*) (mistake "not a list" x))
                                   (andmap Expr?! rand*)))))
-    (define (Expr? x) (or (Location? x) (S64? x) (Binary-op? x) (Call? x)))
+    (define (Expr? x) (or (Location? x) (S64? x) (Binary-op? x) (Comparison? x) (Call? x)))
     (define (Expr?! x) (or (Expr? x) (mistake "not an expression" x)))
     (let loop ((S P))
       (unless (Label? S)
@@ -107,7 +107,7 @@
         (set! loc=>x (cons (cons l (if (integer? x) (s64 x) x)) (aremv l loc=>x))))
       (define (Arity2-op op a b)
         (cond ((assv op binop=>procedure) => (lambda (kop) (s64 ((cdr kop) (Expr a) (Expr b)))))
-              ((assv op cmpop=>procedure) => (lambda (kop) ((cdr kop) (Expr a) (Expr b))))
+              ((assv op cmpop=>procedure) => (lambda (kop) (if ((cdr kop) (Expr a) (Expr b)) 1 0)))
               (else (mistake "invalid operator" op))))
       (define (Expr x)
         (cond ((symbol? x) (loc-ref x))
@@ -153,7 +153,7 @@
             (set! pc (cdr pc))
             (apply (case (car S)
                      ((set!) Assign)
-                     ((jump-if) (lambda (cmp label) (when (Expr cmp) (jump! label))))
+                     ((jump-if) (lambda (cmp label) (when (= (Expr cmp) 1) (jump! label))))
                      ((jump) (lambda (x) (jump! (if (Label? x) x (Expr x)))))
                      ((call) (lambda _ (mistake 'LLL-eval "cannot evaluate call" S)))
                      ((begin) (lambda S* (for-each loop S*)))
