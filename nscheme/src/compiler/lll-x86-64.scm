@@ -28,7 +28,7 @@
 ;; Comparison ::= (Compare-op Location S32)
 ;;              | (Compare-op Location Register)
 ;; Location   ::= Register | Memory8
-;; Register   ::= rax | rcx | rdx | rbx | rbp | rsi | rdi  ; omit rsp
+;; Register   ::= rax | rcx | rdx | rsi | rdi | rbx | rbp | rsp
 ;;              | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
 ;; Memory     ::= #(mloc Width Register S32 Index)
 ;; Memory8    ::= #(mloc 8     Register S32 Index)
@@ -41,7 +41,7 @@
 (splicing-local
   ((define Label? string?)
    (define register*.caller-saved '(rax rcx rdx rsi rdi r8 r9 r10 r11))
-   (define register*.callee-saved '(rbx rbp r12 r13 r14 r15))
+   (define register*.callee-saved '(rbx rbp rsp r12 r13 r14 r15))
    (define register* (append register*.caller-saved register*.callee-saved))
    (define (register/width r w)
      (case r
