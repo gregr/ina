@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;
 ;;; LLL for C ;;;
 ;;;;;;;;;;;;;;;;;
-(define LLL-C-types
+(define LLL-C-prelude
   ##eos"typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
@@ -10,23 +10,26 @@ typedef signed char s8;
 typedef signed short s16;
 typedef signed int s32;
 typedef signed long long s64;
+static inline u64 LLL_atomic_cas(u64* loc, u64 expected, u64 new) {
+__atomic_compare_exchange_n(loc, &expected, new, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+return expected; }
 "eos##)
 
 (define (LLL-emit-C P)
   (define u64-suffix "ull")
   (define emit (let ((out (current-output-port))) (lambda (line) (display line out))))
   (define Label? string?)
-  (define (Location x)
+  (define (Ref x)
     (define (addend x) (if (eqv? x 0) "" (string-append " + " (Subexpr x))))
-    (if (symbol? x)
-        (symbol->string x)
-        (and (mloc? x) (let ((type (case (mloc-width x)
-                                     ((1) "u8")
-                                     ((2) "u16")
-                                     ((4) "u32")
-                                     (else "u64"))))
-                         (string-append "*(" type "*)(" (Subexpr (mloc-base x))
-                                        (addend (mloc-disp x)) (addend (mloc-index x)) ")")))))
+    (let ((type (case (mloc-width x)
+                  ((1) "u8")
+                  ((2) "u16")
+                  ((4) "u32")
+                  (else "u64"))))
+      (string-append "(" type "*)(" (Subexpr (mloc-base x)) (addend (mloc-disp x))
+                     (addend (mloc-index x)) ")")))
+  (define (Location x)
+    (if (symbol? x) (symbol->string x) (and (mloc? x) (string-append "*" (Ref x)))))
   (define (Subexpr x) (if (pair? x) (string-append "(" (Expr x) ")") (Expr x)))
   (define (Expr x)
     (cond ((Location x))
@@ -35,6 +38,9 @@ typedef signed long long s64;
            (let ((rator (cadr x)) (rand* (cddr x)))
              (string-append (if (Label? rator) rator (Subexpr rator))
                             "(" (string-join* "," (map Expr rand*)) ")")))
+          ((and (pair? x) (eqv? (car x) 'atomic-cas))
+           (let* ((x (cdr x)) (loc (car x)) (x (cdr x)) (expected (car x)) (new (cadr x)))
+             (string-append "LLL_atomic_cas(" (Ref loc) "," (Expr expected) "," (Expr new) ")")))
           (else (let ((op (car x)) (a (Subexpr (cadr x))) (b (Subexpr (caddr x))))
                   (case op
                     ((+ - *)   (string-append a " " (symbol->string op) " " b))

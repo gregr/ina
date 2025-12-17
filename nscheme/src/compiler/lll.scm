@@ -10,12 +10,14 @@
 ;;              | Call
 ;;              | Label
 ;; Expr       ::= S64 | Location | (Binary-op Expr Expr) | (Compare-op Expr Expr) | Call
+;;              | (atomic-cas Memory8 Expr Expr)
 ;; Call       ::= (call Label Expr ...) | (call Expr Expr ...)
 ;; Binary-op  ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
 ;; Location   ::= Var | Memory
 ;; Var        ::= <symbol>
 ;; Memory     ::= #(mloc Width Expr Expr Expr)
+;; Memory8    ::= #(mloc 8     Expr Expr Expr)
 ;; Width      ::= 1 | 2 | 4 | 8
 ;; S64        ::= <signed 64-bit integer>
 ;; Label      ::= <string>
@@ -56,6 +58,9 @@
     (define (Memory? x) (and (mloc? x) (or (memv (mloc-width x) '(8 4 2 1))
                                            (mistake "invalid mloc width" x))
                              (Expr?! (mloc-base x)) (Expr?! (mloc-disp x)) (Expr?! (mloc-index x))))
+    (define (Memory?! x) (or (Memory? x) (mistake "not a memory location" x)))
+    (define (Memory8?! x) (or (and (Memory?! x) (eqv? (mloc-width x) 8))
+                              (mistake "memory width is not 8" x)))
     (define (Location? x) (or (symbol? x) (Memory? x)))
     (define (S64? x) (and (integer? x) (or (<= s64-min x s64-max)
                                            (mistake "not a signed 64-bit integer" x))))
@@ -72,7 +77,13 @@
                              (and (or (Label? rator) (Expr? rator) (mistake "not callable" rator x))
                                   (or (list? rand*) (mistake "not a list" x))
                                   (andmap Expr?! rand*)))))
-    (define (Expr? x) (or (Location? x) (S64? x) (Binary-op? x) (Comparison? x) (Call? x)))
+    (define (CAS? x)
+      (and (pair? x) (eqv? (car x) 'atomic-cas)
+           (apply (case-lambda
+                    ((loc expected new) (and (Memory8?! loc) (Expr?! expected) (Expr?! new)))
+                    (_ (mistake "operator arity mismatch" x)))
+                  (cdr x))))
+    (define (Expr? x) (or (Location? x) (S64? x) (Binary-op? x) (Comparison? x) (Call? x) (CAS? x)))
     (define (Expr?! x) (or (Expr? x) (mistake "not an expression" x)))
     (let loop ((S P))
       (unless (Label? S)
@@ -109,6 +120,12 @@
         (cond ((assv op binop=>procedure) => (lambda (kop) (s64 ((cdr kop) (Expr a) (Expr b)))))
               ((assv op cmpop=>procedure) => (lambda (kop) (if ((cdr kop) (Expr a) (Expr b)) 1 0)))
               (else (mistake "invalid operator" op))))
+      (define (Arity3-op op a b c)
+        (case op
+          ((atomic-cas) (let ((current (Expr a)) (expected (Expr b)) (new (Expr c)))
+                          (when (eqv? current expected) (Assign! a new))
+                          current))
+          (else (mistake "invalid operator" op))))
       (define (Expr x)
         (cond ((symbol? x) (loc-ref x))
               ((integer? x) x)
@@ -121,8 +138,11 @@
                                       (v      (loc-ref (- addr offset))))
                                  (bitwise-and (bitwise-asr v shift) mask)))))
               ((eqv? (car x) 'call) (lambda _ (mistake 'LLL-eval "cannot evaluate call" x)))
-              (else (apply (lambda (a b) (Arity2-op (car x) a b)) (cdr x)))))
-      (define (Assign lhs rhs)
+              (else (apply (case-lambda
+                             ((a b)   (Arity2-op (car x) a b))
+                             ((a b c) (Arity3-op (car x) a b c)))
+                           (cdr x)))))
+      (define (Assign! lhs rhs)
         (let ((rhs (if (Label? rhs) rhs (Expr rhs))))
           (if (symbol? lhs)
               (loc-set! lhs rhs)
@@ -152,7 +172,7 @@
           (let ((S (car pc)))
             (set! pc (cdr pc))
             (apply (case (car S)
-                     ((set!) Assign)
+                     ((set!) Assign!)
                      ((jump-if) (lambda (cmp label) (when (= (Expr cmp) 1) (jump! label))))
                      ((jump) (lambda (x) (jump! (if (Label? x) x (Expr x)))))
                      ((call) (lambda _ (mistake 'LLL-eval "cannot evaluate call" S)))

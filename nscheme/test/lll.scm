@@ -109,7 +109,21 @@
       (set! rdi 10)
       (set! rsi 11)
       (set! rax (= rdi 0))
-      (set! rdx (< rdi rsi)))))
+      (set! rdx (< rdi rsi)))
+    (begin
+      (set! r10 #x1000)
+      (set! #(mloc 8 r10 0 0) 33)
+      (set! rax 44)
+      (set! rdi rax)
+      (set! rdi (+ rdi 55))
+      (set! rax (atomic-cas #(mloc 8 r10 0 0) rax rdi)))
+    (begin
+      (set! r10 #x1000)
+      (set! #(mloc 8 r10 0 0) 33)
+      (set! rax #(mloc 8 r10 0 0))
+      (set! rdi rax)
+      (set! rdi (+ rdi 55))
+      (set! rax (atomic-cas #(mloc 8 r10 0 0) rax rdi)))))
 
 (for-each
   LLL-test-C
