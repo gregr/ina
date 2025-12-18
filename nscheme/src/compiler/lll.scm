@@ -173,7 +173,7 @@
             (set! pc (cdr pc))
             (apply (case (car S)
                      ((set!) Assign!)
-                     ((jump-if) (lambda (cmp label) (when (= (Expr cmp) 1) (jump! label))))
+                     ((jump-if) (lambda (cmp label) (unless (= (Expr cmp) 0) (jump! label))))
                      ((jump) (lambda (x) (jump! (if (Label? x) x (Expr x)))))
                      ((call) (lambda _ (mistake 'LLL-eval "cannot evaluate call" S)))
                      ((begin) (lambda S* (for-each loop S*)))
