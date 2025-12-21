@@ -4,13 +4,14 @@
 ;; Statement  ::= (begin Statement ...)
 ;;              | (set! Location Expr)
 ;;              | (set! Location Label)
+;;              | (set! Location Call)
 ;;              | (set! Var1 (atomic-cas Memory8 Var1 Expr))
 ;;              | (jump-if (Compare-op Expr Expr) Label)
 ;;              | (jump Label)
 ;;              | (jump Location)
 ;;              | Call
 ;;              | Label
-;; Expr       ::= S64 | Location | (Binary-op Expr Expr) | (Compare-op Expr Expr) | Call
+;; Expr       ::= S64 | Location | (Binary-op Expr Expr) | (Compare-op Expr Expr)
 ;; Call       ::= (call Label Expr ...) | (call Expr Expr ...)
 ;; Binary-op  ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
@@ -77,7 +78,7 @@
                              (and (or (Label? rator) (Expr? rator) (mistake "not callable" rator x))
                                   (or (list? rand*) (mistake "not a list" x))
                                   (andmap Expr?! rand*)))))
-    (define (Expr? x) (or (Location? x) (S64? x) (Binary-op? x) (Comparison? x) (Call? x)))
+    (define (Expr? x) (or (Location? x) (S64? x) (Binary-op? x) (Comparison? x)))
     (define (Expr?! x) (or (Expr? x) (mistake "not an expression" x)))
     (define (CAS?/lhs lhs x)
       (and (pair? x) (eqv? (car x) 'atomic-cas)
@@ -97,7 +98,7 @@
         (apply (case (car S)
                  ((set!) (lambda (lhs rhs)
                            (unless (Location? lhs) (mistake "not a location" lhs S))
-                           (unless (or (Expr? rhs) (Label? rhs) (CAS?/lhs lhs rhs))
+                           (unless (or (Expr? rhs) (Label? rhs) (Call? rhs) (CAS?/lhs lhs rhs))
                              (mistake "invalid set! right-hand-side" S))))
                  ((jump-if) (lambda (cmp label)
                               (unless (Comparison? cmp) (mistake "not a comparison" cmp))
