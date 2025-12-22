@@ -1,6 +1,7 @@
 ;;;;;;;;;;;;;;;;;
 ;;; LLL for C ;;;
 ;;;;;;;;;;;;;;;;;
+(define LLL-C-options-gcc "-fno-strict-aliasing")
 (define LLL-C-prelude
   ##eos"typedef unsigned char u8;
 typedef unsigned short u16;
@@ -58,7 +59,6 @@ return expected; }
   (define (Subexpr x) (if (pair? x) (string-append "(" (Expr x) ")") (Expr x)))
   (define (Expr x) (or (Location x) (S64 x) (Binary-op x)))
   (define (Call x) (let ((rator (car x)) (rand* (cdr x)))
-                     (displayln 'here)
                      (string-append (if (Label? rator) rator (Subexpr rator))
                                     "(" (string-join* "," (map Expr rand*)) ")")))
   (define (CC x) (case x
