@@ -3,7 +3,7 @@
 (include "../src/compiler/lll-c.scm")
 (include "../src/compiler/lll-x86-64.scm")
 
-(define (LLL-test/eval P)
+(define (LLL-test P)
   (displayln "LLL:")
   (pretty-write P)
   (LLL-validate P)
@@ -31,6 +31,14 @@
   (LLL-emit-x86-64-at&t P)
   (newline))
 
+(define (LLL-test/only-eval P)
+  (displayln "LLL:")
+  (pretty-write P)
+  (LLL-validate P)
+  (displayln "==>")
+  (pretty-write (LLL-eval P '()))
+  (newline))
+
 (define (LLL-test-C P)
   (displayln "LLL:")
   (pretty-write P)
@@ -41,7 +49,7 @@
   (newline))
 
 (for-each
-  LLL-test/eval
+  LLL-test
   '((begin
       (set! rax 55)
       (begin
@@ -124,6 +132,47 @@
       (set! rdi rax)
       (set! rdi (+ rdi 55))
       (set! rax (atomic-cas #(mloc 8 r10 0 0) rax rdi)))))
+
+(for-each
+  LLL-test/only-eval
+  `((begin
+      (set! r8 ,(s64 #x7FFFFFFFFFFFFFF0))
+      (set! r9 15)
+      (set! r10 (+/over r8 r9))
+      (set! rax (cc over))
+      (set! r11 (+/carry r8 r9))
+      (set! rdx (cc carry))
+      (set! rcx 10)
+      (set! rcx (addc rcx 100)))
+    (begin
+      (set! r8 ,(s64 #x7FFFFFFFFFFFFFF0))
+      (set! r9 16)
+      (set! r10 (+/over r8 r9))
+      (set! rax (cc over))
+      (set! r11 (+/carry r8 r9))
+      (set! rdx (cc carry))
+      (set! rcx 10)
+      (set! rcx (addc rcx 100)))
+    (begin
+      (set! r8 ,(s64 #xFFFFFFFFFFFFFFF0))
+      (set! r9 16)
+      (set! r10 (+/over r8 r9))
+      (set! rax (cc over))
+      (set! r11 (+/carry r8 r9))
+      (set! rdx (cc carry))
+      (set! rcx 10)
+      (set! rcx (addc rcx 100)))
+    (begin
+      (set! r8 ,(s64 #x7FFFFFFFFFFFFFF0))
+      (set! r9 16)
+      (set! r10 (+/over r8 r9))
+      (set! rax (cc over))
+      (jump-if (cc over) "skip")
+      (set! r11 (+/carry r8 r9))
+      (set! rdx (cc carry))
+      "skip"
+      (set! rcx 10)
+      (set! rcx (addc rcx 100)))))
 
 (for-each
   LLL-test-C
