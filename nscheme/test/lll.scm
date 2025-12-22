@@ -176,6 +176,47 @@
 
 (for-each
   LLL-test-C
+  `((begin
+      (set! r8 ,(s64 #x7FFFFFFFFFFFFFF0))
+      (set! r9 15)
+      (set! r10 (+/over r8 r9))
+      (set! rax (cc over))
+      (set! r11 (+/carry r8 r9))
+      (set! rdx (cc carry))
+      (set! rcx 10)
+      (set! rcx (addc rcx 100)))
+    (begin
+      (set! r8 ,(s64 #x7FFFFFFFFFFFFFF0))
+      (set! r9 16)
+      (set! r10 (+/over r8 r9))
+      (set! rax (cc over))
+      (set! r11 (+/carry r8 r9))
+      (set! rdx (cc carry))
+      (set! rcx 10)
+      (set! rcx (addc rcx 100)))
+    (begin
+      (set! r8 ,(s64 #xFFFFFFFFFFFFFFF0))
+      (set! r9 16)
+      (set! r10 (+/over r8 r9))
+      (set! rax (cc over))
+      (set! r11 (+/carry r8 r9))
+      (set! rdx (cc carry))
+      (set! rcx 10)
+      (set! rcx (addc rcx 100)))
+    (begin
+      (set! r8 ,(s64 #x7FFFFFFFFFFFFFF0))
+      (set! r9 16)
+      (set! r10 (+/over r8 r9))
+      (set! rax (cc over))
+      (jump-if (cc over) "skip")
+      (set! r11 (+/carry r8 r9))
+      (set! rdx (cc carry))
+      "skip"
+      (set! rcx 10)
+      (set! rcx (addc rcx 100)))))
+
+(for-each
+  LLL-test-C
   '((begin
       (set! rdi 1)
       (set! rsi 2)
