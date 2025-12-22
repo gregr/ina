@@ -30,15 +30,15 @@
 (define (mloc-disp  x) (vector-ref x 3))
 (define (mloc-index x) (vector-ref x 4))
 
+(splicing-let ((2^63 #x8000000000000000) (2^64 #x10000000000000000))
+  (define s64-min (- 2^63))
+  (define s64-max (- 2^63 1))
+  (define u64-max (- 2^64 1))
+  (define (s64 x) (let ((x (integer-floor-mod x 2^64))) (if (< x 2^63) x (- x 2^64))))
+  (define (u64 x) (integer-floor-mod x 2^64)))
+
 (splicing-local
   ((define Label? string?)
-   (define 2^63 #x8000000000000000)
-   (define 2^64 #x10000000000000000)
-   (define s64-min (- 2^63))
-   (define s64-max #x7FFFFFFFFFFFFFFF)
-   (define (s64 x) (if (<= s64-min x s64-max) x (let ((x (integer-floor-mod x 2^64)))
-                                                  (if (< x 2^63) x (+ (- x 2^63) s64-min)))))
-   (define (u64 x) (if (< x 0) (+ (- x s64-min) s64-max) x))
    (define (cmp-nand a b) (= (bitwise-and a b) 0))
    (define (cmp-and a b) (not (cmp-nand a b)))
    (define (u< a b) (< (u64 a) (u64 b)))
