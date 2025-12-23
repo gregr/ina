@@ -259,7 +259,6 @@ LLL x86-64:
 loop:
  addq %rdi,%rax
  subq $1,%rdi
- cmpq $0,%rdi
  jg loop
 end:
 
@@ -302,9 +301,7 @@ LLL x86-64:
  movq $5,%rdi
  movq $-10,%rsi
  addq %rsi,%rdi
- cmpq $0,%rdi
  je zero
- cmpq $0,%rdi
  jl negative
  movq $1,%rax
  jmp end
