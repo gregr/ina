@@ -191,7 +191,7 @@ LLL x86-64:
  sarq $3,%r8
  shrq $2,%r9
  sarq $2,%rdx
- shrq %rcx,%rdi
+ shrq %cl,%rdi
  salq $2,%rsi
 
 LLL:
