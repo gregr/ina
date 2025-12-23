@@ -185,7 +185,7 @@ LLL x86-64:
  movq $-64,%rdx
  movq %rdx,%rdi
  movq %rdx,%rsi
- andq $63,%rax
+ andl $63,%eax
  movq %rax,%r8
  movq %rax,%r9
  sarq $3,%r8
