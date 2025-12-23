@@ -67,6 +67,7 @@
        ((r15) (case w ((1) 'r15b) ((2) 'r15w) ((4) 'r15d)))
        (else (mistake "not a register" r))))
    (define (x/width x w) (if (symbol? x) (register/width x w) x))
+   (define (U32? x) (and (integer? x) (<= 0 x #xFFFFFFFF)))
    (define (Shift? op) (memv op '(asl asr lsl lsr)))
    (define (binop->op op) (case op ((+ +/carry +/over) "addq") ((- -/carry -/over) "subq")
                             ((* */over) "imulq") ((and) "andq") ((ior) "orq") ((xor) "xorq")
@@ -199,7 +200,9 @@
       (let ((wl (Operand-width lhs)) (wr (Operand-width rhs)))
         (case wl
           ((8) (case wr
-                 ((8) (Instruction "movq" rhs lhs))
+                 ((8) (if (and (U32? rhs) (Register? lhs))
+                          (Instruction "movl" rhs (register/width lhs 4))
+                          (Instruction "movq" rhs lhs)))
                  ((4) (Instruction "movl" rhs (register/width lhs 4)))
                  ((2) (Instruction "movzwl" rhs (register/width lhs 4)))
                  (else (Instruction "movzbl" rhs (register/width lhs 4)))))

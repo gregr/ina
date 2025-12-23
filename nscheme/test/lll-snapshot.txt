@@ -52,13 +52,13 @@ LLL C:
  rsi = *(u64*)(r10 + -32ull);
 
 LLL x86-64:
- movq $55,%rax
- movq $11,%rdx
+ movl $55,%eax
+ movl $11,%edx
  addq $7,%rax
  imulq %rdx,%rax
- movq $305419896,%r8
- movq $2596069104,%r9
- movq $4096,%r10
+ movl $305419896,%r8d
+ movl $2596069104,%r9d
+ movl $4096,%r10d
  movq $-16,%r11
  movq %r8,-32(%r10)
  movq %r8,(%r10)
@@ -95,9 +95,9 @@ end:
  rdx = rdx + rax;
 
 LLL x86-64:
- movq $7,%rax
+ movl $7,%eax
 start:
- movq $8,%rdx
+ movl $8,%edx
  jmp end
 middle:
  addq %rdx,%rax
@@ -131,9 +131,9 @@ end:
 
 LLL x86-64:
  leaq end(%rip),%r15
- movq $7,%rax
+ movl $7,%eax
 start:
- movq $8,%rdx
+ movl $8,%edx
  jmp *%r15
 middle:
  addq %rdx,%rax
@@ -180,8 +180,8 @@ LLL C:
  rsi = rsi << 2ull;
 
 LLL x86-64:
- movq $3,%rcx
- movq $127,%rax
+ movl $3,%ecx
+ movl $127,%eax
  movq $-64,%rdx
  movq %rdx,%rdi
  movq %rdx,%rsi
@@ -218,8 +218,8 @@ loop:
 end:
 
 LLL x86-64:
- movq $10,%rdi
- movq $0,%rax
+ movl $10,%edi
+ movl $0,%eax
 loop:
  testq %rdi,%rdi
  je end
@@ -252,8 +252,8 @@ loop:
 end:
 
 LLL x86-64:
- movq $10,%rdi
- movq $0,%rax
+ movl $10,%edi
+ movl $0,%eax
  testq %rdi,%rdi
  je end
 loop:
@@ -298,18 +298,18 @@ zero:
 end:
 
 LLL x86-64:
- movq $5,%rdi
+ movl $5,%edi
  movq $-10,%rsi
  addq %rsi,%rdi
  je zero
  jl negative
- movq $1,%rax
+ movl $1,%eax
  jmp end
 negative:
  movq $-1,%rax
  jmp end
 zero:
- movq $0,%rax
+ movl $0,%eax
  jmp end
 end:
 
@@ -329,8 +329,8 @@ LLL C:
  rdx = (s64)rdi < (s64)rsi;
 
 LLL x86-64:
- movq $10,%rdi
- movq $11,%rsi
+ movl $10,%edi
+ movl $11,%esi
  testq %rdi,%rdi
  sete %al
  movzbl %al,%eax
@@ -358,9 +358,9 @@ LLL C:
  rax = LLL_atomic_cas((u64*)(r10),rax,rdi);
 
 LLL x86-64:
- movq $4096,%r10
+ movl $4096,%r10d
  movq $33,(%r10)
- movq $44,%rax
+ movl $44,%eax
  movq %rax,%rdi
  addq $55,%rdi
  lock cmpxchgq %rdi,(%r10)
@@ -385,7 +385,7 @@ LLL C:
  rax = LLL_atomic_cas((u64*)(r10),rax,rdi);
 
 LLL x86-64:
- movq $4096,%r10
+ movl $4096,%r10d
  movq $33,(%r10)
  movq (%r10),%rax
  movq %rax,%rdi
@@ -427,7 +427,7 @@ LLL C:
 
 LLL x86-64:
  movq $9223372036854775792,%r8
- movq $15,%r9
+ movl $15,%r9d
  movq %r8,%r10
  addq %r9,%r10
  seto %al
@@ -436,7 +436,7 @@ LLL x86-64:
  addq %r9,%r11
  setc %dl
  movzbl %dl,%edx
- movq $10,%rcx
+ movl $10,%ecx
  adcq $100,%rcx
 
 LLL:
@@ -474,7 +474,7 @@ LLL C:
 
 LLL x86-64:
  movq $9223372036854775792,%r8
- movq $16,%r9
+ movl $16,%r9d
  movq %r8,%r10
  addq %r9,%r10
  seto %al
@@ -483,7 +483,7 @@ LLL x86-64:
  addq %r9,%r11
  setc %dl
  movzbl %dl,%edx
- movq $10,%rcx
+ movl $10,%ecx
  adcq $100,%rcx
 
 LLL:
@@ -515,7 +515,7 @@ LLL C:
 
 LLL x86-64:
  movq $-16,%r8
- movq $16,%r9
+ movl $16,%r9d
  movq %r8,%r10
  addq %r9,%r10
  seto %al
@@ -524,7 +524,7 @@ LLL x86-64:
  addq %r9,%r11
  setc %dl
  movzbl %dl,%edx
- movq $10,%rcx
+ movl $10,%ecx
  adcq $100,%rcx
 
 LLL:
@@ -564,7 +564,7 @@ skip:
 
 LLL x86-64:
  movq $9223372036854775792,%r8
- movq $16,%r9
+ movl $16,%r9d
  movq %r8,%r10
  addq %r9,%r10
  seto %al
@@ -575,7 +575,7 @@ LLL x86-64:
  setc %dl
  movzbl %dl,%edx
 skip:
- movq $10,%rcx
+ movl $10,%ecx
  adcq $100,%rcx
 
 LLL:
@@ -604,8 +604,8 @@ LLL C:
  r15();
 
 LLL x86-64:
- movq $1,%rdi
- movq $2,%rsi
+ movl $1,%edi
+ movl $2,%esi
  call foo
  movq %rax,%rdi
  call *%r15
