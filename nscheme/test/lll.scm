@@ -1,4 +1,4 @@
-;; racket bootstrap/run-file.rkt src/run-cli.scm test/lll.scm
+;; racket bootstrap/run-file.rkt src/run-cli.scm test/lll.scm | tee test/lll-snapshot.txt && git diff test/lll-snapshot.txt
 (include "../src/compiler/lll.scm")
 (include "../src/compiler/lll-c.scm")
 (include "../src/compiler/lll-x86-64.scm")
