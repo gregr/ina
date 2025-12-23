@@ -221,7 +221,7 @@ LLL x86-64:
  movq $10,%rdi
  movq $0,%rax
 loop:
- cmpq $0,%rdi
+ testq %rdi,%rdi
  je end
  addq %rdi,%rax
  subq $1,%rdi
@@ -254,7 +254,7 @@ end:
 LLL x86-64:
  movq $10,%rdi
  movq $0,%rax
- cmpq $0,%rdi
+ testq %rdi,%rdi
  je end
 loop:
  addq %rdi,%rax
@@ -331,7 +331,7 @@ LLL C:
 LLL x86-64:
  movq $10,%rdi
  movq $11,%rsi
- cmpq $0,%rdi
+ testq %rdi,%rdi
  sete %al
  movzbl %al,%eax
  cmpq %rsi,%rdi
