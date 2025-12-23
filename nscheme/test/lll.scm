@@ -115,6 +115,30 @@
       "end")
     (begin
       (set! rdi 10)
+      (set! rax 0)
+      (jump-if (= rdi 0) "end")
+      "loop"
+      (set! rax (+ rax rdi))
+      (set! rdi (- rdi 1))
+      (jump-if (> rdi 0) "loop")
+      "end")
+    (begin
+      (set! rdi 5)
+      (set! rsi -10)
+      (set! rdi (+ rdi rsi))
+      (jump-if (= rdi 0) "zero")
+      (jump-if (< rdi 0) "negative")
+      (set! rax 1)
+      (jump "end")
+      "negative"
+      (set! rax -1)
+      (jump "end")
+      "zero"
+      (set! rax 0)
+      (jump "end")
+      "end")
+    (begin
+      (set! rdi 10)
       (set! rsi 11)
       (set! rax (= rdi 0))
       (set! rdx (< rdi rsi)))

@@ -1,0 +1,615 @@
+LLL:
+(begin
+ (set! rax 55)
+ (begin (set! rdx 11) (set! rax (+ rax 7)))
+ (set! rax (* rax rdx))
+ (begin
+  (set! r8 305419896)
+  (set! r9 2596069104)
+  (set! r10 4096)
+  (set! r11 -16)
+  (set! #(mloc 8 r10 -32 0) r8)
+  (set! #(mloc 8 r10 0 0) r8)
+  (set! #(mloc 4 r10 4 0) r9)
+  (set! #(mloc 8 r10 0 r11) r9)
+  (set! r8 #(mloc 2 r10 4 0))
+  (set! r9 #(mloc 8 r10 0 0))
+  (set! r8 (* r8 2))
+  (set! r9 (* r9 2))
+  (set! rdi #(mloc 8 r10 0 r11))
+  (set! rsi #(mloc 8 r10 -32 0))))
+==>
+((rsi . 305419896)
+ (rdi . 2596069104)
+ (r9 . 3853319726573333744)
+ (r8 . 114144)
+ (r11 . -16)
+ (r10 . 4096)
+ (rax . 682)
+ (rdx . 11)
+ (4080 . 2596069104)
+ (4096 . -7296712173568108936)
+ (4064 . 305419896))
+
+LLL C:
+ rax = 55ull;
+ rdx = 11ull;
+ rax = rax + 7ull;
+ rax = rax * rdx;
+ r8 = 305419896ull;
+ r9 = 2596069104ull;
+ r10 = 4096ull;
+ r11 = -16ull;
+ *(u64*)(r10 + -32ull) = r8;
+ *(u64*)(r10) = r8;
+ *(u32*)(r10 + 4ull) = r9;
+ *(u64*)(r10 + r11) = r9;
+ r8 = *(u16*)(r10 + 4ull);
+ r9 = *(u64*)(r10);
+ r8 = r8 * 2ull;
+ r9 = r9 * 2ull;
+ rdi = *(u64*)(r10 + r11);
+ rsi = *(u64*)(r10 + -32ull);
+
+LLL x86-64:
+ movq $55,%rax
+ movq $11,%rdx
+ addq $7,%rax
+ imulq %rdx,%rax
+ movq $305419896,%r8
+ movq $2596069104,%r9
+ movq $4096,%r10
+ movq $-16,%r11
+ movq %r8,-32(%r10)
+ movq %r8,(%r10)
+ movl %r9d,4(%r10)
+ movq %r9,(%r10,%r11)
+ movzwl 4(%r10),%r8d
+ movq (%r10),%r9
+ imulq $2,%r8
+ imulq $2,%r9
+ movq (%r10,%r11),%rdi
+ movq -32(%r10),%rsi
+
+LLL:
+(begin
+ (set! rax 7)
+ "start"
+ (set! rdx 8)
+ (jump "end")
+ "middle"
+ (set! rax (+ rax rdx))
+ "end"
+ (set! rdx (+ rdx rax)))
+==>
+((rdx . 15) (rax . 7))
+
+LLL C:
+ rax = 7ull;
+start:
+ rdx = 8ull;
+ goto end;
+middle:
+ rax = rax + rdx;
+end:
+ rdx = rdx + rax;
+
+LLL x86-64:
+ movq $7,%rax
+start:
+ movq $8,%rdx
+ jmp end
+middle:
+ addq %rdx,%rax
+end:
+ addq %rax,%rdx
+
+LLL:
+(begin
+ (set! r15 "end")
+ (set! rax 7)
+ "start"
+ (set! rdx 8)
+ (jump r15)
+ "middle"
+ (set! rax (+ rax rdx))
+ "end"
+ (set! rdx (+ rdx rax)))
+==>
+((rdx . 15) (rax . 7) (r15 . "end"))
+
+LLL C:
+ r15 = (u64*)&&end;
+ rax = 7ull;
+start:
+ rdx = 8ull;
+ goto *(void*)(r15);
+middle:
+ rax = rax + rdx;
+end:
+ rdx = rdx + rax;
+
+LLL x86-64:
+ leaq end(%rip),%r15
+ movq $7,%rax
+start:
+ movq $8,%rdx
+ jmp *%r15
+middle:
+ addq %rdx,%rax
+end:
+ addq %rax,%rdx
+
+LLL:
+(begin
+ (set! rcx 3)
+ (set! rax 127)
+ (set! rdx -64)
+ (set! rdi rdx)
+ (set! rsi rdx)
+ (set! rax (and rax 63))
+ (set! r8 rax)
+ (set! r9 rax)
+ (set! r8 (asr r8 3))
+ (set! r9 (lsr r9 2))
+ (set! rdx (asr rdx 2))
+ (set! rdi (lsr rdi rcx))
+ (set! rsi (asl rsi 2)))
+==>
+((rsi . -256)
+ (rdi . 2305843009213693944)
+ (rdx . -16)
+ (r9 . 15)
+ (r8 . 7)
+ (rax . 63)
+ (rcx . 3))
+
+LLL C:
+ rcx = 3ull;
+ rax = 127ull;
+ rdx = -64ull;
+ rdi = rdx;
+ rsi = rdx;
+ rax = rax & 63ull;
+ r8 = rax;
+ r9 = rax;
+ r8 = ((s64)r8) < 0 ? ~(~r8 >> 3ull) : r8 >> 3ull;
+ r9 = r9 >> 2ull;
+ rdx = ((s64)rdx) < 0 ? ~(~rdx >> 2ull) : rdx >> 2ull;
+ rdi = rdi >> rcx;
+ rsi = rsi << 2ull;
+
+LLL x86-64:
+ movq $3,%rcx
+ movq $127,%rax
+ movq $-64,%rdx
+ movq %rdx,%rdi
+ movq %rdx,%rsi
+ andq $63,%rax
+ movq %rax,%r8
+ movq %rax,%r9
+ sarq $3,%r8
+ shrq $2,%r9
+ sarq $2,%rdx
+ shrq %rcx,%rdi
+ salq $2,%rsi
+
+LLL:
+(begin
+ (set! rdi 10)
+ (set! rax 0)
+ "loop"
+ (jump-if (= rdi 0) "end")
+ (set! rax (+ rax rdi))
+ (set! rdi (- rdi 1))
+ (jump "loop")
+ "end")
+==>
+((rdi . 0) (rax . 55))
+
+LLL C:
+ rdi = 10ull;
+ rax = 0ull;
+loop:
+ if (rdi == 0ull) goto end;
+ rax = rax + rdi;
+ rdi = rdi - 1ull;
+ goto loop;
+end:
+
+LLL x86-64:
+ movq $10,%rdi
+ movq $0,%rax
+loop:
+ cmpq $0,%rdi
+ je end
+ addq %rdi,%rax
+ subq $1,%rdi
+ jmp loop
+end:
+
+LLL:
+(begin
+ (set! rdi 10)
+ (set! rax 0)
+ (jump-if (= rdi 0) "end")
+ "loop"
+ (set! rax (+ rax rdi))
+ (set! rdi (- rdi 1))
+ (jump-if (> rdi 0) "loop")
+ "end")
+==>
+((rdi . 0) (rax . 55))
+
+LLL C:
+ rdi = 10ull;
+ rax = 0ull;
+ if (rdi == 0ull) goto end;
+loop:
+ rax = rax + rdi;
+ rdi = rdi - 1ull;
+ if ((s64)rdi > (s64)0ull) goto loop;
+end:
+
+LLL x86-64:
+ movq $10,%rdi
+ movq $0,%rax
+ cmpq $0,%rdi
+ je end
+loop:
+ addq %rdi,%rax
+ subq $1,%rdi
+ cmpq $0,%rdi
+ jg loop
+end:
+
+LLL:
+(begin
+ (set! rdi 5)
+ (set! rsi -10)
+ (set! rdi (+ rdi rsi))
+ (jump-if (= rdi 0) "zero")
+ (jump-if (< rdi 0) "negative")
+ (set! rax 1)
+ (jump "end")
+ "negative"
+ (set! rax -1)
+ (jump "end")
+ "zero"
+ (set! rax 0)
+ (jump "end")
+ "end")
+==>
+((rax . -1) (rdi . -5) (rsi . -10))
+
+LLL C:
+ rdi = 5ull;
+ rsi = -10ull;
+ rdi = rdi + rsi;
+ if (rdi == 0ull) goto zero;
+ if ((s64)rdi < (s64)0ull) goto negative;
+ rax = 1ull;
+ goto end;
+negative:
+ rax = -1ull;
+ goto end;
+zero:
+ rax = 0ull;
+ goto end;
+end:
+
+LLL x86-64:
+ movq $5,%rdi
+ movq $-10,%rsi
+ addq %rsi,%rdi
+ cmpq $0,%rdi
+ je zero
+ cmpq $0,%rdi
+ jl negative
+ movq $1,%rax
+ jmp end
+negative:
+ movq $-1,%rax
+ jmp end
+zero:
+ movq $0,%rax
+ jmp end
+end:
+
+LLL:
+(begin
+ (set! rdi 10)
+ (set! rsi 11)
+ (set! rax (= rdi 0))
+ (set! rdx (< rdi rsi)))
+==>
+((rdx . 1) (rax . 0) (rsi . 11) (rdi . 10))
+
+LLL C:
+ rdi = 10ull;
+ rsi = 11ull;
+ rax = rdi == 0ull;
+ rdx = (s64)rdi < (s64)rsi;
+
+LLL x86-64:
+ movq $10,%rdi
+ movq $11,%rsi
+ cmpq $0,%rdi
+ sete %al
+ movzbl %al,%eax
+ cmpq %rsi,%rdi
+ setl %dl
+ movzbl %dl,%edx
+
+LLL:
+(begin
+ (set! r10 4096)
+ (set! #(mloc 8 r10 0 0) 33)
+ (set! rax 44)
+ (set! rdi rax)
+ (set! rdi (+ rdi 55))
+ (set! rax (atomic-cas #(mloc 8 r10 0 0) rax rdi)))
+==>
+((rax . 33) (rdi . 99) (r10 . 4096) (4096 . 33))
+
+LLL C:
+ r10 = 4096ull;
+ *(u64*)(r10) = 33ull;
+ rax = 44ull;
+ rdi = rax;
+ rdi = rdi + 55ull;
+ rax = LLL_atomic_cas((u64*)(r10),rax,rdi);
+
+LLL x86-64:
+ movq $4096,%r10
+ movq $33,(%r10)
+ movq $44,%rax
+ movq %rax,%rdi
+ addq $55,%rdi
+ lock cmpxchgq %rdi,(%r10)
+
+LLL:
+(begin
+ (set! r10 4096)
+ (set! #(mloc 8 r10 0 0) 33)
+ (set! rax #(mloc 8 r10 0 0))
+ (set! rdi rax)
+ (set! rdi (+ rdi 55))
+ (set! rax (atomic-cas #(mloc 8 r10 0 0) rax rdi)))
+==>
+((rax . 33) (rdi . 88) (r10 . 4096) (4096 . 88))
+
+LLL C:
+ r10 = 4096ull;
+ *(u64*)(r10) = 33ull;
+ rax = *(u64*)(r10);
+ rdi = rax;
+ rdi = rdi + 55ull;
+ rax = LLL_atomic_cas((u64*)(r10),rax,rdi);
+
+LLL x86-64:
+ movq $4096,%r10
+ movq $33,(%r10)
+ movq (%r10),%rax
+ movq %rax,%rdi
+ addq $55,%rdi
+ lock cmpxchgq %rdi,(%r10)
+
+LLL:
+(begin
+ (set! r8 9223372036854775792)
+ (set! r9 15)
+ (set! r10 r8)
+ (set! r10 (+/over r10 r9))
+ (set! rax (cc over))
+ (set! r11 r8)
+ (set! r11 (+/carry r11 r9))
+ (set! rdx (cc carry))
+ (set! rcx 10)
+ (set! rcx (addc rcx 100)))
+==>
+((rcx . 110)
+ (rdx . 0)
+ (r11 . 9223372036854775807)
+ (rax . 0)
+ (r10 . 9223372036854775807)
+ (r9 . 15)
+ (r8 . 9223372036854775792))
+
+LLL C:
+ r8 = 9223372036854775792ull;
+ r9 = 15ull;
+ r10 = r8;
+ LLL_flag_overflow = __builtin_saddll_overflow(r10,r9,&r10);
+ rax = LLL_flag_overflow;
+ r11 = r8;
+ LLL_flag_carry = __builtin_uaddll_overflow(r11,r9,&r11);
+ rdx = LLL_flag_carry;
+ rcx = 10ull;
+ rcx = __builtin_addcll(rcx,100ull,LLL_flag_carry,&LLL_flag_carry);;
+
+LLL x86-64:
+ movq $9223372036854775792,%r8
+ movq $15,%r9
+ movq %r8,%r10
+ addq %r9,%r10
+ seto %al
+ movzbl %al,%eax
+ movq %r8,%r11
+ addq %r9,%r11
+ setc %dl
+ movzbl %dl,%edx
+ movq $10,%rcx
+ adcq $100,%rcx
+
+LLL:
+(begin
+ (set! r8 9223372036854775792)
+ (set! r9 16)
+ (set! r10 r8)
+ (set! r10 (+/over r10 r9))
+ (set! rax (cc over))
+ (set! r11 r8)
+ (set! r11 (+/carry r11 r9))
+ (set! rdx (cc carry))
+ (set! rcx 10)
+ (set! rcx (addc rcx 100)))
+==>
+((rcx . 110)
+ (rdx . 0)
+ (r11 . -9223372036854775808)
+ (rax . 1)
+ (r10 . -9223372036854775808)
+ (r9 . 16)
+ (r8 . 9223372036854775792))
+
+LLL C:
+ r8 = 9223372036854775792ull;
+ r9 = 16ull;
+ r10 = r8;
+ LLL_flag_overflow = __builtin_saddll_overflow(r10,r9,&r10);
+ rax = LLL_flag_overflow;
+ r11 = r8;
+ LLL_flag_carry = __builtin_uaddll_overflow(r11,r9,&r11);
+ rdx = LLL_flag_carry;
+ rcx = 10ull;
+ rcx = __builtin_addcll(rcx,100ull,LLL_flag_carry,&LLL_flag_carry);;
+
+LLL x86-64:
+ movq $9223372036854775792,%r8
+ movq $16,%r9
+ movq %r8,%r10
+ addq %r9,%r10
+ seto %al
+ movzbl %al,%eax
+ movq %r8,%r11
+ addq %r9,%r11
+ setc %dl
+ movzbl %dl,%edx
+ movq $10,%rcx
+ adcq $100,%rcx
+
+LLL:
+(begin
+ (set! r8 -16)
+ (set! r9 16)
+ (set! r10 r8)
+ (set! r10 (+/over r10 r9))
+ (set! rax (cc over))
+ (set! r11 r8)
+ (set! r11 (+/carry r11 r9))
+ (set! rdx (cc carry))
+ (set! rcx 10)
+ (set! rcx (addc rcx 100)))
+==>
+((rcx . 111) (rdx . 1) (r11 . 0) (rax . 0) (r10 . 0) (r9 . 16) (r8 . -16))
+
+LLL C:
+ r8 = -16ull;
+ r9 = 16ull;
+ r10 = r8;
+ LLL_flag_overflow = __builtin_saddll_overflow(r10,r9,&r10);
+ rax = LLL_flag_overflow;
+ r11 = r8;
+ LLL_flag_carry = __builtin_uaddll_overflow(r11,r9,&r11);
+ rdx = LLL_flag_carry;
+ rcx = 10ull;
+ rcx = __builtin_addcll(rcx,100ull,LLL_flag_carry,&LLL_flag_carry);;
+
+LLL x86-64:
+ movq $-16,%r8
+ movq $16,%r9
+ movq %r8,%r10
+ addq %r9,%r10
+ seto %al
+ movzbl %al,%eax
+ movq %r8,%r11
+ addq %r9,%r11
+ setc %dl
+ movzbl %dl,%edx
+ movq $10,%rcx
+ adcq $100,%rcx
+
+LLL:
+(begin
+ (set! r8 9223372036854775792)
+ (set! r9 16)
+ (set! r10 r8)
+ (set! r10 (+/over r10 r9))
+ (set! rax (cc over))
+ (jump-if (cc over) "skip")
+ (set! r11 r8)
+ (set! r11 (+/carry r11 r9))
+ (set! rdx (cc carry))
+ "skip"
+ (set! rcx 10)
+ (set! rcx (addc rcx 100)))
+==>
+((rcx . 110)
+ (rax . 1)
+ (r10 . -9223372036854775808)
+ (r9 . 16)
+ (r8 . 9223372036854775792))
+
+LLL C:
+ r8 = 9223372036854775792ull;
+ r9 = 16ull;
+ r10 = r8;
+ LLL_flag_overflow = __builtin_saddll_overflow(r10,r9,&r10);
+ rax = LLL_flag_overflow;
+ if (LLL_flag_overflow) goto skip;
+ r11 = r8;
+ LLL_flag_carry = __builtin_uaddll_overflow(r11,r9,&r11);
+ rdx = LLL_flag_carry;
+skip:
+ rcx = 10ull;
+ rcx = __builtin_addcll(rcx,100ull,LLL_flag_carry,&LLL_flag_carry);;
+
+LLL x86-64:
+ movq $9223372036854775792,%r8
+ movq $16,%r9
+ movq %r8,%r10
+ addq %r9,%r10
+ seto %al
+ movzbl %al,%eax
+ jo skip
+ movq %r8,%r11
+ addq %r9,%r11
+ setc %dl
+ movzbl %dl,%edx
+skip:
+ movq $10,%rcx
+ adcq $100,%rcx
+
+LLL:
+(begin
+ (set! rdi 1)
+ (set! rsi 2)
+ (set! rax (call "foo" rdi rsi))
+ (set! rdi rax)
+ (call r15 rdi rsi))
+
+LLL C:
+ rdi = 1ull;
+ rsi = 2ull;
+ rax = foo(rdi,rsi);
+ rdi = rax;
+ r15(rdi,rsi);
+
+LLL:
+(begin (set! rdi 1) (set! rsi 2) (call "foo") (set! rdi rax) (call r15))
+
+LLL C:
+ rdi = 1ull;
+ rsi = 2ull;
+ foo();
+ rdi = rax;
+ r15();
+
+LLL x86-64:
+ movq $1,%rdi
+ movq $2,%rsi
+ call foo
+ movq %rax,%rdi
+ call *%r15
+
