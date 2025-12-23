@@ -580,6 +580,53 @@ skip:
 
 LLL:
 (begin
+ (set! rdi 8839064868652493312)
+ (set! rsi 8839064868652493482)
+ (jump-if (and rdi 170) "one")
+ (jump-if (and rsi 43690) "two")
+ (set! rax 0)
+ (jump "end")
+ "one"
+ (set! rax 1)
+ (jump "end")
+ "two"
+ (set! rax 2)
+ "end")
+==>
+((rax . 2) (rsi . 8839064868652493482) (rdi . 8839064868652493312))
+
+LLL C:
+ rdi = 8839064868652493312ull;
+ rsi = 8839064868652493482ull;
+ if (rdi & 170ull) goto one;
+ if (rsi & 43690ull) goto two;
+ rax = 0ull;
+ goto end;
+one:
+ rax = 1ull;
+ goto end;
+two:
+ rax = 2ull;
+end:
+
+LLL x86-64:
+ movq $8839064868652493312,%rdi
+ movq $8839064868652493482,%rsi
+ testq $170,%rdi
+ jnz one
+ testq $43690,%rsi
+ jnz two
+ movl $0,%eax
+ jmp end
+one:
+ movl $1,%eax
+ jmp end
+two:
+ movl $2,%eax
+end:
+
+LLL:
+(begin
  (set! rdi 1)
  (set! rsi 2)
  (set! rax (call "foo" rdi rsi))

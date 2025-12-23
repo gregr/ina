@@ -201,7 +201,20 @@
       (set! rdx (cc carry))
       "skip"
       (set! rcx 10)
-      (set! rcx (addc rcx 100)))))
+      (set! rcx (addc rcx 100)))
+    (begin
+      (set! rdi #x7AAAAAAAAAAAAA00)
+      (set! rsi #x7AAAAAAAAAAAAAAA)
+      (jump-if (and rdi #xAA) "one")
+      (jump-if (and rsi #xAAAA) "two")
+      (set! rax 0)
+      (jump "end")
+      "one"
+      (set! rax 1)
+      (jump "end")
+      "two"
+      (set! rax 2)
+      "end")))
 
 (for-each
   LLL-test-C
