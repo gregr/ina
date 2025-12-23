@@ -612,9 +612,9 @@ end:
 LLL x86-64:
  movq $8839064868652493312,%rdi
  movq $8839064868652493482,%rsi
- testq $170,%rdi
+ testb $170,%dil
  jnz one
- testq $43690,%rsi
+ testl $43690,%esi
  jnz two
  movl $0,%eax
  jmp end
