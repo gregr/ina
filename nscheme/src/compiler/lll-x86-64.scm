@@ -14,6 +14,8 @@
 ;;              | (set! Location1 (Shift-op Location1 rcx))
 ;;              | (set! Register1 (* Register1 S32))
 ;;              | (set! Register1 (* Register1 Location))
+;;              | (set! Register1 (*/over Register1 S32))
+;;              | (set! Register1 (*/over Register1 Location))
 ;;              | (set! Register Comparison)
 ;;              | (set! Register (cc CC))
 ;;              | (set! rax (atomic-cas Memory8 rax Register))
@@ -28,7 +30,7 @@
 ;; Binary-op  ::= + | - | and | ior | xor | CC-op  ; * destination must be a register
 ;; Shift-op   ::= asl | asr | lsl | lsr
 ;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
-;; CC-op      ::= addc | subc | +/carry | -/carry | +/over | -/over | */over
+;; CC-op      ::= addc | subc | +/carry | -/carry | +/over | -/over
 ;; CC         ::= carry | ncarry | over | nover  ; NOTE: carry is borrow, not inverted borrow
 ;; Comparison ::= (Compare-op Location S32)
 ;;              | (Compare-op Location Register)
@@ -152,8 +154,8 @@
                                          (and (Binary-op?/lhs lhs rhs)
                                               (or (eqv? (mloc-width lhs) 8)
                                                   (mistake "binary op set! memory width is not 8" S))
-                                              (or (not (eqv? (car rhs) '*))
-                                                  (mistake "memory left-hand-side of *" S))
+                                              (or (not (memv (car rhs) '(* */over)))
+                                                  (mistake "memory left-hand-side of multiply" S))
                                               (or (not (Memory? (caddr rhs)))
                                                   (mistake "too many memory operands" S))))
                                (mistake "invalid set! right-hand-side for memory" S)))
