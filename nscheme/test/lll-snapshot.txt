@@ -331,12 +331,12 @@ LLL C:
 LLL x86-64:
  movl $10,%edi
  movl $11,%esi
+ xorl %eax,%eax
  testq %rdi,%rdi
  sete %al
- movzbl %al,%eax
+ xorl %edx,%edx
  cmpq %rsi,%rdi
  setl %dl
- movzbl %dl,%edx
 
 LLL:
 (begin
