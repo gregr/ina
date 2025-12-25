@@ -2,11 +2,11 @@
 ;;; LLL for x86-64 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;
 ;; Statement  ::= (begin Statement ...)
-;;              | (set! Register S64)
+;;              | (set! Register SU64)
 ;;              | (set! Register Register)
 ;;              | (set! Register Memory)
-;;              | (set! Memory S32)
 ;;              | (set! Memory Register)
+;;              | (set! Memory8 SU64/32)
 ;;              | (set! Location1 (Binary-op Location1 S32))
 ;;              | (set! Location1 (Binary-op Location1 Register))
 ;;              | (set! Register1 (Binary-op Register1 Memory8))
@@ -41,7 +41,8 @@
 ;; Memory8    ::= #(mloc 8     Register S32 Index)
 ;; Index      ::= Register | 0
 ;; Width      ::= 1 | 2 | 4 | 8
-;; S64        ::= <signed 64-bit integer>
+;; SU64       ::= <signed or unsigned 64-bit integer>
+;; SU64/32    ::= <sign-extended-32-bit-representable signed or unsigned 64-bit integer>
 ;; S32        ::= <signed 32-bit integer>
 ;; U6         ::= <unsigned 6-bit integer>  ; 0 through 63
 ;; Label      ::= <string>
@@ -97,8 +98,12 @@
     (define (U6? x) (and (integer? x) (or (<= 0 x 63) (mistake "not an unsigned 6-bit integer" x))))
     (define (S32? x) (and (integer? x) (or (<= #x-80000000 x #x7FFFFFFF)
                                            (mistake "not a signed 32-bit integer" x))))
-    (define (S64? x) (and (integer? x) (or (<= #x-8000000000000000 x #x7FFFFFFFFFFFFFFF)
-                                           (mistake "not a signed 64-bit integer" x))))
+    (define (SU64/32? x)
+      (and (integer? x) (or (<= #x-80000000 x #x7FFFFFFF)
+                            (<= #xFFFFFFFF80000000 x #xFFFFFFFFFFFFFFFF)
+                            (mistake "not a sign-extended-32-bit-representable 64-bit integer" x))))
+    (define (SU64? x) (and (integer? x) (or (<= #x-8000000000000000 x #xFFFFFFFFFFFFFFFF)
+                                            (mistake "not a signed or unsigned 64-bit integer" x))))
     (define (Memory8?/ctx ctx x)
       (and (Memory? x) (or (eqv? (mloc-width x) 8) (mistake "memory width is not 8" x ctx))))
     (define (Location?!/ctx ctx x) (or (Register? x) (Memory8?/ctx ctx x)
@@ -112,7 +117,7 @@
                            (Location?!/ctx rhs a)
                            (or (not (Shift? (car rhs))) (U6? b) (eqv? b 'rcx)
                                (mistake "shift operand is neither a 6-bit integer nor rcx" b rhs))
-                           (or (Register? b) (S32? b)
+                           (or (Register? b) (SU64/32? b)
                                (and (Memory8?/ctx rhs b)
                                     (or (Register? lhs) (mistake "too many memory operands" rhs)))
                                (mistake "invalid argument to binary operation" b rhs))
@@ -125,7 +130,7 @@
            (or (list? (cdr x)) (mistake "not a list" x))
            (apply (case-lambda
                     ((a b) (Location?!/ctx x a)
-                           (or (S32? b) (Register? b)
+                           (or (SU64/32? b) (Register? b)
                                (mistake "not a register or signed 32-bit integer" b x)))
                     (_ (mistake "operator arity mismatch" x)))
                   (cdr x))))
@@ -154,10 +159,10 @@
             ((set!) (lambda (lhs rhs)
                       (cond ((or (Binary-op?/lhs lhs rhs) (CAS?/lhs lhs rhs)))
                             ((Label? rhs) (Location?!/ctx S lhs))
-                            ((Register? lhs) (unless (or (Register? rhs) (S64? rhs) (Memory? rhs)
+                            ((Register? lhs) (unless (or (Register? rhs) (SU64? rhs) (Memory? rhs)
                                                          (Comparison? rhs) (cc? rhs))
                                                (mistake "invalid set! right-hand-side" rhs)))
-                            ((Memory? lhs) (unless (or (Register? rhs) (S32? rhs))
+                            ((Memory? lhs) (unless (or (Register? rhs) (SU64/32? rhs))
                                              (mistake "invalid set! memory right-hand-side" rhs S)))
                             (else (mistake "not a location" lhs)))))
             ((jump-if) (lambda (x label)
@@ -178,7 +183,7 @@
     (define Register? symbol?)
     (define (Reg x) (string-append "%" (symbol->string x)))
     (define (Operand x)
-      (cond ((integer? x) (string-append "$" (number->string x)))
+      (cond ((integer? x) (string-append "$" (number->string (s64 x))))
             ((Register? x) (Reg x))
             ((string? x) x)
             ((mloc? x) (let ((base (mloc-base x)) (disp (mloc-disp x)) (idx (mloc-index x)))

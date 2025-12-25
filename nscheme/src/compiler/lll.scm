@@ -14,7 +14,7 @@
 ;;              | (jump Location)
 ;;              | Call
 ;;              | Label
-;; Expr       ::= S64 | Location | (Binary-op Expr Expr) | (Compare-op Expr Expr)
+;; Expr       ::= SU64 | Location | (Binary-op Expr Expr) | (Compare-op Expr Expr)
 ;; Call       ::= (call Label Expr ...) | (call Expr Expr ...)
 ;; Binary-op  ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
@@ -25,9 +25,8 @@
 ;; Memory     ::= #(mloc Width Expr Expr Expr)
 ;; Memory8    ::= #(mloc 8     Expr Expr Expr)
 ;; Width      ::= 1 | 2 | 4 | 8
-;; S64        ::= <signed 64-bit integer>
+;; SU64       ::= <signed or unsigned 64-bit integer>
 ;; Label      ::= <string>
-
 (define (mloc w b d i) (vector 'mloc w b d i))
 (define (mloc? x) (and (vector? x) (= (vector-length x) 5) (eqv? (vector-ref x 0) 'mloc)))
 (define (mloc-width x) (vector-ref x 1))
@@ -80,8 +79,8 @@
     (define (Memory8?! x) (or (and (Memory?! x) (eqv? (mloc-width x) 8))
                               (mistake "memory width is not 8" x)))
     (define (Location? x) (or (symbol? x) (Memory? x)))
-    (define (S64? x) (and (integer? x) (or (<= s64-min x s64-max)
-                                           (mistake "not a signed 64-bit integer" x))))
+    (define (SU64? x) (and (integer? x) (or (<= s64-min x u64-max)
+                                            (mistake "not a signed or unsigned 64-bit integer" x))))
     (define ((Arity2-op?/op=>procedure op=>procedure) x)
       (and (pair? x) (assv (car x) op=>procedure)
            (or (list? (cdr x)) (mistake "not a list" x))
@@ -97,7 +96,7 @@
                              (and (or (Label? rator) (Expr? rator) (mistake "not callable" rator x))
                                   (or (list? rand*) (mistake "not a list" x))
                                   (andmap Expr?! rand*)))))
-    (define (Expr? x) (or (Location? x) (S64? x) (Binary-op? x) (Comparison? x)))
+    (define (Expr? x) (or (Location? x) (SU64? x) (Binary-op? x) (Comparison? x)))
     (define (Expr?! x) (or (Expr? x) (mistake "not an expression" x)))
     (define (CC?! x) (or (memv x '(carry ncarry over nover)) (mistake "not a condition code" x)))
     (define (cc? x) (and (pair? x) (eqv? (car x) 'cc) (list? (cdr x))
@@ -174,7 +173,7 @@
           (else (mistake "invalid operator" op))))
       (define (Expr x)
         (cond ((symbol? x) (loc-ref x))
-              ((integer? x) x)
+              ((integer? x) (s64 x))
               ((mloc? x) (let ((width (mloc-width x)) (addr (mloc-addr x)))
                            (if (= width 8)
                                (loc-ref addr)

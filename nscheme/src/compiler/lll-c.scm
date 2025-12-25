@@ -30,7 +30,7 @@ return expected; }
                    (addend (mloc-disp x)) (addend (mloc-index x)) ")"))
   (define (Location x)
     (if (symbol? x) (symbol->string x) (and (mloc? x) (string-append "*" (Ref x)))))
-  (define (S64 x) (and (integer? x) (string-append (number->string x) u64-suffix)))
+  (define (SU64 x) (and (integer? x) (string-append (number->string (s64 x)) u64-suffix)))
   (define (Binary-op x)
     (let ((op (car x)) (a (Subexpr (cadr x))) (b (Subexpr (caddr x))))
       (case op
@@ -55,7 +55,7 @@ return expected; }
         ((u>=)     (string-append a " >= " b))
         (else (mistake "invalid binary operator" x)))))
   (define (Subexpr x) (if (pair? x) (string-append "(" (Expr x) ")") (Expr x)))
-  (define (Expr x) (or (Location x) (S64 x) (Binary-op x)))
+  (define (Expr x) (or (Location x) (SU64 x) (Binary-op x)))
   (define (Call x) (let ((rator (car x)) (rand* (cdr x)))
                      (string-append (if (Label? rator) rator (Subexpr rator))
                                     "(" (string-join* "," (map Expr rand*)) ")")))
@@ -71,7 +71,7 @@ return expected; }
                                 (string-append " LLL_flag_" f " = __builtin_" op "ll_overflow("
                                                a "," b ",&" (Location lhs) ");\n")))
     (cond ((Label? x) (simple (string-append "(u64*)&&" x)))
-          ((or (Location x) (S64 x)) => simple)
+          ((or (Location x) (SU64 x)) => simple)
           ((case (car x)
              ((call) (Call (cdr x)))
              ((cc) (or (CC (cadr x)) (mistake "not a condition code" (cadr x))))

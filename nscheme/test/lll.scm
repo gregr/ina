@@ -50,7 +50,7 @@
 
 (for-each
   LLL-test
-  `((begin
+  '((begin
       (set! rax 55)
       (begin
         (set! rdx 11)
@@ -157,7 +157,7 @@
       (set! rdi (+ rdi 55))
       (set! rax (atomic-cas #(mloc 8 r10 0 0) rax rdi)))
     (begin
-      (set! r8 ,(s64 #x7FFFFFFFFFFFFFF0))
+      (set! r8 #x7FFFFFFFFFFFFFF0)
       (set! r9 15)
       (set! r10 r8)
       (set! r10 (+/over r10 r9))
@@ -168,7 +168,7 @@
       (set! rcx 10)
       (set! rcx (addc rcx 100)))
     (begin
-      (set! r8 ,(s64 #x7FFFFFFFFFFFFFF0))
+      (set! r8 #x7FFFFFFFFFFFFFF0)
       (set! r9 16)
       (set! r10 r8)
       (set! r10 (+/over r10 r9))
@@ -179,7 +179,7 @@
       (set! rcx 10)
       (set! rcx (addc rcx 100)))
     (begin
-      (set! r8 ,(s64 #xFFFFFFFFFFFFFFF0))
+      (set! r8 #xFFFFFFFFFFFFFFF0)
       (set! r9 16)
       (set! r10 r8)
       (set! r10 (+/over r10 r9))
@@ -190,7 +190,7 @@
       (set! rcx 10)
       (set! rcx (addc rcx 100)))
     (begin
-      (set! r8 ,(s64 #x7FFFFFFFFFFFFFF0))
+      (set! r8 #x7FFFFFFFFFFFFFF0)
       (set! r9 16)
       (set! r10 r8)
       (set! r10 (+/over r10 r9))

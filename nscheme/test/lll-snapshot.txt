@@ -488,7 +488,7 @@ LLL x86-64:
 
 LLL:
 (begin
- (set! r8 -16)
+ (set! r8 18446744073709551600)
  (set! r9 16)
  (set! r10 r8)
  (set! r10 (+/over r10 r9))
