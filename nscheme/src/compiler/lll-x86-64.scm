@@ -7,6 +7,9 @@
 ;;              | (set! Register Memory)
 ;;              | (set! Memory Register)
 ;;              | (set! Memory8 SU64/32)
+;;              | (set! Memory4 SU32)
+;;              | (set! Memory2 SU16)
+;;              | (set! Memory1 SU8)
 ;;              | (set! Location1 (Binary-op Location1 S32))
 ;;              | (set! Location1 (Binary-op Location1 Register))
 ;;              | (set! Register1 (Binary-op Register1 Memory8))
@@ -39,10 +42,16 @@
 ;;              | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
 ;; Memory     ::= #(mloc Width Register S32 Index)
 ;; Memory8    ::= #(mloc 8     Register S32 Index)
+;; Memory4    ::= #(mloc 4     Register S32 Index)
+;; Memory2    ::= #(mloc 2     Register S32 Index)
+;; Memory1    ::= #(mloc 1     Register S32 Index)
 ;; Index      ::= Register | 0
 ;; Width      ::= 1 | 2 | 4 | 8
 ;; SU64       ::= <signed or unsigned 64-bit integer>
 ;; SU64/32    ::= <sign-extended-32-bit-representable signed or unsigned 64-bit integer>
+;; SU32       ::= <signed or unsigned 32-bit integer>
+;; SU16       ::= <signed or unsigned 16-bit integer>
+;; SU8        ::= <signed or unsigned 8-bit integer>
 ;; S32        ::= <signed 32-bit integer>
 ;; U6         ::= <unsigned 6-bit integer>  ; 0 through 63
 ;; Label      ::= <string>
@@ -104,6 +113,12 @@
                             (mistake "not a sign-extended-32-bit-representable 64-bit integer" x))))
     (define (SU64? x) (and (integer? x) (or (<= #x-8000000000000000 x #xFFFFFFFFFFFFFFFF)
                                             (mistake "not a signed or unsigned 64-bit integer" x))))
+    (define (SU32? x) (and (integer? x) (or (<= #x-80000000 x #xFFFFFFFF)
+                                            (mistake "not a signed or unsigned 32-bit integer" x))))
+    (define (SU16? x) (and (integer? x) (or (<= #x-8000 x #xFFFF)
+                                            (mistake "not a signed or unsigned 16-bit integer" x))))
+    (define (SU8? x) (and (integer? x) (or (<= #x-80 x #xFF)
+                                           (mistake "not a signed or unsigned 8-bit integer" x))))
     (define (Memory8?/ctx ctx x)
       (and (Memory? x) (or (eqv? (mloc-width x) 8) (mistake "memory width is not 8" x ctx))))
     (define (Location?!/ctx ctx x) (or (Register? x) (Memory8?/ctx ctx x)
@@ -162,7 +177,11 @@
                             ((Register? lhs) (unless (or (Register? rhs) (SU64? rhs) (Memory? rhs)
                                                          (Comparison? rhs) (cc? rhs))
                                                (mistake "invalid set! right-hand-side" rhs)))
-                            ((Memory? lhs) (unless (or (Register? rhs) (SU64/32? rhs))
+                            ((Memory? lhs) (unless (or (Register? rhs) (case (mloc-width lhs)
+                                                                         ((8) (SU64/32? rhs))
+                                                                         ((4) (SU32? rhs))
+                                                                         ((2) (SU16? rhs))
+                                                                         (else (SU8? rhs))))
                                              (mistake "invalid set! memory right-hand-side" rhs S)))
                             (else (mistake "not a location" lhs)))))
             ((jump-if) (lambda (x label)
