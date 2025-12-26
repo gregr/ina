@@ -295,6 +295,8 @@
                      ;; maintaining soundness.
                      ((+) (case b ((1) (I/a "incq")) ((-1) (I/a "decq")) (else (simple))))
                      ((-) (case b ((1) (I/a "decq")) ((-1) (I/a "incq")) (else (simple))))
+                     ((*) (if (eqv? b -1) (I/a "negq") (simple)))
+                     ((xor) (if (eqv? b -1) (begin (clear-cmp!) (I/a "notq")) (simple)))
                      ((and) (if (and (Register? a) (U32? b))
                                 (Instruction "andl" b (register/width a 4))
                                 (simple)))
