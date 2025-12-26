@@ -214,7 +214,12 @@
       (jump "end")
       "two"
       (set! rax 2)
-      "end")))
+      "end")
+    (begin
+      (set! rdi 5)
+      (set! rsi 7)
+      (set! rax (+ rdi 20))
+      (set! rdx (+ rsi rax)))))
 
 (for-each
   LLL-test-C

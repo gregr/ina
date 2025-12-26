@@ -626,6 +626,23 @@ two:
 end:
 
 LLL:
+(begin (set! rdi 5) (set! rsi 7) (set! rax (+ rdi 20)) (set! rdx (+ rsi rax)))
+==>
+((rdx . 32) (rax . 25) (rsi . 7) (rdi . 5))
+
+LLL C:
+ rdi = 5ull;
+ rsi = 7ull;
+ rax = rdi + 20ull;
+ rdx = rsi + rax;
+
+LLL x86-64:
+ movl $5,%edi
+ movl $7,%esi
+ leaq 20(%rdi),%rax
+ leaq (%rsi,%rax),%rdx
+
+LLL:
 (begin
  (set! rdi 1)
  (set! rsi 2)
