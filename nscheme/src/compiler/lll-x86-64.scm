@@ -199,6 +199,8 @@
   (define (LLL-emit-x86-64-at&t P)
     (define emit (let ((out (current-output-port))) (lambda (line) (display line out))))
     (mdefine current-cmp #f) (mdefine shift-cmp? #f)
+    (define (clear-cmp!) (set! current-cmp #f))
+    (define (set-cmp! cmp shift?) (set! current-cmp cmp) (set! shift-cmp? shift?))
     (define Register? symbol?)
     (define (Reg x) (string-append "%" (symbol->string x)))
     (define (Operand x)
@@ -242,7 +244,7 @@
     (define (redundant-cmp? op a b)
       (and (equal? current-cmp (cons a b)) (or (not shift-cmp?) (shift-cc op))))
     (define (Compare! op a b)
-      (set! current-cmp (cons a b)) (set! shift-cmp? #f)
+      (set-cmp! (cons a b) #f)
       (cond ((and (eqv? b 0) (Register? a)) (Instruction "testq" a a))
             ((and (U32? b) (Register? a) (memv op '(and nand)))
              (if (U8? b)  ; NOTE: we skip 16-bit to avoid 66h LCP stalls
@@ -280,13 +282,10 @@
         (and iop (let ((simple (lambda () (Instruction iop b a)))
                        (I/a (lambda (iop) (Instruction iop a))))
                    (case op
-                     ((* */over) (set! current-cmp #f))
-                     (else (cond ((not (Shift? op)) (set! current-cmp (cons a 0))
-                                                    (set! shift-cmp? #f))
-                                 ((integer? b) (unless (= b 0)
-                                                 (set! current-cmp (cons a 0))
-                                                 (set! shift-cmp? #t)))
-                                 (else (set! current-cmp #f)))))
+                     ((* */over) (clear-cmp!))
+                     (else (cond ((not (Shift? op)) (set-cmp! (cons a 0) #f))
+                                 ((integer? b)      (unless (= b 0) (set-cmp! (cons a 0) #t)))
+                                 (else              (clear-cmp!)))))
                    (case op
                      ;; NOTE: inc and dec do not update the CF flag, which would normally
                      ;; invalidate redundant-comparison elision for a subsequent unsigned
@@ -302,10 +301,10 @@
                      ((asl asr lsl lsr) (Instruction iop (if (eqv? b 'rcx) 'cl b) a))
                      (else (simple)))
                    #t))))
-    (define (CAS loc new) (set! current-cmp #f) (Instruction "lock cmpxchgq" new loc))
+    (define (CAS loc new) (clear-cmp!) (Instruction "lock cmpxchgq" new loc))
     (let loop ((S P))
       (if (Label? S)
-          (begin (set! current-cmp #f) (emit (string-append S ":\n")))
+          (begin (clear-cmp!) (emit (string-append S ":\n")))
           (apply
             (case (car S)
               ((set!) (lambda (lhs rhs)
@@ -323,7 +322,7 @@
                                              (Jump-cc (flagcc (cadr x)) l)
                                              (Compare-jump op (cadr x) (caddr x) l)))))
               ((jump) (lambda (x) (Jump "jmp" x)))
-              ((call) (lambda (x) (set! current-cmp #f) (Jump "call" x)))
+              ((call) (lambda (x) (clear-cmp!) (Jump "call" x)))
               ((begin) (lambda S* (for-each loop S*)))
               (else (mistake "not a Statement" S)))
             (cdr S))))))
