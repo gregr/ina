@@ -10,14 +10,14 @@
 ;;              | (set! Memory4 SU32)
 ;;              | (set! Memory2 SU16)
 ;;              | (set! Memory1 SU8)
-;;              | (set! Location1 (Binary-op Location1 S32))
+;;              | (set! Location1 (Binary-op Location1 SU64/32))
 ;;              | (set! Location1 (Binary-op Location1 Register))
 ;;              | (set! Register1 (Binary-op Register1 Memory8))
 ;;              | (set! Location1 (Shift-op Location1 U6))
 ;;              | (set! Location1 (Shift-op Location1 rcx))
-;;              | (set! Register1 (* Register1 S32))
+;;              | (set! Register1 (* Register1 SU64/32))
 ;;              | (set! Register1 (* Register1 Location))
-;;              | (set! Register1 (*/over Register1 S32))
+;;              | (set! Register1 (*/over Register1 SU64/32))
 ;;              | (set! Register1 (*/over Register1 Location))
 ;;              | (set! Register Comparison)
 ;;              | (set! Register (cc CC))
@@ -35,7 +35,7 @@
 ;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
 ;; CC-op      ::= addc | subc | +/carry | -/carry | +/over | -/over
 ;; CC         ::= carry | ncarry | over | nover  ; NOTE: carry is borrow, not inverted borrow
-;; Comparison ::= (Compare-op Location S32)
+;; Comparison ::= (Compare-op Location SU64/32)
 ;;              | (Compare-op Location Register)
 ;; Location   ::= Register | Memory8
 ;; Register   ::= rax | rcx | rdx | rsi | rdi | rbx | rbp | rsp
