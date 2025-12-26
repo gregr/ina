@@ -55,6 +55,7 @@
 ;; S32        ::= <signed 32-bit integer>
 ;; U6         ::= <unsigned 6-bit integer>  ; 0 through 63
 ;; Label      ::= <string>
+;; NOTE: (set! Register 0) invalidates condition flags (via xor R R) clearing carry and overflow
 (splicing-local
   ((define Label? string?)
    (define register*.caller-saved '(rax rcx rdx rsi rdi r8 r9 r10 r11))
@@ -225,7 +226,9 @@
         (case wl
           ((8) (case wr
                  ((8) (if (and (U32? rhs) (Register? lhs))
-                          (Instruction "movl" rhs (register/width lhs 4))
+                          (if (eqv? rhs 0)
+                              (Assign-0 lhs)
+                              (Instruction "movl" rhs (register/width lhs 4)))
                           (Instruction "movq" rhs lhs)))
                  ((4) (Instruction "movl" rhs (register/width lhs 4)))
                  ((2) (Instruction "movzwl" rhs (register/width lhs 4)))
@@ -233,7 +236,8 @@
           ((4) (Instruction "movl" (x/width rhs 4) lhs))
           ((2) (Instruction "movw" (x/width rhs 2) lhs))
           (else (Instruction "movb" (x/width rhs 1) lhs)))))
-    (define (Assign-0 reg) (let ((w4 (register/width reg 4))) (Instruction "xorl" w4 w4)))
+    (define (Assign-0 reg) (clear-cmp!) (let ((w4 (register/width reg 4)))
+                                          (Instruction "xorl" w4 w4)))
     (define (Assign-zx1 lhs x) (Instruction "movzbl" x (register/width lhs 4)))
     (define (Set-cc w1 cc) (Instruction (string-append "set" cc) w1))
     (define (Assign-cc lhs cc) (let ((w1 (register/width lhs 1)))

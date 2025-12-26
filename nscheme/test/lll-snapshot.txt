@@ -219,7 +219,7 @@ end:
 
 LLL x86-64:
  movl $10,%edi
- movl $0,%eax
+ xorl %eax,%eax
 loop:
  testq %rdi,%rdi
  je end
@@ -253,7 +253,7 @@ end:
 
 LLL x86-64:
  movl $10,%edi
- movl $0,%eax
+ xorl %eax,%eax
  testq %rdi,%rdi
  je end
 loop:
@@ -309,7 +309,7 @@ negative:
  movq $-1,%rax
  jmp end
 zero:
- movl $0,%eax
+ xorl %eax,%eax
  jmp end
 end:
 
@@ -616,7 +616,7 @@ LLL x86-64:
  jnz one
  testl $43690,%esi
  jnz two
- movl $0,%eax
+ xorl %eax,%eax
  jmp end
 one:
  movl $1,%eax
