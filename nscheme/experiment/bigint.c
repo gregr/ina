@@ -1,4 +1,5 @@
 // gcc -arch x86_64 -std=c99 -o bigint bigint.c && ./bigint
+// gcc -arch x86_64 -std=c99 -O2 -S bigint.c && cat bigint.s && rm bigint.s
 #include <stdio.h>
 typedef unsigned char u8;
 typedef unsigned short u16;
@@ -36,6 +37,24 @@ void bigadd(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out) {
     out[i] = __builtin_addcll(x[i], carry_bit, 0, &carry_bit);
   }
   out[count_full] = carry_bit;
+}
+
+// out = a - b
+u64 bigsub(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out) {
+  u64 carry_bit = 0, count_overlap = (count_a < count_b) ? count_a : count_b;
+  for (u64 i = 0; i < count_overlap; ++i) {
+    out[i] = __builtin_subcll(a[i], b[i], carry_bit, &carry_bit);
+  }
+  if (count_a < count_b) {
+    for (u64 i = count_a; i < count_b; ++i) {
+      out[i] = __builtin_subcll(0, b[i], carry_bit, &carry_bit);
+    }
+  } else {
+    for (u64 i = count_b; i < count_a; ++i) {
+      out[i] = __builtin_subcll(a[i], carry_bit, 0, &carry_bit);
+    }
+  }
+  return carry_bit;
 }
 
 void muladd(u64 factor, u64 count, u64 *in, u64 *out) {
@@ -91,6 +110,24 @@ void testbigadd3(u64 *a, u64 *b, u64 *out) {
   printf("\n");
 }
 
+void testbigsub3(u64 *a, u64 *b, u64 *out) {
+  for (u64 i = 0; i < 4; ++i) { out[i] = 0; }
+  out[3] = -(bigsub(3, a, 3, b, out));
+  printf("                 ");
+  for (u64 i = 3; i > 0; --i) {
+    printf("%016llx ", a[i-1]);
+  }
+  printf("\n-                ");
+  for (u64 i = 3; i > 0; --i) {
+    printf("%016llx ", b[i-1]);
+  }
+  printf("\n===================================================================\n");
+  for (u64 i = 4; i > 0; --i) {
+    printf("%016llx ", out[i-1]);
+  }
+  printf("\n");
+}
+
 void testbigmul3x3(u64 *a, u64 *b, u64 *out) {
   for (u64 i = 0; i < 6; ++i) { out[i] = 0; }
   bigmul(3, a, 3, b, out);
@@ -122,6 +159,31 @@ int main (int argc, char **argv) {
     b[i] = -1;
   }
   testbigadd3(a, b, out);
+  printf("\n");
+  for (u64 i = 0; i < 3; ++i) {
+    a[i] = i+1;
+    b[i] = 2*(i+1);
+  }
+  testbigsub3(a, b, out);
+  printf("\n");
+  for (u64 i = 0; i < 3; ++i) {
+    a[i] = -1;
+    b[i] = -1;
+  }
+  testbigsub3(a, b, out);
+  printf("\n");
+  for (u64 i = 0; i < 3; ++i) {
+    a[i] = 0;
+    b[i] = -1;
+  }
+  testbigsub3(a, b, out);
+  printf("\n");
+  for (u64 i = 0; i < 3; ++i) {
+    a[i] = 0;
+    b[i] = 0;
+  }
+  b[0] = 1;
+  testbigsub3(a, b, out);
   printf("\n");
   for (u64 i = 0; i < 3; ++i) {
     a[i] = i+1;
