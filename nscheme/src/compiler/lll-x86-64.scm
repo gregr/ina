@@ -277,33 +277,31 @@
     (define (No-op) (values))
     (define (Binary-op op a b)
       (let ((iop (binop->op op)))
-        (and iop (begin (case op
-                          ((* */over) (set! current-cmp #f))
-                          (else (cond ((not (Shift? op)) (set! current-cmp (cons a 0))
-                                                         (set! shift-cmp? #f))
-                                      ((integer? b) (unless (= b 0)
-                                                      (set! current-cmp (cons a 0))
-                                                      (set! shift-cmp? #t)))
-                                      (else (set! current-cmp #f)))))
-                        (case op
-                          ;; NOTE: inc and dec do not update the CF flag, which would normally
-                          ;; invalidate redundant-comparison elision for a subsequent unsigned
-                          ;; comparison between the register and zero, because unsigned comparison
-                          ;; condition codes rely on CF.  However, our simplifier for zero-based
-                          ;; unsigned comparisons eliminates the problematic condition codes,
-                          ;; maintaining soundness.
-                          ((+) (if (and (Register? a) (eqv? b 1))
-                                   (Instruction "incq" a)
-                                   (Instruction iop b a)))
-                          ((-) (if (and (Register? a) (eqv? b 1))
-                                   (Instruction "decq" a)
-                                   (Instruction iop b a)))
-                          ((and) (if (and (Register? a) (U32? b))
-                                     (Instruction "andl" b (register/width a 4))
-                                     (Instruction iop b a)))
-                          ((asl asr lsl lsr) (Instruction iop (if (eqv? b 'rcx) 'cl b) a))
-                          (else (Instruction iop b a)))
-                        #t))))
+        (and iop (let ((simple (lambda () (Instruction iop b a)))
+                       (I/a (lambda (iop) (Instruction iop a))))
+                   (case op
+                     ((* */over) (set! current-cmp #f))
+                     (else (cond ((not (Shift? op)) (set! current-cmp (cons a 0))
+                                                    (set! shift-cmp? #f))
+                                 ((integer? b) (unless (= b 0)
+                                                 (set! current-cmp (cons a 0))
+                                                 (set! shift-cmp? #t)))
+                                 (else (set! current-cmp #f)))))
+                   (case op
+                     ;; NOTE: inc and dec do not update the CF flag, which would normally
+                     ;; invalidate redundant-comparison elision for a subsequent unsigned
+                     ;; comparison between the register and zero, because unsigned comparison
+                     ;; condition codes rely on CF.  However, our simplifier for zero-based
+                     ;; unsigned comparisons eliminates the problematic condition codes,
+                     ;; maintaining soundness.
+                     ((+) (case b ((1) (I/a "incq")) ((-1) (I/a "decq")) (else (simple))))
+                     ((-) (case b ((1) (I/a "decq")) ((-1) (I/a "incq")) (else (simple))))
+                     ((and) (if (and (Register? a) (U32? b))
+                                (Instruction "andl" b (register/width a 4))
+                                (simple)))
+                     ((asl asr lsl lsr) (Instruction iop (if (eqv? b 'rcx) 'cl b) a))
+                     (else (simple)))
+                   #t))))
     (define (CAS loc new) (set! current-cmp #f) (Instruction "lock cmpxchgq" new loc))
     (let loop ((S P))
       (if (Label? S)
