@@ -224,7 +224,7 @@ loop:
  testq %rdi,%rdi
  je end
  addq %rdi,%rax
- subq $1,%rdi
+ decq %rdi
  jmp loop
 end:
 
@@ -258,7 +258,7 @@ LLL x86-64:
  je end
 loop:
  addq %rdi,%rax
- subq $1,%rdi
+ decq %rdi
  jg loop
 end:
 
