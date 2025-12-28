@@ -1,4 +1,5 @@
 // gcc -arch x86_64 -std=c99 -o bigint bigint.c && ./bigint
+// gcc -arch x86_64 -std=c99 -o bigint bigint.c bigadd.s && ./bigint && rm bigint
 // gcc -arch x86_64 -std=c99 -O2 -S bigint.c && cat bigint.s && rm bigint.s
 #include <stdio.h>
 typedef unsigned char u8;
@@ -19,25 +20,48 @@ static inline u64pair LLL_umul128(u64 a, u64 b) {
  return p;
 }
 
+// Toggle commenting if linking with bigint.s instead.
+//extern void bigadd(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out);
 void bigadd(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out) {
-  u64 carry_bit = 0, count_overlap, count_full, *x;
+  u64 carry_bit = 0;
   if (count_a < count_b) {
-    count_overlap = count_a;
-    count_full = count_b;
-    x = b;
-  } else {
-    count_overlap = count_b;
-    count_full = count_a;
-    x = a;
+    u64 tmp = count_b; count_b = count_a; count_a = tmp;
+    u64 *ptmp = b; b = a; a = ptmp;
   }
-  for (u64 i = 0; i < count_overlap; ++i) {
+  for (u64 i = 0; i < count_b; ++i) {
     out[i] = __builtin_addcll(a[i], b[i], carry_bit, &carry_bit);
   }
-  for (u64 i = count_overlap; i < count_full; ++i) {
-    out[i] = __builtin_addcll(x[i], carry_bit, 0, &carry_bit);
+  for (u64 i = count_b; i < count_a; ++i) {
+    out[i] = __builtin_addcll(a[i], carry_bit, 0, &carry_bit);
   }
-  out[count_full] = carry_bit;
+  out[count_a] = carry_bit;
 }
+
+// This version counts k down to 0 in a failed attempt to convince Clang and
+// gcc to generate a better loop in x86-64.  It's possible for the main loop
+// to have this structure:
+//   `mov adc mov inc dec jnz`
+// since `inc` and `dec` do not change the carry flag produced by `adc` that
+// must be used by the next iteration.  Counting down to 0 using dec is the
+// trick that lets us use `jnz` without a `cmp`.  A `cmp` would ruin the carry
+// flag needed by the next iteration.  Unfortunately, even for this version,
+// Clang and gcc track the carry in a register rather than using the carry flag
+// directly, giving a significantly worse loop structure of:
+//   `mov add setc add setc or movzbl mov inc cmp jne`
+//void bigadd(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out) {
+//  u64 carry_bit = 0;
+//  if (count_a < count_b) {
+//    u64 tmp = count_b; count_b = count_a; count_a = tmp;
+//    u64 *ptmp = b; b = a; a = ptmp;
+//  }
+//  for (u64 i = 0, k = count_b; k > 0; ++i, --k) {
+//    out[i] = __builtin_addcll(a[i], b[i], carry_bit, &carry_bit);
+//  }
+//  for (u64 i = count_b, k = count_a - count_b; k > 0; ++i, --k) {
+//    out[i] = __builtin_addcll(a[i], carry_bit, 0, &carry_bit);
+//  }
+//  out[count_a] = carry_bit;
+//}
 
 // out = a - b
 u64 bigsub(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out) {
