@@ -8,16 +8,16 @@ LLL:
   (set! r9 2596069104)
   (set! r10 4096)
   (set! r11 -16)
-  (set! #(mloc 8 r10 -32 0) r8)
-  (set! #(mloc 8 r10 0 0) r8)
-  (set! #(mloc 4 r10 4 0) r9)
-  (set! #(mloc 8 r10 0 r11) r9)
-  (set! r8 #(mloc 2 r10 4 0))
-  (set! r9 #(mloc 8 r10 0 0))
+  (set! #(mloc 8 r10 -32 0 0) r8)
+  (set! #(mloc 8 r10 0 0 0) r8)
+  (set! #(mloc 4 r10 4 0 0) r9)
+  (set! #(mloc 8 r10 0 r11 0) r9)
+  (set! r8 #(mloc 2 r10 4 0 0))
+  (set! r9 #(mloc 8 r10 0 0 0))
   (set! r8 (* r8 2))
   (set! r9 (* r9 2))
-  (set! rdi #(mloc 8 r10 0 r11))
-  (set! rsi #(mloc 8 r10 -32 0))))
+  (set! rdi #(mloc 8 r10 0 r11 0))
+  (set! rsi #(mloc 8 r10 -32 0 0))))
 ==>
 ((rsi . 305419896)
  (rdi . 2596069104)
@@ -69,6 +69,79 @@ LLL x86-64:
  imulq $2,%r8
  imulq $2,%r9
  movq (%r10,%r11),%rdi
+ movq -32(%r10),%rsi
+
+LLL:
+(begin
+ (set! rax 55)
+ (begin (set! rdx 11) (set! rax (+ rax 7)))
+ (set! rax (* rax rdx))
+ (begin
+  (set! r8 305419896)
+  (set! r9 2596069104)
+  (set! r10 4096)
+  (set! r11 -2)
+  (set! #(mloc 8 r10 -32 0 0) r8)
+  (set! #(mloc 8 r10 0 0 0) r8)
+  (set! #(mloc 4 r10 4 0 0) r9)
+  (set! #(mloc 8 r10 0 r11 3) r9)
+  (set! r8 #(mloc 2 r10 4 0 0))
+  (set! r9 #(mloc 8 r10 0 0 0))
+  (set! r8 (* r8 2))
+  (set! r9 (* r9 2))
+  (set! rdi #(mloc 8 r10 0 r11 3))
+  (set! rsi #(mloc 8 r10 -32 0 0))))
+==>
+((rsi . 305419896)
+ (rdi . 2596069104)
+ (r9 . 3853319726573333744)
+ (r8 . 114144)
+ (r11 . -2)
+ (r10 . 4096)
+ (rax . 682)
+ (rdx . 11)
+ (4080 . 2596069104)
+ (4096 . -7296712173568108936)
+ (4064 . 305419896))
+
+LLL C:
+ rax = 55ull;
+ rdx = 11ull;
+ rax = rax + 7ull;
+ rax = rax * rdx;
+ r8 = 305419896ull;
+ r9 = 2596069104ull;
+ r10 = 4096ull;
+ r11 = -2ull;
+ *(u64*)(r10 + -32ull) = r8;
+ *(u64*)(r10) = r8;
+ *(u32*)(r10 + 4ull) = (u32)r9;
+ *(u64*)(r10 + (r11<<3)) = r9;
+ r8 = *(u16*)(r10 + 4ull);
+ r9 = *(u64*)(r10);
+ r8 = r8 * 2ull;
+ r9 = r9 * 2ull;
+ rdi = *(u64*)(r10 + (r11<<3));
+ rsi = *(u64*)(r10 + -32ull);
+
+LLL x86-64:
+ movl $55,%eax
+ movl $11,%edx
+ addq $7,%rax
+ imulq %rdx,%rax
+ movl $305419896,%r8d
+ movl $2596069104,%r9d
+ movl $4096,%r10d
+ movq $-2,%r11
+ movq %r8,-32(%r10)
+ movq %r8,(%r10)
+ movl %r9d,4(%r10)
+ movq %r9,(%r10,%r11,8)
+ movzwl 4(%r10),%r8d
+ movq (%r10),%r9
+ imulq $2,%r8
+ imulq $2,%r9
+ movq (%r10,%r11,8),%rdi
  movq -32(%r10),%rsi
 
 LLL:
@@ -341,11 +414,11 @@ LLL x86-64:
 LLL:
 (begin
  (set! r10 4096)
- (set! #(mloc 8 r10 0 0) 33)
+ (set! #(mloc 8 r10 0 0 0) 33)
  (set! rax 44)
  (set! rdi rax)
  (set! rdi (+ rdi 55))
- (set! rax (atomic-cas #(mloc 8 r10 0 0) rax rdi)))
+ (set! rax (atomic-cas #(mloc 8 r10 0 0 0) rax rdi)))
 ==>
 ((rax . 33) (rdi . 99) (r10 . 4096) (4096 . 33))
 
@@ -368,11 +441,11 @@ LLL x86-64:
 LLL:
 (begin
  (set! r10 4096)
- (set! #(mloc 8 r10 0 0) 33)
- (set! rax #(mloc 8 r10 0 0))
+ (set! #(mloc 8 r10 0 0 0) 33)
+ (set! rax #(mloc 8 r10 0 0 0))
  (set! rdi rax)
  (set! rdi (+ rdi 55))
- (set! rax (atomic-cas #(mloc 8 r10 0 0) rax rdi)))
+ (set! rax (atomic-cas #(mloc 8 r10 0 0 0) rax rdi)))
 ==>
 ((rax . 33) (rdi . 88) (r10 . 4096) (4096 . 88))
 

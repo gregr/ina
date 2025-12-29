@@ -22,17 +22,19 @@
 ;; CC         ::= carry | ncarry | over | nover  ; NOTE: carry is borrow, not inverted borrow
 ;; Location   ::= Var | Memory
 ;; Var        ::= <symbol>
-;; Memory     ::= #(mloc Width Expr Expr Expr)
-;; Memory8    ::= #(mloc 8     Expr Expr Expr)
+;; Memory     ::= #(mloc Width Expr Expr Expr IShift)
+;; Memory8    ::= #(mloc 8     Expr Expr Expr IShift)
 ;; Width      ::= 1 | 2 | 4 | 8
+;; IShift     ::= 0 | 1 | 2 | 3
 ;; SU64       ::= <signed or unsigned 64-bit integer>
 ;; Label      ::= <string>
-(define (mloc w b d i) (vector 'mloc w b d i))
-(define (mloc? x) (and (vector? x) (= (vector-length x) 5) (eqv? (vector-ref x 0) 'mloc)))
+(define (mloc w b d i s) (vector 'mloc w b d i s))
+(define (mloc? x) (and (vector? x) (= (vector-length x) 6) (eqv? (vector-ref x 0) 'mloc)))
 (define (mloc-width x) (vector-ref x 1))
 (define (mloc-base  x) (vector-ref x 2))
 (define (mloc-disp  x) (vector-ref x 3))
 (define (mloc-index x) (vector-ref x 4))
+(define (mloc-shift x) (vector-ref x 5))
 
 (splicing-let ((2^63 #x8000000000000000) (2^64 #x10000000000000000))
   (define s64-min (- 2^63))
@@ -74,7 +76,9 @@
   (define (LLL-validate P)
     (define (Memory? x) (and (mloc? x) (or (memv (mloc-width x) '(8 4 2 1))
                                            (mistake "invalid mloc width" x))
-                             (Expr?! (mloc-base x)) (Expr?! (mloc-disp x)) (Expr?! (mloc-index x))))
+                             (Expr?! (mloc-base x)) (Expr?! (mloc-disp x))
+                             (Expr?! (mloc-index x)) (or (memv (mloc-shift x) '(0 1 2 3))
+                                                         (mistake "invalid mloc shift" x))))
     (define (Memory?! x) (or (Memory? x) (mistake "not a memory location" x)))
     (define (Memory8?! x) (or (and (Memory?! x) (eqv? (mloc-width x) 8))
                               (mistake "memory width is not 8" x)))
@@ -136,9 +140,10 @@
 
   (define (LLL-eval P loc=>x)
     (mlet ((loc=>x loc=>x) (flag #f))
-      (define (mloc-addr x) (let ((width (mloc-width x)) (addr (+ (Expr (mloc-base x))
-                                                                  (Expr (mloc-disp x))
-                                                                  (Expr (mloc-index x)))))
+      (define (mloc-addr x) (let ((width (mloc-width x))
+                                  (addr (+ (Expr (mloc-base x)) (Expr (mloc-disp x))
+                                           (* (Expr (mloc-index x))
+                                              (bitwise-asl 1 (mloc-shift x))))))
                               (unless (= (integer-floor-mod addr width) 0)
                                 (mistake "unaligned memory address for width" width addr))
                               addr))

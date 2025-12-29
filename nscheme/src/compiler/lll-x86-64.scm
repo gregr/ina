@@ -42,13 +42,14 @@
 ;; Location   ::= Register | Memory8
 ;; Register   ::= rax | rcx | rdx | rsi | rdi | rbx | rbp | rsp
 ;;              | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
-;; Memory     ::= #(mloc Width Register S32 Index)
-;; Memory8    ::= #(mloc 8     Register S32 Index)
-;; Memory4    ::= #(mloc 4     Register S32 Index)
-;; Memory2    ::= #(mloc 2     Register S32 Index)
-;; Memory1    ::= #(mloc 1     Register S32 Index)
-;; Index      ::= Register | 0
+;; Memory     ::= #(mloc Width Register S32 Index IShift)
+;; Memory8    ::= #(mloc 8     Register S32 Index IShift)
+;; Memory4    ::= #(mloc 4     Register S32 Index IShift)
+;; Memory2    ::= #(mloc 2     Register S32 Index IShift)
+;; Memory1    ::= #(mloc 1     Register S32 Index IShift)
 ;; Width      ::= 1 | 2 | 4 | 8
+;; Index      ::= Register | 0
+;; IShift     ::= 0 | 1 | 2 | 3
 ;; SU64       ::= <signed or unsigned 64-bit integer>
 ;; SU64/32    ::= <sign-extended-32-bit-representable signed or unsigned 64-bit integer>
 ;; SU32       ::= <signed or unsigned 32-bit integer>
@@ -108,7 +109,8 @@
                              (Register?! (mloc-base x))
                              (or (S32? (mloc-disp x)) (mistake "mloc with invalid displacement" x))
                              (or (eqv? (mloc-index x) 0) (Register? (mloc-index x))
-                                 (mistake "mloc with invalid index" x))))
+                                 (mistake "mloc with invalid index" x))
+                             (or (memv (mloc-shift x) '(0 1 2 3)) (mistake "invalid mloc shift" x))))
     (define (U6? x) (and (integer? x) (or (<= 0 x 63) (mistake "not an unsigned 6-bit integer" x))))
     (define (S32? x) (and (integer? x) (or (<= #x-80000000 x #x7FFFFFFF)
                                            (mistake "not a signed 32-bit integer" x))))
@@ -213,12 +215,18 @@
       (cond ((integer? x) (string-append "$" (number->string (s64 x))))
             ((Register? x) (Reg x))
             ((string? x) x)
-            ((mloc? x) (let ((base (mloc-base x)) (disp (mloc-disp x)) (idx (mloc-index x)))
-                         (string-append (cond ((eqv? disp 0)   "")
-                                              ((integer? disp) (number->string disp))
-                                              (else            disp))
-                                        "(" (Reg base)
-                                        (if (eqv? idx 0) "" (string-append "," (Reg idx))) ")")))
+            ((mloc? x)
+             (let ((b (mloc-base x)) (d (mloc-disp x)) (i (mloc-index x)) (s (mloc-shift x)))
+               (string-append
+                 (cond ((eqv? d 0)   "")
+                       ((integer? d) (number->string d))
+                       (else         d))
+                 "(" (Reg b)
+                 (if (eqv? i 0) "" (string-append
+                                     "," (Reg i)
+                                     (if (= s 0) "" (string-append
+                                                      "," (number->string (bitwise-asl 1 s))))))
+                 ")")))
             (else (mistake "not an operand" x))))
     (define (Operand-width x) (if (mloc? x) (mloc-width x) 8))
     (define (Instruction op . rand*)
@@ -312,7 +320,7 @@
                    #t))))
     (define (Assign-op2 lhs op a b)
       (if (and (eqv? op '+) (not (equal? a lhs)))
-          (Instruction "leaq" (if (integer? b) (mloc 8 a b 0) (mloc 8 a 0 b)) lhs)
+          (Instruction "leaq" (if (integer? b) (mloc 8 a b 0 0) (mloc 8 a 0 b 0)) lhs)
           (or (Binary-op op a b) (Cmp-op lhs op a b))))
     (define (CAS loc new) (clear-cmp!) (Instruction "lock cmpxchgq" new loc))
     (let loop ((S P))
@@ -321,7 +329,7 @@
           (apply
             (case (car S)
               ((set!) (lambda (lhs rhs)
-                        (cond ((Label? rhs) (Instruction "leaq" `#(mloc 8 rip ,rhs 0) lhs))
+                        (cond ((Label? rhs) (Instruction "leaq" (mloc 8 'rip rhs 0 0) lhs))
                               ((pair? rhs) (apply (case-lambda
                                                     ((a b) (Assign-op2 lhs (car rhs) a b))
                                                     ((cc) (Assign-cc lhs (flagcc cc)))
