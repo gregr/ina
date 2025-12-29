@@ -57,7 +57,9 @@
 ;; S32        ::= <signed 32-bit integer>
 ;; U6         ::= <unsigned 6-bit integer>  ; 0 through 63
 ;; Label      ::= <string>
-;; NOTE: (set! Register 0) invalidates condition flags (via xor R R) clearing carry and overflow
+;; NOTE:
+;; - (set! Register 0) invalidates condition flags (via xor R R) clearing carry and overflow
+;; - (set! X (+ X 1)) and (set! X (- X 1)) do not alter the carry flag.
 (splicing-local
   ((define Label? string?)
    (define register*.caller-saved '(rax rcx rdx rsi rdi r8 r9 r10 r11))
@@ -288,11 +290,7 @@
       (let ((iop (binop->op op)))
         (and iop (let ((simple (lambda () (Instruction iop b a)))
                        (I/a (lambda (iop) (Instruction iop a))))
-                   (case op
-                     ((* */over) (clear-cmp!))
-                     (else (cond ((not (Shift? op)) (set-cmp! (cons a 0) #f))
-                                 ((integer? b)      (unless (= b 0) (set-cmp! (cons a 0) #t)))
-                                 (else              (clear-cmp!)))))
+                   (set-cmp! (cons a 0) #f)
                    (case op
                      ;; NOTE: inc and dec do not update the CF flag, which would normally
                      ;; invalidate redundant-comparison elision for a subsequent unsigned
@@ -300,14 +298,15 @@
                      ;; condition codes rely on CF.  However, our simplifier for zero-based
                      ;; unsigned comparisons eliminates the problematic condition codes,
                      ;; maintaining soundness.
-                     ((+) (case b ((1) (I/a "incq")) ((-1) (I/a "decq")) (else (simple))))
-                     ((-) (case b ((1) (I/a "decq")) ((-1) (I/a "incq")) (else (simple))))
-                     ((*) (if (eqv? b -1) (I/a "negq") (simple)))
+                     ((+ +/over) (case b ((1) (I/a "incq")) ((-1) (I/a "decq")) (else (simple))))
+                     ((- -/over) (case b ((1) (I/a "decq")) ((-1) (I/a "incq")) (else (simple))))
+                     ((* */over) (clear-cmp!) (if (eqv? b -1) (I/a "negq") (simple)))
                      ((xor) (if (eqv? b -1) (begin (clear-cmp!) (I/a "notq")) (simple)))
                      ((and) (if (and (Register? a) (U32? b))
                                 (Instruction "andl" b (register/width a 4))
                                 (simple)))
-                     ((asl asr lsl lsr) (Instruction iop (if (eqv? b 'rcx) 'cl b) a))
+                     ((asl asr lsl lsr) (if (eqv? b 0) (clear-cmp!) (set-cmp! (cons a 0) #t))
+                                        (Instruction iop (if (eqv? b 'rcx) 'cl b) a))
                      (else (simple)))
                    #t))))
     (define (Assign-op2 lhs op a b)
