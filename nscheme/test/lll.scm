@@ -249,7 +249,16 @@
       (set! rdi 5)
       (set! rsi 7)
       (set! rax (+ rdi 20))
-      (set! rdx (+ rsi rax)))))
+      (set! rdx (+ rsi rax)))
+    (begin
+      (set! rax 77)
+      (set! rdx rax)
+      (set! rdi rax)
+      (set! rsi rax)
+      (set! rax (- 0 rax))
+      (set! rdx (* rdx -1))
+      (set! rdi (xor rdi -1))
+      (set! rsi (xor rsi rsi)))))
 
 (for-each
   LLL-test-C

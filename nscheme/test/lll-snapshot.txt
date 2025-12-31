@@ -752,6 +752,39 @@ LLL x86-64:
 
 LLL:
 (begin
+ (set! rax 77)
+ (set! rdx rax)
+ (set! rdi rax)
+ (set! rsi rax)
+ (set! rax (- 0 rax))
+ (set! rdx (* rdx -1))
+ (set! rdi (xor rdi -1))
+ (set! rsi (xor rsi rsi)))
+==>
+((rsi . 0) (rdi . -78) (rdx . -77) (rax . -77))
+
+LLL C:
+ rax = 77ull;
+ rdx = rax;
+ rdi = rax;
+ rsi = rax;
+ rax = 0ull - rax;
+ rdx = rdx * -1ull;
+ rdi = rdi ^ -1ull;
+ rsi = rsi ^ rsi;
+
+LLL x86-64:
+ movl $77,%eax
+ movq %rax,%rdx
+ movq %rax,%rdi
+ movq %rax,%rsi
+ negq %rax
+ negq %rdx
+ notq %rdi
+ xorq %rsi,%rsi
+
+LLL:
+(begin
  (set! rdi 1)
  (set! rsi 2)
  (set! rax (call "foo" rdi rsi))
