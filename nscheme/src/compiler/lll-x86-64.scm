@@ -326,7 +326,7 @@
                    #t))))
     (define (Assign-op2 lhs op a b)
       (if (and (eqv? op '+) (not (equal? a lhs)))
-          (Instruction "leaq" (if (integer? b) (mloc 8 a b 0 0) (mloc 8 a 0 b 0)) lhs)
+          (Instruction "leaq" (if (integer? b) (mloc 8 a (s64 b) 0 0) (mloc 8 a 0 b 0)) lhs)
           (or (Binary-op op a b) (Cmp-op lhs op a b))))
     (define (CAS loc new) (clear-cmp!) (Instruction "lock cmpxchgq" new loc))
     (let loop ((S P))
