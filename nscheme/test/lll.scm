@@ -269,12 +269,3 @@
       (set! rax (call "foo" rdi rsi))
       (set! rdi rax)
       (call r15 rdi rsi))))
-
-(for-each
-  LLL-test/no-eval
-  '((begin
-      (set! rdi 1)
-      (set! rsi 2)
-      (call "foo")
-      (set! rdi rax)
-      (call r15))))

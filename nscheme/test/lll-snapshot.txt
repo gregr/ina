@@ -801,20 +801,3 @@ LLL C:
  rdi = rax;
  r15(rdi,rsi);
 
-LLL:
-(begin (set! rdi 1) (set! rsi 2) (call "foo") (set! rdi rax) (call r15))
-
-LLL C:
- rdi = 1ull;
- rsi = 2ull;
- foo();
- rdi = rax;
- r15();
-
-LLL x86-64:
- movl $1,%edi
- movl $2,%esi
- call foo
- movq %rax,%rdi
- call *%r15
-

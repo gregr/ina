@@ -31,8 +31,6 @@
 ;;              | (jump-if (cc CC) Label)
 ;;              | (jump Label)
 ;;              | (jump Location)
-;;              | (call Label)
-;;              | (call Location)
 ;;              | Label
 ;; Binary-op  ::= + | - | and | ior | xor | CC-op  ; * destination must be a register
 ;; Shift-op   ::= asl | asr | lsl | lsr
@@ -210,9 +208,6 @@
                          (unless (Label? label) (mistake "not a label" label))))
             ((jump) (lambda (x) (unless (or (Label? x) (Register? x) (Memory8?/ctx S x))
                                   (mistake "not a jump target" x S))))
-            ((call) (lambda (rator)
-                      (unless (or (Label? rator) (Register? rator) (Memory8?/ctx S rator))
-                        (mistake "not callable" rator))))
             ((begin) (lambda S* (for-each loop S*)))
             (else (mistake "not a Statement" S)))
           (cdr S)))))
@@ -368,7 +363,6 @@
                                              (Jump-cc (flagcc (cadr x)) l)
                                              (Compare-jump op (cadr x) (caddr x) l)))))
               ((jump) (lambda (x) (Jump "jmp" x)))
-              ((call) (lambda (x) (clear-cmp!) (Jump "call" x)))
               ((begin) (lambda S* (for-each loop S*)))
               (else (mistake "not a Statement" S)))
             (cdr S))))))
