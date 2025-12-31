@@ -309,7 +309,7 @@ LLL:
  "loop"
  (set! rax (+ rax rdi))
  (set! rdi (- rdi 1))
- (jump-if (> rdi 0) "loop")
+ (jump-if (=/= rdi 0) "loop")
  "end")
 ==>
 ((rdi . 0) (rax . 55))
@@ -321,7 +321,7 @@ LLL C:
 loop:
  rax = rax + rdi;
  rdi = rdi - 1ull;
- if ((s64)rdi > (s64)0ull) goto loop;
+ if (rdi != 0ull) goto loop;
 end:
 
 LLL x86-64:
@@ -332,7 +332,7 @@ LLL x86-64:
 loop:
  addq %rdi,%rax
  decq %rdi
- jg loop
+ jnz loop
 end:
 
 LLL:
@@ -374,8 +374,8 @@ LLL x86-64:
  movl $5,%edi
  movq $-10,%rsi
  addq %rsi,%rdi
- je zero
- jl negative
+ jz zero
+ js negative
  movl $1,%eax
  jmp end
 negative:

@@ -98,8 +98,7 @@
    (define (cmpop->cc op) (case op ((and) "nz") ((nand) "z") ((=) "e") ((=/=)  "ne")
                             ((<) "l") ((<=) "le") ((>) "g") ((>=) "ge")
                             ((u<) "b") ((u<=) "be") ((u>) "a") ((u>=) "ae")
-                            (else #f)))
-   (define (cmpop->test op) (case op ((and nand) "testq") (else "cmpq"))))
+                            (else #f))))
 
   (define (LLL-validate-x86-64 P)
     (define (Register? x) (and (symbol? x) (or (memv x register*) (mistake "invalid register" x))))
@@ -206,9 +205,9 @@
 
   (define (LLL-emit-x86-64-at&t P)
     (define emit (let ((out (current-output-port))) (lambda (line) (display line out))))
-    (mdefine current-cmp #f) (mdefine shift-cmp? #f)
+    (mdefine current-cmp #f) (mdefine current-cmp-type #f)
     (define (clear-cmp!) (set! current-cmp #f))
-    (define (set-cmp! cmp shift?) (set! current-cmp cmp) (set! shift-cmp? shift?))
+    (define (set-cmp! cmp type) (set! current-cmp cmp) (set! current-cmp-type type))
     (define Register? symbol?)
     (define (Reg x) (string-append "%" (symbol->string x)))
     (define (Operand x)
@@ -255,19 +254,34 @@
     (define (Set-cc w1 cc) (Instruction (string-append "set" cc) w1))
     (define (Assign-cc lhs cc) (let ((w1 (register/width lhs 1)))
                                  (Set-cc w1 cc) (Assign-zx1 lhs w1)))
-    (define (shift-cc cmp) (case cmp ((=) "z") ((=/=)  "nz") ((<) "s") ((>=) "ns") ((u>) "nz")
-                             (else #f)))
-    (define (choose-cc cmp) (if (and shift-cmp? current-cmp) (shift-cc cmp) (cmpop->cc cmp)))
+    (define (weak-cc cmp) (case cmp ((=) "z") ((=/=)  "nz") ((<) "s") ((>=) "ns") ((u>) "nz")
+                            (else #f)))
+    (define (choose-cc cmp) (if (and current-cmp (not current-cmp-type))
+                                (weak-cc cmp)
+                                (cmpop->cc cmp)))
     (define (redundant-cmp? op a b)
-      (and (equal? current-cmp (cons a b)) (or (not shift-cmp?) (shift-cc op))))
+      (define (cmp-subsumed? op a b) (and (equal? current-cmp (cons a b))
+                                          (or (eqv? current-cmp-type 'cmp) (weak-cc op))))
+      (case op
+        ((and nand) (if (equal? a b)
+                        (cmp-subsumed? '= a 0)
+                        (and (equal? current-cmp (cons a b))
+                             (eqv? current-cmp-type 'test))))
+        (else (cmp-subsumed? op a b))))
     (define (Compare! op a b)
-      (set-cmp! (cons a b) #f)
-      (cond ((and (eqv? b 0) (Register? a)) (Instruction "testq" a a))
-            ((and (U32? b) (Register? a) (memv op '(and nand)))
-             (if (U8? b)  ; NOTE: we skip 16-bit to avoid 66h LCP stalls
-                 (Instruction "testb" b (register/width a 1))
-                 (Instruction "testl" b (register/width a 4))))
-            (else (Instruction (cmpop->test op) b a))))
+      (case op
+        ((and nand) (if (equal? a b)
+                        (set-cmp! (cons a 0) 'cmp)
+                        (set-cmp! (cons a b) 'test))
+                    (cond ((and (U32? b) (Register? a))
+                           (if (U8? b)  ; NOTE: we skip 16-bit to avoid 66h LCP stalls
+                               (Instruction "testb" b (register/width a 1))
+                               (Instruction "testl" b (register/width a 4))))
+                          (else (Instruction "testq" b a))))
+        (else (set-cmp! (cons a b) 'cmp)
+              (if (and (eqv? b 0) (Register? a))
+                  (Instruction "testq" a a)
+                  (Instruction "cmpq" b a)))))
     (define (Compare op a b) (unless (redundant-cmp? op a b) (Compare! op a b)))
     (define (Cmp-op lhs op a b)
       (define (k op)
@@ -300,12 +314,6 @@
                        (I/a (lambda (iop) (Instruction iop a))))
                    (set-cmp! (cons a 0) #f)
                    (case op
-                     ;; NOTE: inc and dec do not update the CF flag, which would normally
-                     ;; invalidate redundant-comparison elision for a subsequent unsigned
-                     ;; comparison between the register and zero, because unsigned comparison
-                     ;; condition codes rely on CF.  However, our simplifier for zero-based
-                     ;; unsigned comparisons eliminates the problematic condition codes,
-                     ;; maintaining soundness.
                      ((+ +/over) (case b ((1) (I/a "incq")) ((-1) (I/a "decq")) (else (simple))))
                      ((- -/over) (case b ((1) (I/a "decq")) ((-1) (I/a "incq")) (else (simple))))
                      ((* */over) (clear-cmp!) (if (eqv? b -1) (I/a "negq") (simple)))
@@ -313,9 +321,8 @@
                      ((and) (if (and (Register? a) (U32? b))
                                 (Instruction "andl" b (register/width a 4))
                                 (simple)))
-                     ((asl asr lsl lsr)
-                      (if (and (integer? b) (not (= b 0))) (set-cmp! (cons a 0) #t) (clear-cmp!))
-                      (Instruction iop (if (eqv? b 'rcx) 'cl b) a))
+                     ((asl asr lsl lsr) (unless (and (integer? b) (not (= b 0))) (clear-cmp!))
+                                        (Instruction iop (if (eqv? b 'rcx) 'cl b) a))
                      (else (simple)))
                    #t))))
     (define (Assign-op2 lhs op a b)
