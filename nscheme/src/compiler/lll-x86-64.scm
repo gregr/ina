@@ -62,6 +62,7 @@
 ;; NOTE:
 ;; - (set! Register 0) invalidates condition flags (via xor R R) clearing carry and overflow
 ;; - (set! X (+ X 1)) and (set! X (- X 1)) do not alter the carry flag.
+;; - (set! X (xor X -1)) does not alter flags.
 (splicing-local
   ((define Label? string?)
    (define register*.caller-saved '(rax rcx rdx rsi rdi r8 r9 r10 r11))
@@ -320,7 +321,9 @@
                      ((+ +/over) (case b ((1) (I/a "incq")) ((-1) (I/a "decq")) (else (simple))))
                      ((- -/over) (case b ((1) (I/a "decq")) ((-1) (I/a "incq")) (else (simple))))
                      ((* */over) (clear-cmp!) (if (eqv? b -1) (I/a "negq") (simple)))
-                     ((xor) (if (eqv? b -1) (begin (clear-cmp!) (I/a "notq")) (simple)))
+                     ((xor) (cond ((eqv? b -1) (clear-cmp!) (I/a "notq"))
+                                  ((eqv? a b) (Assign-0 a))
+                                  (else (simple))))
                      ((and) (if (and (Register? a) (U32? b))
                                 (Instruction "andl" b (register/width a 4))
                                 (simple)))
