@@ -269,3 +269,45 @@
       (set! rax (call "foo" rdi rsi))
       (set! rdi rax)
       (call r15 rdi rsi))))
+
+(define bigadd
+  '(begin
+     ;; rdi = count_a
+     ;; rsi = a
+     ;; rdx = count_b
+     ;; rcx = b
+     ;; r8 = out
+     (jump-if (u>= rdi rdx) "L_loop1_init")
+     (set! r9 rdi)
+     (set! rdi rdx)
+     (set! rdx r9)
+     (set! r9 rsi)
+     (set! rsi rcx)
+     (set! rcx r9)
+     "L_loop1_init"
+     (set! rax 0)
+     (jump-if (= rdx 0) "L_loop2_init")
+     "L_loop1"
+     (set! r9 #(mloc 8 rsi 0 rax 3))
+     (set! r9 (addc r9 #(mloc 8 rcx 0 rax 3)))
+     (set! #(mloc 8 r8 0 rax 3) r9)
+     (set! rax (+ rax 1))
+     (set! rdx (- rdx 1))
+     (jump-if (=/= rdx 0) "L_loop1")
+     "L_loop2_init"
+     (set! rdx (cc carry))
+     (set! rdi (- rdi rax))
+     (jump-if (= rdi 0) "L_done")
+     (set! rdx (+/carry rdx -1))
+     "L_loop2"
+     (set! r9 #(mloc 8 rsi 0 rax 3))
+     (set! r9 (addc r9 0))
+     (set! #(mloc 8 r8 0 rax 3) r9)
+     (set! rax (+ rax 1))
+     (set! rdi (- rdi 1))
+     (jump-if (=/= rdi 0) "L_loop2")
+     (set! rdx (cc carry))
+     "L_done"
+     (set! #(mloc 8 r8 0 rax 3) rdx)))
+
+(LLL-test/no-eval bigadd)

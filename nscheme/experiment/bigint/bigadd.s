@@ -30,7 +30,6 @@ L_loop2_init:
         setc %dl
         movzbl %dl,%edx
         subq %rax,%rdi
-        testq %rdi,%rdi
         jz L_done
         addq $-1,%rdx
 L_loop2:
