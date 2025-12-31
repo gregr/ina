@@ -258,7 +258,8 @@
       (set! rax (- 0 rax))
       (set! rdx (* rdx -1))
       (set! rdi (xor rdi -1))
-      (set! rsi (xor rsi rsi)))))
+      (set! rsi (xor rsi rsi))
+      (set! rcx (lea #(mloc 1 rsi 17 rax 2))))))
 
 (for-each
   LLL-test-C

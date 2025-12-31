@@ -759,9 +759,10 @@ LLL:
  (set! rax (- 0 rax))
  (set! rdx (* rdx -1))
  (set! rdi (xor rdi -1))
- (set! rsi (xor rsi rsi)))
+ (set! rsi (xor rsi rsi))
+ (set! rcx (lea #(mloc 1 rsi 17 rax 2))))
 ==>
-((rsi . 0) (rdi . -78) (rdx . -77) (rax . -77))
+((rcx . -291) (rsi . 0) (rdi . -78) (rdx . -77) (rax . -77))
 
 LLL C:
  rax = 77ull;
@@ -772,6 +773,7 @@ LLL C:
  rdx = rdx * -1ull;
  rdi = rdi ^ -1ull;
  rsi = rsi ^ rsi;
+ rcx = rsi + 17ull + (rax<<2);
 
 LLL x86-64:
  movl $77,%eax
@@ -782,6 +784,7 @@ LLL x86-64:
  negq %rdx
  notq %rdi
  xorl %esi,%esi
+ leaq 17(%rsi,%rax,4),%rcx
 
 LLL:
 (begin
