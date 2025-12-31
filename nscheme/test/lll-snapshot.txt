@@ -309,6 +309,41 @@ LLL:
  "loop"
  (set! rax (+ rax rdi))
  (set! rdi (- rdi 1))
+ (jump-if (> rdi 0) "loop")
+ "end")
+==>
+((rdi . 0) (rax . 55))
+
+LLL C:
+ rdi = 10ull;
+ rax = 0ull;
+ if (rdi == 0ull) goto end;
+loop:
+ rax = rax + rdi;
+ rdi = rdi - 1ull;
+ if ((s64)rdi > (s64)0ull) goto loop;
+end:
+
+LLL x86-64:
+ movl $10,%edi
+ xorl %eax,%eax
+ testq %rdi,%rdi
+ je end
+loop:
+ addq %rdi,%rax
+ decq %rdi
+ testq %rdi,%rdi
+ jg loop
+end:
+
+LLL:
+(begin
+ (set! rdi 10)
+ (set! rax 0)
+ (jump-if (= rdi 0) "end")
+ "loop"
+ (set! rax (+ rax rdi))
+ (set! rdi (- rdi 1))
  (jump-if (=/= rdi 0) "loop")
  "end")
 ==>

@@ -141,6 +141,15 @@
       "loop"
       (set! rax (+ rax rdi))
       (set! rdi (- rdi 1))
+      (jump-if (> rdi 0) "loop")
+      "end")
+    (begin
+      (set! rdi 10)
+      (set! rax 0)
+      (jump-if (= rdi 0) "end")
+      "loop"
+      (set! rax (+ rax rdi))
+      (set! rdi (- rdi 1))
       (jump-if (=/= rdi 0) "loop")
       "end")
     (begin
