@@ -1,4 +1,4 @@
-// gcc -arch x86_64 -std=c99 -o bigint bigint.c && ./bigint
+// gcc -arch x86_64 -std=c99 -o bigint bigint.c && ./bigint && rm bigint
 // gcc -arch x86_64 -std=c99 -o bigint bigint.c bigadd.s && ./bigint && rm bigint
 // gcc -arch x86_64 -std=c99 -O2 -S bigint.c && cat bigint.s && rm bigint.s
 #include <stdio.h>
@@ -258,6 +258,22 @@ int main (int argc, char **argv) {
     a[i] = -1;
     b[i] = -1;
   }
+  testbigmul3x3(a, b, out);
+  printf("\n");
+  for (u64 i = 0; i < 3; ++i) {
+    a[i] = 0;
+    b[i] = 0;
+  }
+  a[0] = 0xFFFFFFFFFFFFFFFF;
+  b[0] = 0xFFFFFFFFFFFFFFFF;
+  testbigmul3x3(a, b, out);
+  printf("\n");
+  for (u64 i = 0; i < 3; ++i) {
+    a[i] = 0;
+    b[i] = 0;
+  }
+  a[0] = 0x7FFFFFFFFFFFFFFF;
+  b[0] = 0x7FFFFFFFFFFFFFFF;
   testbigmul3x3(a, b, out);
   return 0;
 }

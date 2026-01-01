@@ -788,6 +788,47 @@ LLL x86-64:
 
 LLL:
 (begin
+ (set! rax 18446744073709551615)
+ (set! rdi 18446744073709551615)
+ (set2! rdx rax (u128* rax rdi))
+ (set! r8 rdx)
+ (set! r9 rax)
+ (set! rax 9223372036854775807)
+ (set! rdi 9223372036854775807)
+ (set2! rdx rax (u128* rax rdi)))
+==>
+((rax . 1)
+ (rdx . 4611686018427387903)
+ (rdi . 9223372036854775807)
+ (r9 . 1)
+ (r8 . -2))
+
+LLL C:
+ rax = -1ull;
+ rdi = -1ull;
+ LLL_u128 = LLL_umul128(rax,rdi);
+ rdx = LLL_u128.high;
+ rax = LLL_u128.low;
+ r8 = rdx;
+ r9 = rax;
+ rax = 9223372036854775807ull;
+ rdi = 9223372036854775807ull;
+ LLL_u128 = LLL_umul128(rax,rdi);
+ rdx = LLL_u128.high;
+ rax = LLL_u128.low;
+
+LLL x86-64:
+ movq $-1,%rax
+ movq $-1,%rdi
+ mulq %rdi
+ movq %rdx,%r8
+ movq %rax,%r9
+ movq $9223372036854775807,%rax
+ movq $9223372036854775807,%rdi
+ mulq %rdi
+
+LLL:
+(begin
  (set! rdi 1)
  (set! rsi 2)
  (set! rax (call "foo" rdi rsi))

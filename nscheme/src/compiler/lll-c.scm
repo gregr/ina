@@ -11,11 +11,19 @@ typedef signed char s8;
 typedef signed short s16;
 typedef signed int s32;
 typedef signed long long s64;
+typedef unsigned __int128 u128;
+typedef struct { u64 low, high; } u64pair;
+static inline u64pair LLL_umul128(u64 a, u64 b) {
+ u128 full = ((u128)a) * ((u128)b);
+ u64pair p;
+ p.low = full;
+ p.high = full >> 64;
+ return p; }
 static inline u64 LLL_atomic_cas(u64* loc, u64 expected, u64 new) {
-__atomic_compare_exchange_n(loc, &expected, new, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
-return expected; }
+ __atomic_compare_exchange_n(loc, &expected, new, 0, __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+ return expected; }
 "eos##)
-(define LLL-C-prelude-local "u64 LLL_flag_carry, LLL_flag_over;")
+(define LLL-C-prelude-local "u64pair LLL_u128; u64 LLL_flag_carry, LLL_flag_over;")
 
 (define (LLL-emit-C P)
   (define u64-suffix "ull")
@@ -95,12 +103,21 @@ return expected; }
                   ((-/over) (overflow "overflow" "ssub" (cdr x)))
                   ((*/over) (overflow "overflow" "smul" (cdr x)))
                   (else (simple (Binary-op x)))))))
+  (define (Assign2 l1 l2 x)
+    (case (car x)
+      ((u128*) (apply (lambda (a b)
+                        (string-append " LLL_u128 = LLL_umul128(" (Expr a) "," (Expr b) ");\n"
+                                       " " (Location l1) " = LLL_u128.high;\n"
+                                       " " (Location l2) " = LLL_u128.low;\n"))
+                      (cdr x)))
+      (else (mistake "invalid Expr128" x))))
   (define (Condition x) (if (and (pair? x) (eqv? (car x) 'cc)) (CC (cadr x)) (Expr x)))
   (let loop ((S P))
     (if (Label? S)
         (emit (string-append S ":\n"))
         (apply (case (car S)
                  ((set!) (lambda (lhs rhs) (emit (Assign lhs rhs))))
+                 ((set2!) (lambda (lhs1 lhs2 rhs) (emit (Assign2 lhs1 lhs2 rhs))))
                  ((jump-if) (lambda (x label)
                               (emit (string-append " if (" (Condition x) ") goto " label ";\n"))))
                  ((jump) (lambda (x) (emit (if (Label? x)
