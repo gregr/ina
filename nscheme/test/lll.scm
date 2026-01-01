@@ -295,6 +295,7 @@
      (set! rcx r9)
      "L_loop1_init"
      (set! rax 0)
+     (set! rax (+/carry rax 0))
      (jump-if (= rdx 0) "L_loop2_init")
      "L_loop1"
      (set! r9 #(mloc 8 rsi 0 rax 3))
