@@ -888,7 +888,7 @@ LLL C:
  rcx = r9;
 L_loop1_init:
  rax = 0ull;
- LLL_flag_carry = __builtin_uaddll_overflow(rax,0ull,&rax);
+ LLL_flag_carry = 0;
  if (rdx == 0ull) goto L_loop2_init;
 L_loop1:
  r9 = *(u64*)(rsi + (rax<<3));
@@ -924,7 +924,7 @@ LLL x86-64:
  movq %r9,%rcx
 L_loop1_init:
  xorl %eax,%eax
- addq $0,%rax
+ clc
  testq %rdx,%rdx
  je L_loop2_init
 L_loop1:

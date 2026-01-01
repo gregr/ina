@@ -21,7 +21,7 @@ static inline u64pair LLL_umul128(u64 a, u64 b) {
 }
 
 // Toggle commenting if linking with bigint.s instead.
-extern void bigadd(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out);
+//extern void bigadd(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out);
 void bigadd(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out) {
   u64 carry_bit = 0;
   if (count_a < count_b) {
@@ -40,7 +40,7 @@ void bigadd(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out) {
 // Generated via LLL:
 // void bigadd(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out) {
 //  u64 rdi=count_a, rsi=(u64)a, rdx=count_b, rcx=(u64)b, r8=(u64)out,
-//      LLL_flag_carry=0, rax, r9;
+//      LLL_flag_carry, rax, r9;
 //  if (rdi >= rdx) goto L_loop1_init;
 //  r9 = rdi;
 //  rdi = rdx;
@@ -50,6 +50,7 @@ void bigadd(u64 count_a, u64 *a, u64 count_b, u64 *b, u64 *out) {
 //  rcx = r9;
 // L_loop1_init:
 //  rax = 0ull;
+//  LLL_flag_carry = 0;
 //  if (rdx == 0ull) goto L_loop2_init;
 // L_loop1:
 //  r9 = *(u64*)(rsi + (rax<<3));

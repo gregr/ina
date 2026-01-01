@@ -239,8 +239,10 @@
                  ")")))
             (else (mistake "not an operand" x))))
     (define (Operand-width x) (if (mloc? x) (mloc-width x) 8))
-    (define (Instruction op . rand*)
-      (emit (string-append " " op " " (string-join* "," (map Operand rand*)) "\n")))
+    (define Instruction
+      (case-lambda
+        ((op) (emit (string-append " " op "\n")))
+        ((op . rand*) (emit (string-append " " op " " (string-join* "," (map Operand rand*)) "\n")))))
     (define (Jump op rand)
       (emit (string-append " " op (if (Label? rand) " " " *") (Operand rand) "\n")))
     (define (Jump-cc cc label) (Instruction (string-append "j" cc) label))
@@ -327,6 +329,7 @@
                      ((+ +/over) (case b ((1) (I/a "incq")) ((-1) (I/a "decq")) (else (simple))))
                      ((- -/over) (case b ((1) (I/a "decq")) ((-1) (I/a "incq")) (else (simple))))
                      ((* */over) (clear-cmp!) (if (eqv? b -1) (I/a "negq") (simple)))
+                     ((+/carry -/carry) (case b ((0) (Instruction "clc")) (else (simple))))
                      ((xor) (cond ((eqv? b -1) (clear-cmp!) (I/a "notq"))
                                   ((eqv? a b) (Assign-0 a))
                                   (else (simple))))
