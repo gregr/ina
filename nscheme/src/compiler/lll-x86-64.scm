@@ -22,14 +22,12 @@
 ;;              | (set! Register1 (* Register1 Location))
 ;;              | (set! Register1 (*/over Register1 SU64/32))
 ;;              | (set! Register1 (*/over Register1 Location))
-;;              | (set! Register Comparison)
-;;              | (set! Register (cc CC))
+;;              | (set! Register Condition)
 ;;              | (set! Register (lea Memory))
 ;;              | (set! Register Label)
 ;;              | (set! rax (atomic-cas Memory8 rax Register))
 ;;              | (set2! rdx rax (u128* rax Location))
-;;              | (jump-if Comparison Label)
-;;              | (jump-if (cc CC) Label)
+;;              | (jump-if Condition Label)
 ;;              | (jump Label)
 ;;              | (jump Location)
 ;;              | Label
@@ -38,8 +36,9 @@
 ;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
 ;; CC-op      ::= addc | subc | +/carry | -/carry | +/over | -/over
 ;; CC         ::= carry | ncarry | over | nover  ; NOTE: carry is borrow, not inverted borrow
-;; Comparison ::= (Compare-op Location SU64/32)
+;; Condition  ::= (Compare-op Location SU64/32)
 ;;              | (Compare-op Location Register)
+;;              | (cc CC)
 ;; Location   ::= Register | Memory8
 ;; Register   ::= rax | rcx | rdx | rsi | rdi | rbx | rbp | rsp
 ;;              | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
@@ -160,16 +159,16 @@
                           (or (not (memv (car rhs) '(* */over))) (Register? a)
                               (mistake "left operand of multiply is not a register" a rhs)))))
           (_ (mistake "operator arity mismatch" rhs)))))
-    (define (Comparison? x)
-      (operation? x cmpop->cc
-                  (case-lambda
-                    ((a b) (Location?!/ctx x a)
-                           (or (SU64/32? b) (Register? b)
-                               (mistake "not a register or signed 32-bit integer" b x)))
-                    (_ (mistake "operator arity mismatch" x)))))
-    (define (CC?! x) (or (memv x '(carry ncarry over nover)) (mistake "not a condition code" x)))
-    (define (cc? x) (operation? x 'cc (case-lambda ((x) (CC?! x))
-                                                   (_ (mistake "operator arity mismatch" x)))))
+    (define (Condition? x)
+      (or (operation? x cmpop->cc
+                      (case-lambda
+                        ((a b) (Location?!/ctx x a)
+                               (or (SU64/32? b) (Register? b)
+                                   (mistake "not a register or signed 32-bit integer" b x)))
+                        (_ (mistake "operator arity mismatch" x))))
+          (operation? x 'cc (case-lambda ((x) (or (memv x '(carry ncarry over nover))
+                                                  (mistake "not a condition code" x)))
+                                         (_ (mistake "operator arity mismatch" x))))))
     (define (LEA? x) (operation? x 'lea (case-lambda
                                           ((loc) (Memory?! loc))
                                           (_ (mistake "operator arity mismatch" x)))))
@@ -192,7 +191,7 @@
                       (cond ((or (Binary-op?/lhs lhs rhs) (CAS?/lhs lhs rhs)))
                             ((Label? rhs) (Register?!/ctx S lhs))
                             ((Register? lhs) (unless (or (Register? rhs) (SU64? rhs) (Memory? rhs)
-                                                         (Comparison? rhs) (cc? rhs) (LEA? rhs))
+                                                         (Condition? rhs) (LEA? rhs))
                                                (mistake "invalid set! right-hand-side" rhs)))
                             ((Memory? lhs) (unless (or (Register? rhs) (case (mloc-width lhs)
                                                                          ((8) (SU64/32? rhs))
@@ -211,7 +210,7 @@
                                              (_ (mistake "operator arity mismatch" rhs))))
                          (mistake "not a set2! right-hand-side" rhs S))))
             ((jump-if) (lambda (x label)
-                         (unless (or (Comparison? x) (cc? x)) (mistake "not a condition" x S))
+                         (unless (Condition? x) (mistake "not a condition" x S))
                          (unless (Label? label) (mistake "not a label" label))))
             ((jump) (lambda (x) (unless (or (Label? x) (Register? x) (Memory8?/ctx S x))
                                   (mistake "not a jump target" x S))))
