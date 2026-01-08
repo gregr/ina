@@ -145,6 +145,32 @@ LLL x86-64:
  movq -32(%r10),%rsi
 
 LLL:
+(begin (set! rdi 0) (set! rax (lea #(mloc 1 0 777 rdi 0))))
+==>
+((rax . 777) (rdi . 0))
+
+LLL C:
+ rdi = 0ull;
+ rax = 777ull + rdi;
+
+LLL x86-64:
+ xorl %edi,%edi
+ leaq 777(,%rdi),%rax
+
+LLL:
+(begin (set! rdi 0) (set! rax (lea #(mloc 1 0 777 rdi 2))))
+==>
+((rax . 777) (rdi . 0))
+
+LLL C:
+ rdi = 0ull;
+ rax = 777ull + (rdi<<2);
+
+LLL x86-64:
+ xorl %edi,%edi
+ leaq 777(,%rdi,4),%rax
+
+LLL:
 (begin
  (set! rax 7)
  "start"

@@ -96,6 +96,12 @@
         (set! rdi #(mloc 8 r10 0 r11 3))
         (set! rsi #(mloc 8 r10 -32 0 0))))
     (begin
+      (set! rdi 0)
+      (set! rax (lea #(mloc 1 0 777 rdi 0))))
+    (begin
+      (set! rdi 0)
+      (set! rax (lea #(mloc 1 0 777 rdi 2))))
+    (begin
       (set! rax 7)
       "start"
       (set! rdx 8)

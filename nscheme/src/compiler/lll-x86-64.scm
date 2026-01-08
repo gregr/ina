@@ -44,10 +44,10 @@
 ;; Register   ::= rax | rcx | rdx | rsi | rdi | rbx | rbp | rsp
 ;;              | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
 ;; Memory     ::= Memory8 | Memory4 | Memory2 | Memory1
-;; Memory8    ::= #(mloc 8 Register S32 Index IShift) | #(mloc 8 rip Label 0 0)
-;; Memory4    ::= #(mloc 4 Register S32 Index IShift) | #(mloc 4 rip Label 0 0)
-;; Memory2    ::= #(mloc 2 Register S32 Index IShift) | #(mloc 2 rip Label 0 0)
-;; Memory1    ::= #(mloc 1 Register S32 Index IShift) | #(mloc 1 rip Label 0 0)
+;; Memory8    ::= #(mloc 8 Register S32 Index IShift) | #(mloc 8 0 S32 Register IShift) | #(mloc 8 rip Label 0 0)
+;; Memory4    ::= #(mloc 4 Register S32 Index IShift) | #(mloc 4 0 S32 Register IShift) | #(mloc 4 rip Label 0 0)
+;; Memory2    ::= #(mloc 2 Register S32 Index IShift) | #(mloc 2 0 S32 Register IShift) | #(mloc 2 rip Label 0 0)
+;; Memory1    ::= #(mloc 1 Register S32 Index IShift) | #(mloc 1 0 S32 Register IShift) | #(mloc 1 rip Label 0 0)
 ;; Index      ::= Register | 0
 ;; IShift     ::= 0 | 1 | 2 | 3
 ;; SU64       ::= <signed or unsigned 64-bit integer>
@@ -111,9 +111,11 @@
                  (and (or (Label? d) (S32? d) (mistake "invalid rip-relative mloc displacement" x))
                       (or (eqv? i 0) (mistake "invalid rip-relative mloc index" x))
                       (or (eqv? s 0) (mistake "invalid rip-relative mloc shift" x)))
-                 (and (Register?!/ctx x b)
+                 (and (or (eqv? b 0) (Register?!/ctx x b))
                       (or (S32? d) (mistake "invalid mloc displacement" x))
-                      (or (eqv? i 0) (Register? i) (mistake "invalid mloc index" x))
+                      (or (and (eqv? i 0) (or (not (eqv? b 0))
+                                              (mistake "mloc must have non-zero base or index" x)))
+                          (Register? i) (mistake "invalid mloc index" x))
                       (or (memv s '(0 1 2 3)) (mistake "invalid mloc shift" x)))))))
     (define (Memory?! x) (or (Memory? x) (mistake "not a memory location" x)))
     (define (U6? x) (and (integer? x) (or (<= 0 x 63) (mistake "not an unsigned 6-bit integer" x))))
@@ -234,7 +236,7 @@
                  (cond ((eqv? d 0)   "")
                        ((integer? d) (number->string d))
                        (else         d))
-                 "(" (Reg b)
+                 "(" (if (eqv? b 0) "" (Reg b))
                  (if (eqv? i 0) "" (string-append
                                      "," (Reg i)
                                      (if (= s 0) "" (string-append
