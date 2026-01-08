@@ -11,6 +11,7 @@
   (pretty-write (LLL-eval P '()))
   (newline)
   (displayln "LLL C:")
+  (LLL-validate-C P)
   (LLL-emit-C P)
   (newline)
   (displayln "LLL x86-64:")
@@ -24,6 +25,7 @@
   (LLL-validate P)
   (newline)
   (displayln "LLL C:")
+  (LLL-validate-C P)
   (LLL-emit-C P)
   (newline)
   (displayln "LLL x86-64:")
@@ -45,6 +47,7 @@
   (LLL-validate P)
   (newline)
   (displayln "LLL C:")
+  (LLL-validate-C P)
   (LLL-emit-C P)
   (newline))
 

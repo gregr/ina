@@ -25,6 +25,14 @@ static inline u64 LLL_atomic_cas(u64* loc, u64 expected, u64 new) {
 "eos##)
 (define LLL-C-prelude-local "u64pair LLL_u128; u64 LLL_flag_carry, LLL_flag_over;")
 
+(define (LLL-validate-C P)
+  (LLL-validate P)
+  (let loop ((x P))
+    (cond ((pair? x) (loop (car x)) (loop (cdr x)))
+          ((mloc? x) (when (string? (mloc-disp x))
+                       (mistake "LLL C does not support mloc with label displacement" x)))
+          (else (values)))))
+
 (define (LLL-emit-C P)
   (define u64-suffix "ull")
   (define emit (let ((out (current-output-port))) (lambda (line) (display line out))))

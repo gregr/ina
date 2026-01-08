@@ -43,12 +43,11 @@
 ;; Location   ::= Register | Memory8
 ;; Register   ::= rax | rcx | rdx | rsi | rdi | rbx | rbp | rsp
 ;;              | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
-;; Memory     ::= #(mloc Width Register S32 Index IShift)
-;; Memory8    ::= #(mloc 8     Register S32 Index IShift)
-;; Memory4    ::= #(mloc 4     Register S32 Index IShift)
-;; Memory2    ::= #(mloc 2     Register S32 Index IShift)
-;; Memory1    ::= #(mloc 1     Register S32 Index IShift)
-;; Width      ::= 1 | 2 | 4 | 8
+;; Memory     ::= Memory8 | Memory4 | Memory2 | Memory1
+;; Memory8    ::= #(mloc 8 Register S32 Index IShift) | #(mloc 8 rip Label 0 0)
+;; Memory4    ::= #(mloc 4 Register S32 Index IShift) | #(mloc 4 rip Label 0 0)
+;; Memory2    ::= #(mloc 2 Register S32 Index IShift) | #(mloc 2 rip Label 0 0)
+;; Memory1    ::= #(mloc 1 Register S32 Index IShift) | #(mloc 1 rip Label 0 0)
 ;; Index      ::= Register | 0
 ;; IShift     ::= 0 | 1 | 2 | 3
 ;; SU64       ::= <signed or unsigned 64-bit integer>
@@ -105,13 +104,17 @@
   (define (LLL-validate-x86-64 P)
     (define (Register? x) (and (symbol? x) (or (memv x register*) (mistake "invalid register" x))))
     (define (Register?!/ctx ctx x) (or (Register? x) (mistake "not a register" x ctx)))
-    (define (Memory? x) (and (mloc? x) (or (memv (mloc-width x) '(8 4 2 1))
-                                           (mistake "invalid mloc width" x))
-                             (Register?!/ctx x (mloc-base x))
-                             (or (S32? (mloc-disp x)) (mistake "mloc with invalid displacement" x))
-                             (or (eqv? (mloc-index x) 0) (Register? (mloc-index x))
-                                 (mistake "mloc with invalid index" x))
-                             (or (memv (mloc-shift x) '(0 1 2 3)) (mistake "invalid mloc shift" x))))
+    (define (Memory? x)
+      (and (mloc? x) (or (memv (mloc-width x) '(8 4 2 1)) (mistake "invalid mloc width" x))
+           (let ((b (mloc-base x)) (d (mloc-disp x)) (i (mloc-index x)) (s (mloc-shift x)))
+             (if (eqv? b 'rip)
+                 (and (or (Label? d) (S32? d) (mistake "invalid rip-relative mloc displacement" x))
+                      (or (eqv? i 0) (mistake "invalid rip-relative mloc index" x))
+                      (or (eqv? s 0) (mistake "invalid rip-relative mloc shift" x)))
+                 (and (Register?!/ctx x b)
+                      (or (S32? d) (mistake "invalid mloc displacement" x))
+                      (or (eqv? i 0) (Register? i) (mistake "invalid mloc index" x))
+                      (or (memv s '(0 1 2 3)) (mistake "invalid mloc shift" x)))))))
     (define (Memory?! x) (or (Memory? x) (mistake "not a memory location" x)))
     (define (U6? x) (and (integer? x) (or (<= 0 x 63) (mistake "not an unsigned 6-bit integer" x))))
     (define (S32? x) (and (integer? x) (or (<= #x-80000000 x #x7FFFFFFF)
