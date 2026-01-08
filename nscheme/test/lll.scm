@@ -277,7 +277,19 @@
       (set! r9 rax)
       (set! rax #x7FFFFFFFFFFFFFFF)
       (set! rdi #x7FFFFFFFFFFFFFFF)
-      (set2! rdx rax (u128* rax rdi)))))
+      (set2! rdx rax (u128* rax rdi)))
+    (begin
+      (set! rax 111)
+      (set! rdx 222)
+      (set! rdi 333)
+      (set! rsi 444)
+      (set! rax (if (< rdx rdi) rsi rax)))
+    (begin
+      (set! rax 111)
+      (set! rdx 222)
+      (set! rdi 333)
+      (set! rsi 444)
+      (set! rax (if (= rdx 0) rsi rax)))))
 
 (for-each
   LLL-test-C

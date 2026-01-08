@@ -855,6 +855,56 @@ LLL x86-64:
 
 LLL:
 (begin
+ (set! rax 111)
+ (set! rdx 222)
+ (set! rdi 333)
+ (set! rsi 444)
+ (set! rax (if (< rdx rdi) rsi rax)))
+==>
+((rax . 444) (rsi . 444) (rdi . 333) (rdx . 222))
+
+LLL C:
+ rax = 111ull;
+ rdx = 222ull;
+ rdi = 333ull;
+ rsi = 444ull;
+ rax = ((s64)rdx < (s64)rdi) ? rsi : rax;
+
+LLL x86-64:
+ movl $111,%eax
+ movl $222,%edx
+ movl $333,%edi
+ movl $444,%esi
+ cmpq %rdi,%rdx
+ cmovlq %rsi,%rax
+
+LLL:
+(begin
+ (set! rax 111)
+ (set! rdx 222)
+ (set! rdi 333)
+ (set! rsi 444)
+ (set! rax (if (= rdx 0) rsi rax)))
+==>
+((rax . 111) (rsi . 444) (rdi . 333) (rdx . 222))
+
+LLL C:
+ rax = 111ull;
+ rdx = 222ull;
+ rdi = 333ull;
+ rsi = 444ull;
+ rax = (rdx == 0ull) ? rsi : rax;
+
+LLL x86-64:
+ movl $111,%eax
+ movl $222,%edx
+ movl $333,%edi
+ movl $444,%esi
+ testq %rdx,%rdx
+ cmoveq %rsi,%rax
+
+LLL:
+(begin
  (set! rdi 1)
  (set! rsi 2)
  (set! rax (call "foo" rdi rsi))

@@ -15,6 +15,7 @@
 ;;              | Call
 ;;              | Label
 ;; Expr       ::= SU64 | Location | (Binary-op Expr Expr) | (Compare-op Expr Expr) | (cc CC)
+;;              | (if Expr Expr Expr)
 ;; Call       ::= (call Label Expr ...) | (call Expr Expr ...)
 ;; Binary-op  ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
@@ -108,7 +109,9 @@
                                                                    (mistake "not callable" op x))
                                                                (andmap Expr?! rand*)))
                                             (_ (mistake "call arity mismatch" x)))))
-    (define (Expr? x) (or (Location? x) (SU64? x) (Binary-op? x) (Comparison? x) (cc? x)))
+    (define (If? x) (operation? x 'if (case-lambda ((c t f) (and (Expr?! c) (Expr?! t) (Expr?! f)))
+                                                   (_ (mistake "if arity mismatch" x)))))
+    (define (Expr? x) (or (Location? x) (SU64? x) (Binary-op? x) (Comparison? x) (cc? x) (If? x)))
     (define (Expr?! x) (or (Expr? x) (mistake "not an expression" x)))
     (define (cc? x) (operation? x 'cc (case-lambda ((x) (or (memv x '(carry ncarry over nover))
                                                             (mistake "not a condition code" x)))
@@ -209,6 +212,7 @@
                                     ((nover)  (if (eqv? flag 'over) 0 1))
                                     (else (mistake "not a condition code" (cadr x)))))
               ((eqv? (car x) 'lea) (mloc-addr (cadr x)))
+              ((eqv? (car x) 'if) (apply (lambda (c t f) (Expr (if (= (Expr c) 0) f t))) (cdr x)))
               (else (apply (case-lambda
                              ((a b)   (Arity2-op (car x) a b))
                              ((a b c) (Arity3-op (car x) a b c)))
