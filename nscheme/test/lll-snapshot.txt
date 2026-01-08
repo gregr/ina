@@ -534,7 +534,7 @@ LLL C:
  rcx = __builtin_addcll(rcx,100ull,LLL_flag_carry,&LLL_flag_carry);;
 
 LLL x86-64:
- movq $9223372036854775792,%r8
+ movabsq $9223372036854775792,%r8
  movl $15,%r9d
  movq %r8,%r10
  addq %r9,%r10
@@ -581,7 +581,7 @@ LLL C:
  rcx = __builtin_addcll(rcx,100ull,LLL_flag_carry,&LLL_flag_carry);;
 
 LLL x86-64:
- movq $9223372036854775792,%r8
+ movabsq $9223372036854775792,%r8
  movl $16,%r9d
  movq %r8,%r10
  addq %r9,%r10
@@ -671,7 +671,7 @@ skip:
  rcx = __builtin_addcll(rcx,100ull,LLL_flag_carry,&LLL_flag_carry);;
 
 LLL x86-64:
- movq $9223372036854775792,%r8
+ movabsq $9223372036854775792,%r8
  movl $16,%r9d
  movq %r8,%r10
  addq %r9,%r10
@@ -718,8 +718,8 @@ two:
 end:
 
 LLL x86-64:
- movq $8839064868652493312,%rdi
- movq $8839064868652493482,%rsi
+ movabsq $8839064868652493312,%rdi
+ movabsq $8839064868652493482,%rsi
  testb $170,%dil
  jnz one
  testl $43690,%esi
@@ -823,8 +823,8 @@ LLL x86-64:
  mulq %rdi
  movq %rdx,%r8
  movq %rax,%r9
- movq $9223372036854775807,%rax
- movq $9223372036854775807,%rdi
+ movabsq $9223372036854775807,%rax
+ movabsq $9223372036854775807,%rdi
  mulq %rdi
 
 LLL:
