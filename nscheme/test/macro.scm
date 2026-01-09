@@ -305,6 +305,31 @@
    ==> 5
 
    (let ()
+     (define-syntax define-and-ref-x
+       (syntax-rules ()
+         ((_ a) (begin (define a 5) x))))
+     (define-and-ref-x x))
+   ;EQUIVALENT RACKET CODE:
+   ;((case-lambda (() (letrec ((x.0 5)) x.0))))
+   ==>
+   5
+
+   (let ()
+     (define-syntax def-m
+       (syntax-rules ()
+         ((_ m given-x)
+          (begin (define x 1)
+                 (define-syntax m
+                   (syntax-rules ()
+                     ((_) (begin (define given-x 2) x))))))))
+     (def-m m x)
+     (m))
+   ;EQUIVALENT RACKET CODE:
+   ;((case-lambda (() (letrec ((x.0 1) (x.1 2)) x.0))))
+   ==>
+   1
+
+   (let ()
      (begin-meta
        (splicing-let ((x 5))
          (define foo (quote-syntax x))))
@@ -492,6 +517,7 @@
              (m3)))))
      (m))
    ==> 6
+   ;; These examples all require meta-level hygiene to behave properly.
    (let ((x 6))
      (define-syntax (m stx)
        (define-syntax (m2 stx)
@@ -507,9 +533,30 @@
              (m3)))))
      (m))
    ==> 6
-
-   ;; These examples require meta-level hygiene to behave properly.
-   ;; They should all return 55 in the current system.
+   (let ((x 6))
+     (define-syntax (m stx)
+       (define-syntax (m2 stx)
+         (quote-syntax
+           (quote-syntax x)))
+       (define id1 (quote-syntax x))
+       (define id2 (m2))
+       (quasiquote-syntax
+         (let ((#,id1 5))
+           #,id2)))
+     (m))
+   ==> 5
+   (let ((x 6))
+     (define-syntax (m stx)
+       (define-syntax (m2 stx)
+         (quote-syntax
+           (quote-syntax x)))
+       (define id1 (quote-syntax x))
+       (define id2 (m2))
+       (quasiquote-syntax
+         (let ((#,id2 5))
+           #,id1)))
+     (m))
+   ==> 5
    (let ((x 44))
      (define-syntax (m stx)
        (define-syntax (m2 stx)
