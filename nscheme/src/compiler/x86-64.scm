@@ -1,0 +1,108 @@
+(define (oport->x86-64-emit-at&t out)
+  (define (emit line) (display line out))
+  (define Register? symbol?)
+  (define Label? string?)
+  (define (register/width r w)
+    (case r
+      ((rax) (case w ((4) 'eax)  ((2) 'ax)   ((1) 'al)   ))
+      ((rcx) (case w ((4) 'ecx)  ((2) 'cx)   ((1) 'cl)   ))
+      ((rdx) (case w ((4) 'edx)  ((2) 'dx)   ((1) 'dl)   ))
+      ((rsi) (case w ((4) 'esi)  ((2) 'si)   ((1) 'sil)  ))
+      ((rdi) (case w ((4) 'edi)  ((2) 'di)   ((1) 'dil)  ))
+      ((r8)  (case w ((4) 'r8d)  ((2) 'r8w)  ((1) 'r8b)  ))
+      ((r9)  (case w ((4) 'r9d)  ((2) 'r9w)  ((1) 'r9b)  ))
+      ((r10) (case w ((4) 'r10d) ((2) 'r10w) ((1) 'r10b) ))
+      ((r11) (case w ((4) 'r11d) ((2) 'r11w) ((1) 'r11b) ))
+      ((rbx) (case w ((4) 'ebx)  ((2) 'bx)   ((1) 'bl)   ))
+      ((rbp) (case w ((4) 'ebp)  ((2) 'bp)   ((1) 'bpl)  ))
+      ((r12) (case w ((4) 'r12d) ((2) 'r12w) ((1) 'r12b) ))
+      ((r13) (case w ((4) 'r13d) ((2) 'r13w) ((1) 'r13b) ))
+      ((r14) (case w ((4) 'r14d) ((2) 'r14w) ((1) 'r14b) ))
+      ((r15) (case w ((4) 'r15d) ((2) 'r15w) ((1) 'r15b) ))
+      (else (mistake "not a register" r))))
+  (define (x/width x w) (if (Register? x) (register/width x w) x))
+  (define (Operand x)
+    (define (Reg x) (string-append "%" (symbol->string x)))
+    (cond ((integer? x) (string-append "$" (number->string (s64 x))))
+          ((Register? x) (Reg x))
+          ((Label? x) x)
+          ((mloc? x)
+           (let ((b (mloc-base x)) (d (mloc-disp x)) (i (mloc-index x)) (s (mloc-shift x)))
+             (string-append
+               (cond ((eqv? d 0)   "")
+                     ((integer? d) (number->string d))
+                     (else         d))
+               "(" (if (eqv? b 0) "" (Reg b))
+               (if (eqv? i 0) "" (string-append
+                                   "," (Reg i)
+                                   (if (= s 0) "" (string-append
+                                                    "," (number->string (bitwise-asl 1 s))))))
+               ")")))
+          (else (mistake "not an operand" x))))
+  (define Instruction
+    (case-lambda
+      ((op) (emit (string-append " " op "\n")))
+      ((op . rand*) (emit (string-append " " op " " (string-join* "," (map Operand rand*)) "\n")))))
+  (define (fail* x*) (mistake "invalid x86-64 instruction" x*))
+  (define (fail . x*) (fail* x*))
+  (case-lambda
+    ((op) (case op
+            ((clc) (Instruction "clc"))
+            (else (fail op))))
+    ((op r1) (case op
+               ((label) (emit (string-append r1 ":\n")))
+               ((jmp) (emit (string-append " jmp" (if (Label? r1) " " " *") (Operand r1) "\n")))
+               (else (fail op r1))))
+    ((op r1 r2)
+     (let ((fail (lambda () (fail op r1 r2))))
+       (case op
+         ((setcc) (Instruction (string-append "set" (symbol->string r1)) (x/width r2 1)))
+         ((jcc)   (Instruction (string-append "j" (symbol->string r1)) r2))
+         ((inc dec neg not mul)
+          (case r1
+            ((8) (Instruction (string-append (symbol->string op) "q") r2))
+            (else (fail))))
+         (else (fail)))))
+    ((op r1 r2 r3)
+     (let ((fail (lambda () (fail op r1 r2 r3))))
+       (case op
+         ((mov) (case r1
+                  ((abs8)  (Instruction "movabsq" r3 r2))
+                  ((8)     (Instruction "movq"    r3 r2))
+                  ((4)     (Instruction "movl"    (x/width r3 4) (x/width r2 4)))
+                  ((2)     (Instruction "movw"    (x/width r3 2) (x/width r2 2)))
+                  ((1)     (Instruction "movb"    (x/width r3 1) (x/width r2 1)))
+                  ((zx2-4) (Instruction "movzwl"  (x/width r3 2) (x/width r2 4)))
+                  ((zx1-4) (Instruction "movzbl"  (x/width r3 1) (x/width r2 4)))
+                  (else (fail))))
+         ((test) (case r1
+                   ((8) (Instruction "testq" r3 r2))
+                   ((4) (Instruction "testl" (x/width r3 4) (x/width r2 4)))
+                   ((1) (Instruction "testb" (x/width r3 1) (x/width r2 1)))
+                   (else (fail))))
+         ((and xor)
+          (case r1
+            ((8) (Instruction (string-append (symbol->string op) "q") r3 r2))
+            ((4) (Instruction (string-append (symbol->string op) "l") (x/width r3 4) (x/width r2 4)))
+            (else (fail))))
+         ((lea cmp or adc sbb add sub imul)
+          (case r1
+            ((8) (Instruction (string-append (symbol->string op) "q") r3 r2))
+            (else (fail))))
+         ((sal sar shr)
+          (let ((r3 (if (eqv? r3 'rcx) 'cl r3)))
+            (case r1
+              ((8) (Instruction (string-append (symbol->string op) "q") r3 r2))
+              (else (fail)))))
+         ((lock-cmpxchg) (case r1
+                           ((8) (Instruction "lock cmpxchgq" r3 r2))
+                           (else (fail))))
+         (else (fail)))))
+    ((op r1 r2 r3 r4)
+     (let ((fail (lambda () (fail op r1 r2 r3 r4))))
+       (case op
+         ((cmov) (case r2
+                   ((8) (Instruction (string-append "cmov" (symbol->string r1) "q") r4 r3))
+                   (else (fail))))
+         (else (fail)))))
+    (x* (fail* x*))))
