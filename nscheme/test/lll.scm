@@ -2,6 +2,7 @@
 (include "../src/compiler/lll.scm")
 (include "../src/compiler/lll-c.scm")
 (include "../src/compiler/lll-x86-64.scm")
+(include "../src/compiler/x86-64.scm")
 
 (define (LLL-test P)
   (displayln "LLL:")
