@@ -47,18 +47,19 @@
   (define (fail . x*) (fail* x*))
   (case-lambda
     ((op) (case op
-            ((clc) (Instruction "clc"))
+            ((clc ret syscall sysret) (Instruction (symbol->string op)))
             (else (fail op))))
     ((op r1) (case op
                ((label) (emit (string-append r1 ":\n")))
                ((jmp) (emit (string-append " jmp" (if (Label? r1) " " " *") (Operand r1) "\n")))
+               ((call) (emit (string-append " call" (if (Label? r1) " " " *") (Operand r1) "\n")))
                (else (fail op r1))))
     ((op r1 r2)
      (let ((fail (lambda () (fail op r1 r2))))
        (case op
          ((setcc) (Instruction (string-append "set" (symbol->string r1)) (x/width r2 1)))
          ((jcc)   (Instruction (string-append "j" (symbol->string r1)) r2))
-         ((inc dec neg not mul)
+         ((inc dec neg not mul push pop)
           (case r1
             ((8) (Instruction (string-append (symbol->string op) "q") r2))
             (else (fail))))
