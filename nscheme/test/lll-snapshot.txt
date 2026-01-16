@@ -310,7 +310,7 @@ LLL C:
  rdi = 10ull;
  rax = 0ull;
 loop:
- if (rdi == 0ull) goto end;
+ if (!rdi) goto end;
  rax = rax + rdi;
  rdi = rdi - 1ull;
  goto loop;
@@ -343,7 +343,7 @@ LLL:
 LLL C:
  rdi = 10ull;
  rax = 0ull;
- if (rdi == 0ull) goto end;
+ if (!rdi) goto end;
 loop:
  rax = rax + rdi;
  rdi = rdi - 1ull;
@@ -378,11 +378,11 @@ LLL:
 LLL C:
  rdi = 10ull;
  rax = 0ull;
- if (rdi == 0ull) goto end;
+ if (!rdi) goto end;
 loop:
  rax = rax + rdi;
  rdi = rdi - 1ull;
- if (rdi != 0ull) goto loop;
+ if (rdi) goto loop;
 end:
 
 LLL x86-64:
@@ -419,7 +419,7 @@ LLL C:
  rdi = 5ull;
  rsi = -10ull;
  rdi = rdi + rsi;
- if (rdi == 0ull) goto zero;
+ if (!rdi) goto zero;
  if ((s64)rdi < (s64)0ull) goto negative;
  rax = 1ull;
  goto end;
@@ -459,7 +459,7 @@ LLL:
 LLL C:
  rdi = 10ull;
  rsi = 11ull;
- rax = rdi == 0ull;
+ rax = !rdi;
  rdx = (s64)rdi < (s64)rsi;
 
 LLL x86-64:
@@ -797,7 +797,7 @@ LLL C:
  rsi = rax;
  rax = 0ull - rax;
  rdx = rdx * -1ull;
- rdi = rdi ^ -1ull;
+ rdi = ~rdi;
  rsi = rsi ^ rsi;
  rcx = rsi + 17ull + (rax<<2);
 
@@ -893,7 +893,7 @@ LLL C:
  rdx = 222ull;
  rdi = 333ull;
  rsi = 444ull;
- rax = (rdx == 0ull) ? rsi : rax;
+ rax = (!rdx) ? rsi : rax;
 
 LLL x86-64:
  movl $111,%eax
@@ -965,18 +965,18 @@ LLL C:
 L_loop1_init:
  rax = 0ull;
  LLL_flag_carry = 0;
- if (rdx == 0ull) goto L_loop2_init;
+ if (!rdx) goto L_loop2_init;
 L_loop1:
  r9 = *(u64*)(rsi + (rax<<3));
  r9 = __builtin_addcll(r9,*(u64*)(rcx + (rax<<3)),LLL_flag_carry,&LLL_flag_carry);;
  *(u64*)(r8 + (rax<<3)) = r9;
  rax = rax + 1ull;
  rdx = rdx - 1ull;
- if (rdx != 0ull) goto L_loop1;
+ if (rdx) goto L_loop1;
 L_loop2_init:
  rdx = LLL_flag_carry;
  rdi = rdi - rax;
- if (rdi == 0ull) goto L_done;
+ if (!rdi) goto L_done;
  LLL_flag_carry = __builtin_uaddll_overflow(rdx,-1ull,&rdx);
 L_loop2:
  r9 = *(u64*)(rsi + (rax<<3));
@@ -984,7 +984,7 @@ L_loop2:
  *(u64*)(r8 + (rax<<3)) = r9;
  rax = rax + 1ull;
  rdi = rdi - 1ull;
- if (rdi != 0ull) goto L_loop2;
+ if (rdi) goto L_loop2;
  rdx = LLL_flag_carry;
 L_done:
  *(u64*)(r8 + (rax<<3)) = rdx;

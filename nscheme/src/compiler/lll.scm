@@ -9,18 +9,18 @@
 ;;              | (set! Location Call)
 ;;              | (set! Var1 (atomic-cas Memory8 Var1 Expr))
 ;;              | (set2! Location Location (u128* Expr Expr))
-;;              | (jump-if Expr Label)
+;;              | (jump-if Condition Label)
 ;;              | (jump Label)
 ;;              | (jump Location)
 ;;              | Call
 ;;              | Label
-;; Expr       ::= SU64 | Location | (Binary-op Expr Expr) | (Compare-op Expr Expr) | (cc CC)
-;;              | (if Expr Expr Expr)
+;; Expr       ::= SU64 | Location | (Binary-op Expr Expr) | Condition | (if Condition Expr Expr)
 ;; Call       ::= (call Label Expr ...) | (call Expr Expr ...)
 ;; Binary-op  ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
 ;; CC-op      ::= addc | subc | +/carry | -/carry | +/over | -/over | */over
 ;; CC         ::= carry | ncarry | over | nover  ; NOTE: carry is borrow, not inverted borrow
+;; Condition  ::= (Compare-op Expr Expr) | (cc CC)
 ;; Location   ::= Var | Memory
 ;; Var        ::= <symbol>
 ;; Memory     ::= Memory8 | Memory4 | Memory2 | Memory1
@@ -109,9 +109,12 @@
                                                                    (mistake "not callable" op x))
                                                                (andmap Expr?! rand*)))
                                             (_ (mistake "call arity mismatch" x)))))
-    (define (If? x) (operation? x 'if (case-lambda ((c t f) (and (Expr?! c) (Expr?! t) (Expr?! f)))
-                                                   (_ (mistake "if arity mismatch" x)))))
-    (define (Expr? x) (or (Location? x) (SU64? x) (Binary-op? x) (Comparison? x) (cc? x) (If? x)))
+    (define (If? x) (operation? x 'if (case-lambda
+                                        ((c t f) (and (Condition?! c) (Expr?! t) (Expr?! f)))
+                                        (_ (mistake "if arity mismatch" x)))))
+    (define (Condition? x) (or (Comparison? x) (cc? x)))
+    (define (Condition?! x) (or (Condition? x) (mistake "not a condition" x)))
+    (define (Expr? x) (or (Location? x) (SU64? x) (Binary-op? x) (Condition? x) (If? x)))
     (define (Expr?! x) (or (Expr? x) (mistake "not an expression" x)))
     (define (cc? x) (operation? x 'cc (case-lambda ((x) (or (memv x '(carry ncarry over nover))
                                                             (mistake "not a condition code" x)))
@@ -144,7 +147,7 @@
                              (mistake "invalid set! right-hand-side" S))))
                  ((set2!) (lambda (l1 l2 r) (Location?!/ctx S l1) (Location?!/ctx S l2) (u128*? r)))
                  ((jump-if) (lambda (x label)
-                              (unless (Expr? x) (mistake "not a condition" x S))
+                              (Condition?! x)
                               (unless (Label? label) (mistake "not a label" label))))
                  ((jump) (lambda (target) (unless (or (Location? target) (Label? target))
                                             (mistake "not a location or label" target S))))
