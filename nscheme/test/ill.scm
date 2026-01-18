@@ -1,0 +1,108 @@
+;; racket bootstrap/run-file.rkt src/run-cli.scm test/ill.scm | tee test/ill-snapshot.txt && git diff test/ill-snapshot.txt
+(include "../src/compiler/data.scm")
+(include "../src/compiler/ill.scm")
+
+(define (ILL-test P)
+  (displayln "ILL:")
+  (pretty-write P)
+  (ILL-validate P)
+  (newline))
+
+(for-each
+  ILL-test
+  '((fresh (a b)
+      (letrec ()
+        (fresh (c)
+          (+ (* a b) c))))
+    (fresh ()
+      (letrec (("sum-to-n"
+                (case-lambda
+                  ((n) (fresh () (call "loop" n 0)))))
+               ("loop"
+                (case-lambda
+                  ((n total)
+                   (fresh ()
+                     (if (=/= n 0)
+                         (call "loop" (- n 1) (+ total n))
+                         total))))))
+        (fresh () (call "sum-to-n" 10))))
+    (fresh ()
+      (letrec (("sum-to-n"
+                (case-lambda
+                  ((n) (fresh ()
+                         (if (= n 0) 0 (call "loop" n 0))))))
+               ("loop"
+                (case-lambda
+                  ((n total)
+                   (fresh ()
+                     (begin
+                       (set! total (+ total n))
+                       (set! n (- n 1))
+                       (if (=/= n 0)
+                           (call "loop" n total)
+                           total)))))))
+        (fresh () (call "sum-to-n" 10))))
+    (fresh ()
+      (letrec (("bigadd"
+                (case-lambda
+                  ((count-a a count-b b out)
+                   (fresh (tmp)
+                     (begin
+                       (if (u>= count-a count-b)
+                           ()
+                           (begin
+                             (set! tmp count-a)
+                             (set! count-a count-b)
+                             (set! count-b tmp)
+                             (set! tmp a)
+                             (set! a b)
+                             (set! b tmp)))
+                       (call "L_loop1_init" count-a a count-b b out))))))
+               ("L_loop1_init"
+                (case-lambda
+                  ((count-a a count-b b out)
+                   (fresh ()
+                     (if (= count-b 0)
+                         (call "L_loop2_init" 0 0 count-a a out)
+                         (call "L_loop1" 0 0 count-a a count-b b out))))))
+               ("L_loop1"
+                (case-lambda
+                  ((i carry count-a a count-b b out)
+                   (fresh (acc)
+                     (begin
+                       (set!-values (acc carry) (addc (mref a (asl i 3)) (mref b (asl i 3)) carry))
+                       (mset! out (asl i 3) acc)
+                       (set! i (+ i 1))
+                       (set! count-b (- count-b 1))
+                       (if (=/= count-b 0)
+                           (call "L_loop1" i carry count-a a count-b b out)
+                           (call "L_loop2_init" i carry count-a a out)))))))
+               ("L_loop2_init"
+                (case-lambda
+                  ((i carry count-a a out)
+                   (fresh ()
+                     (begin
+                       (set! count-a (- count-a i))
+                       (if (= count-a 0)
+                           (call "L_done" i carry out)
+                           (call "L_loop2" i carry count-a a out)))))))
+               ("L_loop2"
+                (case-lambda
+                  ((i carry count-a a out)
+                   (fresh (acc)
+                     (begin
+                       (set!-values (acc carry) (+/carry (mref a (asl i 3)) carry))
+                       (mset! out (asl i 3) acc)
+                       (set! i (+ i 1))
+                       (set! count-a (- count-a 1))
+                       (if (=/= count-a 0)
+                           (call "L_loop2" i carry count-a a out)
+                           (call "L_done" i carry out)))))))
+               ("L_done"
+                (case-lambda
+                  ((i carry out)
+                   (fresh ()
+                     (begin
+                       (mset! out (asl i 3) carry)
+                       (values)))))))
+        (fresh () (call "bigadd" rdi rsi rdx rcx r8))))))
