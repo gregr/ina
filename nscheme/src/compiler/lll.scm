@@ -31,21 +31,6 @@
 ;; IShift     ::= 0 | 1 | 2 | 3
 ;; SU64       ::= <signed or unsigned 64-bit integer>
 ;; Label      ::= <string>
-(define (mloc w b d i s) (vector 'mloc w b d i s))
-(define (mloc? x) (and (vector? x) (= (vector-length x) 6) (eqv? (vector-ref x 0) 'mloc)))
-(define (mloc-width x) (vector-ref x 1))
-(define (mloc-base  x) (vector-ref x 2))
-(define (mloc-disp  x) (vector-ref x 3))
-(define (mloc-index x) (vector-ref x 4))
-(define (mloc-shift x) (vector-ref x 5))
-
-(splicing-let ((2^63 #x8000000000000000) (2^64 #x10000000000000000))
-  (define s64-min (- 2^63))
-  (define s64-max (- 2^63 1))
-  (define u64-max (- 2^64 1))
-  (define (s64 x) (let ((x (integer-floor-mod x 2^64))) (if (< x 2^63) x (- x 2^64))))
-  (define (u64 x) (integer-floor-mod x 2^64)))
-
 (splicing-local
   ((define Label? string?)
    (define (cmp-nand a b) (= (bitwise-and a b) 0))
