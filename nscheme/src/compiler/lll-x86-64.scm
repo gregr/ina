@@ -39,6 +39,7 @@
 ;; CC         ::= carry | ncarry | over | nover  ; NOTE: carry is borrow, not inverted borrow
 ;; Condition  ::= (Compare-op Location SU64/32)
 ;;              | (Compare-op Location Register)
+;;              | (Compare-op Register Memory8)
 ;;              | (cc CC)
 ;; Location   ::= Register | Memory8
 ;; Register   ::= rax | rcx | rdx | rsi | rdi | rbx | rbp | rsp
@@ -144,7 +145,9 @@
                       (case-lambda
                         ((a b) (Location?!/ctx x a)
                                (or (SU64/32? b) (Register? b)
-                                   (mistake "not a register or signed 32-bit integer" b x)))
+                                   (and (Memory8?/ctx x b)
+                                        (or (Register? a) (mistake "not a register" a x)))
+                                   (mistake "not a location or signed 32-bit integer" b x)))
                         (_ (mistake "operator arity mismatch" x))))
           (operation? x 'cc (case-lambda ((x) (or (memv x '(carry ncarry over nover))
                                                   (mistake "not a condition code" x)))
