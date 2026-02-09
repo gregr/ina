@@ -26,9 +26,10 @@
 ;;                | (mset! Value Value Value)
 ;;                | (set!-values Param* Values)
 ;;                | (set! Var Value)
+;;                | Call
+;;                | (set!-values (Param ...) Foreign-call)
 ;;                | (set! Var Foreign-call)
 ;;                | Foreign-call
-;;                | Call
 ;; Foreign-call ::= (foreign-call Value Value ...)
 ;; General      ::= Simple | Call | (mcas! Value Value Value) | (malloc Value)
 ;; Call         ::= (call Value Value ...)
@@ -130,9 +131,15 @@
                                  ((mem i rhs) (Value?!/ctx x mem) (Value?!/ctx x i)
                                               (Value?!/ctx x rhs))
                                  (_ (mistake "mset! arity mismatch" x))))
-          (operation? x 'set!-values (case-lambda
-                                       ((p* rhs) (Param*?!/ctx x p*) (Values?!/ctx x rhs))
-                                       (_ (mistake "set!-values arity mismatch" x))))
+          (operation? x 'set!-values
+                      (case-lambda
+                        ((p* rhs)
+                         (Param*?!/ctx x p*)
+                         (or (and (Foreign-call? rhs)
+                                  (or (not (Var? p*))
+                                      (mistake "foreign-call cannot have variadic return" x)))
+                             (Values?!/ctx x rhs)))
+                        (_ (mistake "set!-values arity mismatch" x))))
           (operation? x 'set! (case-lambda
                                 ((lhs rhs) (Var?!/ctx x lhs) (or (Foreign-call? rhs)
                                                                  (Value?!/ctx x rhs)))
