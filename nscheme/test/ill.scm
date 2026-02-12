@@ -70,7 +70,7 @@
                   ((i carry count-a a count-b b out)
                    (fresh (acc)
                      (begin
-                       (set!-values (acc carry) (addc (mref a (asl i 3)) (mref b (asl i 3)) carry))
+                       (set!-values (acc carry) (addc #(mloc 8 a 0 i 3) #(mloc 8 b 0 i 3) carry))
                        (mset! out (asl i 3) acc)
                        (set! i (+ i 1))
                        (set! count-b (- count-b 1))
@@ -91,7 +91,7 @@
                   ((i carry count-a a out)
                    (fresh (acc)
                      (begin
-                       (set!-values (acc carry) (+/carry (mref a (asl i 3)) carry))
+                       (set!-values (acc carry) (+/carry #(mloc 8 a 0 i 3) carry))
                        (mset! out (asl i 3) acc)
                        (set! i (+ i 1))
                        (set! count-a (- count-a 1))

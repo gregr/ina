@@ -5,7 +5,7 @@
 ;; Block        ::= (fresh (Var ...) Values)
 ;; Values       ::= (if Condition Values Values)
 ;;                | (begin Effect ... Values)
-;;                | (case-set!-values Values (Param* Values) ...)
+;;                | (case-set!-values Values (LHS* Values) ...)
 ;;                | General
 ;;                | (Binary-op2 Value Value)
 ;;                | (addc Value Value Value)
@@ -13,35 +13,44 @@
 ;;                | (values Value ...)
 ;; Value        ::= (if Condition Value Value)
 ;;                | (begin Effect ... Value)
-;;                | (case-set!-values Values (Param* Value) ...)
+;;                | (case-set!-values Values (LHS* Value) ...)
 ;;                | General
 ;; Condition    ::= (if Condition Condition Condition)
 ;;                | (begin Effect ... Condition)
-;;                | (case-set!-values Values (Param* Condition) ...)
+;;                | (case-set!-values Values (LHS* Condition) ...)
 ;;                | Boolean
 ;; Effect       ::= (if Condition Effect Effect)
 ;;                | (begin Effect ... Effect)
-;;                | (case-set!-values Values (Param* Effect) ...)
+;;                | (case-set!-values Values (LHS* Effect) ...)
 ;;                | ()
-;;                | (mset! Value Value Value)
-;;                | (set!-values Param* Values)
-;;                | (set! Var Value)
+;;                | (set!-values LHS* Values)
+;;                | (set! Location Value)
+;;                | (set! Var1 (atomic-cas Memory8 Var1 Value))
 ;;                | Call
-;;                | (set!-values (Param ...) Foreign-call)
-;;                | (set! Var Foreign-call)
+;;                | (set!-values (LHS ...) Foreign-call)
+;;                | (set! Location Foreign-call)
 ;;                | Foreign-call
 ;; Foreign-call ::= (foreign-call Value Value ...)
-;; General      ::= Simple | Call | (mcas! Value Value Value) | (malloc Value)
+;; General      ::= Simple | Call | (malloc Value)
 ;; Call         ::= (call Value Value ...)
 ;;                | (apply Value Value ...)
 ;;                | (apply/values Value Values)
-;; Simple       ::= SU64 | Label | Var | (Binary-op Value Value) | Boolean
+;; Simple       ::= SU64 | Label | Location | (Binary-op Value Value) | Boolean
 ;; Boolean      ::= #f | #t | (Compare-op Value Value)
-;; Binary-op    ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr | mref
+;; Binary-op    ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Binary-op2   ::= +/carry | +/over | -/carry | -/over | */over | u128*
 ;; Compare-op   ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
+;; LHS*         ::= LHS | (LHS ...) | (LHS LHS ... . LHS)
+;; LHS          ::= Location | #f
 ;; Param*       ::= Param | (Param ...) | (Param Param ... . Param)
 ;; Param        ::= Var | #f
+;; Location     ::= Var | Memory
+;; Memory       ::= Memory8 | Memory4 | Memory2 | Memory1
+;; Memory4      ::= #(mloc 4 Value Value Value IShift)
+;; Memory8      ::= #(mloc 8 Value Value Value IShift)
+;; Memory2      ::= #(mloc 2 Value Value Value IShift)
+;; Memory1      ::= #(mloc 1 Value Value Value IShift)
+;; IShift       ::= 0 | 1 | 2 | 3
 ;; Var          ::= <symbol>
 ;; SU64         ::= <signed or unsigned 64-bit integer>
 ;; Label        ::= <string>
@@ -51,7 +60,7 @@
 
   (define (ILL-validate P)
     (define cmpop '(and nand = =/= < <= > >= u< u<= u> u>=))
-    (define binop '(+ - * and ior xor asl asr lsl lsr mref))
+    (define binop '(+ - * and ior xor asl asr lsl lsr))
     (define binop2 '(+/carry +/over -/carry -/over */over u128*))
     (define (SU64? x) (and (integer? x) (or (<= s64-min x u64-max)
                                             (mistake "not a signed or unsigned 64-bit integer" x))))
@@ -60,9 +69,22 @@
     (define (Var*?!/ctx ctx x)
       (unless (list? x) (mistake "not a list" x ctx))
       (andmap (lambda (x) (Var?!/ctx ctx x)) x))
+    (define (Memory? x)
+      (and (mloc? x) (or (memv (mloc-width x) '(8 4 2 1)) (mistake "invalid mloc width" x))
+           (let ((b (mloc-base x)) (d (mloc-disp x)) (i (mloc-index x)) (s (mloc-shift x)))
+             (and (Value?!/ctx x b) (Value?!/ctx x d) (Value?!/ctx x i)
+                  (or (memv s '(0 1 2 3)) (mistake "invalid mloc shift" x))))))
+    (define (Memory?! x) (or (Memory? x) (mistake "not a memory location" x)))
+    (define (Memory8?! x) (or (and (Memory?! x) (eqv? (mloc-width x) 8))
+                              (mistake "memory width is not 8" x)))
+    (define (Location? x) (or (Var? x) (Memory? x)))
+    (define (Location?!/ctx ctx x) (unless (Location? x) (mistake "not a location" x ctx)))
     (define (Param? x) (or (Var? x) (not x)))
     (define (Param*? x) (or (Param? x) (null? x) (and (pair? x) (Param? (car x)) (Param*? (cdr x)))))
     (define (Param*?!/ctx ctx x) (or (Param*? x) (mistake "not a parameter list" x ctx)))
+    (define (LHS? x) (or (Location? x) (not x)))
+    (define (LHS*? x) (or (LHS? x) (null? x) (and (pair? x) (LHS? (car x)) (LHS*? (cdr x)))))
+    (define (LHS*?!/ctx ctx x) (or (LHS*? x) (mistake "not a left-hand-side list" x ctx)))
     (define (operation? x tag handle)
       (and (pair? x) (if (procedure? tag) (tag (car x)) (eqv? (car x) tag))
            (or (list? (cdr x)) (mistake "not a list" x)) (apply handle (cdr x))))
@@ -79,7 +101,7 @@
                   (case-lambda ((a b) (and (Value?!/ctx x a) (Value?!/ctx x b)))
                                (_ (mistake "operator arity mismatch" x)))))
     (define (Boolean? x) (case x ((#f #t) #t) (else (Compare-op? x))))
-    (define (Simple? x) (or (SU64? x) (Label? x) (Var? x) (Binary-op? x) (Boolean? x)))
+    (define (Simple? x) (or (SU64? x) (Label? x) (Location? x) (Binary-op? x) (Boolean? x)))
     (define (Call? x)
       (or (operation? x (lambda (t) (memv t '(call apply)))
                       (case-lambda
@@ -92,10 +114,6 @@
                         (_ (mistake "operator arity mismatch" x))))))
     (define (General? x)
       (or (Simple? x) (Call? x)
-          (operation? x 'mcas!
-                      (case-lambda
-                        ((mem old new) (Value?!/ctx x mem) (Value?!/ctx x old) (Value?!/ctx x new))
-                        (_ (mistake "operator arity mismatch" x))))
           (operation? x 'malloc (case-lambda
                                   ((size) (Value?!/ctx x size))
                                   (_ (mistake "operator arity mismatch" x))))))
@@ -121,29 +139,35 @@
                          (andmap (lambda (c)
                                    (unless (list? c) (mistake "not a list" c x))
                                    (apply (case-lambda
-                                            ((p* e) (Param*?!/ctx x p*) (Expr?!/ctx x e))
+                                            ((p* e) (LHS*?!/ctx x p*) (Expr?!/ctx x e))
                                             (_ (mistake "malformed case-set!-values clause" c x)))
                                           c))
                                  clause*))
                         (_ (mistake "malformed case-set!-values" x))))))
+    (define (CAS?/lhs lhs x)
+      (operation? x 'atomic-cas
+                  (case-lambda
+                    ((loc expected new)
+                     (unless (Var? lhs) (mistake "atomic-cas is not assigned to a variable" lhs x))
+                     (unless (eqv? expected lhs)
+                       (mistake "atomic-cas expected value is not reassigned" lhs expected x))
+                     (and (Memory8?! loc) (Value?!/ctx x new)))
+                    (_ (mistake "operator arity mismatch" x)))))
     (define (Effect? x)
-      (or (operation? x 'mset! (case-lambda
-                                 ((mem i rhs) (Value?!/ctx x mem) (Value?!/ctx x i)
-                                              (Value?!/ctx x rhs))
-                                 (_ (mistake "mset! arity mismatch" x))))
-          (operation? x 'set!-values
+      (or (operation? x 'set!-values
                       (case-lambda
                         ((p* rhs)
-                         (Param*?!/ctx x p*)
+                         (LHS*?!/ctx x p*)
                          (or (and (Foreign-call? rhs)
-                                  (or (not (Var? p*))
+                                  (or (not (LHS? p*))
                                       (mistake "foreign-call cannot have variadic return" x)))
                              (Values?!/ctx x rhs)))
                         (_ (mistake "set!-values arity mismatch" x))))
-          (operation? x 'set! (case-lambda
-                                ((lhs rhs) (Var?!/ctx x lhs) (or (Foreign-call? rhs)
-                                                                 (Value?!/ctx x rhs)))
-                                (_ (mistake "set! arity mismatch" x))))
+          (operation? x 'set!
+                      (case-lambda
+                        ((lhs rhs) (Location?!/ctx x lhs)
+                                   (or (Foreign-call? rhs) (Value?!/ctx x rhs) (CAS?/lhs lhs rhs)))
+                        (_ (mistake "set! arity mismatch" x))))
           (Call? x) (Foreign-call? x) (null? x)
           (Compound?/Expr?!/ctx Effect?!/ctx x)))
     (define (Effect?!/ctx ctx x) (or (Effect? x) (mistake "not an Effect" x ctx)))
