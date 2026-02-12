@@ -33,6 +33,7 @@
 ;; Label      ::= <string>
 (splicing-local
   ((define Label? string?)
+   (define Var? symbol?)
    (define (cmp-nand a b) (= (bitwise-and a b) 0))
    (define (cmp-and a b) (not (cmp-nand a b)))
    (define (u< a b) (< (u64 a) (u64 b)))
@@ -66,7 +67,7 @@
       (and (mloc? x) (or (memv (mloc-width x) '(8 4 2 1)) (mistake "invalid mloc width" x))
            (let ((b (mloc-base x)) (d (mloc-disp x)) (i (mloc-index x)) (s (mloc-shift x)))
              (if (Label? d)
-                 (and (or (symbol? b) (mistake "invalid label mloc base" x))
+                 (and (or (Var? b) (mistake "invalid label mloc base" x))
                       (or (eqv? i 0) (mistake "invalid label mloc index" x))
                       (or (eqv? s 0) (mistake "invalid label mloc shift" x)))
                  (and (Expr?! b) (Expr?! d) (Expr?! i)
@@ -74,7 +75,7 @@
     (define (Memory?! x) (or (Memory? x) (mistake "not a memory location" x)))
     (define (Memory8?! x) (or (and (Memory?! x) (eqv? (mloc-width x) 8))
                               (mistake "memory width is not 8" x)))
-    (define (Location? x) (or (symbol? x) (Memory? x)))
+    (define (Location? x) (or (Var? x) (Memory? x)))
     (define (Location?!/ctx ctx x) (unless (Location? x) (mistake "not a location" x ctx)))
     (define (SU64? x) (and (integer? x) (or (<= s64-min x u64-max)
                                             (mistake "not a signed or unsigned 64-bit integer" x))))
@@ -111,11 +112,9 @@
       (operation? x 'atomic-cas
                   (case-lambda
                     ((loc expected new)
-                     (unless (symbol? lhs)
-                       (mistake "atomic-cas is not assigned to a variable" lhs x))
+                     (unless (Var? lhs) (mistake "atomic-cas is not assigned to a variable" lhs x))
                      (unless (eqv? expected lhs)
-                       (mistake "atomic-cas expected value is not the assigned variable"
-                                lhs expected))
+                       (mistake "atomic-cas expected value is not reassigned" lhs expected x))
                      (and (Memory8?! loc) (Expr?! new)))
                     (_ (mistake "operator arity mismatch" x)))))
     (define (u128*? x) (operation? x 'u128* (case-lambda
@@ -182,7 +181,7 @@
                           current))
           (else (mistake "invalid operator" op))))
       (define (Expr x)
-        (cond ((symbol? x) (loc-ref x))
+        (cond ((Var? x) (loc-ref x))
               ((integer? x) (s64 x))
               ((mloc? x) (let ((width (mloc-width x)) (addr (mloc-addr x)))
                            (if (= width 8)
@@ -213,7 +212,7 @@
                           (cdr x)))
           (else (mistake "invalid Expr128" x))))
       (define (assign! l x)
-        (if (symbol? l)
+        (if (Var? l)
             (loc-set! l x)
             (let ((width (mloc-width l)) (addr (mloc-addr l)))
               (if (= width 8)
@@ -254,4 +253,4 @@
                      (else (mistake "not a Statement" S)))
                    (cdr S)))
           (loop)))
-      (append (afilter symbol? loc=>x) (afilter integer? loc=>x)))))
+      (append (afilter Var? loc=>x) (afilter integer? loc=>x)))))
