@@ -1,7 +1,7 @@
 ;;;;;;;;;;;
 ;;; ILL ;;;
 ;;;;;;;;;;;
-;; Program      ::= (fresh (Var ...) (letrec ((Label (case-lambda (Param* Block) ...)) ...) Block))
+;; Program      ::= (letrec ((Label (case-lambda (Param* Block) ...)) ...) Block)
 ;; Block        ::= (fresh (Var ...) Values)
 ;; Values       ::= (if Condition Values Values)
 ;;                | (begin Effect ... Values)
@@ -187,7 +187,7 @@
       (or (operation? x 'fresh (case-lambda ((v* e) (Var*?!/ctx x v*) (Values?!/ctx x e))
                                             (_ (mistake "malformed fresh" x))))
           (mistake "not a Block" x ctx)))
-    (define (Letrec?!/ctx ctx x)
+    (define (Letrec?! x)
       (define (Lambda?! lam)
         (define (Clause?! c)
           (or (and (list? c) (apply (case-lambda
@@ -209,8 +209,5 @@
                                          ll*)
                                  (Block?!/ctx x b))
                         (_ (mistake "malformed letrec" x))))
-          (mistake "not a letrec" x ctx)))
-    (unless (operation? P 'fresh (case-lambda
-                                   ((v* lr) (Var*?!/ctx P v*) (Letrec?!/ctx P lr))
-                                   (_ (mistake "malformed fresh" P))))
-      (mistake "invalid ILL program" P))))
+          (mistake "not a letrec" x)))
+    (Letrec?! P)))
