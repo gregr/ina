@@ -53,6 +53,16 @@
   (LLL-emit-C P)
   (newline))
 
+(define (LLL-test-x86-64 P)
+  (displayln "LLL:")
+  (pretty-write P)
+  (LLL-validate P)
+  (newline)
+  (displayln "LLL x86-64:")
+  (LLL-validate-x86-64 P)
+  (LLL-emit-x86-64-at&t P)
+  (newline))
+
 (for-each
   LLL-test
   '((begin
@@ -301,6 +311,18 @@
       (set! rax (call "foo" rdi rsi))
       (set! rdi rax)
       (call r15 rdi rsi))))
+
+(for-each
+  LLL-test-x86-64
+  '((begin
+      (set! rdi 0)
+      (set! rax (lea #(mloc 1 0 777 rdi 0)))
+      (set! rdx (lea #(mloc 8 rip "foo" 16 0)))
+      (set! rcx (lea #(mloc 8 rip "foo" -16 0)))
+      (set! r8 "foo")
+      (set! r9 (lea #(mloc 8 rip "foo" 0 0)))
+      (set! r10 #(mloc 8 rip "foo" 16 0))
+      (set! #(mloc 8 rip "foo" -16 0) r10))))
 
 (define bigadd
   '(begin

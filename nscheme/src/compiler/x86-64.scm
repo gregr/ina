@@ -28,16 +28,20 @@
           ((Label? x) x)
           ((mloc? x)
            (let ((b (mloc-base x)) (d (mloc-disp x)) (i (mloc-index x)) (s (mloc-shift x)))
-             (string-append
-               (cond ((eqv? d 0)   "")
-                     ((integer? d) (number->string d))
-                     (else         d))
-               "(" (if (eqv? b 0) "" (Reg b))
-               (if (eqv? i 0) "" (string-append
-                                   "," (Reg i)
-                                   (if (= s 0) "" (string-append
-                                                    "," (number->string (bitwise-asl 1 s))))))
-               ")")))
+             (if (Label? d)
+                 (string-append
+                   (if (eqv? i 0) d (string-append d (if (< i 0) "" "+") (number->string i)))
+                   "(" (Reg b) ")")
+                 (string-append
+                   (cond ((eqv? d 0)   "")
+                         ((integer? d) (number->string d))
+                         (else         (mistake "invalid mloc displacement" x)))
+                   "(" (if (eqv? b 0) "" (Reg b))
+                   (if (eqv? i 0) "" (string-append
+                                       "," (Reg i)
+                                       (if (= s 0) "" (string-append
+                                                        "," (number->string (bitwise-asl 1 s))))))
+                   ")"))))
           (else (mistake "not an operand" x))))
   (define Instruction
     (case-lambda

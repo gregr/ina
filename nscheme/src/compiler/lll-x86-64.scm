@@ -44,12 +44,10 @@
 ;; Location   ::= Register | Memory8
 ;; Register   ::= rax | rcx | rdx | rsi | rdi | rbx | rbp | rsp
 ;;              | r8 | r9 | r10 | r11 | r12 | r13 | r14 | r15
-;; Memory     ::= Memory8 | Memory4 | Memory2 | Memory1
-;; Memory8    ::= #(mloc 8 Register S32 Index IShift) | #(mloc 8 0 S32 Register IShift) | #(mloc 8 rip Label 0 0)
-;; Memory4    ::= #(mloc 4 Register S32 Index IShift) | #(mloc 4 0 S32 Register IShift) | #(mloc 4 rip Label 0 0)
-;; Memory2    ::= #(mloc 2 Register S32 Index IShift) | #(mloc 2 0 S32 Register IShift) | #(mloc 2 rip Label 0 0)
-;; Memory1    ::= #(mloc 1 Register S32 Index IShift) | #(mloc 1 0 S32 Register IShift) | #(mloc 1 rip Label 0 0)
+;; Memory8    ::= #(mloc 8      Register S32 Index IShift) | #(mloc 8      0 S32 Register IShift) | #(mloc 8      rip S32 0 0) | #(mloc 8      rip Label S32 0)
+;; Memory     ::= #(mloc MWidth Register S32 Index IShift) | #(mloc MWidth 0 S32 Register IShift) | #(mloc MWidth rip S32 0 0) | #(mloc MWidth rip Label S32 0)
 ;; Index      ::= Register | 0
+;; MWidth     ::= 8 | 4 | 2 | 1
 ;; IShift     ::= 0 | 1 | 2 | 3
 ;; SU64       ::= <signed or unsigned 64-bit integer>
 ;; SU64/32    ::= <sign-extended-32-bit-representable signed or unsigned 64-bit integer>
@@ -89,7 +87,8 @@
            (let ((b (mloc-base x)) (d (mloc-disp x)) (i (mloc-index x)) (s (mloc-shift x)))
              (if (eqv? b 'rip)
                  (and (or (Label? d) (S32? d) (mistake "invalid rip-relative mloc displacement" x))
-                      (or (eqv? i 0) (mistake "invalid rip-relative mloc index" x))
+                      (or (eqv? i 0) (and (Label? d) (S32? i))
+                          (mistake "invalid rip-relative mloc index" x))
                       (or (eqv? s 0) (mistake "invalid rip-relative mloc shift" x)))
                  (and (or (eqv? b 0) (Register?!/ctx x b))
                       (or (S32? d) (mistake "invalid mloc displacement" x))

@@ -920,6 +920,27 @@ LLL C:
 
 LLL:
 (begin
+ (set! rdi 0)
+ (set! rax (lea #(mloc 1 0 777 rdi 0)))
+ (set! rdx (lea #(mloc 8 rip "foo" 16 0)))
+ (set! rcx (lea #(mloc 8 rip "foo" -16 0)))
+ (set! r8 "foo")
+ (set! r9 (lea #(mloc 8 rip "foo" 0 0)))
+ (set! r10 #(mloc 8 rip "foo" 16 0))
+ (set! #(mloc 8 rip "foo" -16 0) r10))
+
+LLL x86-64:
+ xorl %edi,%edi
+ leaq 777(,%rdi),%rax
+ leaq foo+16(%rip),%rdx
+ leaq foo-16(%rip),%rcx
+ leaq foo(%rip),%r8
+ leaq foo(%rip),%r9
+ movq foo+16(%rip),%r10
+ movq %r10,foo-16(%rip)
+
+LLL:
+(begin
  (jump-if (u>= rdi rdx) "L_loop1_init")
  (set! r9 rdi)
  (set! rdi rdx)
