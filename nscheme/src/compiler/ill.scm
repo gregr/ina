@@ -6,7 +6,7 @@
 ;; Values       ::= (if Condition Values Values)
 ;;                | (begin Effect ... Values)
 ;;                | (case-set!-values Values (LHS* Values) ...)
-;;                | General
+;;                | Simple
 ;;                | (Binary-op2 Value Value)
 ;;                | (addc Value Value Value)
 ;;                | (subc Value Value Value)
@@ -14,7 +14,7 @@
 ;; Value        ::= (if Condition Value Value)
 ;;                | (begin Effect ... Value)
 ;;                | (case-set!-values Values (LHS* Value) ...)
-;;                | General
+;;                | Simple
 ;; Condition    ::= (if Condition Condition Condition)
 ;;                | (begin Effect ... Condition)
 ;;                | (case-set!-values Values (LHS* Condition) ...)
@@ -31,11 +31,10 @@
 ;;                | (set! Location Foreign-call)
 ;;                | Foreign-call
 ;; Foreign-call ::= (foreign-call Value Value ...)
-;; General      ::= Simple | Call | (malloc Value)
+;; Simple       ::= SU64 | Label | Location | (Binary-op Value Value) | Boolean | Call
 ;; Call         ::= (call Value Value ...)
 ;;                | (apply Value Value ...)
 ;;                | (apply/values Value Values)
-;; Simple       ::= SU64 | Label | Location | (Binary-op Value Value) | Boolean
 ;; Boolean      ::= #f | #t | (Compare-op Value Value)
 ;; Binary-op    ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Binary-op2   ::= +/carry | +/over | -/carry | -/over | */over | u128*
@@ -101,7 +100,6 @@
                   (case-lambda ((a b) (and (Value?!/ctx x a) (Value?!/ctx x b)))
                                (_ (mistake "operator arity mismatch" x)))))
     (define (Boolean? x) (case x ((#f #t) #t) (else (Compare-op? x))))
-    (define (Simple? x) (or (SU64? x) (Label? x) (Location? x) (Binary-op? x) (Boolean? x)))
     (define (Call? x)
       (or (operation? x (lambda (t) (memv t '(call apply)))
                       (case-lambda
@@ -112,11 +110,8 @@
                       (case-lambda
                         ((rator vrand) (Value?!/ctx x rator) (Values?!/ctx x vrand))
                         (_ (mistake "operator arity mismatch" x))))))
-    (define (General? x)
-      (or (Simple? x) (Call? x)
-          (operation? x 'malloc (case-lambda
-                                  ((size) (Value?!/ctx x size))
-                                  (_ (mistake "operator arity mismatch" x))))))
+    (define (Simple? x)
+      (or (SU64? x) (Label? x) (Location? x) (Binary-op? x) (Boolean? x) (Call? x)))
     (define (Foreign-call? x)
       (operation? x 'foreign-call
                   (case-lambda
@@ -173,10 +168,10 @@
     (define (Effect?!/ctx ctx x) (or (Effect? x) (mistake "not an Effect" x ctx)))
     (define (Condition? x) (or (Boolean? x) (Compound?/Expr?!/ctx Condition?!/ctx x)))
     (define (Condition?!/ctx ctx x) (or (Condition? x) (mistake "not a Condition" x ctx)))
-    (define (Value? x) (or (General? x) (Compound?/Expr?!/ctx Value?!/ctx x)))
+    (define (Value? x) (or (Simple? x) (Compound?/Expr?!/ctx Value?!/ctx x)))
     (define (Value?!/ctx ctx x) (or (Value? x) (mistake "not a Value" x ctx)))
     (define (Values? x)
-      (or (General? x) (Binary-op2? x) (Compound?/Expr?!/ctx Values?!/ctx x)
+      (or (Simple? x) (Binary-op2? x) (Compound?/Expr?!/ctx Values?!/ctx x)
           (operation? x (lambda (t) (memv t '(addc subc)))
                       (case-lambda
                         ((a b c) (Value?!/ctx x a) (Value?!/ctx x b) (Value?!/ctx x c))
