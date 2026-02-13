@@ -71,7 +71,7 @@
                    (fresh (acc)
                      (begin
                        (set!-values (acc carry) (addc #(mloc 8 a 0 i 3) #(mloc 8 b 0 i 3) carry))
-                       (mset! out (asl i 3) acc)
+                       (set! #(mloc 8 out 0 i 3) acc)
                        (set! i (+ i 1))
                        (set! count-b (- count-b 1))
                        (if (=/= count-b 0)
@@ -92,7 +92,7 @@
                    (fresh (acc)
                      (begin
                        (set!-values (acc carry) (+/carry #(mloc 8 a 0 i 3) carry))
-                       (mset! out (asl i 3) acc)
+                       (set! #(mloc 8 out 0 i 3) acc)
                        (set! i (+ i 1))
                        (set! count-a (- count-a 1))
                        (if (=/= count-a 0)
@@ -103,6 +103,6 @@
                   ((i carry out)
                    (fresh ()
                      (begin
-                       (mset! out (asl i 3) carry)
+                       (set! #(mloc 8 out 0 i 3) carry)
                        (values)))))))
         (fresh () (call "bigadd" rdi rsi rdx rcx r8))))))
