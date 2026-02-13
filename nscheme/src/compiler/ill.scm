@@ -44,11 +44,9 @@
 ;; Param*       ::= Param | (Param ...) | (Param Param ... . Param)
 ;; Param        ::= Var | #f
 ;; Location     ::= Var | Memory
-;; Memory       ::= Memory8 | Memory4 | Memory2 | Memory1
-;; Memory4      ::= #(mloc 4 Value Value Value IShift)
-;; Memory8      ::= #(mloc 8 Value Value Value IShift)
-;; Memory2      ::= #(mloc 2 Value Value Value IShift)
-;; Memory1      ::= #(mloc 1 Value Value Value IShift)
+;; Memory8      ::= #(mloc 8      Value Value Value IShift)
+;; Memory       ::= #(mloc MWidth Value Value Value IShift)
+;; MWidth       ::= 8 | 4 | 2 | 1
 ;; IShift       ::= 0 | 1 | 2 | 3
 ;; Var          ::= <symbol>
 ;; SU64         ::= <signed or unsigned 64-bit integer>

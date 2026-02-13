@@ -3,7 +3,6 @@
 ;;;;;;;;;;;
 ;; Statement  ::= (begin Statement ...)
 ;;              | (set! Location Expr)
-;;              | (set! Location Label)
 ;;              | (set! Location (CC-op Expr Expr))
 ;;              | (set! Location (lea Memory))
 ;;              | (set! Location Call)
@@ -14,8 +13,8 @@
 ;;              | (jump Location)
 ;;              | Call
 ;;              | Label
-;; Expr       ::= SU64 | Location | (Binary-op Expr Expr) | Condition | (if Condition Expr Expr)
-;; Call       ::= (call Label Expr ...) | (call Expr Expr ...)
+;; Expr       ::= SU64 | Label | Location | (Binary-op Expr Expr) | Condition | (if Condition Expr Expr)
+;; Call       ::= (call Expr Expr ...)
 ;; Binary-op  ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Compare-op ::= and | nand | = | =/= | < | <= | > | >= | u< | u<= | u> | u>=
 ;; CC-op      ::= addc | subc | +/carry | -/carry | +/over | -/over | */over
@@ -23,11 +22,9 @@
 ;; Condition  ::= (Compare-op Expr Expr) | (cc CC)
 ;; Location   ::= Var | Memory
 ;; Var        ::= <symbol>
-;; Memory     ::= Memory8 | Memory4 | Memory2 | Memory1
-;; Memory8    ::= #(mloc 8 Expr Expr Expr IShift) | #(mloc 8 Var Label 0 0)
-;; Memory4    ::= #(mloc 4 Expr Expr Expr IShift) | #(mloc 4 Var Label 0 0)
-;; Memory2    ::= #(mloc 2 Expr Expr Expr IShift) | #(mloc 2 Var Label 0 0)
-;; Memory1    ::= #(mloc 1 Expr Expr Expr IShift) | #(mloc 1 Var Label 0 0)
+;; Memory8    ::= #(mloc 8      Expr Expr Expr IShift)
+;; Memory     ::= #(mloc MWidth Expr Expr Expr IShift)
+;; MWidth     ::= 8 | 4 | 2 | 1
 ;; IShift     ::= 0 | 1 | 2 | 3
 ;; SU64       ::= <signed or unsigned 64-bit integer>
 ;; Label      ::= <string>
@@ -66,12 +63,8 @@
     (define (Memory? x)
       (and (mloc? x) (or (memv (mloc-width x) '(8 4 2 1)) (mistake "invalid mloc width" x))
            (let ((b (mloc-base x)) (d (mloc-disp x)) (i (mloc-index x)) (s (mloc-shift x)))
-             (if (Label? d)
-                 (and (or (Var? b) (mistake "invalid label mloc base" x))
-                      (or (eqv? i 0) (mistake "invalid label mloc index" x))
-                      (or (eqv? s 0) (mistake "invalid label mloc shift" x)))
-                 (and (Expr?! b) (Expr?! d) (Expr?! i)
-                      (or (memv s '(0 1 2 3)) (mistake "invalid mloc shift" x)))))))
+             (and (Expr?! b) (Expr?! d) (Expr?! i)
+                  (or (memv s '(0 1 2 3)) (mistake "invalid mloc shift" x))))))
     (define (Memory?! x) (or (Memory? x) (mistake "not a memory location" x)))
     (define (Memory8?! x) (or (and (Memory?! x) (eqv? (mloc-width x) 8))
                               (mistake "memory width is not 8" x)))
@@ -91,7 +84,7 @@
     (define Carry-op?   (Arity2-op?/op=>procedure carryop=>procedure))
     (define Over-op?    (Arity2-op?/op=>procedure overop=>procedure))
     (define (Call? x) (operation? x 'call (case-lambda
-                                            ((op . rand*) (and (or (Label? op) (Expr? op)
+                                            ((op . rand*) (and (or (Expr? op)
                                                                    (mistake "not callable" op x))
                                                                (andmap Expr?! rand*)))
                                             (_ (mistake "call arity mismatch" x)))))
@@ -100,7 +93,7 @@
                                         (_ (mistake "if arity mismatch" x)))))
     (define (Condition? x) (or (Comparison? x) (cc? x)))
     (define (Condition?! x) (or (Condition? x) (mistake "not a condition" x)))
-    (define (Expr? x) (or (Location? x) (SU64? x) (Binary-op? x) (Condition? x) (If? x)))
+    (define (Expr? x) (or (Location? x) (SU64? x) (Label? x) (Binary-op? x) (Condition? x) (If? x)))
     (define (Expr?! x) (or (Expr? x) (mistake "not an expression" x)))
     (define (cc? x) (operation? x 'cc (case-lambda ((x) (or (memv x '(carry ncarry over nover))
                                                             (mistake "not a condition code" x)))
@@ -126,9 +119,9 @@
         (apply (case (car S)
                  ((set!) (lambda (lhs rhs)
                            (Location?!/ctx S lhs)
-                           (unless (or (Expr? rhs) (Label? rhs) (Call? rhs)
-                                       (Carry-op? rhs) (Over-op? rhs) (LEA? rhs) (CAS?/lhs lhs rhs))
-                             (mistake "invalid set! right-hand-side" S))))
+                           (unless (or (Expr? rhs) (Call? rhs) (Carry-op? rhs) (Over-op? rhs)
+                                       (LEA? rhs) (CAS?/lhs lhs rhs))
+                             (mistake "invalid set! right-hand-side" rhs S))))
                  ((set2!) (lambda (l1 l2 r) (Location?!/ctx S l1) (Location?!/ctx S l2) (u128*? r)))
                  ((jump-if) (lambda (x label)
                               (Condition?! x)
@@ -142,15 +135,13 @@
 
   (define (LLL-eval P loc=>x)
     (mlet ((loc=>x loc=>x) (flag #f))
-      (define (mloc-addr x) (if (Label? (mloc-disp x))
-                                (mistake "cannot evaluate label mloc" x)
-                                (let ((width (mloc-width x))
-                                      (addr (+ (Expr (mloc-base x)) (Expr (mloc-disp x))
-                                               (* (Expr (mloc-index x))
-                                                  (bitwise-asl 1 (mloc-shift x))))))
-                                  (unless (= (integer-floor-mod addr width) 0)
-                                    (mistake "unaligned memory address for width" width addr))
-                                  addr)))
+      (define (mloc-addr x) (let ((width (mloc-width x))
+                                  (addr (+ (Expr (mloc-base x)) (Expr (mloc-disp x))
+                                           (* (Expr (mloc-index x))
+                                              (bitwise-asl 1 (mloc-shift x))))))
+                              (unless (= (integer-floor-mod addr width) 0)
+                                (mistake "unaligned memory address for width" width addr))
+                              addr))
       (define (loc-ref l) (let ((entry (assv l loc=>x)))
                             (unless entry (mistake "unassigned location" l))
                             (cdr entry)))
@@ -191,6 +182,7 @@
                                       (shift  (* offset 8))
                                       (v      (loc-ref (- addr offset))))
                                  (bitwise-and (bitwise-asr v shift) mask)))))
+              ((Label? x) (mistake "cannot evaluate label" x))
               ((eqv? (car x) 'call) (lambda _ (mistake 'LLL-eval "cannot evaluate call" x)))
               ((eqv? (car x) 'cc) (case (cadr x)
                                     ((carry)  (if (eqv? flag 'carry) 1 0))
