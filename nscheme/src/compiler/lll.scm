@@ -29,7 +29,7 @@
 ;; IShift     ::= 0 | 1 | 2 | 3
 ;; SU64       ::= <signed or unsigned 64-bit integer>
 ;; Label      ::= <string>
-;; Relocation ::= #<mvector 0>
+;; Relocation ::= <relocation>
 (splicing-local
   ((define Label? string?)
    (define Var? symbol?)

@@ -58,7 +58,7 @@
 ;; S32        ::= <signed 32-bit integer>
 ;; U6         ::= <unsigned 6-bit integer>  ; 0 through 63
 ;; Label      ::= <string>
-;; Relocation ::= #<mvector 0>
+;; Relocation ::= <relocation>
 
 ;; NOTE:
 ;; - (set! Register 0) invalidates condition flags (via xor R R) clearing carry and overflow
