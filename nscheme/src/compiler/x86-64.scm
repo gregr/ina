@@ -42,6 +42,7 @@
                                        (if (= s 0) "" (string-append
                                                         "," (number->string (bitwise-asl 1 s))))))
                    ")"))))
+          ((relocation? x) (mistake "x86-64-emit-at&t does not support relocation" x))
           (else (mistake "not an operand" x))))
   (define Instruction
     (case-lambda
@@ -111,3 +112,28 @@
                    (else (fail))))
          (else (fail)))))
     (x* (fail* x*))))
+
+;; TODO: a machine-code-generating assembler for x86-64
+;;
+;; How do we get the addresses for C library labels?
+;; - at runtime we can use dlopen and dlsym
+;; - at compile time we can use C function labels:
+;;   - directly in jumps and calls
+;;   - or (set! R (mloc 8 rip "label@GOTPCREL" 0 0)) to store a function pointer
+;;     - unless statically linking with libc, in which case we can use (set! R "label")
+;; NOTE: the text-generating "assembler" assumes all labels do not move, and its set! policy generates a rip-relative leaq in all cases
+;; - therefore code generated in this way must never be moved by the gc
+;; - the system assembler and dynamic linker can manage all labels in this case without upstream assistance
+;;
+;; What about labels that move due to gc?
+;; - how do we update instructions that reference them after gc moves them?
+;; - for all movable objects including code, we refer to them using relocation entries instead of labels
+;;   - (mvector BYTE-OFFSET)
+;; - we also use the machine-code-generating assembler so that we can control linking
+;;   - the assembler populates the BYTE-OFFSET at which to patch in the object address once it is available
+;; - for instance, to call a movable code object, upstream should explicitly generate this LLL:
+;;   - ```
+;;     (begin (set! R.scratch CODE-ADDRESS-RELOCATION)
+;;            (jump-or-call-of-some-kind R.scratch))
+;;     ```
+;; - then a relocation table will accompany the instructions to describe how the code address should be patched during gc

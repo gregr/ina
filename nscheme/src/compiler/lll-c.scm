@@ -32,6 +32,7 @@ static inline u64 LLL_atomic_cas(u64* loc, u64 expected, u64 new) {
     (cond ((pair? x) (loop (car x)) (loop (cdr x)))
           ((mloc? x) (when (Label? (mloc-disp x))
                        (mistake "LLL C does not support mloc with label displacement" x)))
+          ((relocation? x) (mistake "LLL C does not support relocations" x))
           (else (values)))))
 
 (define (LLL-emit-C P)

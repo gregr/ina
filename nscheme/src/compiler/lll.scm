@@ -6,6 +6,7 @@
 ;;              | (set! Location (CC-op Expr Expr))
 ;;              | (set! Location (lea Memory))
 ;;              | (set! Location Call)
+;;              | (set! Location Relocation)
 ;;              | (set! Var1 (atomic-cas Memory8 Var1 Expr))
 ;;              | (set2! Location Location (u128* Expr Expr))
 ;;              | (jump-if Condition Label)
@@ -28,6 +29,7 @@
 ;; IShift     ::= 0 | 1 | 2 | 3
 ;; SU64       ::= <signed or unsigned 64-bit integer>
 ;; Label      ::= <string>
+;; Relocation ::= #<mvector 0>
 (splicing-local
   ((define Label? string?)
    (define Var? symbol?)
@@ -120,7 +122,7 @@
                  ((set!) (lambda (lhs rhs)
                            (Location?!/ctx S lhs)
                            (unless (or (Expr? rhs) (Call? rhs) (Carry-op? rhs) (Over-op? rhs)
-                                       (LEA? rhs) (CAS?/lhs lhs rhs))
+                                       (LEA? rhs) (CAS?/lhs lhs rhs) (relocation? rhs))
                              (mistake "invalid set! right-hand-side" rhs S))))
                  ((set2!) (lambda (l1 l2 r) (Location?!/ctx S l1) (Location?!/ctx S l2) (u128*? r)))
                  ((jump-if) (lambda (x label)
@@ -216,7 +218,9 @@
                     (loc-set! (- addr offset)
                               (bitwise-ior (bitwise-and (bitwise-not (bitwise-asl mask shift)) v)
                                            (bitwise-asl x shift))))))))
-      (define (Assign! lhs rhs) (assign! lhs (if (Label? rhs) rhs (Expr rhs))))
+      (define (Assign! lhs rhs)
+        (when (relocation? rhs) (mistake "cannot evaluate relocation" lhs rhs))
+        (assign! lhs (if (Label? rhs) rhs (Expr rhs))))
       (define (Assign2! lhs1 lhs2 rhs) (let-values (((r1 r2) (Expr128 rhs)))
                                          (assign! lhs1 r1)
                                          (assign! lhs2 r2)))

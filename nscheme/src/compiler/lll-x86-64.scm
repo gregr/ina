@@ -25,6 +25,7 @@
 ;;              | (set! Register Condition)
 ;;              | (set! Register (lea Memory))
 ;;              | (set! Register Label)
+;;              | (set! Register Relocation)
 ;;              | (set! rax (atomic-cas Memory8 rax Register))
 ;;              | (set! Register1 (if Condition Location Register1))
 ;;              | (set2! rdx rax (u128* rax Location))
@@ -57,6 +58,8 @@
 ;; S32        ::= <signed 32-bit integer>
 ;; U6         ::= <unsigned 6-bit integer>  ; 0 through 63
 ;; Label      ::= <string>
+;; Relocation ::= #<mvector 0>
+
 ;; NOTE:
 ;; - (set! Register 0) invalidates condition flags (via xor R R) clearing carry and overflow
 ;; - (set! X (+ X 1)) and (set! X (- X 1)) do not alter the carry flag.
@@ -182,7 +185,7 @@
                             ((Label? rhs) (Register?!/ctx S lhs))
                             ((Register? lhs) (unless (or (Register? rhs) (SU64? rhs) (Memory? rhs)
                                                          (Condition? rhs) (LEA? rhs)
-                                                         (If?/ctx&lhs S lhs rhs))
+                                                         (If?/ctx&lhs S lhs rhs) (relocation? rhs))
                                                (mistake "invalid set! right-hand-side" rhs)))
                             ((Memory? lhs) (unless (or (Register? rhs) (case (mloc-width lhs)
                                                                          ((8) (SU64/32? rhs))
@@ -224,9 +227,11 @@
           ((8) (case wr
                  ((8) (cond ((and (Register? lhs) (eqv? rhs 0)) (Assign-0 lhs))
                             ((and (Register? lhs) (U32? rhs)) (asm 'mov 4 lhs rhs))
-                            ((and (Register? lhs) (integer? rhs)
-                                  (not (or (<= #x-80000000 rhs #x7FFFFFFF)
-                                           (<= #xFFFFFFFF80000000 rhs #xFFFFFFFFFFFFFFFF))))
+                            ((and (Register? lhs)
+                                  (or (and (integer? rhs)
+                                           (not (or (<= #x-80000000 rhs #x7FFFFFFF)
+                                                    (<= #xFFFFFFFF80000000 rhs #xFFFFFFFFFFFFFFFF))))
+                                      (relocation? rhs)))
                              (asm 'mov 'abs8 lhs rhs))
                             (else (asm 'mov 8 lhs rhs))))
                  ((4) (asm 'mov 4 lhs rhs))

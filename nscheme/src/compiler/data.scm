@@ -6,6 +6,9 @@
 (define (mloc-index x) (vector-ref x 4))
 (define (mloc-shift x) (vector-ref x 5))
 
+(define (make-relocation) (mvector 0))
+(define (relocation? x) (and (mvector? x) (= (mvector-length x) 1)))
+
 (splicing-let ((2^63 #x8000000000000000) (2^64 #x10000000000000000))
   (define s64-min (- 2^63))
   (define s64-max (- 2^63 1))
