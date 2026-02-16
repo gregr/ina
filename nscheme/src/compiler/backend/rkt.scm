@@ -13,6 +13,11 @@
                                                  (memv c (bytes->list #"\"#'(),;[\\]`{|}"))))
                                         (loop (+ i width)))))))))))))
 
+;; TODO: optional stack traces for Racket platform debugging via:
+;; - `(with-continuation-mark trace-key note EXPR)`
+;;   - wrap around case-lambda bodies and calls, providing the E-note
+;; - `(continuation-mark-set->list #f trace-key)`
+;;   - use this to recover the trail of notes during panic handling
 (define (E-compile-rkt E global-addr=>id)
   ;; NOTE: we assume that suffixing variable names with .N will prevent them from colliding with
   ;; any global names, such as the names of any primitives or special form keywords.

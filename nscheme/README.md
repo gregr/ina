@@ -3,10 +3,14 @@
 nScheme is a low-tech, nonstandard Scheme implementation designed for
 programming portable, flexible systems.
 
-Compared with standard Scheme, the language has been simplified in many ways.
+Compared with standard Scheme, the language has been simplified in many ways,
+particularly:
+- most primitive data types and variable bindings are immutable
+- multi-shot continuations have been removed
+- there is no distinct "top-level" program structure
 This simplification makes it easier to reason about control and data flow, and
-also facilitates a simpler, more compact implementation that can be
-straightforwardly ported to new platforms.
+also facilitates a more compact implementation that can be straightforwardly
+ported to new platforms.
 
 Unlike standard Scheme, nScheme does not prescribe any particular form of
 program organization or approach to metaprogramming.  Where standard Scheme
@@ -16,7 +20,7 @@ combining, and evaluating programs at any time.
 
 Beyond basic language support, an nScheme implementation will also inherit
 primitive capabilities specific to its platform.  The primitives provided by
-some platforms will include support for low level resource control and
+some platforms will include support for low-level resource control and
 virtualization, allowing a programmer to decide how a system works at every
 level.  Some platforms will provide reflection primitives that enable saving
 and resuming snapshots of a running system.
@@ -124,6 +128,70 @@ bootstrap/build
 Optionally move resulting artifacts from built/ to prebuilt/ to commit a snapshot.
 
 ## TODO
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Unmanaged programs ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+Options for implementing low-level support, such as a runtime library, or writing unmanaged programs in general:
+- nscheme written carefully using normal ops in a way that the compiler will not need to link with low-level support code
+  - unreliable, or at least very difficult, especially without compiler feedback to let us know if we've succeeded
+  - must avoid anything that allocates memory except when we can guarantee the compiler will allocate locally
+    - we may be able to allocate large mvector/mbytes buffers up front, and virtually allocate within these
+  - in a situation where we need to avoid interrupt-handling, the computation must fit in the interrupt-free window size
+- nscheme written using unsafe, low-level ops
+  - more reliable, but tediously explicit
+  - will require some verbose representation conversions
+    - manually tagging and untagging
+    - e.g., casting nscheme integers to/from 64-bit integers
+  - ensuring the GC never triggers while we are referencing untagged values
+    - this means explicitly turning off interrupts around unsafe computations
+    - NOTE: to avoid memory/interrupt starvation, must give constant bounds for these interrupts-off computations
+- specify and use an architecture-specific, unmanaged language (where we consider C and JS to be architectures)
+  - reliable and less tedious, but requires another compiler
+  - any GC, interrupt-handers, schedulers, etc. are explicitly invoked when appropriate
+  - appropriate low-level representations (e.g., 64-bit integers), rather than nscheme representations (fixnum/bignum)
+  - architecture-specific details
+    - C unboxes everything by default, and requires manual address indirection and dereferencing
+  - notation facilitates concise low-level operations
+    - will look like straightforward code without verbose conversions
+    - quoted literals correspond to low-level representations, not nscheme representations
+      - e.g., for C the literal 123 will be compiled to an untagged, 64-bit integer representation of 123
+      - literals outside the 64-bit range cannot be used (likely signal an error at compile-time)
+    - primitive operations correspond to low-level ops
+      - e.g., for C, + will add untagged, 64-bit integers
+  - maybe optional type checking/inference
+    - may only be partial if we allow arbitrary header inclusion, since some names will have unknown types
+    - though we could still check that these names are used consistently, or declare types for them
+- generate architecture-specific code without any compiler support
+  - e.g., using codegen/c.scm, or handwritten text from other sources
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; BIGNUM/RATNUM Implementation ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+If we implement bignum/ratnum arithmetic directly in nscheme using unsafe ops, nscheme's implicit
+interrupt-handling will automatically prevent denial-of-service when manipulating huge bignums.
+
+Need to implement these primitives:
+- bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
+  integer-floor-divmod numerator denominator = <= >= < > + - * /
+
+low-level ops we can depend on:
+- `u64-addc u64-subc u64+/carry u64-/carry s64+/over s64-/over s64*/over u128*`
+- `make-array array-ref array-set!`
+  - or maybe call them: `malloc mref mset!`
+  - for allocation of untagged arrays of untagged integer/bitvector values
+  - an untagged integer/bitvector is not inherently u64 or s64
+    - the operations used will determine whether it is treated as u64 or s64
+
+bigint representation:
+- header containing:
+  - size (number of u64 components)
+  - sign (negative or nonnegative)
+- body is a little-endian u64 array representing the magnitude
+
 
 ;;;;;;;;;;;;;;;;;;
 ;;; PRIMITIVES ;;;
@@ -242,6 +310,137 @@ Racket-specific implementation improvement:
   - use this to implement runtime, memory management, etc.
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Memory Management ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+fast path allocator state is implicit and thread-local
+- likely implemented with the allocation pointer and limit kept in registers
+- malloc calls manipulate this state implicitly
+- this allows region-specific allocation by repointing the allocator state
+  without needing explicit coordination with malloc calls
+
+procedure code objects contain metadata describing whether their arguments
+escape, and how they escape
+- example hows:
+  - returned
+  - stored in a mutable data type
+  - passed as an argument to a procedure whose behavior is unknown
+- this allows callers of unknown procedures to dynamically determine whether
+  local allocation is safe
+  - particularly useful for ports and temporary buffers
+
+memory is composed of hierarchical regions
+- this is superficially similar to a memory manager for a generational garbage
+  collector, but no predetermined management policy is imposed
+- regions support a variety of operations for manually creating, destroying,
+  and otherwise manipulating them, giving a program enough flexibility to
+  specify policies tailored to its own allocation behavior
+  - for instance, enough control is available to specify various typical
+    generational gc policies if one is desired
+  - alternatively, more manual organizations can be expressed, such as arenas,
+    stacks, rings, etc.
+  - or a program can forgo memory reclamation entirely
+- immutable references in one region may only point into the same region or
+  into an ancestor region, and can be managed locally
+- mutable references may point backwards into descendent regions, requiring
+  more coordination to manage
+- a thread allocates into its innermost/youngest region
+- a thread can maintain its own local regions, and share ancestor regions with
+  a subset of other threads
+  - managing a shared region often requires more coordination overhead than a
+    local region, but allocating an object into a shared region is safer when
+    that object might be written to shared mutable memory, such as an mvector
+    or synchronous channel, allowing it to be communicated to another thread
+  - if an object is allocated into a local region and then written to shared
+    mutable memory, a thread that does not share the local region can read the
+    object from the shared memory, and retain a reference to it during a gc
+    - local gc is unsafe for the local region owner because the remote
+      reference is invisible to the owner
+- when a thread spawns a new thread, the old thread shares all of its current
+  regions with the new thread
+
+referencing regions
+- regions are second class, and are unsafely referenced by relative position
+- nonnegative positions are relative to a thread's innermost region
+  - 0 refers to the most-local region, 1 to its immediate parent, etc.
+- negative positions are relative to a thread's outermost region and can only
+  reference globally shared regions
+  - the outermost region is -1
+  - -2 is the immediate child of -1, -3 is the immediate child of -2, etc.
+
+garbage collection
+- a thread can control its current availability for gc coordination
+  - it can specify the oldest region that it is willing to collect
+    - coordinating threads can only collect up to the youngest common region
+- region collectability can be controlled directly
+  - the youngest uncollectable region and its ancestors will not be collected,
+    even in response to explicit gc initiation
+  - it is often desirable for the contents of the oldest region to be kept
+    immortal, and disabling region collectability makes this possible
+- the oldest ancestor whose mutable references may be roots for a region (i.e.,
+  they point backwards into the younger region) can be unsafely specified
+  - this is unsafe when the specificied ancestor does not include all mutable
+    references, because then some roots will be missed during a gc
+  - when collecting up to a particular region, mutable references are searched
+    within all regions up to the oldest common mutable root region indicated by
+    any of the collected regions
+  - for example, given old to young regions: A B C D E F
+    - if F is the youngest region and A is the oldest
+    - and we set D to be mutably reachable only up to B
+    - and we set F and E to be mutably reachable only up to C
+    - then if we collect only up to F or E, we only have to search mutable
+      references up to C
+    - or if we collect up to D, we have to search mutable references up to B
+    - if instead we set E to be mutably reachable up to A, then if collection
+      includes E at all, then we search mutable references all the way up to A
+- a region can request an ancestor to use as the target for its gc survivors
+  - but the actual target will be no older than the parent of the oldest region
+    requested for collection
+  - all intermediate regions will be forced to target a region that is at least
+    as old as any of its descendents' targets
+- automatic garbage collection can be toggled for a region
+  - current and minimum allocation ceilings can be chosen
+    - gc is triggered when an allocation ceiling is exceeded
+  - the allocation ceiling can grow or shrink in response to how much space is
+    occupied by data that survives a gc
+    - it will never shrink below the minimum specified
+  - optionally, a maximum ceiling can be imposed on a thread's local regions
+    - if this maximum is insufficient for gc survivors, the thread will panic
+    - this can prevent accidental or intentional denial-of-service attacks
+- garbage collection can be initiated explicitly
+  - the initiating thread chooses the oldest region to be collected, and
+    coordinates with other threads as necessary to collect everything up to
+    that region
+
+other region management
+- the region of an object can be determined
+- a region's memory usage can be examined
+- a thread can determine the number of regions it has access to, which makes it
+  possible to iterate over them
+- a thread can determine the youngest common region it shares with a set of
+  threads
+- a region can be unsafely truncated to empty it, immediately recovering any
+  memory that was allocated without requiring gc
+  - this is unsafe when any of its allocated objects are still reachable
+  - this makes it possible to perform manual, efficient, arena-style memory
+    management
+- a region can be unsafely discarded
+  - this is unsafe if the region is not empty
+  - discarding a region collapses the hierarchy by one level
+- a region can be immediately merged into an ancestor
+  - all intermediate ancestors are also merged
+  - this collapses the hierarchy by the number of merged regions
+- a local region can be shared
+  - either the degree of sharing can be inherited from a target region
+    - the local region and its ancestors become shared with any thread that
+      already shares the target region
+  - or a region can be shared with a set of other threads
+    - the local region and its ancestors become shared with these threads
+- a new region can be created and inserted above or below a relative position
+  - the new region inherits the degree of sharing of the region that currently
+    exists at that position
+- a new innermost, local region can be created
 
 
 ;;;;;;;;;;;;;;;;

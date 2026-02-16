@@ -1113,6 +1113,13 @@
             (peek 2 (lambda (c w)
                       (if (separator? c) (atom 2 x) (fail 2 (buf-span 3)
                                                           "boolean followed by a non-separator")))))
+          ;; TODO: more graceful suppression of Text failures
+          ;; - since we have to consume the entire delimited Text anyway, instead of
+          ;;   signalling rerror at each local failure, gather them all up and present them
+          ;;   at the end, no matter whether rerror returns #t (for multi-error support) or
+          ;;   #f (to indicate first-fail-only)
+          ;; - gathering and issuing a final "invalid text" rerror allows the entire token to
+          ;;   be spanned appropriately
           (define Text
             (mlet ((buf.text (make-mbytes 64 0)))
               (lambda (i byte:delim return/k)

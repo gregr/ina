@@ -1,3 +1,8 @@
+;; TODO: express SIMD computations
+;; - SSE registers and instructions for x86-64
+;; - floating point literals and operations
+;; - maybe distinguished operators of the form: vELEMENT-BYTE-SIZEop ? e.g., v4+, v8*
+
 ;;;;;;;;;;;
 ;;; LLL ;;;
 ;;;;;;;;;;;

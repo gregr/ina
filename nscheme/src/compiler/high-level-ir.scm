@@ -16,6 +16,7 @@
 
 (define (E:lambda param*~ body)   (E:case-lambda (list param*~) (list body)))
 (define (E:let    lhs* rhs* body) (E:call (E:lambda lhs* body) rhs*))
+;; TODO: define a direct E:seq type
 (define (E:seq    e0 e1)          (E:apply/values (E:lambda (make-address #f #f) e1) e0))
 
 (splicing-local
@@ -58,6 +59,19 @@
                         (list 'letrec (map (lambda (lhs rhs) (list (address-pretty lhs) (loop rhs))) lhs* rhs*)
                               (loop body))))))
 
+;; TODO: treat unused arguments to immediately-applied lambdas (i.e., begin / seq) more efficiently
+
+;; TODO: handle outer-level evaluation differently from evaluation inside a procedure
+;; - outside any procedure, an expression will be evaluated at most once, so staging is unnecessary
+;; - an outside variable bound by letrec or let (immediately-applied lambda) will only be bound once
+;;   - so even within staged procedures, a reference can be converted directly to the value instead
+;;     of using a runtime environment
+;; - once we descend into a non-let procedure, we should stage or compile
+;;   - either to a host-preferred code representation
+;;   - or an abstract machine where we also make these improvements over the current implementation:
+;;     - flat closure environments that only capture the free variables they use
+;;     - local-only (non-escaping) procedures that can reference free variables through the parent's
+;;       closure/frame, since the parent's environment is guaranteed to still be available
 (define (E-eval E)
   (let ((primitive-evaluate (current-primitive-evaluate)))
     (let loop ((code-type* (primitive-evaluate)))
