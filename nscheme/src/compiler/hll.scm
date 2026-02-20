@@ -10,6 +10,7 @@
 ;;          | (case-lambda (Param* Expr) ...)
 ;;          | (letrec ((Param Expr) ...) Expr)
 ;;          | (let ((Param Expr) ...) Expr)
+;;          | (case-values Expr (Param* Expr) ...)
 ;;          | (begin Expr ... Expr)
 ;;          | (note <value> Expr)
 ;; Param* ::= Param | (Param ...) | (Param Param ... . Param)
@@ -34,18 +35,17 @@
     (or (Param? x) (null? x)
         (and (pair? x) (Param?!/ctx ctx (car x)) (Param*?!/ctx ctx (cdr x)))
         (mistake "not a parameter list" x ctx)))
+  (define (Parameter-expr-pair*?!/ctx ctx p&e*)
+    (andmap (lambda (p&e)
+              (apply?! (case-lambda
+                         ((p e) (and (Param*?!/ctx ctx p) (Expr?!/ctx ctx e)))
+                         (_ (mistake "not a parameter-expression pair" p&e ctx)))
+                       p&e))
+            p&e*))
   (define (Expr?!/ctx ctx x)
     (define Let-rand*?!
       (case-lambda
-        ((p&e* body)
-         (and (list?! p&e*)
-              (andmap (lambda (p&e)
-                        (apply?! (case-lambda
-                                   ((p e) (and (Param*?!/ctx x p) (Expr?!/ctx x e)))
-                                   (_ (mistake "not a case-lambda clause" x ctx)))
-                                 p&e))
-                      p&e*)
-              (Expr?!/ctx x body)))
+        ((p&e* body) (and (list?! p&e*) (Parameter-expr-pair*?!/ctx ctx p&e*) (Expr?!/ctx x body)))
         (_ (mistake "operator arity mismatch" x ctx))))
     (or (uvar? x) (primop? x)
         (operation?
@@ -62,15 +62,12 @@
           'apply/values (case-lambda
                           ((rator . rand) (and (Expr?!/ctx x rator) (Expr?!/ctx x rand)))
                           (_ (mistake "operator arity mismatch" x ctx)))
-          'case-lambda  (lambda p&b*
-                          (andmap (lambda (p&b)
-                                    (apply?! (case-lambda
-                                               ((p b) (and (Param*?!/ctx x p) (Expr?!/ctx x b)))
-                                               (_ (mistake "not a case-lambda clause" x ctx)))
-                                             p&b))
-                                  p&b*))
+          'case-lambda  (lambda p&e* (Parameter-expr-pair*?!/ctx x p&e*))
           'letrec       Let-rand*?!
           'let          Let-rand*?!
+          'case-values  (case-lambda
+                          ((e . p&e*) (Expr?!/ctx x e) (Parameter-expr-pair*?!/ctx x p&e*))
+                          (_ (mistake "operator arity mismatch" x ctx)))
           'begin        (case-lambda
                           ((e . e*) (Expr?!/ctx x e) (Expr*?!/ctx x e*))
                           (_ (mistake "operator arity mismatch" x ctx)))

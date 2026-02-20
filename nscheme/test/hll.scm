@@ -16,6 +16,7 @@
 ;;           | (lambda Param* . Body)
 ;;           | (letrec ((Param Expr) ...) . Body)
 ;;           | (let ((Param Expr) ...) . Body)
+;;           | (case-values Expr (Param* . Body) ...)
 ;;           | (begin . Body)
 ;;           | Body  ; call
 ;; Body    ::= (Expr Expr ...)
@@ -75,12 +76,13 @@
           (let ((x (syntax-unwrap stx)))
             (cond ((or (not x) (null? x)) x)
                   ((pair? x) (cons (Param (car x)) (Param* (cdr x))))
+                  ((symbol? x) (Var stx))
                   (else (mistake "not a parameter list" stx)))))
         (k env (Param* p) (make-begin (Body/env env e*)))))
     (define (Lambda-rand* p&b)
       (apply! (case-lambda
                 ((p . e*) (bind/k p e* (lambda (env p e) (list p e))))
-                (_ (mistake "empty procedure case")))
+                (_ (mistake "empty procedural case" stx)))
               p&b))
     (define (Let-rand*/k k)
       (case-lambda
@@ -124,6 +126,9 @@
                           (list 'let (map list p* (map (lambda (e) (Expr/env env e)) e*)) body)))
         'let          (Let-rand*/k
                         (lambda (env p* e* body) (list 'let (map list p* (map Expr e*)) body)))
+        'case-values  (case-lambda
+                        ((e . p&b*) (cons* 'case-values (Expr e) (map Lambda-rand* p&b*)))
+                        (_ (mistake "operator arity mismatch" stx)))
         'begin        (lambda x* (Body x*))))
     (annotate
       (cond
@@ -191,4 +196,9 @@
                                             (else (values))))))
                        (loop n)
                        (unbox total))))))
-           (sum-to-n 1000))))))
+           (sum-to-n 1000)))
+       (let ((list (lambda x* x*)) (^x* (lambda () (values 1 2 3))))
+         (case-values (^x*)
+           ((a)        (list 'one a))
+           ((a b)      (list 'two a b))
+           ((a b . c*) (list 'more a b c*)))))))

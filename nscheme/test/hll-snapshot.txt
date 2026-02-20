@@ -1,40 +1,40 @@
 VHLL:
 123
 HLL:
-(note #("test/hll.scm" #(7422 162 7) "123" #f #f) (quote 123))
+(note #("test/hll.scm" #(7718 167 7) "123" #f #f) (quote 123))
 
 VHLL:
 (+ 1 2)
 HLL:
 (note
- #("test/hll.scm" #(7433 163 7) "(" #(7439 163 13) ")")
+ #("test/hll.scm" #(7729 168 7) "(" #(7735 168 13) ")")
  (call
-  (note #("test/hll.scm" #(7434 163 8) "+" #f #f) |#+|)
-  (note #("test/hll.scm" #(7436 163 10) "1" #f #f) (quote 1))
-  (note #("test/hll.scm" #(7438 163 12) "2" #f #f) (quote 2))))
+  (note #("test/hll.scm" #(7730 168 8) "+" #f #f) |#+|)
+  (note #("test/hll.scm" #(7732 168 10) "1" #f #f) (quote 1))
+  (note #("test/hll.scm" #(7734 168 12) "2" #f #f) (quote 2))))
 
 VHLL:
 (lambda (a b) (let ((c 3)) (+ (* a b) c)))
 HLL:
 (note
- #("test/hll.scm" #(7448 164 7) "(" #(7489 164 48) ")")
+ #("test/hll.scm" #(7744 169 7) "(" #(7785 169 48) ")")
  (case-lambda
   ((a.0 b.1)
    (note
-    #("test/hll.scm" #(7462 164 21) "(" #(7488 164 47) ")")
+    #("test/hll.scm" #(7758 169 21) "(" #(7784 169 47) ")")
     (let
-     ((c.2 (note #("test/hll.scm" #(7471 164 30) "3" #f #f) (quote 3))))
+     ((c.2 (note #("test/hll.scm" #(7767 169 30) "3" #f #f) (quote 3))))
      (note
-      #("test/hll.scm" #(7475 164 34) "(" #(7487 164 46) ")")
+      #("test/hll.scm" #(7771 169 34) "(" #(7783 169 46) ")")
       (call
-       (note #("test/hll.scm" #(7476 164 35) "+" #f #f) |#+|)
+       (note #("test/hll.scm" #(7772 169 35) "+" #f #f) |#+|)
        (note
-        #("test/hll.scm" #(7478 164 37) "(" #(7484 164 43) ")")
+        #("test/hll.scm" #(7774 169 37) "(" #(7780 169 43) ")")
         (call
-         (note #("test/hll.scm" #(7479 164 38) "*" #f #f) |#*|)
-         (note #("test/hll.scm" #(7481 164 40) "a" #f #f) a.0)
-         (note #("test/hll.scm" #(7483 164 42) "b" #f #f) b.1)))
-       (note #("test/hll.scm" #(7486 164 45) "c" #f #f) c.2))))))))
+         (note #("test/hll.scm" #(7775 169 38) "*" #f #f) |#*|)
+         (note #("test/hll.scm" #(7777 169 40) "a" #f #f) a.0)
+         (note #("test/hll.scm" #(7779 169 42) "b" #f #f) b.1)))
+       (note #("test/hll.scm" #(7782 169 45) "c" #f #f) c.2))))))))
 
 VHLL:
 (let
@@ -46,75 +46,75 @@ VHLL:
   (sum-to-n 10)))
 HLL:
 (note
- #("test/hll.scm" #(7498 165 7) "(" #(7798 171 25) ")")
+ #("test/hll.scm" #(7794 170 7) "(" #(8094 176 25) ")")
  (let
   ((not.0
     (note
-     #("test/hll.scm" #(7509 165 18) "(" #(7533 165 42) ")")
+     #("test/hll.scm" #(7805 170 18) "(" #(7829 170 42) ")")
      (case-lambda
       ((x.6)
        (note
-        #("test/hll.scm" #(7521 165 30) "(" #(7532 165 41) ")")
+        #("test/hll.scm" #(7817 170 30) "(" #(7828 170 41) ")")
         (if
-         (note #("test/hll.scm" #(7525 165 34) "x" #f #f) x.6)
-         (note #("test/hll.scm" #(7527 165 36) "#f" #f #f) (quote #f))
-         (note #("test/hll.scm" #(7530 165 39) "#t" #f #f) (quote #t)))))))))
+         (note #("test/hll.scm" #(7821 170 34) "x" #f #f) x.6)
+         (note #("test/hll.scm" #(7823 170 36) "#f" #f #f) (quote #f))
+         (note #("test/hll.scm" #(7826 170 39) "#t" #f #f) (quote #t)))))))))
   (note
-   #("test/hll.scm" #(7546 166 9) "(" #(7797 171 24) ")")
+   #("test/hll.scm" #(7842 171 9) "(" #(8093 176 24) ")")
    (let
     ((sum-to-n.1
       (note
-       #("test/hll.scm" #(7565 166 28) "(" #(7587 166 50) ")")
+       #("test/hll.scm" #(7861 171 28) "(" #(7883 171 50) ")")
        (case-lambda
         ((n.3)
          (note
-          #("test/hll.scm" #(7577 166 40) "(" #(7586 166 49) ")")
+          #("test/hll.scm" #(7873 171 40) "(" #(7882 171 49) ")")
           (call
-           (note #("test/hll.scm" #(7578 166 41) "loop" #f #f) loop.2)
-           (note #("test/hll.scm" #(7583 166 46) "n" #f #f) n.3)
-           (note #("test/hll.scm" #(7585 166 48) "0" #f #f) (quote 0))))))))
+           (note #("test/hll.scm" #(7874 171 41) "loop" #f #f) loop.2)
+           (note #("test/hll.scm" #(7879 171 46) "n" #f #f) n.3)
+           (note #("test/hll.scm" #(7881 171 48) "0" #f #f) (quote 0))))))))
      (loop.2
       (note
-       #("test/hll.scm" #(7614 167 24) "(" #(7769 170 36) ")")
+       #("test/hll.scm" #(7910 172 24) "(" #(8065 175 36) ")")
        (case-lambda
         ((n.4 total.5)
          (note
-          #("test/hll.scm" #(7658 168 26) "(" #(7768 170 35) ")")
+          #("test/hll.scm" #(7954 173 26) "(" #(8064 175 35) ")")
           (if
            (note
-            #("test/hll.scm" #(7662 168 30) "(" #(7674 168 42) ")")
+            #("test/hll.scm" #(7958 173 30) "(" #(7970 173 42) ")")
             (call
-             (note #("test/hll.scm" #(7663 168 31) "not" #f #f) not.0)
+             (note #("test/hll.scm" #(7959 173 31) "not" #f #f) not.0)
              (note
-              #("test/hll.scm" #(7667 168 35) "(" #(7673 168 41) ")")
+              #("test/hll.scm" #(7963 173 35) "(" #(7969 173 41) ")")
               (call
-               (note #("test/hll.scm" #(7668 168 36) "=" #f #f) |#=|)
-               (note #("test/hll.scm" #(7670 168 38) "n" #f #f) n.4)
-               (note #("test/hll.scm" #(7672 168 40) "0" #f #f) (quote 0))))))
+               (note #("test/hll.scm" #(7964 173 36) "=" #f #f) |#=|)
+               (note #("test/hll.scm" #(7966 173 38) "n" #f #f) n.4)
+               (note #("test/hll.scm" #(7968 173 40) "0" #f #f) (quote 0))))))
            (note
-            #("test/hll.scm" #(7706 169 30) "(" #(7731 169 55) ")")
+            #("test/hll.scm" #(8002 174 30) "(" #(8027 174 55) ")")
             (call
-             (note #("test/hll.scm" #(7707 169 31) "loop" #f #f) loop.2)
+             (note #("test/hll.scm" #(8003 174 31) "loop" #f #f) loop.2)
              (note
-              #("test/hll.scm" #(7712 169 36) "(" #(7718 169 42) ")")
+              #("test/hll.scm" #(8008 174 36) "(" #(8014 174 42) ")")
               (call
-               (note #("test/hll.scm" #(7713 169 37) "-" #f #f) |#-|)
-               (note #("test/hll.scm" #(7715 169 39) "n" #f #f) n.4)
-               (note #("test/hll.scm" #(7717 169 41) "1" #f #f) (quote 1))))
+               (note #("test/hll.scm" #(8009 174 37) "-" #f #f) |#-|)
+               (note #("test/hll.scm" #(8011 174 39) "n" #f #f) n.4)
+               (note #("test/hll.scm" #(8013 174 41) "1" #f #f) (quote 1))))
              (note
-              #("test/hll.scm" #(7720 169 44) "(" #(7730 169 54) ")")
+              #("test/hll.scm" #(8016 174 44) "(" #(8026 174 54) ")")
               (call
-               (note #("test/hll.scm" #(7721 169 45) "+" #f #f) |#+|)
-               (note #("test/hll.scm" #(7723 169 47) "total" #f #f) total.5)
-               (note #("test/hll.scm" #(7729 169 53) "n" #f #f) n.4)))))
+               (note #("test/hll.scm" #(8017 174 45) "+" #f #f) |#+|)
+               (note #("test/hll.scm" #(8019 174 47) "total" #f #f) total.5)
+               (note #("test/hll.scm" #(8025 174 53) "n" #f #f) n.4)))))
            (note
-            #("test/hll.scm" #(7763 170 30) "total" #f #f)
+            #("test/hll.scm" #(8059 175 30) "total" #f #f)
             total.5))))))))
     (note
-     #("test/hll.scm" #(7784 171 11) "(" #(7796 171 23) ")")
+     #("test/hll.scm" #(8080 176 11) "(" #(8092 176 23) ")")
      (call
-      (note #("test/hll.scm" #(7785 171 12) "sum-to-n" #f #f) sum-to-n.1)
-      (note #("test/hll.scm" #(7794 171 21) "10" #f #f) (quote 10))))))))
+      (note #("test/hll.scm" #(8081 176 12) "sum-to-n" #f #f) sum-to-n.1)
+      (note #("test/hll.scm" #(8090 176 21) "10" #f #f) (quote 10))))))))
 
 VHLL:
 (let
@@ -130,96 +130,96 @@ VHLL:
   (sum-to-n 100)))
 HLL:
 (note
- #("test/hll.scm" #(7807 172 7) "(" #(8215 180 26) ")")
+ #("test/hll.scm" #(8103 177 7) "(" #(8511 185 26) ")")
  (let
   ((not.0
     (note
-     #("test/hll.scm" #(7818 172 18) "(" #(7842 172 42) ")")
+     #("test/hll.scm" #(8114 177 18) "(" #(8138 177 42) ")")
      (case-lambda
       ((x.8)
        (note
-        #("test/hll.scm" #(7830 172 30) "(" #(7841 172 41) ")")
+        #("test/hll.scm" #(8126 177 30) "(" #(8137 177 41) ")")
         (if
-         (note #("test/hll.scm" #(7834 172 34) "x" #f #f) x.8)
-         (note #("test/hll.scm" #(7836 172 36) "#f" #f #f) (quote #f))
-         (note #("test/hll.scm" #(7839 172 39) "#t" #f #f) (quote #t)))))))))
+         (note #("test/hll.scm" #(8130 177 34) "x" #f #f) x.8)
+         (note #("test/hll.scm" #(8132 177 36) "#f" #f #f) (quote #f))
+         (note #("test/hll.scm" #(8135 177 39) "#t" #f #f) (quote #t)))))))))
   (note
-   #("test/hll.scm" #(7855 173 9) "(" #(8214 180 25) ")")
+   #("test/hll.scm" #(8151 178 9) "(" #(8510 185 25) ")")
    (let
     ((sum-to-n.1
       (note
-       #("test/hll.scm" #(7874 173 28) "(" #(7911 173 65) ")")
+       #("test/hll.scm" #(8170 178 28) "(" #(8207 178 65) ")")
        (case-lambda
         ((n.3)
          (note
-          #("test/hll.scm" #(7886 173 40) "(" #(7910 173 64) ")")
+          #("test/hll.scm" #(8182 178 40) "(" #(8206 178 64) ")")
           (if
            (note
-            #("test/hll.scm" #(7890 173 44) "(" #(7896 173 50) ")")
+            #("test/hll.scm" #(8186 178 44) "(" #(8192 178 50) ")")
             (call
-             (note #("test/hll.scm" #(7891 173 45) "=" #f #f) |#=|)
-             (note #("test/hll.scm" #(7893 173 47) "n" #f #f) n.3)
-             (note #("test/hll.scm" #(7895 173 49) "0" #f #f) (quote 0))))
-           (note #("test/hll.scm" #(7898 173 52) "0" #f #f) (quote 0))
+             (note #("test/hll.scm" #(8187 178 45) "=" #f #f) |#=|)
+             (note #("test/hll.scm" #(8189 178 47) "n" #f #f) n.3)
+             (note #("test/hll.scm" #(8191 178 49) "0" #f #f) (quote 0))))
+           (note #("test/hll.scm" #(8194 178 52) "0" #f #f) (quote 0))
            (note
-            #("test/hll.scm" #(7900 173 54) "(" #(7909 173 63) ")")
+            #("test/hll.scm" #(8196 178 54) "(" #(8205 178 63) ")")
             (call
-             (note #("test/hll.scm" #(7901 173 55) "loop" #f #f) loop.2)
-             (note #("test/hll.scm" #(7906 173 60) "n" #f #f) n.3)
+             (note #("test/hll.scm" #(8197 178 55) "loop" #f #f) loop.2)
+             (note #("test/hll.scm" #(8202 178 60) "n" #f #f) n.3)
              (note
-              #("test/hll.scm" #(7908 173 62) "0" #f #f)
+              #("test/hll.scm" #(8204 178 62) "0" #f #f)
               (quote 0))))))))))
      (loop.2
       (note
-       #("test/hll.scm" #(7938 174 24) "(" #(8185 179 39) ")")
+       #("test/hll.scm" #(8234 179 24) "(" #(8481 184 39) ")")
        (case-lambda
         ((n.4 total.5)
          (note
-          #("test/hll.scm" #(7982 175 26) "(" #(8184 179 38) ")")
+          #("test/hll.scm" #(8278 180 26) "(" #(8480 184 38) ")")
           (let
            ((total.6
              (note
-              #("test/hll.scm" #(7995 175 39) "(" #(8005 175 49) ")")
+              #("test/hll.scm" #(8291 180 39) "(" #(8301 180 49) ")")
               (call
-               (note #("test/hll.scm" #(7996 175 40) "+" #f #f) |#+|)
-               (note #("test/hll.scm" #(7998 175 42) "total" #f #f) total.5)
-               (note #("test/hll.scm" #(8004 175 48) "n" #f #f) n.4))))
+               (note #("test/hll.scm" #(8292 180 40) "+" #f #f) |#+|)
+               (note #("test/hll.scm" #(8294 180 42) "total" #f #f) total.5)
+               (note #("test/hll.scm" #(8300 180 48) "n" #f #f) n.4))))
             (n.7
              (note
-              #("test/hll.scm" #(8043 176 35) "(" #(8049 176 41) ")")
+              #("test/hll.scm" #(8339 181 35) "(" #(8345 181 41) ")")
               (call
-               (note #("test/hll.scm" #(8044 176 36) "-" #f #f) |#-|)
-               (note #("test/hll.scm" #(8046 176 38) "n" #f #f) n.4)
-               (note #("test/hll.scm" #(8048 176 40) "1" #f #f) (quote 1))))))
+               (note #("test/hll.scm" #(8340 181 36) "-" #f #f) |#-|)
+               (note #("test/hll.scm" #(8342 181 38) "n" #f #f) n.4)
+               (note #("test/hll.scm" #(8344 181 40) "1" #f #f) (quote 1))))))
            (note
-            #("test/hll.scm" #(8081 177 28) "(" #(8183 179 37) ")")
+            #("test/hll.scm" #(8377 182 28) "(" #(8479 184 37) ")")
             (if
              (note
-              #("test/hll.scm" #(8085 177 32) "(" #(8097 177 44) ")")
+              #("test/hll.scm" #(8381 182 32) "(" #(8393 182 44) ")")
               (call
-               (note #("test/hll.scm" #(8086 177 33) "not" #f #f) not.0)
+               (note #("test/hll.scm" #(8382 182 33) "not" #f #f) not.0)
                (note
-                #("test/hll.scm" #(8090 177 37) "(" #(8096 177 43) ")")
+                #("test/hll.scm" #(8386 182 37) "(" #(8392 182 43) ")")
                 (call
-                 (note #("test/hll.scm" #(8091 177 38) "=" #f #f) |#=|)
-                 (note #("test/hll.scm" #(8093 177 40) "n" #f #f) n.7)
+                 (note #("test/hll.scm" #(8387 182 38) "=" #f #f) |#=|)
+                 (note #("test/hll.scm" #(8389 182 40) "n" #f #f) n.7)
                  (note
-                  #("test/hll.scm" #(8095 177 42) "0" #f #f)
+                  #("test/hll.scm" #(8391 182 42) "0" #f #f)
                   (quote 0))))))
              (note
-              #("test/hll.scm" #(8131 178 32) "(" #(8144 178 45) ")")
+              #("test/hll.scm" #(8427 183 32) "(" #(8440 183 45) ")")
               (call
-               (note #("test/hll.scm" #(8132 178 33) "loop" #f #f) loop.2)
-               (note #("test/hll.scm" #(8137 178 38) "n" #f #f) n.7)
-               (note #("test/hll.scm" #(8139 178 40) "total" #f #f) total.6)))
+               (note #("test/hll.scm" #(8428 183 33) "loop" #f #f) loop.2)
+               (note #("test/hll.scm" #(8433 183 38) "n" #f #f) n.7)
+               (note #("test/hll.scm" #(8435 183 40) "total" #f #f) total.6)))
              (note
-              #("test/hll.scm" #(8178 179 32) "total" #f #f)
+              #("test/hll.scm" #(8474 184 32) "total" #f #f)
               total.6))))))))))
     (note
-     #("test/hll.scm" #(8200 180 11) "(" #(8213 180 24) ")")
+     #("test/hll.scm" #(8496 185 11) "(" #(8509 185 24) ")")
      (call
-      (note #("test/hll.scm" #(8201 180 12) "sum-to-n" #f #f) sum-to-n.1)
-      (note #("test/hll.scm" #(8210 180 21) "100" #f #f) (quote 100))))))))
+      (note #("test/hll.scm" #(8497 185 12) "sum-to-n" #f #f) sum-to-n.1)
+      (note #("test/hll.scm" #(8506 185 21) "100" #f #f) (quote 100))))))))
 
 VHLL:
 (let
@@ -243,153 +243,213 @@ VHLL:
   (sum-to-n 1000)))
 HLL:
 (note
- #("test/hll.scm" #(8224 181 7) "(" #(8827 193 27) ")")
+ #("test/hll.scm" #(8520 186 7) "(" #(9123 198 27) ")")
  (let
   ((box.0
     (note
-     #("test/hll.scm" #(8235 181 18) "(" #(8258 181 41) ")")
+     #("test/hll.scm" #(8531 186 18) "(" #(8554 186 41) ")")
      (case-lambda
       ((x.8)
        (note
-        #("test/hll.scm" #(8247 181 30) "(" #(8257 181 40) ")")
+        #("test/hll.scm" #(8543 186 30) "(" #(8553 186 40) ")")
         (call
-         (note #("test/hll.scm" #(8248 181 31) "mvector" #f #f) |#mvector|)
-         (note #("test/hll.scm" #(8256 181 39) "x" #f #f) x.8)))))))
+         (note #("test/hll.scm" #(8544 186 31) "mvector" #f #f) |#mvector|)
+         (note #("test/hll.scm" #(8552 186 39) "x" #f #f) x.8)))))))
    (unbox.1
     (note
-     #("test/hll.scm" #(8281 182 20) "(" #(8310 182 49) ")")
+     #("test/hll.scm" #(8577 187 20) "(" #(8606 187 49) ")")
      (case-lambda
       ((b.9)
        (note
-        #("test/hll.scm" #(8293 182 32) "(" #(8309 182 48) ")")
+        #("test/hll.scm" #(8589 187 32) "(" #(8605 187 48) ")")
         (call
          (note
-          #("test/hll.scm" #(8294 182 33) "mvector-ref" #f #f)
+          #("test/hll.scm" #(8590 187 33) "mvector-ref" #f #f)
           |#mvector-ref|)
-         (note #("test/hll.scm" #(8306 182 45) "b" #f #f) b.9)
-         (note #("test/hll.scm" #(8308 182 47) "0" #f #f) (quote 0))))))))
+         (note #("test/hll.scm" #(8602 187 45) "b" #f #f) b.9)
+         (note #("test/hll.scm" #(8604 187 47) "0" #f #f) (quote 0))))))))
    (set-box!.2
     (note
-     #("test/hll.scm" #(8336 183 23) "(" #(8370 183 57) ")")
+     #("test/hll.scm" #(8632 188 23) "(" #(8666 188 57) ")")
      (case-lambda
       ((b.10 x.11)
        (note
-        #("test/hll.scm" #(8350 183 37) "(" #(8369 183 56) ")")
+        #("test/hll.scm" #(8646 188 37) "(" #(8665 188 56) ")")
         (call
          (note
-          #("test/hll.scm" #(8351 183 38) "mvector-set!" #f #f)
+          #("test/hll.scm" #(8647 188 38) "mvector-set!" #f #f)
           |#mvector-set!|)
-         (note #("test/hll.scm" #(8364 183 51) "b" #f #f) b.10)
-         (note #("test/hll.scm" #(8366 183 53) "0" #f #f) (quote 0))
-         (note #("test/hll.scm" #(8368 183 55) "x" #f #f) x.11))))))))
+         (note #("test/hll.scm" #(8660 188 51) "b" #f #f) b.10)
+         (note #("test/hll.scm" #(8662 188 53) "0" #f #f) (quote 0))
+         (note #("test/hll.scm" #(8664 188 55) "x" #f #f) x.11))))))))
   (note
-   #("test/hll.scm" #(8383 184 9) "(" #(8826 193 26) ")")
+   #("test/hll.scm" #(8679 189 9) "(" #(9122 198 26) ")")
    (let
     ((sum-to-n.3
       (note
-       #("test/hll.scm" #(8416 185 17) "(" #(8796 192 38) ")")
+       #("test/hll.scm" #(8712 190 17) "(" #(9092 197 38) ")")
        (case-lambda
         ((n.4)
          (note
-          #("test/hll.scm" #(8447 186 19) "(" #(8795 192 37) ")")
+          #("test/hll.scm" #(8743 191 19) "(" #(9091 197 37) ")")
           (let
            ((total.5
              (note
-              #("test/hll.scm" #(8460 186 32) "(" #(8466 186 38) ")")
+              #("test/hll.scm" #(8756 191 32) "(" #(8762 191 38) ")")
               (call
-               (note #("test/hll.scm" #(8461 186 33) "box" #f #f) box.0)
-               (note #("test/hll.scm" #(8465 186 37) "0" #f #f) (quote 0))))))
+               (note #("test/hll.scm" #(8757 191 33) "box" #f #f) box.0)
+               (note #("test/hll.scm" #(8761 191 37) "0" #f #f) (quote 0))))))
            (note
-            #("test/hll.scm" #(8491 187 21) "(" #(8794 192 36) ")")
+            #("test/hll.scm" #(8787 192 21) "(" #(9090 197 36) ")")
             (let
              ((loop.6
                (note
-                #("test/hll.scm" #(8506 187 36) "(" #(8722 190 60) ")")
+                #("test/hll.scm" #(8802 192 36) "(" #(9018 195 60) ")")
                 (case-lambda
                  ((n.7)
                   (begin
                    (note
-                    #("test/hll.scm" #(8556 188 38) "(" #(8591 188 73) ")")
+                    #("test/hll.scm" #(8852 193 38) "(" #(8887 193 73) ")")
                     (call
                      (note
-                      #("test/hll.scm" #(8557 188 39) "set-box!" #f #f)
+                      #("test/hll.scm" #(8853 193 39) "set-box!" #f #f)
                       set-box!.2)
                      (note
-                      #("test/hll.scm" #(8566 188 48) "total" #f #f)
+                      #("test/hll.scm" #(8862 193 48) "total" #f #f)
                       total.5)
                      (note
-                      #("test/hll.scm" #(8572 188 54) "(" #(8590 188 72) ")")
+                      #("test/hll.scm" #(8868 193 54) "(" #(8886 193 72) ")")
                       (call
-                       (note #("test/hll.scm" #(8573 188 55) "+" #f #f) |#+|)
+                       (note #("test/hll.scm" #(8869 193 55) "+" #f #f) |#+|)
                        (note
                         #("test/hll.scm"
-                          #(8575 188 57)
+                          #(8871 193 57)
                           "("
-                          #(8587 188 69)
+                          #(8883 193 69)
                           ")")
                         (call
                          (note
-                          #("test/hll.scm" #(8576 188 58) "unbox" #f #f)
+                          #("test/hll.scm" #(8872 193 58) "unbox" #f #f)
                           unbox.1)
                          (note
-                          #("test/hll.scm" #(8582 188 64) "total" #f #f)
+                          #("test/hll.scm" #(8878 193 64) "total" #f #f)
                           total.5)))
                        (note
-                        #("test/hll.scm" #(8589 188 71) "n" #f #f)
+                        #("test/hll.scm" #(8885 193 71) "n" #f #f)
                         n.7)))))
                    (note
-                    #("test/hll.scm" #(8631 189 38) "(" #(8721 190 59) ")")
+                    #("test/hll.scm" #(8927 194 38) "(" #(9017 195 59) ")")
                     (if
                      (note
-                      #("test/hll.scm" #(8638 189 45) "(" #(8644 189 51) ")")
+                      #("test/hll.scm" #(8934 194 45) "(" #(8940 194 51) ")")
                       (call
-                       (note #("test/hll.scm" #(8639 189 46) "<" #f #f) |#<|)
+                       (note #("test/hll.scm" #(8935 194 46) "<" #f #f) |#<|)
                        (note
-                        #("test/hll.scm" #(8641 189 48) "0" #f #f)
+                        #("test/hll.scm" #(8937 194 48) "0" #f #f)
                         (quote 0))
-                       (note #("test/hll.scm" #(8643 189 50) "n" #f #f) n.7)))
+                       (note #("test/hll.scm" #(8939 194 50) "n" #f #f) n.7)))
                      (note
-                      #("test/hll.scm" #(8646 189 53) "(" #(8659 189 66) ")")
+                      #("test/hll.scm" #(8942 194 53) "(" #(8955 194 66) ")")
                       (call
                        (note
-                        #("test/hll.scm" #(8647 189 54) "loop" #f #f)
+                        #("test/hll.scm" #(8943 194 54) "loop" #f #f)
                         loop.6)
                        (note
                         #("test/hll.scm"
-                          #(8652 189 59)
+                          #(8948 194 59)
                           "("
-                          #(8658 189 65)
+                          #(8954 194 65)
                           ")")
                         (call
                          (note
-                          #("test/hll.scm" #(8653 189 60) "-" #f #f)
+                          #("test/hll.scm" #(8949 194 60) "-" #f #f)
                           |#-|)
-                         (note #("test/hll.scm" #(8655 189 62) "n" #f #f) n.7)
+                         (note #("test/hll.scm" #(8951 194 62) "n" #f #f) n.7)
                          (note
-                          #("test/hll.scm" #(8657 189 64) "1" #f #f)
+                          #("test/hll.scm" #(8953 194 64) "1" #f #f)
                           (quote 1))))))
                      (note
-                      #("test/hll.scm" #(8712 190 50) "(" #(8719 190 57) ")")
+                      #("test/hll.scm" #(9008 195 50) "(" #(9015 195 57) ")")
                       (call
                        (note
-                        #("test/hll.scm" #(8713 190 51) "values" #f #f)
+                        #("test/hll.scm" #(9009 195 51) "values" #f #f)
                         |#values|)))))))))))
              (begin
               (note
-               #("test/hll.scm" #(8749 191 23) "(" #(8756 191 30) ")")
+               #("test/hll.scm" #(9045 196 23) "(" #(9052 196 30) ")")
                (call
-                (note #("test/hll.scm" #(8750 191 24) "loop" #f #f) loop.6)
-                (note #("test/hll.scm" #(8755 191 29) "n" #f #f) n.4)))
+                (note #("test/hll.scm" #(9046 196 24) "loop" #f #f) loop.6)
+                (note #("test/hll.scm" #(9051 196 29) "n" #f #f) n.4)))
               (note
-               #("test/hll.scm" #(8781 192 23) "(" #(8793 192 35) ")")
+               #("test/hll.scm" #(9077 197 23) "(" #(9089 197 35) ")")
                (call
-                (note #("test/hll.scm" #(8782 192 24) "unbox" #f #f) unbox.1)
+                (note #("test/hll.scm" #(9078 197 24) "unbox" #f #f) unbox.1)
                 (note
-                 #("test/hll.scm" #(8788 192 30) "total" #f #f)
+                 #("test/hll.scm" #(9084 197 30) "total" #f #f)
                  total.5)))))))))))))
     (note
-     #("test/hll.scm" #(8811 193 11) "(" #(8825 193 25) ")")
+     #("test/hll.scm" #(9107 198 11) "(" #(9121 198 25) ")")
      (call
-      (note #("test/hll.scm" #(8812 193 12) "sum-to-n" #f #f) sum-to-n.3)
-      (note #("test/hll.scm" #(8821 193 21) "1000" #f #f) (quote 1000))))))))
+      (note #("test/hll.scm" #(9108 198 12) "sum-to-n" #f #f) sum-to-n.3)
+      (note #("test/hll.scm" #(9117 198 21) "1000" #f #f) (quote 1000))))))))
+
+VHLL:
+(let
+ ((list (lambda x* x*)) (^x* (lambda () (values 1 2 3))))
+ (case-values
+  (^x*)
+  ((a) (list (quote one) a))
+  ((a b) (list (quote two) a b))
+  ((a b . c*) (list (quote more) a b c*))))
+HLL:
+(note
+ #("test/hll.scm" #(9132 199 7) "(" #(9344 203 44) ")")
+ (let
+  ((list.0
+    (note
+     #("test/hll.scm" #(9144 199 19) "(" #(9157 199 32) ")")
+     (case-lambda
+      (x*.8 (note #("test/hll.scm" #(9155 199 30) "x*" #f #f) x*.8)))))
+   (^x*.1
+    (note
+     #("test/hll.scm" #(9165 199 40) "(" #(9190 199 65) ")")
+     (case-lambda
+      (()
+       (note
+        #("test/hll.scm" #(9176 199 51) "(" #(9189 199 64) ")")
+        (call
+         (note #("test/hll.scm" #(9177 199 52) "values" #f #f) |#values|)
+         (note #("test/hll.scm" #(9184 199 59) "1" #f #f) (quote 1))
+         (note #("test/hll.scm" #(9186 199 61) "2" #f #f) (quote 2))
+         (note #("test/hll.scm" #(9188 199 63) "3" #f #f) (quote 3)))))))))
+  (note
+   #("test/hll.scm" #(9203 200 9) "(" #(9343 203 43) ")")
+   (case-values
+    (note
+     #("test/hll.scm" #(9216 200 22) "(" #(9220 200 26) ")")
+     (call (note #("test/hll.scm" #(9217 200 23) "^x*" #f #f) ^x*.1)))
+    ((a.2)
+     (note
+      #("test/hll.scm" #(9245 201 23) "(" #(9257 201 35) ")")
+      (call
+       (note #("test/hll.scm" #(9246 201 24) "list" #f #f) list.0)
+       (quote one)
+       (note #("test/hll.scm" #(9256 201 34) "a" #f #f) a.2))))
+    ((a.3 b.4)
+     (note
+      #("test/hll.scm" #(9283 202 23) "(" #(9297 202 37) ")")
+      (call
+       (note #("test/hll.scm" #(9284 202 24) "list" #f #f) list.0)
+       (quote two)
+       (note #("test/hll.scm" #(9294 202 34) "a" #f #f) a.3)
+       (note #("test/hll.scm" #(9296 202 36) "b" #f #f) b.4))))
+    ((a.5 b.6 . c*.7)
+     (note
+      #("test/hll.scm" #(9323 203 23) "(" #(9341 203 41) ")")
+      (call
+       (note #("test/hll.scm" #(9324 203 24) "list" #f #f) list.0)
+       (quote more)
+       (note #("test/hll.scm" #(9335 203 35) "a" #f #f) a.5)
+       (note #("test/hll.scm" #(9337 203 37) "b" #f #f) b.6)
+       (note #("test/hll.scm" #(9339 203 39) "c*" #f #f) c*.7))))))))
 
