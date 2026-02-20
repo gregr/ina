@@ -19,15 +19,17 @@
   (define (u64 x) (integer-floor-mod x 2^64)))
 
 (splicing-local
-  ((define rtd.uvar  (make-rtd 'uvar 2 #t 'uvar))  ; TODO: source and analysis annotations
+  ((define rtd.uvar  (make-rtd 'uvar 3 #t 'uvar))  ; TODO: analysis annotations
    (define make-uvar (rtd-constructor rtd.uvar))
    (define uvar-ref  (rtd-accessor    rtd.uvar))
    (define uvar-set! (rtd-mutator     rtd.uvar)))
   (define uvar? (rtd-predicate rtd.uvar))
-  (define (uvar name) (make-uvar name #f))
+  (define (uvar name) (make-uvar name #f #f))
   (define (uvar-name x) (uvar-ref x 0))
   (define (uvar-uid  x) (uvar-ref x 1))
-  (define (set-uvar-uid! x uid) (uvar-set! x 1 uid))
+  (define (uvar-note x) (uvar-ref x 2))
+  (define (set-uvar-uid!  x uid)  (uvar-set! x 1 uid))
+  (define (set-uvar-note! x note) (uvar-set! x 2 note))
   (define (uvar->symbol x)
     (let ((name (uvar-name x)) (uid (uvar-uid x)))
       (string->symbol (string-append (if name (symbol->string name) "_") "."

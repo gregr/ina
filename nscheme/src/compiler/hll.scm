@@ -1,4 +1,3 @@
-;; TODO: source annotations
 ;;;;;;;;;;;
 ;;; HLL ;;;
 ;;;;;;;;;;;
@@ -12,6 +11,7 @@
 ;;          | (letrec ((Param Expr) ...) Expr)
 ;;          | (let ((Param Expr) ...) Expr)
 ;;          | (begin Expr ... Expr)
+;;          | (note <value> Expr)
 ;; Param* ::= Param | (Param ...) | (Param Param ... . Param)
 ;; Param  ::= Var | #f
 ;; Var    ::= <uvar>  ; each case-lambda, let, or letrec-bound variable must be unique
@@ -73,6 +73,9 @@
           'let          Let-rand*?!
           'begin        (case-lambda
                           ((e . e*) (Expr?!/ctx x e) (Expr*?!/ctx x e*))
+                          (_ (mistake "operator arity mismatch" x ctx)))
+          'note         (case-lambda
+                          ((n e) (Expr?!/ctx x e))
                           (_ (mistake "operator arity mismatch" x ctx))))
         (mistake "not an Expr" x ctx)))
   (define (Expr*?!/ctx ctx x*) (andmap (lambda (x) (Expr?!/ctx ctx x)) x*))
