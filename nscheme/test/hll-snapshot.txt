@@ -12,9 +12,7 @@ VHLL:
 (lambda (a b) (let ((c 3)) (+ (* a b) c)))
 HLL:
 (case-lambda
- ((a.0 b.1)
-  (begin
-   (let ((c.2 (quote 3))) (begin (call |#+| (call |#*| a.0 b.1) c.2))))))
+ ((a.0 b.1) (let ((c.2 (quote 3))) (call |#+| (call |#*| a.0 b.1) c.2))))
 
 VHLL:
 (let
@@ -26,19 +24,17 @@ VHLL:
   (sum-to-n 10)))
 HLL:
 (let
- ((not.0 (case-lambda ((x.6) (begin (if x.6 (quote #f) (quote #t)))))))
- (begin
-  (let
-   ((sum-to-n.1 (case-lambda ((n.3) (begin (call loop.2 n.3 (quote 0))))))
-    (loop.2
-     (case-lambda
-      ((n.4 total.5)
-       (begin
-        (if
-         (call not.0 (call |#=| n.4 (quote 0)))
-         (call loop.2 (call |#-| n.4 (quote 1)) (call |#+| total.5 n.4))
-         total.5))))))
-   (begin (call sum-to-n.1 (quote 10))))))
+ ((not.0 (case-lambda ((x.6) (if x.6 (quote #f) (quote #t))))))
+ (let
+  ((sum-to-n.1 (case-lambda ((n.3) (call loop.2 n.3 (quote 0)))))
+   (loop.2
+    (case-lambda
+     ((n.4 total.5)
+      (if
+       (call not.0 (call |#=| n.4 (quote 0)))
+       (call loop.2 (call |#-| n.4 (quote 1)) (call |#+| total.5 n.4))
+       total.5)))))
+  (call sum-to-n.1 (quote 10))))
 
 VHLL:
 (let
@@ -51,30 +47,68 @@ VHLL:
      (let
       ((total (+ total n)) (n (- n 1)))
       (if (not (= n 0)) (loop n total) total)))))
-  (sum-to-n 10)))
+  (sum-to-n 100)))
 HLL:
 (let
- ((not.0 (case-lambda ((x.8) (begin (if x.8 (quote #f) (quote #t)))))))
- (begin
-  (let
-   ((sum-to-n.1
-     (case-lambda
-      ((n.3)
-       (begin
-        (if
-         (call |#=| n.3 (quote 0))
-         (quote 0)
-         (call loop.2 n.3 (quote 0)))))))
-    (loop.2
-     (case-lambda
-      ((n.4 total.5)
-       (begin
-        (let
-         ((total.6 (call |#+| total.5 n.4)) (n.7 (call |#-| n.4 (quote 1))))
-         (begin
-          (if
-           (call not.0 (call |#=| n.7 (quote 0)))
-           (call loop.2 n.7 total.6)
-           total.6))))))))
-   (begin (call sum-to-n.1 (quote 10))))))
+ ((not.0 (case-lambda ((x.8) (if x.8 (quote #f) (quote #t))))))
+ (let
+  ((sum-to-n.1
+    (case-lambda
+     ((n.3)
+      (if (call |#=| n.3 (quote 0)) (quote 0) (call loop.2 n.3 (quote 0))))))
+   (loop.2
+    (case-lambda
+     ((n.4 total.5)
+      (let
+       ((total.6 (call |#+| total.5 n.4)) (n.7 (call |#-| n.4 (quote 1))))
+       (if
+        (call not.0 (call |#=| n.7 (quote 0)))
+        (call loop.2 n.7 total.6)
+        total.6))))))
+  (call sum-to-n.1 (quote 100))))
+
+VHLL:
+(let
+ ((box (lambda (x) (mvector x)))
+  (unbox (lambda (b) (mvector-ref b 0)))
+  (set-box! (lambda (b x) (mvector-set! b 0 x))))
+ (let
+  ((sum-to-n
+    (lambda
+     (n)
+     (let
+      ((total (box 0)))
+      (letrec
+       ((loop
+         (lambda
+          (n)
+          (set-box! total (+ (unbox total) n))
+          (cond ((< 0 n) (loop (- n 1))) (else (values))))))
+       (loop n)
+       (unbox total))))))
+  (sum-to-n 1000)))
+HLL:
+(let
+ ((box.0 (case-lambda ((x.8) (call |#mvector| x.8))))
+  (unbox.1 (case-lambda ((b.9) (call |#mvector-ref| b.9 (quote 0)))))
+  (set-box!.2
+   (case-lambda ((b.10 x.11) (call |#mvector-set!| b.10 (quote 0) x.11)))))
+ (let
+  ((sum-to-n.3
+    (case-lambda
+     ((n.4)
+      (let
+       ((total.5 (call box.0 (quote 0))))
+       (let
+        ((loop.6
+          (case-lambda
+           ((n.7)
+            (begin
+             (call set-box!.2 total.5 (call |#+| (call unbox.1 total.5) n.7))
+             (if
+              (call |#<| (quote 0) n.7)
+              (call loop.6 (call |#-| n.7 (quote 1)))
+              (call |#values|)))))))
+        (begin (call loop.6 n.4) (call unbox.1 total.5))))))))
+  (call sum-to-n.3 (quote 1000))))
 
