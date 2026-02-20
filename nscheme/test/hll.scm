@@ -1,0 +1,170 @@
+;; racket bootstrap/run-file.rkt src/run-cli.scm test/hll.scm | tee test/hll-snapshot.txt && git diff test/hll-snapshot.txt
+(include "../src/compiler/data.scm")
+(include "../src/compiler/hll.scm")
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;;; VHLL for testing ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;
+;; Expr    ::= Var
+;;           | Primop
+;;           | Literal
+;;           | (quote <value>)
+;;           | (if Expr Expr Expr)
+;;           | (cond (Expr . Body) ... (else . Body))
+;;           | (apply/values Expr Expr)
+;;           | (case-lambda (Param* . Body) ...)
+;;           | (lambda Param* . Body)
+;;           | (letrec ((Param Expr) ...) . Body)
+;;           | (let ((Param Expr) ...) . Body)
+;;           | (begin . Body)
+;;           | Body  ; call
+;; Body    ::= (Expr Expr ...)
+;; Param*  ::= Param | (Param ...) | (Param Param ... . Param)
+;; Param   ::= Var | #f
+;; Var     ::= <symbol>
+;; Primop  ::= <symbol>
+;; Literal ::= #f | #t | <number> | <string>
+(define (VHLL->HLL P name=>primop)
+  (mdefine uid 0)
+  (define (list?! x) (or (list? x) (mistake "not a list" x)))
+  (define (apply! proc x) (list?! x) (apply proc x))
+  (define (make-env n=>x) (list (box n=>x)))
+  (define (env-ref/k env n kf k)
+    (let loop ((env env))
+      (if (null? env)
+          (kf)
+          (let* ((n=>x (unbox (car env))) (nx (assv n n=>x)))
+            (if nx (k (cdr nx)) (loop (cdr env)))))))
+  (define (env-ref env n) (env-ref/k env n (lambda () (mistake "unbound" n)) values))
+  (define (env-ref? env n) (env-ref/k env n (lambda () #f) (lambda (_) #t)))
+  (define (env-bind! env n x) (let* ((frame (car env)) (n=>x (unbox frame)))
+                                (when (assv n n=>x) (mistake "already bound" n))
+                                (set-box! frame (cons (cons n x) n=>x))))
+  (define (env-extend env) (cons (box '()) env))
+  (let Expr/env ((env (make-env name=>primop)) (x P))
+    (define (Expr x) (Expr/env env x))
+    (define (operation x default tag handle . tag&handle*)
+      (operation* x default tag handle tag&handle*))
+    (define (operation* x default tag handle t&h*)
+      (if (pair? x)
+          (let ((key (car x)))
+            (if (and (symbol? key) (not (env-ref? env key)))
+                (let loop ((tag tag) (handle handle) (t&h* t&h*))
+                  (cond ((eqv? key tag) (apply! handle (cdr x)))
+                        ((null? t&h*) (default x))
+                        (else (loop (car t&h*) (cadr t&h*) (cddr t&h*)))))
+                (default x)))
+          (default x)))
+    (define (Body/env env e*)
+      (unless (pair? e*) (mistake "empty Body" x))
+      (list?! e*)
+      (map (lambda (e) (Expr/env env e)) e*))
+    (define (Body x) (Body/env env x))
+    (define (make-begin e*) (cons 'begin (Body e*)))
+    (define (bind/k p e* k)
+      (let ((env (env-extend env)))
+        (define (Var x)
+          (unless (symbol? x) (mistake "not a symbol" x))
+          (let ((v (uvar x))) (set-uvar-uid! v uid) (set! uid (+ uid 1)) (env-bind! env x v) v))
+        (define (Param x) (if (not x) x (Var x)))
+        (define (Param* x)
+          (cond ((or (not x) (null? x)) x)
+                ((pair? x) (cons (Param (car x)) (Param* (cdr x))))
+                (else (mistake "not a parameter list" x))))
+        (k env (Param* p) (cons 'begin (Body/env env e*)))))
+    (define (Lambda-rand* p&b)
+      (apply! (case-lambda
+                ((p . e*) (bind/k p e* (lambda (env p e) (list p e))))
+                (_ (mistake "empty procedure case")))
+              p&b))
+    (define (Let-rand*/k k)
+      (case-lambda
+        ((p&e* . e*) (list?! p&e*)
+                     (for-each (lambda (p&e) (list?! p&e) (unless (= (length p&e) 2)
+                                                            (mistake "not a binding pair" p&e x)))
+                               p&e*)
+                     (bind/k (map car p&e*) e* (lambda (env p e) (k env p (map cadr p&e*) e))))
+        (_ (mistake "operator arity mismatch" x))))
+    (define (default)
+      (operation
+        x (lambda (x) (cons 'call (Body x)))
+        'quote        (case-lambda
+                        ((val) x)
+                        (_ (mistake "operator arity mismatch" x)))
+        'if           (case-lambda
+                        ((c t f) (list 'if (Expr c) (Expr t) (Expr f)))
+                        (_ (mistake "operator arity mismatch" x)))
+        'cond         (case-lambda
+                        ((c . c*)
+                         (let loop ((c c) (c* c*))
+                           (if (null? c*)
+                               (operation c (lambda (c) (mistake "missing else clause" x))
+                                          'else make-begin)
+                               (apply! (case-lambda
+                                         ((e . e*) (list 'if (Expr e)
+                                                         (make-begin e*)
+                                                         (loop (car c*) (cdr c*))))
+                                         (_ (mistake "empty cond clause" x)))
+                                       c))))
+                        (_ (mistake "operator arity mismatch" x)))
+        'apply/values (case-lambda
+                        ((rator rand) (list 'apply/values (Expr rator) (Expr rand)))
+                        (_ (mistake "operator arity mismatch" x)))
+        'case-lambda  (lambda p&b* (cons 'case-lambda (map Lambda-rand* p&b*)))
+        'lambda       (lambda p&b  (list 'case-lambda (Lambda-rand* p&b)))
+        'letrec       (Let-rand*/k
+                        (lambda (env p* e* body)
+                          (list 'let (map list p* (map (lambda (e) (Expr/env env e)) e*)) body)))
+        'let          (Let-rand*/k
+                        (lambda (env p* e* body) (list 'let (map list p* (map Expr e*)) body)))
+        'begin        (lambda x* (Body x*))))
+    (cond
+      ((or (not x) (eqv? x #t) (number? x) (string? x)) (list 'quote x))
+      ((symbol? x) (env-ref/k env x default values))
+      (else (default)))))
+
+(define name=>primop
+  (map (lambda (n)
+         (cons n (primop (string->symbol (string-append "#" (symbol->string n))) #f)))
+       '(null? number? symbol? string? pair? eqv? cons car cdr + - * =)))
+
+(define (HLL-pretty x)
+  (let loop ((x x))
+    (cond ((pair? x) (cons (loop (car x)) (loop (cdr x))))
+          ((vector? x) (list->vector (map loop (vector->list x))))
+          ((uvar? x) (uvar->symbol x))
+          ((primop? x) (primop-name x))
+          (else x))))
+
+(define (HLL-test P)
+  (displayln "HLL:")
+  (pretty-write (HLL-pretty P))
+  (HLL-validate P)
+  (newline))
+
+(define (VHLL-test P)
+  (displayln "VHLL:")
+  (pretty-write P)
+  (HLL-test (VHLL->HLL P name=>primop)))
+
+(for-each
+  VHLL-test
+  '(123
+    (+ 1 2)
+    (lambda (a b) (let ((c 3)) (+ (* a b) c)))
+    (let ((not (lambda (x) (if x #f #t))))
+      (letrec ((sum-to-n (lambda (n) (loop n 0)))
+               (loop (lambda (n total)
+                       (if (not (= n 0))
+                           (loop (- n 1) (+ total n))
+                           total))))
+        (sum-to-n 10)))
+    (let ((not (lambda (x) (if x #f #t))))
+      (letrec ((sum-to-n (lambda (n) (if (= n 0) 0 (loop n 0))))
+               (loop (lambda (n total)
+                       (let ((total (+ total n))
+                             (n (- n 1)))
+                         (if (not (= n 0))
+                             (loop n total)
+                             total)))))
+        (sum-to-n 10)))))
