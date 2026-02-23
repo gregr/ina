@@ -28,6 +28,7 @@
            E:quote?        (lambda (_)              E)
            E:ref?          (lambda (_)              E)
            E:if?           (lambda (c t f)          (E:if           (loop c) (loop t) (loop f)))
+           E:begin?        (lambda (e^ e)           (E:begin        (tree-map loop e^) (loop e)))
            E:call?         (lambda (rator rand*)    (E:call         (loop rator) (map loop rand*)))
            E:case-lambda?  (lambda (param*~* body*) (E:case-lambda  param*~* (map loop body*)))
            E:letrec?       (lambda (lhs* rhs* body) (E:letrec       lhs* (map loop rhs*) (loop body))))

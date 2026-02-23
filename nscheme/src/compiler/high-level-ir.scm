@@ -9,6 +9,7 @@
 (define (E:quote        v)              (vector 'E:quote        #f v))
 (define (E:ref          address)        (vector 'E:ref          #f address))
 (define (E:if           c t f)          (vector 'E:if           #f c t f))
+(define (E:begin        e^ e)           (vector 'E:begin        #f e^ e))
 (define (E:call         rator rand*)    (vector 'E:call         #f rator rand*))
 (define (E:case-lambda  param*~* body*) (vector 'E:case-lambda  #f param*~* body*))
 (define (E:letrec       lhs* rhs* body) (vector 'E:letrec       #f lhs* rhs* body))
@@ -16,17 +17,18 @@
 (define (E:apply/values rator rand) (E:call (E:quote call/values) (list (E:lambda '() rand) rator)))
 (define (E:lambda param*~ body)     (E:case-lambda (list param*~) (list body)))
 (define (E:let    lhs* rhs* body)   (E:call (E:lambda lhs* body) rhs*))
-;; TODO: define a direct E:seq type or E:begin
-(define (E:seq    e0 e1)            (E:apply/values (E:lambda (make-address #f #f) e1) e0))
+;; TODO: replace to use E:begin directly
+(define (E:seq    e0 e1)            (E:begin e0 e1))
 
 (splicing-local
   ((define (E-tagged? E len tag)
      (and (vector? E) (= (vector-length E) len) (eqv? (vector-ref E 0) tag))))
   (define (E:quote?        E) (E-tagged? E 3 'E:quote))
   (define (E:ref?          E) (E-tagged? E 3 'E:ref))
-  (define (E:if?           E) (E-tagged? E 5 'E:if))
+  (define (E:begin?        E) (E-tagged? E 4 'E:begin))
   (define (E:call?         E) (E-tagged? E 4 'E:call))
   (define (E:case-lambda?  E) (E-tagged? E 4 'E:case-lambda))
+  (define (E:if?           E) (E-tagged? E 5 'E:if))
   (define (E:letrec?       E) (E-tagged? E 5 'E:letrec)))
 (define (E-note E) (vector-ref E 1))
 (define (E-annotate E note)
@@ -48,6 +50,7 @@
       E:quote?        (lambda (v)           (list 'quote v))
       E:ref?          (lambda (addr)        (list 'ref (address-pretty addr)))
       E:if?           (lambda (c t f)       (list 'if (loop c) (loop t) (loop f)))
+      E:begin?        (lambda (e^ e)        (cons 'begin (tree-flatten e^ (list e))))
       E:call?         (lambda (rator rand*) (cons* 'call (loop rator) (map loop rand*)))
       E:case-lambda?  (lambda (param*~* body*)
                         (cons 'case-lambda
@@ -115,6 +118,10 @@
          E:ref?          (lambda (addr)        (cenv-ref cenv addr))
          E:if?           (lambda (c t f)       (let ((c (loop c)) (t (loop t)) (f (loop f)))
                                                  (lambda (renv) (if (c renv) (t renv) (f renv)))))
+         E:begin?        (lambda (e^ e)        (let ((e^ (tree-map loop e^)) (e (loop e)))
+                                                 (lambda (renv)
+                                                   (tree-for-each (lambda (r) (r renv)) e^)
+                                                   (e renv))))
          E:call?         (lambda (rator rand*) (let ((rator (loop rator)) (rand* (map loop rand*)))
                                                  (lambda (renv) (apply (rator renv) (map (lambda (r) (r renv)) rand*)))))
          E:case-lambda?  (lambda (param*~* body*)

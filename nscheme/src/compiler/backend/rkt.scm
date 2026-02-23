@@ -42,6 +42,7 @@
       E:quote?        (lambda (x) (if (or (boolean? x) (number? x) (bytes? x)) x (list 'quote x)))
       E:ref?          (lambda (addr)  (cenv-ref cenv addr))
       E:if?           (lambda (c t f) (list 'if (loop c) (loop t) (loop f)))
+      E:begin?        (lambda (e^ e) (cons 'begin (tree-map-flatten loop e^ (list (loop e)))))
       E:call?         (lambda (rator rand*) (cons (loop rator) (map loop rand*)))
       ;; TODO: generate Racket code to wrap case-lambda with inspector-compatible metadata
       E:case-lambda?  (lambda (param*~* body*)
