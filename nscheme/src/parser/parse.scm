@@ -185,8 +185,11 @@
 
 (define ($lambda param*~     ^body) ($case-lambda (list param*~) (list ^body)))
 (define ($let    param* rhs* ^body) ($call* ($lambda param* ^body) rhs*))
-(define ($begin  e . e*)            (let loop ((e e) (e* e*))
-                                      (if (null? e*) e (E:seq e (loop (car e*) (cdr e*))))))
+(define ($begin  e . e*)
+  (if (null? e*)
+      e
+      (let loop ((e^ e) (e (car e*)) (e* (cdr e*)))
+        (if (null? e*) (E:begin e^ e) (loop (cons e^ e) (car e*) (cdr e*))))))
 
 (define ($source E stx) ($annotate E stx))
 (splicing-local

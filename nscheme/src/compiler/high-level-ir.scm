@@ -17,8 +17,6 @@
 (define (E:apply/values rator rand) (E:call (E:quote call/values) (list (E:lambda '() rand) rator)))
 (define (E:lambda param*~ body)     (E:case-lambda (list param*~) (list body)))
 (define (E:let    lhs* rhs* body)   (E:call (E:lambda lhs* body) rhs*))
-;; TODO: replace to use E:begin directly
-(define (E:seq    e0 e1)            (E:begin e0 e1))
 
 (splicing-local
   ((define (E-tagged? E len tag)
@@ -60,7 +58,7 @@
                         (list 'letrec (map (lambda (lhs rhs) (list (address-pretty lhs) (loop rhs))) lhs* rhs*)
                               (loop body))))))
 
-;; TODO: treat unused arguments to immediately-applied lambdas (i.e., begin / seq) more efficiently
+;; TODO: treat unused arguments to immediately-applied lambdas (i.e., begin) more efficiently
 
 ;; TODO: handle outer-level evaluation differently from evaluation inside a procedure
 ;; - outside any procedure, an expression will be evaluated at most once, so staging is unnecessary
