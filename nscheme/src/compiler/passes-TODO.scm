@@ -16,8 +16,6 @@
        )
       ((E:call?         E)
        )
-      ((E:apply/values? E)
-       )
       ((E:case-lambda?  E)
        )
       ((E:letrec?       E)

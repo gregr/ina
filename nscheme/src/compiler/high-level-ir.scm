@@ -10,14 +10,14 @@
 (define (E:ref          address)        (vector 'E:ref          #f address))
 (define (E:if           c t f)          (vector 'E:if           #f c t f))
 (define (E:call         rator rand*)    (vector 'E:call         #f rator rand*))
-(define (E:apply/values rator vrand)    (vector 'E:apply/values #f rator vrand))
 (define (E:case-lambda  param*~* body*) (vector 'E:case-lambda  #f param*~* body*))
 (define (E:letrec       lhs* rhs* body) (vector 'E:letrec       #f lhs* rhs* body))
 
-(define (E:lambda param*~ body)   (E:case-lambda (list param*~) (list body)))
-(define (E:let    lhs* rhs* body) (E:call (E:lambda lhs* body) rhs*))
-;; TODO: define a direct E:seq type
-(define (E:seq    e0 e1)          (E:apply/values (E:lambda (make-address #f #f) e1) e0))
+(define (E:apply/values rator rand) (E:call (E:quote call/values) (list (E:lambda '() rand) rator)))
+(define (E:lambda param*~ body)     (E:case-lambda (list param*~) (list body)))
+(define (E:let    lhs* rhs* body)   (E:call (E:lambda lhs* body) rhs*))
+;; TODO: define a direct E:seq type or E:begin
+(define (E:seq    e0 e1)            (E:apply/values (E:lambda (make-address #f #f) e1) e0))
 
 (splicing-local
   ((define (E-tagged? E len tag)
@@ -26,7 +26,6 @@
   (define (E:ref?          E) (E-tagged? E 3 'E:ref))
   (define (E:if?           E) (E-tagged? E 5 'E:if))
   (define (E:call?         E) (E-tagged? E 4 'E:call))
-  (define (E:apply/values? E) (E-tagged? E 4 'E:apply/values))
   (define (E:case-lambda?  E) (E-tagged? E 4 'E:case-lambda))
   (define (E:letrec?       E) (E-tagged? E 5 'E:letrec)))
 (define (E-note E) (vector-ref E 1))
@@ -50,7 +49,6 @@
       E:ref?          (lambda (addr)        (list 'ref (address-pretty addr)))
       E:if?           (lambda (c t f)       (list 'if (loop c) (loop t) (loop f)))
       E:call?         (lambda (rator rand*) (cons* 'call (loop rator) (map loop rand*)))
-      E:apply/values? (lambda (rator vrand) (list 'apply/values (loop rator) (loop vrand)))
       E:case-lambda?  (lambda (param*~* body*)
                         (cons 'case-lambda
                               (map (lambda (p*~ body) (list (improper-list-map address-pretty p*~) (loop body)))
@@ -119,8 +117,6 @@
                                                  (lambda (renv) (if (c renv) (t renv) (f renv)))))
          E:call?         (lambda (rator rand*) (let ((rator (loop rator)) (rand* (map loop rand*)))
                                                  (lambda (renv) (apply (rator renv) (map (lambda (r) (r renv)) rand*)))))
-         E:apply/values? (lambda (rator vrand) (let ((rator (loop rator)) (vrand (loop vrand)))
-                                                 (lambda (renv) (apply/values (rator renv) (vrand renv)))))
          E:case-lambda?  (lambda (param*~* body*)
                            (let ((k (fold-right
                                       (lambda (k param body)

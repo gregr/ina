@@ -43,8 +43,6 @@
       E:ref?          (lambda (addr)  (cenv-ref cenv addr))
       E:if?           (lambda (c t f) (list 'if (loop c) (loop t) (loop f)))
       E:call?         (lambda (rator rand*) (cons (loop rator) (map loop rand*)))
-      E:apply/values? (lambda (rator vrand) (list 'call-with-values (list 'lambda '() (loop vrand))
-                                                  (loop rator)))
       ;; TODO: generate Racket code to wrap case-lambda with inspector-compatible metadata
       E:case-lambda?  (lambda (param*~* body*)
                         (cons 'case-lambda

@@ -29,7 +29,6 @@
            E:ref?          (lambda (_)              E)
            E:if?           (lambda (c t f)          (E:if           (loop c) (loop t) (loop f)))
            E:call?         (lambda (rator rand*)    (E:call         (loop rator) (map loop rand*)))
-           E:apply/values? (lambda (rator vrand)    (E:apply/values (loop rator) (loop vrand)))
            E:case-lambda?  (lambda (param*~* body*) (E:case-lambda  param*~* (map loop body*)))
            E:letrec?       (lambda (lhs* rhs* body) (E:letrec       lhs* (map loop rhs*) (loop body))))
          (E-note E)))))

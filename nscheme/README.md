@@ -809,7 +809,7 @@ inspector method interface:
 - notes on Es can be more involved than just storing stx
   - E:ref only needs source (stx)
   - but the others need source AND more info, likely in the form of flags that inform and are updated by analysis and inlining
-  - E:call and E:apply/values might track info about:
+  - E:call might track info about:
     - procedure arity
     - return arity
       - maybe return types
