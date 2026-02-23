@@ -40,6 +40,22 @@
           ((pair? x*) (cons (f (car x*)) (loop (cdr x*))))
           (else       (f x*)))))
 
+(define (tree-map f x^) (let loop ((x^ x^))
+                          (if (pair? x^) (cons (loop (car x^)) (loop (cdr x^))) (f x^))))
+
+(define (tree-for-each f x^) (let loop ((x^ x^))
+                               (if (pair? x^) (begin (loop (car x^)) (loop (cdr x^))) (f x^))))
+
+(define (tree-flatten x^ y) (let loop ((x^ x^) (y y))
+                              (if (pair? x^)
+                                  (loop (car x^) (loop (cdr x^) y))
+                                  (cons x^ y))))
+
+(define (tree-map-flatten f x^ y) (let loop ((x^ x^) (y y))
+                                    (if (pair? x^)
+                                        (loop (car x^) (loop (cdr x^) y))
+                                        (cons (f x^) y))))
+
 (define (memp ? x*)
   (let loop ((x* x*))
     (and (not (null? x*))
