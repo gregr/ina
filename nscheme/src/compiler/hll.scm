@@ -5,13 +5,10 @@
 ;;          | Primop
 ;;          | (quote <value>)  ; upstream is responsible for any complex literal simplification
 ;;          | (if Expr Expr Expr)
+;;          | (begin Expr ... Expr)
 ;;          | (call Expr Expr ...)
-;;          | (apply/values Expr Expr)
 ;;          | (case-lambda (Param* Expr) ...)
 ;;          | (letrec ((Param Expr) ...) Expr)
-;;          | (let ((Param Expr) ...) Expr)
-;;          | (case-values Expr (Param* Expr) ...)
-;;          | (begin Expr ... Expr)
 ;;          | (note <value> Expr)
 ;; Param* ::= Param | (Param ...) | (Param Param ... . Param)
 ;; Param  ::= Var | #f
@@ -43,37 +40,29 @@
                        p&e))
             p&e*))
   (define (Expr?!/ctx ctx x)
-    (define Let-rand*?!
-      (case-lambda
-        ((p&e* body) (and (list?! p&e*) (Parameter-expr-pair*?!/ctx ctx p&e*) (Expr?!/ctx x body)))
-        (_ (mistake "operator arity mismatch" x ctx))))
     (or (uvar? x) (primop? x)
         (operation?
           x
-          'quote        (case-lambda
-                          ((val) #t)
-                          (_ (mistake "operator arity mismatch" x ctx)))
-          'if           (case-lambda
-                          ((c t f) (and (Expr?!/ctx x c) (Expr?!/ctx x t) (Expr?!/ctx x f)))
-                          (_ (mistake "operator arity mismatch" x ctx)))
-          'call         (case-lambda
-                          ((rator . rand*) (and (Expr?!/ctx x rator) (Expr*?!/ctx x rand*)))
-                          (_ (mistake "operator arity mismatch" x ctx)))
-          'apply/values (case-lambda
-                          ((rator . rand) (and (Expr?!/ctx x rator) (Expr?!/ctx x rand)))
-                          (_ (mistake "operator arity mismatch" x ctx)))
-          'case-lambda  (lambda p&e* (Parameter-expr-pair*?!/ctx x p&e*))
-          'letrec       Let-rand*?!
-          'let          Let-rand*?!
-          'case-values  (case-lambda
-                          ((e . p&e*) (Expr?!/ctx x e) (Parameter-expr-pair*?!/ctx x p&e*))
-                          (_ (mistake "operator arity mismatch" x ctx)))
-          'begin        (case-lambda
-                          ((e . e*) (Expr?!/ctx x e) (Expr*?!/ctx x e*))
-                          (_ (mistake "operator arity mismatch" x ctx)))
-          'note         (case-lambda
-                          ((n e) (Expr?!/ctx x e))
-                          (_ (mistake "operator arity mismatch" x ctx))))
+          'quote       (case-lambda
+                         ((val) #t)
+                         (_ (mistake "operator arity mismatch" x ctx)))
+          'if          (case-lambda
+                         ((c t f) (and (Expr?!/ctx x c) (Expr?!/ctx x t) (Expr?!/ctx x f)))
+                         (_ (mistake "operator arity mismatch" x ctx)))
+          'call        (case-lambda
+                         ((rator . rand*) (and (Expr?!/ctx x rator) (Expr*?!/ctx x rand*)))
+                         (_ (mistake "operator arity mismatch" x ctx)))
+          'case-lambda (lambda p&e* (Parameter-expr-pair*?!/ctx x p&e*))
+          'letrec      (case-lambda
+                         ((p&e* body) (and (list?! p&e*) (Parameter-expr-pair*?!/ctx ctx p&e*)
+                                           (Expr?!/ctx x body)))
+                         (_ (mistake "operator arity mismatch" x ctx)))
+          'begin       (case-lambda
+                         ((e . e*) (Expr?!/ctx x e) (Expr*?!/ctx x e*))
+                         (_ (mistake "operator arity mismatch" x ctx)))
+          'note        (case-lambda
+                         ((n e) (Expr?!/ctx x e))
+                         (_ (mistake "operator arity mismatch" x ctx))))
         (mistake "not an Expr" x ctx)))
   (define (Expr*?!/ctx ctx x*) (andmap (lambda (x) (Expr?!/ctx ctx x)) x*))
   (Expr?!/ctx #f P))

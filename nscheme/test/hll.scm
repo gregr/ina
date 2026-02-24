@@ -42,6 +42,7 @@
   (define (env-extend env) (cons (box '()) env))
   (define (make-begin e*) (if (null? (cdr e*)) (car e*) (cons 'begin e*)))
   (define (annotate x note) (if (null? note) x (list 'note note x)))
+  (define (primop name) (cdr (assoc name name=>primop)))
   (let Expr/env ((env (make-env name=>primop)) (stx P))
     (define x (syntax-unwrap stx))
     (define (operation x default tag handle . tag&handle*)
@@ -117,31 +118,39 @@
                                        c))))
                         (_ (mistake "operator arity mismatch" stx)))
         'apply/values (case-lambda
-                        ((rator rand) (list 'apply/values (Expr rator) (Expr rand)))
+                        ((rator rand) (list 'call (primop 'call/values)
+                                            (list 'case-lambda (list '() (Expr rand)))
+                                            (Expr rator)))
                         (_ (mistake "operator arity mismatch" stx)))
         'case-lambda  (lambda p&b* (cons 'case-lambda (map Lambda-rand* p&b*)))
         'lambda       (lambda p&b  (list 'case-lambda (Lambda-rand* p&b)))
         'letrec       (Let-rand*/k
                         (lambda (env p* e* body)
-                          (list 'let (map list p* (map (lambda (e) (Expr/env env e)) e*)) body)))
+                          (list 'letrec (map list p* (map (lambda (e) (Expr/env env e)) e*)) body)))
         'let          (Let-rand*/k
-                        (lambda (env p* e* body) (list 'let (map list p* (map Expr e*)) body)))
+                        (lambda (env p* e* body)
+                          (cons* 'call (list 'case-lambda (list p* body)) (map Expr e*))))
         'case-values  (case-lambda
-                        ((e . p&b*) (cons* 'case-values (Expr e) (map Lambda-rand* p&b*)))
+                        ((e . p&b*) (list 'call (primop 'call/values)
+                                          (list 'case-lambda (list '() (Expr e)))
+                                          (cons 'case-lambda (map Lambda-rand* p&b*))))
                         (_ (mistake "operator arity mismatch" stx)))
         'begin        (lambda x* (Body x*))))
     (annotate
-      (cond
-        ((or (not x) (eqv? x #t) (number? x) (string? x)) (list 'quote x))
-        ((symbol? x) (env-ref/k env x (lambda () (mistake "unbound" stx)) values))
-        (else (default)))
+      (cond ((or (not x) (eqv? x #t) (number? x) (string? x)) (list 'quote x))
+            ((symbol? x) (env-ref/k env x (lambda () (mistake "unbound" stx)) values))
+            (else (default)))
       (syntax-note stx))))
 
 (define name=>primop
   (map (lambda (n)
          (cons n (primop (string->symbol (string-append "#" (symbol->string n))) #f)))
-       '(values null? number? symbol? string? pair? eqv? cons car cdr + - * = < <= > >=
-                mvector mvector-ref mvector-set!)))
+       '(
+         values call/values
+         null? number? symbol? string? pair? eqv?
+         cons car cdr
+         + - * = < <= > >=
+         mvector mvector-ref mvector-set!)))
 
 (define (HLL-pretty x)
   (let loop ((x x))
