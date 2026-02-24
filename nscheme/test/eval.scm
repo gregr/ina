@@ -1399,19 +1399,19 @@
               count
               (reverse missing))))
     ==>
-    (#(E:call
+    (#(call
         (foo 1 2)
-        #(E:quote foo (REPLACED: foo 1))
-        (#(E:quote 1 1) #(E:quote 2 2)))
-     #(E:call
+        #(quote foo (REPLACED: foo 1))
+        (#(quote 1 1) #(quote 2 2)))
+     #(call
         (foo bar baz)
-        #(E:quote foo (REPLACED: foo 1))
-        (#(E:quote bar (REPLACED: bar 2)) #(E:quote baz (REPLACED: baz 3))))
-     #(E:call
+        #(quote foo (REPLACED: foo 1))
+        (#(quote bar (REPLACED: bar 2)) #(quote baz (REPLACED: baz 3))))
+     #(call
         (bar baz foo)
-        #(E:quote bar (REPLACED: bar 2))
-        (#(E:quote baz (REPLACED: baz 3))
-         #(E:quote foo (REPLACED: foo 1))))
+        #(quote bar (REPLACED: bar 2))
+        (#(quote baz (REPLACED: baz 3))
+         #(quote foo (REPLACED: foo 1))))
      3
      (foo bar baz)))
 
@@ -1442,8 +1442,8 @@
            (map (lambda (r*) (map (lambda (r) (list (restart-name r) (restart-describe r))) r*))
                 (reverse restart-binding*))))))
    ==>
-   (#(E:quote #f (UNBOUND: foo))
-    #(E:quote #f (UNBOUND: foo))
+   (#(quote #f (UNBOUND: foo))
+    #(quote #f (UNBOUND: foo))
     final-alternative
     (foo foo #(not-ok) #(also-not-ok) #(still-not-ok))
     (((use-value (catch unbound identifier)))
