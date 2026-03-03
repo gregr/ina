@@ -13,7 +13,7 @@
 ;; Expr^              ::= Expr | (Expr^ . Expr^)
 ;; Param*~            ::= Param | (Param ...) | (Param Param ... . Param)
 ;; Param              ::= Var | #f
-;; Var                ::= <address>
+;; Var                ::= <uvar>
 ;; Note               ::= <value>
 (define (HLL-validate P)
   (define (list?! x) (or (list? x) (mistake "not a list" x)))
@@ -72,11 +72,48 @@
   (define (Expr^?!/ctx ctx x^) (tree-andmap (lambda (x) (Expr?!/ctx ctx x)) x^))
   (Expr?!/ctx #f P))
 
-(define (cl-clause? x) (pair? x))
-(define (cl-clause p e) (cons p e))
+(define (HLL:ref         note var)         (vector 'ref         note var))
+(define (HLL:quote       note val)         (vector 'quote       note val))
+(define (HLL:if          note c t f)       (vector 'if          note c t f))
+(define (HLL:begin       note e^ e)        (vector 'begin       note e^ e))
+(define (HLL:call        note rator rand*) (vector 'call        note rator rand*))
+(define (HLL:case-lambda note clc*)        (vector 'case-lambda note clc*))
+(define (HLL:letrec      note lb* body)    (vector 'letrec      note lb* body))
+(define (cl-clause? x)      (pair? x))
+(define (cl-clause p e)     (cons p e))
 (define (cl-clause-param c) (car c))
 (define (cl-clause-body  c) (cdr c))
-(define (let-binding? x) (pair? x))
-(define (let-binding p e) (cons p e))
+(define (let-binding? x)    (pair? x))
+(define (let-binding p e)   (cons p e))
 (define (let-binding-lhs b) (car b))
 (define (let-binding-rhs b) (cdr b))
+
+(define (HLL-pretty P)
+  (define (param-pretty x) (if x (uvar->symbol x) #f))
+  (let loop ((x P))
+    (let ((len (vector-length x)) (tag (vector-ref x 0)) (note (vector-ref x 1)))
+      (case len
+        ((3) ((case tag
+                ((ref) (lambda (addr) (list 'ref (param-pretty addr))))
+                ((quote) (lambda (val) (list 'quote val)))
+                ((case-lambda) (lambda (clc*)
+                                 (cons 'case-lambda
+                                       (map (lambda (clc)
+                                              (list (improper-list-map param-pretty
+                                                                       (cl-clause-param clc))
+                                                    (loop (cl-clause-body clc))))
+                                            clc*)))))
+              (vector-ref x 2)))
+        ((4) ((case tag
+                ((call) (lambda (rator rand*) (cons* 'call (loop rator) (map loop rand*))))
+                ((letrec) (lambda (lb* body)
+                            (list 'letrec (map (lambda (lb)
+                                                 (list (param-pretty (let-binding-lhs lb))
+                                                       (loop (let-binding-rhs lb))))
+                                               lb*)
+                                  (loop body))))
+                ((begin) (lambda (e^ e) (cons 'begin (tree-map-flatten loop e^ (loop e))))))
+              (vector-ref x 2) (vector-ref x 3)))
+        ((5) ((case tag
+                ((if) (lambda (c t f) (list 'if (loop c) (loop t) (loop f)))))
+              (vector-ref x 2) (vector-ref x 3) (vector-ref x 4)))))))

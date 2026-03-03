@@ -46,17 +46,17 @@
           e
           (let loop ((e^ e) (e (car e*)) (e* (cdr e*)))
             (if (null? e*)
-                (vector 'begin note e^ e)
+                (HLL:begin note e^ e)
                 (loop (cons e^ e) (car e*) (cdr e*)))))))
-  (define (make-call note rator . rand*) (vector 'call note rator rand*))
-  (define (make-case-lambda note . clause*) (vector 'case-lambda note clause*))
+  (define (make-call note rator . rand*) (HLL:call note rator rand*))
+  (define (make-case-lambda note . clause*) (HLL:case-lambda note clause*))
+  (define (primop name) (HLL:quote note.empty (cdr (assoc name name=>primop))))
+  (define (simple-note note) (if (and (vector? note) (< 0 (vector-length note)))
+                                 (list 'source (vector-ref note 0))
+                                 note))
   (define note.empty #f)
-  (define (primop name) (vector 'quote note.empty (cdr (assoc name name=>primop))))
   (let Expr/env ((env (make-env name=>primop)) (stx P))
-    (define note (let ((note (syntax-note stx)))
-                   (if (and (vector? note) (< 0 (vector-length note)))
-                       (list 'source (vector-ref note 0))
-                       note)))
+    (define note (simple-note (syntax-note stx)))
     (define x (syntax-unwrap stx))
     (define (operation x default tag handle . tag&handle*)
       (operation* x default tag handle tag&handle*))
@@ -80,11 +80,12 @@
         (define (Var stx)
           (let ((x (syntax-unwrap stx)))
             (unless (symbol? x) (mistake "not a symbol" stx))
-            (let ((v (uvar x)) (note (syntax-note stx)))
-              (unless (null? note) (set-uvar-note! v (syntax-note stx)))
+            (let ((v (uvar x)))
+              (set-uvar-note! v (simple-note (syntax-note stx)))
               (set-uvar-uid! v uid)
               (set! uid (+ uid 1))
-              (env-bind! env x v) v)))
+              (env-bind! env x v)
+              v)))
         (define (Param stx) (let ((x (syntax-unwrap stx))) (if (not x) x (Var stx))))
         (define (Param* stx)
           (let ((x (syntax-unwrap stx)))
@@ -111,10 +112,10 @@
       (operation
         x (lambda (x) (apply make-call note (Body (syntax->list x))))
         'quote        (case-lambda
-                        ((val) (vector 'quote note (syntax->datum val)))
+                        ((val) (HLL:quote note (syntax->datum val)))
                         (_ (mistake "operator arity mismatch" stx)))
         'if           (case-lambda
-                        ((c t f) (vector 'if note (Expr c) (Expr t) (Expr f)))
+                        ((c t f) (HLL:if note (Expr c) (Expr t) (Expr f)))
                         (_ (mistake "operator arity mismatch" stx)))
         'cond         (case-lambda
                         ((c . c*)
@@ -124,7 +125,7 @@
                                           (lambda (c) (mistake "missing else clause" stx))
                                           'else (lambda e* (make-begin note.empty (Body e*))))
                                (apply! (case-lambda
-                                         ((e . e*) (vector 'if note (Expr e)
+                                         ((e . e*) (HLL:if note (Expr e)
                                                            (make-begin note.empty (Body e*))
                                                            (loop (car c*) (cdr c*))))
                                          (_ (mistake "empty cond clause" stx)))
@@ -136,52 +137,41 @@
                                     (make-case-lambda note.empty (cl-clause '() (Expr rand)))
                                     (Expr rator)))
                         (_ (mistake "operator arity mismatch" stx)))
-        'case-lambda  (lambda p&b* (vector 'case-lambda note (map Lambda-rand* p&b*)))
+        'case-lambda  (lambda p&b* (HLL:case-lambda note (map Lambda-rand* p&b*)))
         'lambda       (lambda p&b  (make-case-lambda note (Lambda-rand* p&b)))
         'letrec       (Let-rand*/k
                         (lambda (env p* e* body)
-                          (vector 'letrec note
-                                  (map (lambda (p e) (let-binding p (Expr/env env e))) p* e*)
-                                  body)))
+                          (HLL:letrec note
+                                      (map (lambda (p e) (let-binding p (Expr/env env e))) p* e*)
+                                      body)))
         'let          (Let-rand*/k
                         (lambda (env p* e* body)
-                          (vector 'call note (make-case-lambda note.empty (cl-clause p* body))
-                                  (map Expr e*))))
+                          (HLL:call note (make-case-lambda note.empty (cl-clause p* body))
+                                    (map Expr e*))))
         'case-values  (case-lambda
                         ((e . p&b*)
                          (make-call note (primop 'call/values)
                                     (make-case-lambda note.empty (cl-clause '() (Expr e)))
-                                    (vector 'case-lambda note.empty (map Lambda-rand* p&b*))))
+                                    (HLL:case-lambda note.empty (map Lambda-rand* p&b*))))
                         (_ (mistake "operator arity mismatch" stx)))
         'begin        (lambda x* (make-begin note (Body x*)))))
-    (cond ((or (not x) (eqv? x #t) (number? x) (string? x)) (vector 'quote note x))
+    (cond ((or (not x) (eqv? x #t) (number? x) (string? x)) (HLL:quote note x))
           ((symbol? x) (env-ref/k env x (lambda () (mistake "unbound" stx))
-                                  (lambda (addr)
-                                    (vector (if (primop? addr) 'quote 'ref) note addr))))
+                                  (lambda (v) ((if (uvar? v) HLL:ref HLL:quote) note v))))
           (else (default)))))
 
 (define name=>primop
-  (map (lambda (n)
-         (cons n (primop (string->symbol (string-append "#" (symbol->string n))) #f)))
-       '(
-         values call/values
-         null? number? symbol? string? pair? eqv?
-         cons car cdr
-         + - * = < <= > >=
-         mvector mvector-ref mvector-set!)))
-
-(define (HLL-pretty x)
-  (let loop ((x x))
-    (cond ((pair? x) (cons (loop (car x)) (loop (cdr x))))
-          ((vector? x) (list->vector (map loop (vector->list x))))
-          ((uvar? x) (uvar->symbol x))
-          ((primop? x) (primop-name x))
-          (else x))))
+  (aquote values call/values
+          null? number? symbol? string? pair? eqv?
+          cons car cdr
+          + - * = < <= > >=
+          mvector mvector-ref mvector-set!))
 
 (define (HLL-test P)
   (displayln "HLL:")
-  (pretty-write (HLL-pretty P))
+  (pretty-write P)
   (HLL-validate P)
+  (pretty-write (HLL-pretty P))
   (newline))
 
 (define (VHLL-test P)
@@ -194,6 +184,7 @@
   (syntax->list
     #'(123
        (+ 1 2)
+       (lambda (#f #f) 5)
        (lambda (a b) (let ((c 3)) (+ (* a b) c)))
        (let ((not (lambda (x) (if x #f #t))))
          (letrec ((sum-to-n (lambda (n) (loop n 0)))

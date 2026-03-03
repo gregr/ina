@@ -2,38 +2,58 @@ VHLL:
 123
 HLL:
 #(quote (source "test/hll.scm") 123)
+(quote 123)
 
 VHLL:
 (+ 1 2)
 HLL:
 #(call
   (source "test/hll.scm")
-  #(quote (source "test/hll.scm") |#+|)
+  #(quote (source "test/hll.scm") #<procedure +>)
   (#(quote (source "test/hll.scm") 1) #(quote (source "test/hll.scm") 2)))
+(call (quote #<procedure +>) (quote 1) (quote 2))
+
+VHLL:
+(lambda (#f #f) 5)
+HLL:
+#(case-lambda
+  (source "test/hll.scm")
+  (((#f #f) . #(quote (source "test/hll.scm") 5))))
+(case-lambda ((#f #f) (quote 5)))
 
 VHLL:
 (lambda (a b) (let ((c 3)) (+ (* a b) c)))
 HLL:
 #(case-lambda
   (source "test/hll.scm")
-  (((a.0 b.1)
+  (((#<uvar> #<uvar>)
     .
     #(call
       (source "test/hll.scm")
       #(case-lambda
         #f
-        (((c.2)
+        (((#<uvar>)
           .
           #(call
             (source "test/hll.scm")
-            #(quote (source "test/hll.scm") |#+|)
+            #(quote (source "test/hll.scm") #<procedure +>)
             (#(call
                (source "test/hll.scm")
-               #(quote (source "test/hll.scm") |#*|)
-               (#(ref (source "test/hll.scm") a.0)
-                #(ref (source "test/hll.scm") b.1)))
-             #(ref (source "test/hll.scm") c.2))))))
+               #(quote (source "test/hll.scm") #<procedure *>)
+               (#(ref (source "test/hll.scm") #<uvar>)
+                #(ref (source "test/hll.scm") #<uvar>)))
+             #(ref (source "test/hll.scm") #<uvar>))))))
       (#(quote (source "test/hll.scm") 3))))))
+(case-lambda
+ ((a.0 b.1)
+  (call
+   (case-lambda
+    ((c.2)
+     (call
+      (quote #<procedure +>)
+      (call (quote #<procedure *>) (ref a.0) (ref b.1))
+      (ref c.2))))
+   (quote 3))))
 
 VHLL:
 (let
@@ -48,64 +68,82 @@ HLL:
   (source "test/hll.scm")
   #(case-lambda
     #f
-    (((not.0)
+    (((#<uvar>)
       .
       #(letrec
         (source "test/hll.scm")
-        ((sum-to-n.1
+        ((#<uvar>
           .
           #(case-lambda
             (source "test/hll.scm")
-            (((n.3)
+            (((#<uvar>)
               .
               #(call
                 (source "test/hll.scm")
-                #(ref (source "test/hll.scm") loop.2)
-                (#(ref (source "test/hll.scm") n.3)
+                #(ref (source "test/hll.scm") #<uvar>)
+                (#(ref (source "test/hll.scm") #<uvar>)
                  #(quote (source "test/hll.scm") 0)))))))
-         (loop.2
+         (#<uvar>
           .
           #(case-lambda
             (source "test/hll.scm")
-            (((n.4 total.5)
+            (((#<uvar> #<uvar>)
               .
               #(if
                 (source "test/hll.scm")
                 #(call
                   (source "test/hll.scm")
-                  #(ref (source "test/hll.scm") not.0)
+                  #(ref (source "test/hll.scm") #<uvar>)
                   (#(call
                      (source "test/hll.scm")
-                     #(quote (source "test/hll.scm") |#=|)
-                     (#(ref (source "test/hll.scm") n.4)
+                     #(quote (source "test/hll.scm") #<procedure =>)
+                     (#(ref (source "test/hll.scm") #<uvar>)
                       #(quote (source "test/hll.scm") 0)))))
                 #(call
                   (source "test/hll.scm")
-                  #(ref (source "test/hll.scm") loop.2)
+                  #(ref (source "test/hll.scm") #<uvar>)
                   (#(call
                      (source "test/hll.scm")
-                     #(quote (source "test/hll.scm") |#-|)
-                     (#(ref (source "test/hll.scm") n.4)
+                     #(quote (source "test/hll.scm") #<procedure ->)
+                     (#(ref (source "test/hll.scm") #<uvar>)
                       #(quote (source "test/hll.scm") 1)))
                    #(call
                      (source "test/hll.scm")
-                     #(quote (source "test/hll.scm") |#+|)
-                     (#(ref (source "test/hll.scm") total.5)
-                      #(ref (source "test/hll.scm") n.4)))))
-                #(ref (source "test/hll.scm") total.5)))))))
+                     #(quote (source "test/hll.scm") #<procedure +>)
+                     (#(ref (source "test/hll.scm") #<uvar>)
+                      #(ref (source "test/hll.scm") #<uvar>)))))
+                #(ref (source "test/hll.scm") #<uvar>)))))))
         #(call
           (source "test/hll.scm")
-          #(ref (source "test/hll.scm") sum-to-n.1)
+          #(ref (source "test/hll.scm") #<uvar>)
           (#(quote (source "test/hll.scm") 10)))))))
   (#(case-lambda
      (source "test/hll.scm")
-     (((x.6)
+     (((#<uvar>)
        .
        #(if
          (source "test/hll.scm")
-         #(ref (source "test/hll.scm") x.6)
+         #(ref (source "test/hll.scm") #<uvar>)
          #(quote (source "test/hll.scm") #f)
          #(quote (source "test/hll.scm") #t)))))))
+(call
+ (case-lambda
+  ((not.0)
+   (letrec
+    ((sum-to-n.1
+      (case-lambda ((n.3) (call (ref loop.2) (ref n.3) (quote 0)))))
+     (loop.2
+      (case-lambda
+       ((n.4 total.5)
+        (if
+         (call (ref not.0) (call (quote #<procedure =>) (ref n.4) (quote 0)))
+         (call
+          (ref loop.2)
+          (call (quote #<procedure ->) (ref n.4) (quote 1))
+          (call (quote #<procedure +>) (ref total.5) (ref n.4)))
+         (ref total.5))))))
+    (call (ref sum-to-n.1) (quote 10)))))
+ (case-lambda ((x.6) (if (ref x.6) (quote #f) (quote #t)))))
 
 VHLL:
 (let
@@ -124,80 +162,107 @@ HLL:
   (source "test/hll.scm")
   #(case-lambda
     #f
-    (((not.0)
+    (((#<uvar>)
       .
       #(letrec
         (source "test/hll.scm")
-        ((sum-to-n.1
+        ((#<uvar>
           .
           #(case-lambda
             (source "test/hll.scm")
-            (((n.3)
+            (((#<uvar>)
               .
               #(if
                 (source "test/hll.scm")
                 #(call
                   (source "test/hll.scm")
-                  #(quote (source "test/hll.scm") |#=|)
-                  (#(ref (source "test/hll.scm") n.3)
+                  #(quote (source "test/hll.scm") #<procedure =>)
+                  (#(ref (source "test/hll.scm") #<uvar>)
                    #(quote (source "test/hll.scm") 0)))
                 #(quote (source "test/hll.scm") 0)
                 #(call
                   (source "test/hll.scm")
-                  #(ref (source "test/hll.scm") loop.2)
-                  (#(ref (source "test/hll.scm") n.3)
+                  #(ref (source "test/hll.scm") #<uvar>)
+                  (#(ref (source "test/hll.scm") #<uvar>)
                    #(quote (source "test/hll.scm") 0))))))))
-         (loop.2
+         (#<uvar>
           .
           #(case-lambda
             (source "test/hll.scm")
-            (((n.4 total.5)
+            (((#<uvar> #<uvar>)
               .
               #(call
                 (source "test/hll.scm")
                 #(case-lambda
                   #f
-                  (((total.6 n.7)
+                  (((#<uvar> #<uvar>)
                     .
                     #(if
                       (source "test/hll.scm")
                       #(call
                         (source "test/hll.scm")
-                        #(ref (source "test/hll.scm") not.0)
+                        #(ref (source "test/hll.scm") #<uvar>)
                         (#(call
                            (source "test/hll.scm")
-                           #(quote (source "test/hll.scm") |#=|)
-                           (#(ref (source "test/hll.scm") n.7)
+                           #(quote (source "test/hll.scm") #<procedure =>)
+                           (#(ref (source "test/hll.scm") #<uvar>)
                             #(quote (source "test/hll.scm") 0)))))
                       #(call
                         (source "test/hll.scm")
-                        #(ref (source "test/hll.scm") loop.2)
-                        (#(ref (source "test/hll.scm") n.7)
-                         #(ref (source "test/hll.scm") total.6)))
-                      #(ref (source "test/hll.scm") total.6)))))
+                        #(ref (source "test/hll.scm") #<uvar>)
+                        (#(ref (source "test/hll.scm") #<uvar>)
+                         #(ref (source "test/hll.scm") #<uvar>)))
+                      #(ref (source "test/hll.scm") #<uvar>)))))
                 (#(call
                    (source "test/hll.scm")
-                   #(quote (source "test/hll.scm") |#+|)
-                   (#(ref (source "test/hll.scm") total.5)
-                    #(ref (source "test/hll.scm") n.4)))
+                   #(quote (source "test/hll.scm") #<procedure +>)
+                   (#(ref (source "test/hll.scm") #<uvar>)
+                    #(ref (source "test/hll.scm") #<uvar>)))
                  #(call
                    (source "test/hll.scm")
-                   #(quote (source "test/hll.scm") |#-|)
-                   (#(ref (source "test/hll.scm") n.4)
+                   #(quote (source "test/hll.scm") #<procedure ->)
+                   (#(ref (source "test/hll.scm") #<uvar>)
                     #(quote (source "test/hll.scm") 1))))))))))
         #(call
           (source "test/hll.scm")
-          #(ref (source "test/hll.scm") sum-to-n.1)
+          #(ref (source "test/hll.scm") #<uvar>)
           (#(quote (source "test/hll.scm") 100)))))))
   (#(case-lambda
      (source "test/hll.scm")
-     (((x.8)
+     (((#<uvar>)
        .
        #(if
          (source "test/hll.scm")
-         #(ref (source "test/hll.scm") x.8)
+         #(ref (source "test/hll.scm") #<uvar>)
          #(quote (source "test/hll.scm") #f)
          #(quote (source "test/hll.scm") #t)))))))
+(call
+ (case-lambda
+  ((not.0)
+   (letrec
+    ((sum-to-n.1
+      (case-lambda
+       ((n.3)
+        (if
+         (call (quote #<procedure =>) (ref n.3) (quote 0))
+         (quote 0)
+         (call (ref loop.2) (ref n.3) (quote 0))))))
+     (loop.2
+      (case-lambda
+       ((n.4 total.5)
+        (call
+         (case-lambda
+          ((total.6 n.7)
+           (if
+            (call
+             (ref not.0)
+             (call (quote #<procedure =>) (ref n.7) (quote 0)))
+            (call (ref loop.2) (ref n.7) (ref total.6))
+            (ref total.6))))
+         (call (quote #<procedure +>) (ref total.5) (ref n.4))
+         (call (quote #<procedure ->) (ref n.4) (quote 1)))))))
+    (call (ref sum-to-n.1) (quote 100)))))
+ (case-lambda ((x.8) (if (ref x.8) (quote #f) (quote #t)))))
 
 VHLL:
 (let
@@ -224,110 +289,158 @@ HLL:
   (source "test/hll.scm")
   #(case-lambda
     #f
-    (((box.0 unbox.1 set-box!.2)
+    (((#<uvar> #<uvar> #<uvar>)
       .
       #(call
         (source "test/hll.scm")
         #(case-lambda
           #f
-          (((sum-to-n.3)
+          (((#<uvar>)
             .
             #(call
               (source "test/hll.scm")
-              #(ref (source "test/hll.scm") sum-to-n.3)
+              #(ref (source "test/hll.scm") #<uvar>)
               (#(quote (source "test/hll.scm") 1000))))))
         (#(case-lambda
            (source "test/hll.scm")
-           (((n.4)
+           (((#<uvar>)
              .
              #(call
                (source "test/hll.scm")
                #(case-lambda
                  #f
-                 (((total.5)
+                 (((#<uvar>)
                    .
                    #(letrec
                      (source "test/hll.scm")
-                     ((loop.6
+                     ((#<uvar>
                        .
                        #(case-lambda
                          (source "test/hll.scm")
-                         (((n.7)
+                         (((#<uvar>)
                            .
                            #(begin
                              #f
                              #(call
                                (source "test/hll.scm")
-                               #(ref (source "test/hll.scm") set-box!.2)
-                               (#(ref (source "test/hll.scm") total.5)
+                               #(ref (source "test/hll.scm") #<uvar>)
+                               (#(ref (source "test/hll.scm") #<uvar>)
                                 #(call
                                   (source "test/hll.scm")
-                                  #(quote (source "test/hll.scm") |#+|)
+                                  #(quote
+                                    (source "test/hll.scm")
+                                    #<procedure +>)
                                   (#(call
                                      (source "test/hll.scm")
-                                     #(ref (source "test/hll.scm") unbox.1)
-                                     (#(ref (source "test/hll.scm") total.5)))
-                                   #(ref (source "test/hll.scm") n.7)))))
+                                     #(ref (source "test/hll.scm") #<uvar>)
+                                     (#(ref (source "test/hll.scm") #<uvar>)))
+                                   #(ref (source "test/hll.scm") #<uvar>)))))
                              #(if
                                (source "test/hll.scm")
                                #(call
                                  (source "test/hll.scm")
-                                 #(quote (source "test/hll.scm") |#<|)
+                                 #(quote
+                                   (source "test/hll.scm")
+                                   #<procedure <>)
                                  (#(quote (source "test/hll.scm") 0)
-                                  #(ref (source "test/hll.scm") n.7)))
+                                  #(ref (source "test/hll.scm") #<uvar>)))
                                #(call
                                  (source "test/hll.scm")
-                                 #(ref (source "test/hll.scm") loop.6)
+                                 #(ref (source "test/hll.scm") #<uvar>)
                                  (#(call
                                     (source "test/hll.scm")
-                                    #(quote (source "test/hll.scm") |#-|)
-                                    (#(ref (source "test/hll.scm") n.7)
+                                    #(quote
+                                      (source "test/hll.scm")
+                                      #<procedure ->)
+                                    (#(ref (source "test/hll.scm") #<uvar>)
                                      #(quote (source "test/hll.scm") 1)))))
                                #(call
                                  (source "test/hll.scm")
-                                 #(quote (source "test/hll.scm") |#values|)
+                                 #(quote
+                                   (source "test/hll.scm")
+                                   #<procedure values>)
                                  ()))))))))
                      #(begin
                        #f
                        #(call
                          (source "test/hll.scm")
-                         #(ref (source "test/hll.scm") loop.6)
-                         (#(ref (source "test/hll.scm") n.4)))
+                         #(ref (source "test/hll.scm") #<uvar>)
+                         (#(ref (source "test/hll.scm") #<uvar>)))
                        #(call
                          (source "test/hll.scm")
-                         #(ref (source "test/hll.scm") unbox.1)
-                         (#(ref (source "test/hll.scm") total.5))))))))
+                         #(ref (source "test/hll.scm") #<uvar>)
+                         (#(ref (source "test/hll.scm") #<uvar>))))))))
                (#(call
                   (source "test/hll.scm")
-                  #(ref (source "test/hll.scm") box.0)
+                  #(ref (source "test/hll.scm") #<uvar>)
                   (#(quote (source "test/hll.scm") 0)))))))))))))
   (#(case-lambda
      (source "test/hll.scm")
-     (((x.8)
+     (((#<uvar>)
        .
        #(call
          (source "test/hll.scm")
-         #(quote (source "test/hll.scm") |#mvector|)
-         (#(ref (source "test/hll.scm") x.8))))))
+         #(quote (source "test/hll.scm") #<procedure mvector.148>)
+         (#(ref (source "test/hll.scm") #<uvar>))))))
    #(case-lambda
      (source "test/hll.scm")
-     (((b.9)
+     (((#<uvar>)
        .
        #(call
          (source "test/hll.scm")
-         #(quote (source "test/hll.scm") |#mvector-ref|)
-         (#(ref (source "test/hll.scm") b.9)
+         #(quote (source "test/hll.scm") #<procedure mvector-ref>)
+         (#(ref (source "test/hll.scm") #<uvar>)
           #(quote (source "test/hll.scm") 0))))))
    #(case-lambda
      (source "test/hll.scm")
-     (((b.10 x.11)
+     (((#<uvar> #<uvar>)
        .
        #(call
          (source "test/hll.scm")
-         #(quote (source "test/hll.scm") |#mvector-set!|)
-         (#(ref (source "test/hll.scm") b.10)
+         #(quote (source "test/hll.scm") #<procedure mvector-set!>)
+         (#(ref (source "test/hll.scm") #<uvar>)
           #(quote (source "test/hll.scm") 0)
-          #(ref (source "test/hll.scm") x.11))))))))
+          #(ref (source "test/hll.scm") #<uvar>))))))))
+(call
+ (case-lambda
+  ((box.0 unbox.1 set-box!.2)
+   (call
+    (case-lambda ((sum-to-n.3) (call (ref sum-to-n.3) (quote 1000))))
+    (case-lambda
+     ((n.4)
+      (call
+       (case-lambda
+        ((total.5)
+         (letrec
+          ((loop.6
+            (case-lambda
+             ((n.7)
+              (begin
+               (call
+                (ref set-box!.2)
+                (ref total.5)
+                (call
+                 (quote #<procedure +>)
+                 (call (ref unbox.1) (ref total.5))
+                 (ref n.7)))
+               if
+               (call (quote #<procedure <>) (quote 0) (ref n.7))
+               (call
+                (ref loop.6)
+                (call (quote #<procedure ->) (ref n.7) (quote 1)))
+               (call (quote #<procedure values>)))))))
+          (begin
+           (call (ref loop.6) (ref n.4))
+           call
+           (ref unbox.1)
+           (ref total.5)))))
+       (call (ref box.0) (quote 0))))))))
+ (case-lambda ((x.8) (call (quote #<procedure mvector.148>) (ref x.8))))
+ (case-lambda
+  ((b.9) (call (quote #<procedure mvector-ref>) (ref b.9) (quote 0))))
+ (case-lambda
+  ((b.10 x.11)
+   (call (quote #<procedure mvector-set!>) (ref b.10) (quote 0) (ref x.11)))))
 
 VHLL:
 (let
@@ -342,55 +455,69 @@ HLL:
   (source "test/hll.scm")
   #(case-lambda
     #f
-    (((list.0 ^x*.1)
+    (((#<uvar> #<uvar>)
       .
       #(call
         (source "test/hll.scm")
-        #(quote #f |#call/values|)
+        #(quote #f #<procedure call-with-values.2>)
         (#(case-lambda
            #f
            ((()
              .
              #(call
                (source "test/hll.scm")
-               #(ref (source "test/hll.scm") ^x*.1)
+               #(ref (source "test/hll.scm") #<uvar>)
                ()))))
          #(case-lambda
            #f
-           (((a.2)
+           (((#<uvar>)
              .
              #(call
                (source "test/hll.scm")
-               #(ref (source "test/hll.scm") list.0)
-               (#(quote () one) #(ref (source "test/hll.scm") a.2))))
-            ((a.3 b.4)
+               #(ref (source "test/hll.scm") #<uvar>)
+               (#(quote () one) #(ref (source "test/hll.scm") #<uvar>))))
+            ((#<uvar> #<uvar>)
              .
              #(call
                (source "test/hll.scm")
-               #(ref (source "test/hll.scm") list.0)
+               #(ref (source "test/hll.scm") #<uvar>)
                (#(quote () two)
-                #(ref (source "test/hll.scm") a.3)
-                #(ref (source "test/hll.scm") b.4))))
-            ((a.5 b.6 . c*.7)
+                #(ref (source "test/hll.scm") #<uvar>)
+                #(ref (source "test/hll.scm") #<uvar>))))
+            ((#<uvar> #<uvar> . #<uvar>)
              .
              #(call
                (source "test/hll.scm")
-               #(ref (source "test/hll.scm") list.0)
+               #(ref (source "test/hll.scm") #<uvar>)
                (#(quote () more)
-                #(ref (source "test/hll.scm") a.5)
-                #(ref (source "test/hll.scm") b.6)
-                #(ref (source "test/hll.scm") c*.7)))))))))))
+                #(ref (source "test/hll.scm") #<uvar>)
+                #(ref (source "test/hll.scm") #<uvar>)
+                #(ref (source "test/hll.scm") #<uvar>)))))))))))
   (#(case-lambda
      (source "test/hll.scm")
-     ((x*.8 . #(ref (source "test/hll.scm") x*.8))))
+     ((#<uvar> . #(ref (source "test/hll.scm") #<uvar>))))
    #(case-lambda
      (source "test/hll.scm")
      ((()
        .
        #(call
          (source "test/hll.scm")
-         #(quote (source "test/hll.scm") |#values|)
+         #(quote (source "test/hll.scm") #<procedure values>)
          (#(quote (source "test/hll.scm") 1)
           #(quote (source "test/hll.scm") 2)
           #(quote (source "test/hll.scm") 3))))))))
+(call
+ (case-lambda
+  ((list.0 ^x*.1)
+   (call
+    (quote #<procedure call-with-values.2>)
+    (case-lambda (() (call (ref ^x*.1))))
+    (case-lambda
+     ((a.2) (call (ref list.0) (quote one) (ref a.2)))
+     ((a.3 b.4) (call (ref list.0) (quote two) (ref a.3) (ref b.4)))
+     ((a.5 b.6 . c*.7)
+      (call (ref list.0) (quote more) (ref a.5) (ref b.6) (ref c*.7)))))))
+ (case-lambda (x*.8 (ref x*.8)))
+ (case-lambda
+  (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3)))))
 
