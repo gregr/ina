@@ -1,68 +1,82 @@
 ;;;;;;;;;;;
 ;;; HLL ;;;
 ;;;;;;;;;;;
-;; Expr   ::= Var
-;;          | Primop
-;;          | (quote <value>)  ; upstream is responsible for any complex literal simplification
-;;          | (if Expr Expr Expr)
-;;          | (begin Expr ... Expr)
-;;          | (call Expr Expr ...)
-;;          | (case-lambda (Param* Expr) ...)
-;;          | (letrec ((Param Expr) ...) Expr)
-;;          | (note <value> Expr)
-;; Param* ::= Param | (Param ...) | (Param Param ... . Param)
-;; Param  ::= Var | #f
-;; Var    ::= <uvar>  ; each case-lambda, let, or letrec-bound variable must be unique
-;; Primop ::= <primop>
+;; Expr               ::= #(ref         Note Var)
+;;                      | #(quote       Note <value>)
+;;                      | #(if          Note Expr Expr Expr)
+;;                      | #(begin       Note Expr^ Expr)
+;;                      | #(call        Note Expr (Expr ...))
+;;                      | #(case-lambda Note (Case-lambda-clause ...)
+;;                      | #(letrec      Note (Let-binding ...) Expr)
+;; Case-lambda-clause ::= (Param*~ . Expr)
+;; Let-binding        ::= (Param . Expr)
+;; Expr^              ::= Expr | (Expr^ . Expr^)
+;; Param*~            ::= Param | (Param ...) | (Param Param ... . Param)
+;; Param              ::= Var | #f
+;; Var                ::= <address>
+;; Note               ::= <value>
 (define (HLL-validate P)
   (define (list?! x) (or (list? x) (mistake "not a list" x)))
-  (define (apply?! proc x) (and (list?! x) (apply proc x)))
-  (define (operation? x tag handle . tag&handle*) (operation?* x tag handle tag&handle*))
-  (define (operation?* x tag handle t&h*)
-    (and (pair? x)
-         (let ((key (car x)))
-           (let loop ((tag tag) (handle handle) (t&h* t&h*))
-             (if (if (procedure? tag) (tag (car x)) (eqv? key tag))
-                 (apply?! handle (cdr x))
-                 (and (pair? t&h*) (pair? (cdr t&h*))
-                      (loop (car t&h*) (cadr t&h*) (cddr t&h*))))))))
   (define (Param? x) (or (not x) (uvar? x)))
   (define (Param?!/ctx ctx x) (or (Param? x) (mistake "not a Param" x ctx)))
   (define (Param*?!/ctx ctx x)
     (or (Param? x) (null? x)
         (and (pair? x) (Param?!/ctx ctx (car x)) (Param*?!/ctx ctx (cdr x)))
         (mistake "not a parameter list" x ctx)))
-  (define (Parameter-expr-pair*?!/ctx ctx p&e*)
-    (andmap (lambda (p&e)
-              (apply?! (case-lambda
-                         ((p e) (and (Param*?!/ctx ctx p) (Expr?!/ctx ctx e)))
-                         (_ (mistake "not a parameter-expression pair" p&e ctx)))
-                       p&e))
-            p&e*))
+  (define (Let-binding*?!/ctx ctx x*)
+    (andmap (lambda (x)
+              (unless (let-binding? x)
+                (mistake "not a let binding" x ctx))
+              (let ((p (let-binding-lhs x)) (e (let-binding-rhs x)))
+                (and (Param*?!/ctx ctx p) (Expr?!/ctx ctx e))))
+            x*))
+  (define (Case-lambda-clause*?!/ctx ctx x*)
+    (andmap (lambda (x)
+              (unless (cl-clause? x)
+                (mistake "not a case-lambda clause" x ctx))
+              (let ((p (cl-clause-param x)) (e (cl-clause-body x)))
+                (and (Param*?!/ctx ctx p) (Expr?!/ctx ctx e))))
+            x*))
   (define (Expr?!/ctx ctx x)
-    (or (uvar? x) (primop? x)
-        (operation?
-          x
-          'quote       (case-lambda
-                         ((val) #t)
-                         (_ (mistake "operator arity mismatch" x ctx)))
-          'if          (case-lambda
-                         ((c t f) (and (Expr?!/ctx x c) (Expr?!/ctx x t) (Expr?!/ctx x f)))
-                         (_ (mistake "operator arity mismatch" x ctx)))
-          'call        (case-lambda
-                         ((rator . rand*) (and (Expr?!/ctx x rator) (Expr*?!/ctx x rand*)))
-                         (_ (mistake "operator arity mismatch" x ctx)))
-          'case-lambda (lambda p&e* (Parameter-expr-pair*?!/ctx x p&e*))
-          'letrec      (case-lambda
-                         ((p&e* body) (and (list?! p&e*) (Parameter-expr-pair*?!/ctx ctx p&e*)
-                                           (Expr?!/ctx x body)))
-                         (_ (mistake "operator arity mismatch" x ctx)))
-          'begin       (case-lambda
-                         ((e . e*) (Expr?!/ctx x e) (Expr*?!/ctx x e*))
-                         (_ (mistake "operator arity mismatch" x ctx)))
-          'note        (case-lambda
-                         ((n e) (Expr?!/ctx x e))
-                         (_ (mistake "operator arity mismatch" x ctx))))
-        (mistake "not an Expr" x ctx)))
+    (define (fail) (mistake "not an Expr" x ctx))
+    (if (vector? x)
+        (let ((len (vector-length x)))
+          (if (<= 2 len)
+              (let ((tag (vector-ref x 0)) (note (vector-ref x 1)))
+                (case len
+                  ((3) ((case tag
+                          ((ref) (lambda (addr) #t))
+                          ((quote) (lambda (val) #t))
+                          ((case-lambda) (lambda (clc*) (and (list?! clc*)
+                                                             (Case-lambda-clause*?!/ctx x clc*))))
+                          (else (fail)))
+                        (vector-ref x 2)))
+                  ((4) ((case tag
+                          ((call) (lambda (rator rand*) (and (Expr?!/ctx x rator)
+                                                             (list?! rand*) (Expr*?!/ctx x rand*))))
+                          ((letrec) (lambda (lb* body)
+                                      (and (list?! lb*) (Let-binding*?!/ctx ctx lb*)
+                                           (Expr?!/ctx x body))))
+                          ((begin) (lambda (e^ e) (Expr^?!/ctx x e^) (Expr?!/ctx x e)))
+                          (else (fail)))
+                        (vector-ref x 2) (vector-ref x 3)))
+                  ((5) ((case tag
+                          ((if) (lambda (c t f)
+                                  (and (Expr?!/ctx x c) (Expr?!/ctx x t) (Expr?!/ctx x f))))
+                          (else (fail)))
+                        (vector-ref x 2) (vector-ref x 3) (vector-ref x 4)))
+                  (else (fail))))
+              (fail)))
+        (begin (mistake "really" x ctx) (fail))))
   (define (Expr*?!/ctx ctx x*) (andmap (lambda (x) (Expr?!/ctx ctx x)) x*))
+  (define (Expr^?!/ctx ctx x^) (tree-andmap (lambda (x) (Expr?!/ctx ctx x)) x^))
   (Expr?!/ctx #f P))
+
+(define (cl-clause? x) (pair? x))
+(define (cl-clause p e) (cons p e))
+(define (cl-clause-param c) (car c))
+(define (cl-clause-body  c) (cdr c))
+(define (let-binding? x) (pair? x))
+(define (let-binding p e) (cons p e))
+(define (let-binding-lhs b) (car b))
+(define (let-binding-rhs b) (cdr b))
