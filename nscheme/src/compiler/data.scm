@@ -43,3 +43,24 @@
   (define primop? (rtd-predicate rtd.primop))
   (define (primop-name  x) (primop-ref x 0))
   (define (primop-arity x) (primop-ref x 1)))
+
+;; NOTE: these can be implemented more efficiently as tag-checking at a lower level, but doing so
+;; assumes that the target representation matches the host representation.  Also, it's not clear
+;; that we should make assumptions about the target representation here in the first place.  We
+;; likely want to be representation-agnostic until later phases of the compiler.  However, we have
+;; to decide how to normalize quoted data early in the compiler.  Therefore we should probably
+;; parameterize quote normalization by the representation choice.  This is not a big deal because
+;; we already need to parameterize quote normalization by whether to preserve the literal runtime
+;; values that were quoted, or to reconstruct them.
+;; TODO: is it really important to normalize quotes early?
+;; - to expose procedures that should be converted to lambdas, yes
+;; - alternatively, could we just lift ALL quotes?
+;;   - except maybe the most obvious immediates (null and boolean)?
+;;   - and leave further simplification to a later phase that knows the representation
+(define (fixnum? x) (and (integer? x) (<= #x-1000000000000000 x #x0fffffffffffffff)))
+(define (immediate? x)
+  (define (string-immediate? x) (<= (bytes-length x) 7))
+  (or (null? x) (boolean? x) (fixnum? x)
+      (and (symbol? x) (string-immediate? (symbol->string x)))
+      (and (string? x) (string-immediate? x))
+      (and (vector? x) (= (vector-length x) 0))))
