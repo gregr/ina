@@ -423,17 +423,15 @@ HLL:
                  (quote #<procedure +>)
                  (call (ref unbox.1) (ref total.5))
                  (ref n.7)))
-               if
-               (call (quote #<procedure <>) (quote 0) (ref n.7))
-               (call
-                (ref loop.6)
-                (call (quote #<procedure ->) (ref n.7) (quote 1)))
-               (call (quote #<procedure values>)))))))
+               (if
+                (call (quote #<procedure <>) (quote 0) (ref n.7))
+                (call
+                 (ref loop.6)
+                 (call (quote #<procedure ->) (ref n.7) (quote 1)))
+                (call (quote #<procedure values>))))))))
           (begin
            (call (ref loop.6) (ref n.4))
-           call
-           (ref unbox.1)
-           (ref total.5)))))
+           (call (ref unbox.1) (ref total.5))))))
        (call (ref box.0) (quote 0))))))))
  (case-lambda ((x.8) (call (quote #<procedure mvector.148>) (ref x.8))))
  (case-lambda

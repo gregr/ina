@@ -148,7 +148,7 @@
                 ((call)   (lambda (rator rand*) (cons* 'call (loop rator) (map loop rand*))))
                 ((letrec) (lambda (lb* body) (list 'letrec (lb*-pretty lb*) (loop body))))
                 ((let*)   (lambda (lb* body) (list 'let*   (lb*-pretty lb*) (loop body))))
-                ((begin)  (lambda (e^ e) (cons 'begin (tree-map-flatten loop e^ (loop e)))))
+                ((begin)  (lambda (e^ e) (cons 'begin (tree-map-flatten loop e^ (list (loop e))))))
                 ((apply/values) (lambda (rator rand) (list 'apply/values (loop rator) (loop rand))))
                 ((case-values) (lambda (rand clc*)
                                  (cons* 'case-values (loop rand) (clc*-pretty clc*)))))
