@@ -233,10 +233,10 @@
       ((dynamic-push key v body) (HLL:dynamic-push note (Expr key) (Expr v) (Expr body)))))
   (Expr P))
 
-(define (HLL-normalize-quote P proc=>primop)
+(define (HLL-normalize-quote P)
   (mdefine lb* '())
-  (define (proc->primop proc note) (let ((pp (assv proc proc=>primop)))
-                                     (if pp (HLL:primop note (cdr pp)) (HLL:quote note proc))))
+  (define (proc->primop proc note) (let ((p (procedure->primop proc)))
+                                     (if p (HLL:primop note p) (HLL:quote note proc))))
   (define p.cons   (proc->primop cons #f))
   (define p.vector (proc->primop vector #f))
   (let ((x (HLL-map-quote
@@ -256,6 +256,6 @@
     (if (null? lb*) x (HLL:let* #f lb* x))))
 
 ;; Alternative to HLL-normalize-quote when we do not want to simplify quote
-(define (HLL-normalize-primop P proc=>primop)
-  (HLL-map-quote P (lambda (x note v) (let ((pp (and (procedure? v) (assv v proc=>primop))))
-                                        (if pp (HLL:primop note (cdr pp)) x)))))
+(define (HLL-normalize-primop P)
+  (HLL-map-quote P (lambda (x note v) (let ((p (and (procedure? v) (procedure->primop v))))
+                                        (if p (HLL:primop note p) x)))))

@@ -46,6 +46,8 @@
   (define (primop-name  x) (primop-ref x 0))
   (define (primop-arity x) (primop-ref x 1)))
 
+;; TODO: move target-specific definitions to a target-specific file that we can selectively include
+
 ;; NOTE: these can be implemented more efficiently as tag-checking at a lower level, but doing so
 ;; assumes that the target representation matches the host representation.  Also, it's not clear
 ;; that we should make assumptions about the target representation here in the first place.  We
@@ -66,3 +68,19 @@
       (and (symbol? x) (string-immediate? (symbol->string x)))
       (and (string? x) (string-immediate? x))
       (and (vector? x) (= (vector-length x) 0))))
+
+(define procedure->primop
+  (let ((proc=>primop
+          (map (lambda (n=>p) (cons (cdr n=>p) (primop (car n=>p) #f)))
+               ;; TODO: also build primops for procedures we might not have access to here
+               (aquote
+                 panic apply values call/values make-record-type describe
+                 eqv? null? boolean? procedure? symbol? rational? integer?
+                 pair? vector? mvector? bytes? mbytes?
+                 cons car cdr vector vector-length vector-ref
+                 make-mvector mvector->vector mvector-length mvector-ref mvector-set!
+                 bytes bytes-length bytes-ref bytes->symbol symbol->bytes
+                 make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
+                 bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
+                 integer-floor-divmod numerator denominator = <= >= < > + - * /))))
+    (lambda (proc) (let ((pp (assv proc proc=>primop))) (and pp (cdr pp))))))
