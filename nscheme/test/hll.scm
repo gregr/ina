@@ -96,7 +96,7 @@
         (k env (Param* p) (make-begin note.empty (Body/env env e*)))))
     (define (Lambda-rand* p&b)
       (apply! (case-lambda
-                ((p . e*) (bind/k p e* (lambda (env p e) (let-binding p e))))
+                ((p . e*) (bind/k p e* (lambda (env p e) ($cl-clause p e))))
                 (_ (mistake "empty procedural case" stx)))
               p&b))
     (define (Let-rand*/k k)
@@ -134,7 +134,7 @@
         'apply/values (case-lambda
                         ((rator rand)
                          (make-call note (primop 'call/values)
-                                    (make-case-lambda note.empty (cl-clause '() (Expr rand)))
+                                    (make-case-lambda note.empty ($cl-clause '() (Expr rand)))
                                     (Expr rator)))
                         (_ (mistake "operator arity mismatch" stx)))
         'case-lambda  (lambda p&b* (HLL:case-lambda note (map Lambda-rand* p&b*)))
@@ -146,12 +146,12 @@
                                       body)))
         'let          (Let-rand*/k
                         (lambda (env p* e* body)
-                          (HLL:call note (make-case-lambda note.empty (cl-clause p* body))
+                          (HLL:call note (make-case-lambda note.empty ($cl-clause p* body))
                                     (map Expr e*))))
         'case-values  (case-lambda
                         ((e . p&b*)
                          (make-call note (primop 'call/values)
-                                    (make-case-lambda note.empty (cl-clause '() (Expr e)))
+                                    (make-case-lambda note.empty ($cl-clause '() (Expr e)))
                                     (HLL:case-lambda note.empty (map Lambda-rand* p&b*))))
                         (_ (mistake "operator arity mismatch" stx)))
         'begin        (lambda x* (make-begin note (Body x*)))))
