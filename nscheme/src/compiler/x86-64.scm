@@ -15,6 +15,7 @@
       ((r11) (case w ((4) 'r11d) ((2) 'r11w) ((1) 'r11b) ))
       ((rbx) (case w ((4) 'ebx)  ((2) 'bx)   ((1) 'bl)   ))
       ((rbp) (case w ((4) 'ebp)  ((2) 'bp)   ((1) 'bpl)  ))
+      ((rsp) (case w ((4) 'esp)  ((2) 'sp)   ((1) 'spl)  ))
       ((r12) (case w ((4) 'r12d) ((2) 'r12w) ((1) 'r12b) ))
       ((r13) (case w ((4) 'r13d) ((2) 'r13w) ((1) 'r13b) ))
       ((r14) (case w ((4) 'r14d) ((2) 'r14w) ((1) 'r14b) ))
