@@ -64,6 +64,9 @@
 ;; - (set! Register 0) invalidates condition flags (via xor R R) clearing carry and overflow
 ;; - (set! X (+ X 1)) and (set! X (- X 1)) do not alter the carry flag.
 ;; - (set! X (xor X -1)) does not alter flags.
+;; - When possible, (Compare-op X 0) will reuse the condition flags computed by a (set! X _) that
+;;   immediately precedes it.
+;;   - For instance, (begin (set! X (- X 1)) (jump-if (=/= X 0) _)) will not alter the carry flag.
 (splicing-local
   ((define Label? string?)
    (define register* '(rax rcx rdx rsi rdi r8 r9 r10 r11 rbx rbp rsp r12 r13 r14 r15))
