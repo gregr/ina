@@ -26,7 +26,6 @@
 ;; Primop  ::= <symbol>
 ;; Literal ::= #f | #t | <number> | <string>
 (define (VHLL->HLL P name=>primop)
-  (mdefine uid 0)
   (define (apply! proc x) (apply proc (syntax->list x)))
   (define (make-env n=>x) (list (box n=>x)))
   (define (env-ref/k env n kf k)
@@ -37,7 +36,7 @@
             (if nx (k (cdr nx)) (loop (cdr env)))))))
   (define (env-ref? env n) (env-ref/k env n (lambda () #f) (lambda (_) #t)))
   (define (env-bind! env n x) (let* ((frame (car env)) (n=>x (unbox frame)))
-                                (when (assv n n=>x) (mistake "already bound" n (uvar-source x)))
+                                (when (assv n n=>x) (mistake "already bound" n (hllvar-source x)))
                                 (set-box! frame (cons (cons n x) n=>x))))
   (define (env-extend env) (cons (box '()) env))
   (define (make-begin note e*)
@@ -80,10 +79,7 @@
         (define (Var stx)
           (let ((x (syntax-unwrap stx)))
             (unless (symbol? x) (mistake "not a symbol" stx))
-            (let ((v (uvar x)))
-              (set-uvar-source! v (simple-note (syntax-note stx)))
-              (set-uvar-uid! v uid)
-              (set! uid (+ uid 1))
+            (let ((v (hllvar x (simple-note (syntax-note stx)))))
               (env-bind! env x v)
               v)))
         (define (Param stx) (let ((x (syntax-unwrap stx))) (if (not x) x (Var stx))))
@@ -157,7 +153,7 @@
         'begin        (lambda x* (make-begin note (Body x*)))))
     (cond ((or (not x) (eqv? x #t) (number? x) (string? x)) (HLL:quote note x))
           ((symbol? x) (env-ref/k env x (lambda () (mistake "unbound" stx))
-                                  (lambda (v) ((if (uvar? v) HLL:ref HLL:quote) note v))))
+                                  (lambda (v) ((if (hllvar? v) HLL:ref HLL:quote) note v))))
           (else (default)))))
 
 (define name=>primop
@@ -168,11 +164,14 @@
           mvector mvector-ref mvector-set!))
 
 (define (HLL-test P)
-  (displayln "HLL:")
+  (displayln "raw HLL:")
   (pretty-write P)
-  (HLL-validate P)
-  (pretty-write (HLL-pretty P))
-  (newline))
+  (let ((P (HLL-initialize P)))
+    (displayln "initialized HLL:")
+    (pretty-write P)
+    (displayln "pretty HLL:")
+    (pretty-write (HLL-pretty-uid P))
+    (newline)))
 
 (define (VHLL-test P)
   (displayln "VHLL:")
