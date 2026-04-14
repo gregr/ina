@@ -18,7 +18,7 @@
 
 (define-syntax (define-record-type stx)
   (syntax-case stx ()
-    ((_ constructor-name predicate-name . field-desc*)
+    ((_ representer constructor-name predicate-name . field-desc*)
      (mlet ((mutable? #f))
        (let ((field-desc*
                (map (lambda (stx)
@@ -30,7 +30,7 @@
                               ((2) (set! mutable? #t) (cons (car fdesc) (cadr fdesc)))
                               (else (raise-parse-error "not a record field description" stx))))))
                     (syntax->list #'field-desc*))))
-         #`(begin (define rtd (make-rtd 'constructor-name #,(length field-desc*) #,mutable? #f))
+         #`(begin (define rtd (make-rtd 'constructor-name #,(length field-desc*) #,mutable? representer))
                   (define constructor-name (rtd-constructor rtd))
                   (define predicate-name   (rtd-predicate   rtd))
                   (define-record-type-accessor* rtd . #,(map car field-desc*))
