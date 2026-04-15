@@ -261,6 +261,7 @@
                                   (hllvar-source x))))
                  (set-hllvar-data! new (hllvar-data x))
                  (set-hllvar-data! x new)
+                 (set! old* (cons x old*))
                  new))
              hllvar-data)))
     (for-each (lambda (x) (set-hllvar-data! x (hllvar-data (hllvar-data x)))) old*)
