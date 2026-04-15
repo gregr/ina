@@ -14,9 +14,11 @@
 ;;                      | #(apply/values Note Expr Expr)
 ;;                      | #(values       Note (Expr ...))
 ;;                      | #(panic        Note (Expr ...))
+;;                      | #(late         Note &Expr)
 ;; Case-lambda-clause ::= #(Arity Param*~ Expr)
 ;; Arity              ::= <integer>  ; complemented (negative) if arity is variadic
 ;; Let-binding        ::= (Param . Expr)
+;; &Expr              ::= <box that eventually contains an Expr>
 ;; Expr^              ::= Expr | (Expr^ . Expr^)
 ;; Param*~            ::= Param | (Param ...) | (Param Param ... . Param)
 ;; Param              ::= Var | #f
@@ -35,6 +37,7 @@
 (define (HLL:apply/values note rator rand)        (vector 'apply/values note rator rand))
 (define (HLL:values       note rand*)             (vector 'values       note rand*))
 (define (HLL:panic        note rand*)             (vector 'panic        note rand*))
+(define (HLL:late         note &e)                (vector 'late         note &e))
 (define (HLL-note x)        (vector-ref x 1))
 (define (cl-clause? x)      (and (vector? x) (= (vector-length x) 3)))
 (define (cl-clause a p e)   (vector a p e))
@@ -117,6 +120,8 @@
         (HLL-case-build x clause* ((values . (lambda (a) . body)) . v1*) v2* v3*))
        ((_ x (((panic a) . body) . clause*) v1* v2* v3*)
         (HLL-case-build x clause* ((panic . (lambda (a) . body)) . v1*) v2* v3*))
+       ((_ x (((late a) . body) . clause*) v1* v2* v3*)
+        (HLL-case-build x clause* ((late . (lambda (a) . body)) . v1*) v2* v3*))
        ((_ x (((begin a b) . body) . clause*) v1* v2* v3*)
         (HLL-case-build x clause* v1* ((begin . (lambda (a b) . body)) . v2*) v3*))
        ((_ x (((call a b) . body) . clause*) v1* v2* v3*)
@@ -207,6 +212,7 @@
       ((apply/values rator rand) (HLL:apply/values note (Expr/ctx x rator) (Expr/ctx x rand)))
       ((values rand*)            (HLL:values note (Expr*/ctx x rand*)))
       ((panic rand*)             (HLL:panic note (Expr*/ctx x rand*)))
+      ((late &e)                 (Expr/ctx ctx (unbox &e)))
       (x                         (fail "not an Expr" x ctx))))
   (define (Expr*/ctx ctx x*) (list?!/ctx ctx x*) (map (lambda (x) (Expr/ctx ctx x)) x*))
   (define (Expr^/ctx ctx x^) (tree-map (lambda (x) (Expr/ctx ctx x)) x^))
@@ -238,7 +244,8 @@
       ((apply rator rand* lrand) (cons* 'apply (loop rator) (append (map loop rand*) (loop lrand))))
       ((apply/values rator rand) (list 'apply/values (loop rator) (loop rand)))
       ((values rand*)            (cons 'values (map loop rand*)))
-      ((panic rand*)             (list 'panic (map loop rand*)))))
+      ((panic rand*)             (list 'panic (map loop rand*)))
+      ((late &e)                 (loop (unbox &e)))))
   (loop P))
 
 (define (HLL-pretty-uid P)
@@ -285,7 +292,8 @@
       ((apply rator rand* lrand) (HLL:apply note (Expr rator) (map Expr rand*) (Expr lrand)))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
       ((values rand*)            (HLL:values note (map Expr rand*)))
-      ((panic rand*)             (HLL:panic note (map Expr rand*)))))
+      ((panic rand*)             (HLL:panic note (map Expr rand*)))
+      ((late &e)                 (Expr (unbox &e)))))
   (Expr P))
 
 (define (HLL-map-quote P f)
@@ -308,7 +316,8 @@
       ((apply rator rand* lrand) (HLL:apply note (Expr rator) (map Expr rand*) (Expr lrand)))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
       ((values rand*)            (HLL:values note (map Expr rand*)))
-      ((panic rand*)             (HLL:panic note (map Expr rand*)))))
+      ((panic rand*)             (HLL:panic note (map Expr rand*)))
+      ((late &e)                 (Expr (unbox &e)))))
   (Expr P))
 
 (define (HLL-normalize-quote P)
