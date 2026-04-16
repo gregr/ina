@@ -103,6 +103,21 @@
 (define (clc*-map f c*)
   (map (lambda (c) (f (cl-clause-arity c) (cl-clause-param c) (cl-clause-body c))) c*))
 (define (lb*-map f lb*) (map (lambda (lb) (f (let-binding-lhs lb) (let-binding-rhs lb))) lb*))
+(define (lb*-for-each f lb*)
+  (for-each (lambda (lb) (f (let-binding-lhs lb) (let-binding-rhs lb))) lb*))
+
+(define HLL:box
+  (let ((p.make-mvector (procedure->primop make-mvector)))
+    (lambda (note val)
+      (HLL:call note (HLL:primop #f p.make-mvector) (list (HLL:quote #f 1) val)))))
+(define HLL:unbox
+  (let ((p.mvector-ref (procedure->primop mvector-ref)))
+    (lambda (note box)
+      (HLL:call note (HLL:primop #f p.mvector-ref) (list box (HLL:quote #f 0))))))
+(define HLL:set-box!
+  (let ((p.mvector-set! (procedure->primop mvector-set!)))
+    (lambda (note box val)
+      (HLL:call note (HLL:primop #f p.mvector-set!) (list box (HLL:quote #f 0) val)))))
 
 (splicing-local
   ((define-syntax HLL-case-build
@@ -347,3 +362,115 @@
 (define (HLL-normalize-primop P)
   (HLL-map-quote P (lambda (x note v) (let ((p (and (procedure? v) (procedure->primop v))))
                                         (if p (HLL:primop note p) x)))))
+
+(define (HLL-check-letrec P)
+  (mdefine var*.all '())
+  (mdefine bnd*.pending '())
+  (define (bind! v initialized? init-var)
+    (let ((bnd (mvector initialized? init-var '())))
+      (set-hllvar-data! v bnd)
+      (set! bnd*.pending (cons bnd bnd*.pending)))
+    (set! var*.all (cons v var*.all)))
+  (define (bind-nonrec! v) (bind! v #t #f))
+  (define (bind-rec!    v) (bind! v #f (hllvar 'init? #f)))
+  (define (binding-initialized? x)   (mvector-ref x 0))
+  (define (binding-init-var     x)   (mvector-ref x 1))
+  (define (binding-initialize!  x)   (mvector-set! x 0 #t))
+  (define (binding-defer!       x t) (mvector-set! x 2 (cons t (mvector-ref x 2))))
+  (define (binding-force!       x)   (let ((t* (mvector-ref x 2)))
+                                       (mvector-set! x 2 '())
+                                       (for-each (lambda (t) (t)) t*)))
+  (define (Expr/no-escape x) (Expr/binding #f #f x))
+  (define (Expr/binding outer-bnd escape? x)
+    (define (loop x) (Expr/binding outer-bnd escape? x))
+    (define (Expr x) (Expr/binding outer-bnd #t x))
+    (define note (HLL-note x))
+    (HLL-case
+      x
+      ((ref v)
+       (let ((bnd (hllvar-data v)))
+         (if bnd
+             (let ((x (if (binding-initialized? bnd)
+                          x
+                          (HLL:if
+                            #f
+                            (let ((init (binding-init-var bnd)))
+                              (inc-hllvar-refcount! init)
+                              (HLL:unbox #f (HLL:ref #f init)))
+                            x
+                            (HLL:panic note
+                                       (list (HLL:quote #f #f)
+                                             (HLL:quote #f "referenced uninitialized variable")
+                                             (HLL:quote #f (hllvar-name v))))))))
+               (if escape?
+                   (binding-force! bnd)
+                   (when outer-bnd (binding-defer! outer-bnd (lambda () (binding-force! bnd)))))
+               x)
+             x)))
+      ((primop _)         x)
+      ((quote _)          x)
+      ((if c t f)         (HLL:if note (Expr/no-escape c) (loop t) (loop f)))
+      ((begin e^ e)       (HLL:begin note (tree-map Expr/no-escape e^) (loop e)))
+      ((call rator rand*) (HLL:call note (Expr rator) (map Expr rand*)))
+      ((case-lambda clc*)
+       (define (^expr)
+         (HLL:case-lambda note (clc*-map (lambda (a p body) (cl-clause a p (Expr body))) clc*)))
+       (cond (escape?   (^expr))
+             (outer-bnd (let ((&expr (box #f)))
+                          (binding-defer! outer-bnd (lambda () (set-box! &expr (^expr))))
+                          (HLL:late #f &expr)))
+             (else      (HLL:quote note #t))))
+      ((letrec lb* body)
+       (lb*-for-each (lambda (lhs _) (when lhs (bind-rec! lhs))) lb*)
+       (mdefine init* '())
+       (let* ((x (HLL:letrec
+                   note
+                   (lb*-map
+                     (lambda (lhs rhs)
+                       (let-binding
+                         lhs
+                         (if lhs
+                             (let* ((bnd (hllvar-data lhs))
+                                    (init (binding-init-var bnd))
+                                    (rhs (Expr/binding bnd #f rhs)))
+                               (binding-initialize! bnd)
+                               (if (hllvar-referenced? init)
+                                   (let ((rhsvar (hllvar #f #f)))
+                                     (inc-hllvar-refcount! init)
+                                     (inc-hllvar-refcount! rhsvar)
+                                     (set! init* (cons init init*))
+                                     (HLL:let*
+                                       #f (list (let-binding rhsvar rhs))
+                                       (HLL:begin
+                                         #f (HLL:set-box! #f (HLL:ref #f init) (HLL:quote #f #t))
+                                         (HLL:ref #f rhsvar))))
+                                   rhs))
+                             (Expr/no-escape rhs))))
+                     lb*)
+                   (loop body)))
+              (init* init*))
+         (if (null? init*)
+             x
+             (HLL:let*
+               #f
+               (map (lambda (init) (let-binding init (HLL:box #f (HLL:quote #f #f)))) init*)
+               x))))
+      ((let* lb* body)
+       (lb*-for-each (lambda (lhs _) (when lhs (bind-nonrec! lhs))) lb*)
+       (HLL:let* note (lb*-map (lambda (lhs rhs)
+                                 (let-binding lhs (Expr/binding (and lhs (hllvar-data lhs)) #f rhs)))
+                               lb*)
+                 (loop body)))
+      ((apply rator rand* lrand) (HLL:apply note (Expr rator) (map Expr rand*) (Expr lrand)))
+      ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
+      ((values rand*)            (HLL:values note (map Expr rand*)))
+      ((panic rand*)             (HLL:panic note (map Expr rand*)))
+      ((late &e)                 (loop (unbox &e)))))
+  (let ((topvar (hllvar #f #f)))
+    (bind-nonrec! topvar)
+    (let ((P (Expr/binding (hllvar-data topvar) #f P)))
+      (let loop () (let ((bnd* bnd*.pending))
+                     (set! bnd*.pending '())
+                     (unless (null? bnd*) (for-each binding-force! bnd*) (loop))))
+      (for-each (lambda (x) (set-hllvar-data! x #f)) var*.all)
+      P)))
