@@ -453,16 +453,12 @@
          (if bnd
              (let ((x (if (binding-initialized? bnd)
                           x
-                          (HLL:if
-                            #f
-                            (let ((init (binding-init-var bnd)))
-                              (inc-hllvar-refcount! init)
-                              (HLL:unbox #f (HLL:ref #f init)))
-                            x
-                            (HLL:panic note
-                                       (list (HLL:quote #f #f)
-                                             (HLL:quote #f "referenced uninitialized variable")
-                                             (HLL:quote #f (hllvar-name v))))))))
+                          (HLL: (if ,(let ((init (binding-init-var bnd)))
+                                       (inc-hllvar-refcount! init)
+                                       (HLL: (unbox init)))
+                                    ,x
+                                    (/note note (panic #f "referenced uninitialized variable"
+                                                       ',(hllvar-name v))))))))
                (if escape?
                    (binding-force! bnd)
                    (when outer-bnd (binding-defer! outer-bnd (lambda () (binding-force! bnd)))))
@@ -500,11 +496,7 @@
                                      (inc-hllvar-refcount! init)
                                      (inc-hllvar-refcount! rhsvar)
                                      (set! init* (cons init init*))
-                                     (HLL:let*
-                                       #f (list (let-binding rhsvar rhs))
-                                       (HLL:begin
-                                         #f (HLL:set-box! #f (HLL:ref #f init) (HLL:quote #f #t))
-                                         (HLL:ref #f rhsvar))))
+                                     (HLL: (let* ((rhsvar ,rhs)) (set-box! init #t) rhsvar)))
                                    rhs))
                              (Expr/no-escape rhs))))
                      lb*)
@@ -512,10 +504,7 @@
               (init* init*))
          (if (null? init*)
              x
-             (HLL:let*
-               #f
-               (map (lambda (init) (let-binding init (HLL:box #f (HLL:quote #f #f)))) init*)
-               x))))
+             (HLL: (let* ,(map (lambda (init) (let-binding init (HLL: (box #f)))) init*) ,x)))))
       ((let* lb* body)
        (lb*-for-each (lambda (lhs _) (when lhs (bind-nonrec! lhs))) lb*)
        (HLL:let* note (lb*-map (lambda (lhs rhs)
