@@ -108,8 +108,8 @@
                                     (else (mistake 'plist->alist "not a property list" p))))
 (define (plist-key*      p)   (if (null? p) '() (cons (car  p) (plist-key*   (cddr p)))))
 (define (plist-value*    p)   (if (null? p) '() (cons (cadr p) (plist-value* (cddr p)))))
-(define (plist-map       p f) (alist-map (plist->alist p) f))
-(define (plist-map-value p f) (alist->plist (alist-map-value (plist->alist p) f)))
+(define (plist-map       f p) (alist-map f (plist->alist p)))
+(define (plist-map-value f p) (alist->plist (alist-map-value f (plist->alist p))))
 
 (define (alist->plist a) (cond ((null? a) '())
                                ((pair? a) (let ((kv (car a)))
@@ -180,9 +180,9 @@
                                                    (lambda (a) (cons (cons key value) (cdr a)))
                                                    (lambda ()  (cons (cons key value) a))
                                                    (lambda (a) a)))
-(define (alist-for-each  a f) (for-each (lambda (kv) (f (car kv) (cdr kv))) a))
-(define (alist-map       a f) (map (lambda (kv) (f (car kv) (cdr kv))) a))
-(define (alist-map-value a f) (alist-map a (lambda (k v) (cons k (f v)))))
+(define (alist-for-each  f a) (for-each (lambda (kv) (f (car kv) (cdr kv))) a))
+(define (alist-map       f a) (map (lambda (kv) (f (car kv) (cdr kv))) a))
+(define (alist-map-value f a) (alist-map (lambda (k v) (cons k (f v))) a))
 
 (define range
   (let ((go (lambda (start end inc)

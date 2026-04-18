@@ -56,9 +56,9 @@
                 (env-vocabulary-bind! env id vocab.definition op.def vocab.expression op.expr))
               (map car b*.def-and-expr) (map cadr b*.def-and-expr) (map caddr b*.def-and-expr))
     (alist-for-each
+      (lambda (id op) (env-vocabulary-bind! env id vocab.definition op))
       (list (cons 'define-in-vocabulary (operator-parser parse-define-in-vocabulary 1 #f))
             (cons 'add-in-vocabulary    (operator-parser parse-add-in-vocabulary    1 #f))
-            (cons 'define-syntax        (operator-parser parse-define-syntax        2 #f)))
-      (lambda (id op) (env-vocabulary-bind! env id vocab.definition op)))
+            (cons 'define-syntax        (operator-parser parse-define-syntax        2 #f))))
     (env-read-only! env)
     env))

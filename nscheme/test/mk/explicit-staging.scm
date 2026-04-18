@@ -176,12 +176,12 @@
 (define (env-conjoin/minikanren env)
   (let ((env.scope (make-env)))
     (alist-for-each
+      (lambda (id op) (env-vocabulary-bind! env.scope id vocab.expression op))
       (list (cons 'fresh (operator-parser parse-fresh 2 #f))
             (cons 'conde (operator-parser parse-conde 1 #f))
             (cons 'run   (operator-parser parse-run   3 #f))
             (cons 'run*  (operator-parser parse-run*  2 #f))
-            (cons '==    (parse/constant-expression $==)))
-      (lambda (id op) (env-vocabulary-bind! env.scope id vocab.expression op)))
+            (cons '==    (parse/constant-expression $==))))
     (env-read-only! env.scope)
     (env-conjoin env.scope env)))
 

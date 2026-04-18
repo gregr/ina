@@ -206,15 +206,14 @@
                        (def*.source*
                          (append*
                            (alist-map
-                             ',(source*->path=>text)
                              (lambda (path text)
                                ((text->definition*/read*
                                   (if path (read*-syntax-annotated/source path) read*-syntax))
-                                text))))))
+                                text))
+                             ',(source*->path=>text)))))
                   (program-parse-definition* program env def*.source*)
                   (E-eval (program->E program)))))))
       (alist-for-each
-        (reverse compiler-output*)
         (lambda (target path)
           (verbose-displayln "Compiling:" '<target> target '<output-file> path)
           (define (write-output text)
@@ -223,4 +222,5 @@
                 (call/oport:file path 'create (lambda (out) (displayln text out)))))
           (case target
             ((racket) (write-output (E-compile-racket-program E.program)))
-            (else (mistake "compiler target is not yet supported" target path)))))))
+            (else (mistake "compiler target is not yet supported" target path))))
+        (reverse compiler-output*))))

@@ -140,12 +140,13 @@
                                                 ($set-box! ($source (^E.box) stx.lhs) E.rhs)))))))
 
 (define (env-add-alist! env a)
-  (alist-for-each a (lambda (id E) (env-vocabulary-bind!
-                                     env id vocab.expression (parse/constant-expression E)))))
+  (alist-for-each (lambda (id E) (env-vocabulary-bind! env id vocab.expression
+                                                       (parse/constant-expression E)))
+                  a))
 (define (alist->env a) (let ((env (make-env))) (env-add-alist! env a) (env-read-only! env) env))
-(define (env-add-value-alist! env a) (env-add-alist! env (alist-map-value a $quote)))
-(define (value-alist->env a) (alist->env (alist-map-value a $quote)))
-(define (addr-alist->env  a) (alist->env (alist-map-value a $ref)))
+(define (env-add-value-alist! env a) (env-add-alist! env (alist-map-value $quote a)))
+(define (value-alist->env a) (alist->env (alist-map-value $quote a)))
+(define (addr-alist->env  a) (alist->env (alist-map-value $ref a)))
 
 (define (((keyword/env/vocabulary vocab) env) stx.id)
   (and (identifier? stx.id) (env-vocabulary-ref env stx.id vocab)))
@@ -421,6 +422,6 @@
       (define ((make-parser E->parse) env stx)
         ((E->parse (or E (raise-parse-error "parsed identifier before completing its definition" stx)))
          env stx))
-      (env-vocabulary-bind!* env lhs (plist-map-value vp* make-parser))
+      (env-vocabulary-bind!* env lhs (plist-map-value make-parser vp*))
       (D:definition lhs (lambda (E.new) (set! E E.new)) ^rhs)))
   (define $d:define ($d:define/vocabulary vocab.expression parse/constant-expression)))

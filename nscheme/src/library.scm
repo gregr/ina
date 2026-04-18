@@ -94,7 +94,7 @@
   (define (p->text p)
     (when out.verbose (pretty-write `(read-file-text ,p) out.verbose))
     (path->text p))
-  (alist-map-value library=>path* (lambda (path*) (map p->text path*))))
+  (alist-map-value (lambda (path*) (map p->text path*)) library=>path*))
 
 (define (posix-make-library=>text* out.verbose path.library)
   (make-library=>text* out.verbose (lambda (p) (file->bytes (path-append path.library p)))))
