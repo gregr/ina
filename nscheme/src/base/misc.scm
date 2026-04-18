@@ -1,6 +1,6 @@
 (define call-with-values call/values)
 (define (void . args) (values))
-(define (not  x)      (if x #f #t))
+(define (not  x)      (eqv? x #f))
 
 (define (mistake* detail*) (panic 'mistake detail*))
 (define (mistake . detail*) (mistake* detail*))
