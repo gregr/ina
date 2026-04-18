@@ -10,7 +10,9 @@ HLL-convert-letrec:
 (quote 123)
 HLL-bind-lambda:
 (quote 123)
-HLL-free-variables:
+HLL-procedure=>free-variable*:
+HLL-well-known-procedure*:
+()
 
 VHLL:
 (+ 1 2)
@@ -27,7 +29,9 @@ HLL-convert-letrec:
 (call (quote #<procedure +>) (quote 1) (quote 2))
 HLL-bind-lambda:
 (call (quote #<procedure +>) (quote 1) (quote 2))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
+HLL-well-known-procedure*:
+()
 
 VHLL:
 (lambda (#f #f) 5)
@@ -43,8 +47,10 @@ HLL-convert-letrec:
 (case-lambda ((#t #t) (quote 5)))
 HLL-bind-lambda:
 (letrec ((_.0 (case-lambda ((#t #t) (quote 5))))) (ref _.0))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (_.0 ())
+HLL-well-known-procedure*:
+()
 
 VHLL:
 (lambda (a b) (let ((c 3)) (+ (* a b) c)))
@@ -119,9 +125,11 @@ HLL-bind-lambda:
        (ref _.3))
       (quote 3))))))
  (ref _.0))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (_.3 (b.2 a.1))
 (_.0 ())
+HLL-well-known-procedure*:
+()
 
 VHLL:
 (let
@@ -277,11 +285,13 @@ HLL-bind-lambda:
  (letrec
   ((_.7 (case-lambda ((x.8) (if (ref x.8) (quote #f) (quote #t))))))
   (ref _.7)))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (_.7 ())
 (loop.4 (loop.4 not.1))
 (sum-to-n.2 (loop.4))
 (_.0 ())
+HLL-well-known-procedure*:
+(loop.4 sum-to-n.2)
 
 VHLL:
 (let
@@ -494,12 +504,14 @@ HLL-bind-lambda:
  (letrec
   ((_.10 (case-lambda ((x.11) (if (ref x.11) (quote #f) (quote #t))))))
   (ref _.10)))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (_.10 ())
 (_.7 (loop.4 not.1))
 (loop.4 (loop.4 not.1))
 (sum-to-n.2 (loop.4))
 (_.0 ())
+HLL-well-known-procedure*:
+(loop.4 sum-to-n.2)
 
 VHLL:
 (let
@@ -832,7 +844,7 @@ HLL-bind-lambda:
        (quote 0)
        (ref x.18))))))
   (ref _.16)))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (_.16 ())
 (_.14 ())
 (_.12 ())
@@ -841,6 +853,8 @@ HLL-free-variables:
 (_.6 (box.1 unbox.2 set-box!.3))
 (_.4 ())
 (_.0 ())
+HLL-well-known-procedure*:
+(loop.10)
 
 VHLL:
 (let
@@ -980,12 +994,14 @@ HLL-bind-lambda:
     (case-lambda
      (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3))))))
   (ref _.13)))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (_.13 ())
 (_.11 ())
 (_.4 (list.1))
 (_.3 (^x*.2))
 (_.0 ())
+HLL-well-known-procedure*:
+()
 
 VHLL:
 (let ((a 1)) (letrec ((b (lambda () d)) (c b) (d 5)) c))
@@ -1056,9 +1072,11 @@ HLL-bind-lambda:
          (call (primop mvector-ref) (ref c.2) (quote 0)))))))))
   (ref _.0))
  (quote 1))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (b.4 (d.3))
 (_.0 ())
+HLL-well-known-procedure*:
+()
 
 VHLL:
 (let ((a 1)) (letrec ((b (lambda () (cons d c))) (c b) (d e) (e 5)) c))
@@ -1211,9 +1229,11 @@ HLL-bind-lambda:
           (call (primop mvector-ref) (ref c.3) (quote 0))))))))))
   (ref _.0))
  (quote 1))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (b.6 (c.3 d.4))
 (_.0 ())
+HLL-well-known-procedure*:
+()
 
 VHLL:
 (let
@@ -1421,9 +1441,11 @@ HLL-bind-lambda:
           (call (primop mvector-ref) (ref p.4) (quote 0))))))))))
   (ref _.0))
  (quote 1))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (b.6 (c.3 d.5 init?.2))
 (_.0 ())
+HLL-well-known-procedure*:
+()
 
 VHLL:
 (let
@@ -1683,9 +1705,11 @@ HLL-bind-lambda:
           (call (primop mvector-ref) (ref p.5) (quote 0))))))))))
   (ref _.0))
  (quote 1))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (b.7 (c.4 init?.3 d.6 init?.2))
 (_.0 ())
+HLL-well-known-procedure*:
+()
 
 VHLL:
 (let
@@ -1914,10 +1938,12 @@ HLL-bind-lambda:
           (call (primop mvector-ref) (ref p.4) (quote 0))))))))))
   (ref _.0))
  (quote 1))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (z.7 (p.4))
 (b.6 (c.3 d.5 init?.2 p.4))
 (_.0 ())
+HLL-well-known-procedure*:
+(z.7)
 
 VHLL:
 (let
@@ -2203,10 +2229,12 @@ HLL-bind-lambda:
           (call (primop mvector-ref) (ref p.5) (quote 0))))))))))
   (ref _.0))
  (quote 1))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (z.8 (p.5 init?.3))
 (b.7 (c.4 d.6 init?.2 p.5 init?.3))
 (_.0 ())
+HLL-well-known-procedure*:
+()
 
 VHLL:
 (let
@@ -2508,9 +2536,11 @@ HLL-bind-lambda:
           (call (primop mvector-ref) (ref p.5) (quote 0))))))))))
   (ref _.0))
  (quote 1))
-HLL-free-variables:
+HLL-procedure=>free-variable*:
 (_.9 (z.8 c.4 d.6 init?.2))
 (z.8 (p.5 init?.3))
 (b.7 (c.4 d.6 init?.2 p.5 init?.3))
 (_.0 ())
+HLL-well-known-procedure*:
+()
 

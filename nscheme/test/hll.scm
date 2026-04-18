@@ -179,11 +179,14 @@
         (let ((P (HLL-bind-lambda P)))
           (HLL-distinguish-variable-names! P)
           (pretty-write (HLL-pretty P))
-          (displayln "HLL-free-variables:")
-          (let ((lhs=>free* (HLL-free-variables P)))
+          (displayln "HLL-procedure=>free-variable*:")
+          (let ((lhs=>free*  (HLL-procedure=>free-variable* P)))
             (alist-for-each
               (lambda (lhs free*) (pretty-write (list (hllvar-name lhs) (map hllvar-name free*))))
-              lhs=>free*))))))
+              lhs=>free*)
+            (displayln "HLL-well-known-procedure*:")
+            (let ((well-known* (HLL-well-known-procedure* P (map car lhs=>free*))))
+              (pretty-write (map hllvar-name well-known*))))))))
   (newline))
 
 (define (VHLL-test P)
