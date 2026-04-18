@@ -578,7 +578,7 @@
                                  (HLL:ref note t)))))))))
     (if (null? lb*) x (HLL:let* #f lb* x))))
 
-(define (HLL-determine-free-variables P)
+(define (HLL-free-variables P)
   (define (make-clo) (box '()))
   (define (clo-free! clo v) (set-box! clo (cons v (unbox clo))))
   (define (make-seen clo* depth) (mvector depth clo* depth))
@@ -586,7 +586,7 @@
   (define (seen-clo*      s) (mvector-ref s 1))
   (define (seen-depth     s) (mvector-ref s 2))
   (define (seen-set! s clo* depth) (mvector-set! s 1 clo*) (mvector-set! s 2 depth))
-  (mdefine pending* '())
+  (mdefine lhs=>clo '())
   (let loop/lhs ((lhs #f) (clo* '()) (depth 0) (x P))
     (define (loop/clo* clo* depth x) (loop/lhs #f clo* depth x))
     (define (loop x) (loop/clo* clo* depth x))
@@ -617,7 +617,7 @@
       ((begin e^ e)              (tree-for-each loop e^) (loop e))
       ((call rator rand*)        (loop rator) (for-each loop rand*))
       ((case-lambda clc*)        (let* ((clo (make-clo)) (clo* (cons clo clo*)) (depth (+ depth 1)))
-                                   (set! pending* (cons (cons lhs clo) pending*))
+                                   (set! lhs=>clo (cons (cons lhs clo) lhs=>clo))
                                    (clc*-for-each
                                      (lambda (a p*~ body)
                                        (param-for-each
@@ -633,4 +633,4 @@
       ((values rand*)            (for-each loop rand*))
       ((panic rand*)             (for-each loop rand*))
       ((late &e)                 (loop (unbox &e)))))
-  (for-each (lambda (lhs&clo) (set-hllvar-data! (car lhs&clo) (unbox (cdr lhs&clo)))) pending*))
+  (alist-map-value unbox lhs=>clo))
