@@ -8,6 +8,7 @@ HLL-check-letrec:
 (quote 123)
 HLL-bind-lambda:
 (quote 123)
+HLL-determine-free-variables:
 
 VHLL:
 (+ 1 2)
@@ -22,6 +23,7 @@ HLL-check-letrec:
 (call (quote #<procedure +>) (quote 1) (quote 2))
 HLL-bind-lambda:
 (call (quote #<procedure +>) (quote 1) (quote 2))
+HLL-determine-free-variables:
 
 VHLL:
 (lambda (#f #f) 5)
@@ -35,6 +37,8 @@ HLL-check-letrec:
 (case-lambda ((#f #f) (quote 5)))
 HLL-bind-lambda:
 (letrec ((_.0 (case-lambda ((#f #f) (quote 5))))) (ref _.0))
+HLL-determine-free-variables:
+(_.0 ())
 
 VHLL:
 (lambda (a b) (let ((c 3)) (+ (* a b) c)))
@@ -98,6 +102,9 @@ HLL-bind-lambda:
        (ref _.3))
       (quote 3))))))
  (ref _.0))
+HLL-determine-free-variables:
+(_.0 ())
+(_.3 (b.2 a.1))
 
 VHLL:
 (let
@@ -234,6 +241,11 @@ HLL-bind-lambda:
  (letrec
   ((_.7 (case-lambda ((x.8) (if (ref x.8) (quote #f) (quote #t))))))
   (ref _.7)))
+HLL-determine-free-variables:
+(_.0 ())
+(sum-to-n.2 (loop.3))
+(loop.3 (loop.3 not.1))
+(_.7 ())
 
 VHLL:
 (let
@@ -418,6 +430,12 @@ HLL-bind-lambda:
  (letrec
   ((_.10 (case-lambda ((x.11) (if (ref x.11) (quote #f) (quote #t))))))
   (ref _.10)))
+HLL-determine-free-variables:
+(_.0 ())
+(sum-to-n.2 (loop.3))
+(loop.3 (loop.3 not.1))
+(_.7 (loop.3 not.1))
+(_.10 ())
 
 VHLL:
 (let
@@ -711,6 +729,15 @@ HLL-bind-lambda:
        (quote 0)
        (ref x.18))))))
   (ref _.16)))
+HLL-determine-free-variables:
+(_.0 ())
+(_.4 ())
+(_.6 (box.1 unbox.2 set-box!.3))
+(_.8 (n.7 unbox.2 set-box!.3))
+(loop.10 (loop.10 unbox.2 total.9 set-box!.3))
+(_.12 ())
+(_.14 ())
+(_.16 ())
 
 VHLL:
 (let
@@ -835,6 +862,12 @@ HLL-bind-lambda:
     (case-lambda
      (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3))))))
   (ref _.13)))
+HLL-determine-free-variables:
+(_.0 ())
+(_.3 (^x*.2))
+(_.4 (list.1))
+(_.11 ())
+(_.13 ())
 
 VHLL:
 (let ((a 1)) (letrec ((b (lambda () d)) (c b) (d 5)) c))
@@ -883,6 +916,9 @@ HLL-bind-lambda:
        (ref c.3))))))
   (ref _.0))
  (quote 1))
+HLL-determine-free-variables:
+(_.0 ())
+(b.2 (d.4))
 
 VHLL:
 (let ((a 1)) (letrec ((b (lambda () (cons d c))) (c b) (d e) (e 5)) c))
@@ -978,6 +1014,9 @@ HLL-bind-lambda:
         (ref c.4)))))))
   (ref _.0))
  (quote 1))
+HLL-determine-free-variables:
+(_.0 ())
+(b.3 (c.4 d.5))
 
 VHLL:
 (let
@@ -1115,6 +1154,9 @@ HLL-bind-lambda:
         (ref p.5)))))))
   (ref _.0))
  (quote 1))
+HLL-determine-free-variables:
+(_.0 ())
+(b.3 (c.4 d.6 init?.2))
 
 VHLL:
 (let
@@ -1289,6 +1331,9 @@ HLL-bind-lambda:
         (ref p.6)))))))
   (ref _.0))
  (quote 1))
+HLL-determine-free-variables:
+(_.0 ())
+(b.4 (c.5 init?.3 d.7 init?.2))
 
 VHLL:
 (let
@@ -1441,6 +1486,10 @@ HLL-bind-lambda:
         (ref p.5)))))))
   (ref _.0))
  (quote 1))
+HLL-determine-free-variables:
+(_.0 ())
+(b.3 (c.4 d.6 init?.2 p.5))
+(z.7 (p.5))
 
 VHLL:
 (let
@@ -1636,6 +1685,10 @@ HLL-bind-lambda:
         (ref p.6)))))))
   (ref _.0))
  (quote 1))
+HLL-determine-free-variables:
+(_.0 ())
+(b.4 (c.5 d.7 init?.2 p.6 init?.3))
+(z.8 (p.6 init?.3))
 
 VHLL:
 (let
@@ -1845,4 +1898,9 @@ HLL-bind-lambda:
         (ref p.6)))))))
   (ref _.0))
  (quote 1))
+HLL-determine-free-variables:
+(_.0 ())
+(b.4 (c.5 d.7 init?.2 p.6 init?.3))
+(z.8 (p.6 init?.3))
+(_.9 (z.8 c.5 d.7 init?.2))
 
