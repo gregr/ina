@@ -324,7 +324,7 @@
       ((late &e)                 (loop (unbox &e)))))
   (loop P))
 
-(define (HLL-pretty-uid P)
+(define (HLL-distinguish-variable-names P)
   (mdefine old* '())
   (mdefine uid -1)
   (let ((P (HLL-map-var
@@ -341,7 +341,9 @@
                  new))
              hllvar-data)))
     (for-each (lambda (x) (set-hllvar-data! x (hllvar-data (hllvar-data x)))) old*)
-    (HLL-pretty P)))
+    P))
+
+(define (HLL-pretty-uid P) (HLL-pretty (HLL-distinguish-variable-names P)))
 
 (define (HLL-map-var P f.param f.ref)
   (define (Param x) (if (hllvar? x) (f.param x) x))
