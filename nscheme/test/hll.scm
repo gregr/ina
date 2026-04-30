@@ -186,7 +186,10 @@
               lhs=>free*)
             (displayln "HLL-well-known-procedure*:")
             (let ((well-known* (HLL-well-known-procedure* P (map car lhs=>free*))))
-              (pretty-write (map hllvar-name well-known*))))))))
+              (pretty-write (map hllvar-name well-known*))
+              (displayln "HLL-join-point*:")
+              (let ((join-point* (HLL-join-point* P well-known*)))
+                (pretty-write (map hllvar-name join-point*)))))))))
   (newline))
 
 (define (VHLL-test P)

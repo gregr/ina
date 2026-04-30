@@ -13,6 +13,8 @@ HLL-bind-lambda:
 HLL-procedure=>free-variable*:
 HLL-well-known-procedure*:
 ()
+HLL-join-point*:
+()
 
 VHLL:
 (+ 1 2)
@@ -32,6 +34,8 @@ HLL-bind-lambda:
 HLL-procedure=>free-variable*:
 HLL-well-known-procedure*:
 ()
+HLL-join-point*:
+()
 
 VHLL:
 (lambda (#f #f) 5)
@@ -50,6 +54,8 @@ HLL-bind-lambda:
 HLL-procedure=>free-variable*:
 (_.0 ())
 HLL-well-known-procedure*:
+()
+HLL-join-point*:
 ()
 
 VHLL:
@@ -129,6 +135,8 @@ HLL-procedure=>free-variable*:
 (_.3 (b.2 a.1))
 (_.0 ())
 HLL-well-known-procedure*:
+()
+HLL-join-point*:
 ()
 
 VHLL:
@@ -291,6 +299,8 @@ HLL-procedure=>free-variable*:
 (sum-to-n.2 (loop.4))
 (_.0 ())
 HLL-well-known-procedure*:
+(loop.4 sum-to-n.2)
+HLL-join-point*:
 (loop.4 sum-to-n.2)
 
 VHLL:
@@ -512,6 +522,8 @@ HLL-procedure=>free-variable*:
 (_.0 ())
 HLL-well-known-procedure*:
 (loop.4 sum-to-n.2)
+HLL-join-point*:
+(sum-to-n.2)
 
 VHLL:
 (let
@@ -855,6 +867,8 @@ HLL-procedure=>free-variable*:
 (_.0 ())
 HLL-well-known-procedure*:
 (loop.10)
+HLL-join-point*:
+()
 
 VHLL:
 (let
@@ -1002,6 +1016,8 @@ HLL-procedure=>free-variable*:
 (_.0 ())
 HLL-well-known-procedure*:
 ()
+HLL-join-point*:
+()
 
 VHLL:
 (let ((a 1)) (letrec ((b (lambda () d)) (c b) (d 5)) c))
@@ -1076,6 +1092,8 @@ HLL-procedure=>free-variable*:
 (b.4 (d.3))
 (_.0 ())
 HLL-well-known-procedure*:
+()
+HLL-join-point*:
 ()
 
 VHLL:
@@ -1233,6 +1251,8 @@ HLL-procedure=>free-variable*:
 (b.6 (c.3 d.4))
 (_.0 ())
 HLL-well-known-procedure*:
+()
+HLL-join-point*:
 ()
 
 VHLL:
@@ -1445,6 +1465,8 @@ HLL-procedure=>free-variable*:
 (b.6 (c.3 d.5 init?.2))
 (_.0 ())
 HLL-well-known-procedure*:
+()
+HLL-join-point*:
 ()
 
 VHLL:
@@ -1710,6 +1732,8 @@ HLL-procedure=>free-variable*:
 (_.0 ())
 HLL-well-known-procedure*:
 ()
+HLL-join-point*:
+()
 
 VHLL:
 (let
@@ -1943,6 +1967,8 @@ HLL-procedure=>free-variable*:
 (b.6 (c.3 d.5 init?.2 p.4))
 (_.0 ())
 HLL-well-known-procedure*:
+(z.7)
+HLL-join-point*:
 (z.7)
 
 VHLL:
@@ -2234,6 +2260,8 @@ HLL-procedure=>free-variable*:
 (b.7 (c.4 d.6 init?.2 p.5 init?.3))
 (_.0 ())
 HLL-well-known-procedure*:
+()
+HLL-join-point*:
 ()
 
 VHLL:
@@ -2542,5 +2570,7 @@ HLL-procedure=>free-variable*:
 (b.7 (c.4 d.6 init?.2 p.5 init?.3))
 (_.0 ())
 HLL-well-known-procedure*:
+()
+HLL-join-point*:
 ()
 
