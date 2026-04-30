@@ -1150,8 +1150,11 @@ HLL-check-letrec:
        (if
         (call (primop mvector-ref) (ref init?.1) (quote 0))
         (ref e.5)
-        (panic
-         ((quote #f) (quote "referenced uninitialized variable") (quote e)))))
+        (call
+         (primop panic)
+         (quote #f)
+         (quote "referenced uninitialized variable")
+         (quote e))))
       (e.5
        (let*
         ((_.6 (quote 5)))
@@ -1187,10 +1190,11 @@ HLL-convert-letrec:
         (if
          (call (primop mvector-ref) (ref init?.1) (quote 0))
          (call (primop mvector-ref) (ref e.4) (quote 0))
-         (panic
-          ((quote #f)
-           (quote "referenced uninitialized variable")
-           (quote e)))))
+         (call
+          (primop panic)
+          (quote #f)
+          (quote "referenced uninitialized variable")
+          (quote e))))
        (call
         (primop mvector-set!)
         (ref e.4)
@@ -1231,10 +1235,11 @@ HLL-bind-lambda:
            (if
             (call (primop mvector-ref) (ref init?.2) (quote 0))
             (call (primop mvector-ref) (ref e.5) (quote 0))
-            (panic
-             ((quote #f)
-              (quote "referenced uninitialized variable")
-              (quote e)))))
+            (call
+             (primop panic)
+             (quote #f)
+             (quote "referenced uninitialized variable")
+             (quote e))))
           (call
            (primop mvector-set!)
            (ref e.5)
@@ -1335,10 +1340,11 @@ HLL-check-letrec:
           (if
            (call (primop mvector-ref) (ref init?.1) (quote 0))
            (ref d.5)
-           (panic
-            ((quote #f)
-             (quote "referenced uninitialized variable")
-             (quote d))))
+           (call
+            (primop panic)
+            (quote #f)
+            (quote "referenced uninitialized variable")
+            (quote d)))
           (ref c.3)))))
       (c.3
        (if
@@ -1373,10 +1379,11 @@ HLL-convert-letrec:
            (if
             (call (primop mvector-ref) (ref init?.1) (quote 0))
             (call (primop mvector-ref) (ref d.4) (quote 0))
-            (panic
-             ((quote #f)
-              (quote "referenced uninitialized variable")
-              (quote d))))
+            (call
+             (primop panic)
+             (quote #f)
+             (quote "referenced uninitialized variable")
+             (quote d)))
            (call (primop mvector-ref) (ref c.2) (quote 0)))))))
       (begin
        (call
@@ -1427,10 +1434,11 @@ HLL-bind-lambda:
               (if
                (call (primop mvector-ref) (ref init?.2) (quote 0))
                (call (primop mvector-ref) (ref d.5) (quote 0))
-               (panic
-                ((quote #f)
-                 (quote "referenced uninitialized variable")
-                 (quote d))))
+               (call
+                (primop panic)
+                (quote #f)
+                (quote "referenced uninitialized variable")
+                (quote d)))
               (call (primop mvector-ref) (ref c.3) (quote 0)))))))
          (begin
           (call
@@ -1557,17 +1565,19 @@ HLL-check-letrec:
           (if
            (call (primop mvector-ref) (ref init?.1) (quote 0))
            (ref d.7)
-           (panic
-            ((quote #f)
-             (quote "referenced uninitialized variable")
-             (quote d))))
+           (call
+            (primop panic)
+            (quote #f)
+            (quote "referenced uninitialized variable")
+            (quote d)))
           (if
            (call (primop mvector-ref) (ref init?.2) (quote 0))
            (ref c.4)
-           (panic
-            ((quote #f)
-             (quote "referenced uninitialized variable")
-             (quote c))))))))
+           (call
+            (primop panic)
+            (quote #f)
+            (quote "referenced uninitialized variable")
+            (quote c)))))))
       (c.4
        (let*
         ((_.5
@@ -1610,17 +1620,19 @@ HLL-convert-letrec:
            (if
             (call (primop mvector-ref) (ref init?.1) (quote 0))
             (call (primop mvector-ref) (ref d.5) (quote 0))
-            (panic
-             ((quote #f)
-              (quote "referenced uninitialized variable")
-              (quote d))))
+            (call
+             (primop panic)
+             (quote #f)
+             (quote "referenced uninitialized variable")
+             (quote d)))
            (if
             (call (primop mvector-ref) (ref init?.2) (quote 0))
             (call (primop mvector-ref) (ref c.3) (quote 0))
-            (panic
-             ((quote #f)
-              (quote "referenced uninitialized variable")
-              (quote c)))))))))
+            (call
+             (primop panic)
+             (quote #f)
+             (quote "referenced uninitialized variable")
+             (quote c))))))))
       (begin
        (call
         (primop mvector-set!)
@@ -1679,17 +1691,19 @@ HLL-bind-lambda:
               (if
                (call (primop mvector-ref) (ref init?.2) (quote 0))
                (call (primop mvector-ref) (ref d.6) (quote 0))
-               (panic
-                ((quote #f)
-                 (quote "referenced uninitialized variable")
-                 (quote d))))
+               (call
+                (primop panic)
+                (quote #f)
+                (quote "referenced uninitialized variable")
+                (quote d)))
               (if
                (call (primop mvector-ref) (ref init?.3) (quote 0))
                (call (primop mvector-ref) (ref c.4) (quote 0))
-               (panic
-                ((quote #f)
-                 (quote "referenced uninitialized variable")
-                 (quote c)))))))))
+               (call
+                (primop panic)
+                (quote #f)
+                (quote "referenced uninitialized variable")
+                (quote c))))))))
          (begin
           (call
            (primop mvector-set!)
@@ -1828,10 +1842,11 @@ HLL-check-letrec:
            (if
             (call (primop mvector-ref) (ref init?.1) (quote 0))
             (ref d.6)
-            (panic
-             ((quote #f)
-              (quote "referenced uninitialized variable")
-              (quote d))))
+            (call
+             (primop panic)
+             (quote #f)
+             (quote "referenced uninitialized variable")
+             (quote d)))
            (ref c.4))))))
       (c.4
        (if
@@ -1870,10 +1885,11 @@ HLL-convert-letrec:
             (if
              (call (primop mvector-ref) (ref init?.1) (quote 0))
              (call (primop mvector-ref) (ref d.4) (quote 0))
-             (panic
-              ((quote #f)
-               (quote "referenced uninitialized variable")
-               (quote d))))
+             (call
+              (primop panic)
+              (quote #f)
+              (quote "referenced uninitialized variable")
+              (quote d)))
             (call (primop mvector-ref) (ref c.2) (quote 0))))))))
       (begin
        (call
@@ -1928,10 +1944,11 @@ HLL-bind-lambda:
                (if
                 (call (primop mvector-ref) (ref init?.2) (quote 0))
                 (call (primop mvector-ref) (ref d.5) (quote 0))
-                (panic
-                 ((quote #f)
-                  (quote "referenced uninitialized variable")
-                  (quote d))))
+                (call
+                 (primop panic)
+                 (quote #f)
+                 (quote "referenced uninitialized variable")
+                 (quote d)))
                (call (primop mvector-ref) (ref c.3) (quote 0))))))))
          (begin
           (call
@@ -2072,10 +2089,11 @@ HLL-check-letrec:
               (if
                (call (primop mvector-ref) (ref init?.2) (quote 0))
                (ref p.6)
-               (panic
-                ((quote #f)
-                 (quote "referenced uninitialized variable")
-                 (quote p))))))))
+               (call
+                (primop panic)
+                (quote #f)
+                (quote "referenced uninitialized variable")
+                (quote p)))))))
           (call
            (quote #<procedure cons>)
            (call
@@ -2083,10 +2101,11 @@ HLL-check-letrec:
             (if
              (call (primop mvector-ref) (ref init?.1) (quote 0))
              (ref d.8)
-             (panic
-              ((quote #f)
-               (quote "referenced uninitialized variable")
-               (quote d))))
+             (call
+              (primop panic)
+              (quote #f)
+              (quote "referenced uninitialized variable")
+              (quote d)))
             (ref c.5))
            (ref z.4))))))
       (c.5
@@ -2130,10 +2149,11 @@ HLL-convert-letrec:
                (if
                 (call (primop mvector-ref) (ref init?.2) (quote 0))
                 (call (primop mvector-ref) (ref p.4) (quote 0))
-                (panic
-                 ((quote #f)
-                  (quote "referenced uninitialized variable")
-                  (quote p))))))))
+                (call
+                 (primop panic)
+                 (quote #f)
+                 (quote "referenced uninitialized variable")
+                 (quote p)))))))
            (call
             (quote #<procedure cons>)
             (call
@@ -2141,10 +2161,11 @@ HLL-convert-letrec:
              (if
               (call (primop mvector-ref) (ref init?.1) (quote 0))
               (call (primop mvector-ref) (ref d.5) (quote 0))
-              (panic
-               ((quote #f)
-                (quote "referenced uninitialized variable")
-                (quote d))))
+              (call
+               (primop panic)
+               (quote #f)
+               (quote "referenced uninitialized variable")
+               (quote d)))
              (call (primop mvector-ref) (ref c.3) (quote 0)))
             (ref z.7)))))))
       (begin
@@ -2204,10 +2225,11 @@ HLL-bind-lambda:
                   (if
                    (call (primop mvector-ref) (ref init?.3) (quote 0))
                    (call (primop mvector-ref) (ref p.5) (quote 0))
-                   (panic
-                    ((quote #f)
-                     (quote "referenced uninitialized variable")
-                     (quote p))))))))
+                   (call
+                    (primop panic)
+                    (quote #f)
+                    (quote "referenced uninitialized variable")
+                    (quote p)))))))
               (call
                (quote #<procedure cons>)
                (call
@@ -2215,10 +2237,11 @@ HLL-bind-lambda:
                 (if
                  (call (primop mvector-ref) (ref init?.2) (quote 0))
                  (call (primop mvector-ref) (ref d.6) (quote 0))
-                 (panic
-                  ((quote #f)
-                   (quote "referenced uninitialized variable")
-                   (quote d))))
+                 (call
+                  (primop panic)
+                  (quote #f)
+                  (quote "referenced uninitialized variable")
+                  (quote d)))
                 (call (primop mvector-ref) (ref c.4) (quote 0)))
                (ref z.8)))))))
          (begin
@@ -2372,10 +2395,11 @@ HLL-check-letrec:
               (if
                (call (primop mvector-ref) (ref init?.2) (quote 0))
                (ref p.6)
-               (panic
-                ((quote #f)
-                 (quote "referenced uninitialized variable")
-                 (quote p))))))))
+               (call
+                (primop panic)
+                (quote #f)
+                (quote "referenced uninitialized variable")
+                (quote p)))))))
           (case-lambda
            (()
             (call
@@ -2385,10 +2409,11 @@ HLL-check-letrec:
               (if
                (call (primop mvector-ref) (ref init?.1) (quote 0))
                (ref d.8)
-               (panic
-                ((quote #f)
-                 (quote "referenced uninitialized variable")
-                 (quote d))))
+               (call
+                (primop panic)
+                (quote #f)
+                (quote "referenced uninitialized variable")
+                (quote d)))
               (ref c.5))
              (ref z.4))))))))
       (c.5
@@ -2432,10 +2457,11 @@ HLL-convert-letrec:
                (if
                 (call (primop mvector-ref) (ref init?.2) (quote 0))
                 (call (primop mvector-ref) (ref p.4) (quote 0))
-                (panic
-                 ((quote #f)
-                  (quote "referenced uninitialized variable")
-                  (quote p))))))))
+                (call
+                 (primop panic)
+                 (quote #f)
+                 (quote "referenced uninitialized variable")
+                 (quote p)))))))
            (case-lambda
             (()
              (call
@@ -2445,10 +2471,11 @@ HLL-convert-letrec:
                (if
                 (call (primop mvector-ref) (ref init?.1) (quote 0))
                 (call (primop mvector-ref) (ref d.5) (quote 0))
-                (panic
-                 ((quote #f)
-                  (quote "referenced uninitialized variable")
-                  (quote d))))
+                (call
+                 (primop panic)
+                 (quote #f)
+                 (quote "referenced uninitialized variable")
+                 (quote d)))
                (call (primop mvector-ref) (ref c.3) (quote 0)))
               (ref z.7)))))))))
       (begin
@@ -2508,10 +2535,11 @@ HLL-bind-lambda:
                   (if
                    (call (primop mvector-ref) (ref init?.3) (quote 0))
                    (call (primop mvector-ref) (ref p.5) (quote 0))
-                   (panic
-                    ((quote #f)
-                     (quote "referenced uninitialized variable")
-                     (quote p))))))))
+                   (call
+                    (primop panic)
+                    (quote #f)
+                    (quote "referenced uninitialized variable")
+                    (quote p)))))))
               (letrec
                ((_.9
                  (case-lambda
@@ -2523,10 +2551,11 @@ HLL-bind-lambda:
                      (if
                       (call (primop mvector-ref) (ref init?.2) (quote 0))
                       (call (primop mvector-ref) (ref d.6) (quote 0))
-                      (panic
-                       ((quote #f)
-                        (quote "referenced uninitialized variable")
-                        (quote d))))
+                      (call
+                       (primop panic)
+                       (quote #f)
+                       (quote "referenced uninitialized variable")
+                       (quote d)))
                      (call (primop mvector-ref) (ref c.4) (quote 0)))
                     (ref z.8))))))
                (ref _.9)))))))
