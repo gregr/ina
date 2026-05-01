@@ -116,27 +116,27 @@
 (define (lb*-for-each f lb*)
   (for-each (lambda (lb) (f (let-binding-lhs lb) (let-binding-rhs lb))) lb*))
 
-(define HLL:apply
-  (let ((p.apply (HLL:primop #f (procedure->primop apply))))
-    (lambda (note rand*) (HLL:call note p.apply rand*))))
-(define HLL:values
-  (let ((p.values (HLL:primop #f (procedure->primop values))))
-    (lambda (note rand*) (HLL:call note p.values rand*))))
-(define HLL:panic
-  (let ((p.panic (HLL:primop #f (procedure->primop panic))))
-    (lambda (note rand*) (HLL:call note p.panic rand*))))
-(define HLL:box
-  (let ((p.make-mvector (HLL:primop #f (procedure->primop make-mvector))))
-    (lambda (note val)
-      (HLL:call note p.make-mvector (list (HLL:quote #f 1) val)))))
-(define HLL:unbox
-  (let ((p.mvector-ref (HLL:primop #f (procedure->primop mvector-ref))))
-    (lambda (note box)
-      (HLL:call note p.mvector-ref (list box (HLL:quote #f 0))))))
-(define HLL:set-box!
-  (let ((p.mvector-set! (HLL:primop #f (procedure->primop mvector-set!))))
-    (lambda (note box val)
-      (HLL:call note p.mvector-set! (list box (HLL:quote #f 0) val)))))
+(splicing-let
+  ((p.apply        (HLL:primop #f (procedure->primop apply)))
+   (p.values       (HLL:primop #f (procedure->primop values)))
+   (p.panic        (HLL:primop #f (procedure->primop panic)))
+   (p.make-mvector (HLL:primop #f (procedure->primop make-mvector)))
+   (p.mvector-ref  (HLL:primop #f (procedure->primop mvector-ref)))
+   (p.mvector-set! (HLL:primop #f (procedure->primop mvector-set!)))
+   (p.cons         (HLL:primop #f (procedure->primop cons)))
+   (e.0            (HLL:quote #f 0))
+   (e.1            (HLL:quote #f 1)))
+  (define (HLL:apply    note rand*) (HLL:call note p.apply rand*))
+  (define (HLL:values   note rand*) (HLL:call note p.values rand*))
+  (define (HLL:panic    note rand*) (HLL:call note p.panic rand*))
+  (define (HLL:box      note val)   (HLL:call note p.make-mvector (list e.1 val)))
+  (define (HLL:unbox    note b)     (HLL:call note p.mvector-ref  (list b e.0)))
+  (define (HLL:set-box! note b val) (HLL:call note p.mvector-set! (list b e.0 val)))
+  (define (HLL:cons     note a d)   (HLL:call note p.cons         (list a d)))
+  (define (HLL:list     note rand*) (let loop ((note note) (rand* rand*))
+                                      (if (null? rand*)
+                                          (HLL:quote note '())
+                                          (HLL:cons note (car rand*) (loop #f (cdr rand*)))))))
 
 (splicing-local
   ((define-syntax HLL-case-build
@@ -191,7 +191,8 @@
 (splicing-local
   ((define-syntax Expr/note
      (syntax-rules (unquote /note ref primop quote if begin call case-lambda lambda letrec let*
-                            apply/values case-values apply values panic box unbox set-box!)
+                            apply/values case-values
+                            apply values panic box unbox set-box! cons list)
        ((_ note ,x)                             x)
        ((_ note (ref ,v))                       (HLL:ref note v))
        ((_ note (primop ,p))                    (HLL:primop note p))
@@ -220,6 +221,8 @@
        ((_ note (box e))                        (HLL:box note (Expr e)))
        ((_ note (unbox b))                      (HLL:unbox note (Expr b)))
        ((_ note (set-box! b e))                 (HLL:set-box! note (Expr b) (Expr e)))
+       ((_ note (cons a d))                     (HLL:cons note (Expr a) (Expr d)))
+       ((_ note (list rand* ...))               (HLL:list note (list (Expr rand*) ...)))
        ((_ note (rator . rand*))                (HLL:-unrecognized (rator . rand*)))
        ((_ note stx)                            (Atom note stx))))
    (define-syntax CL-clause
