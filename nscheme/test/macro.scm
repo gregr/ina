@@ -499,6 +499,40 @@
    ;((case-lambda (() (letrec ((x.0 (quote 1))) x.0))))
    ==> 1
 
+   ;;; Examples demonstrating that the meaning of a free name can change after transcription:
+   (let ()
+     (define y 5)
+     (let ()
+       (define-syntax m (syntax-rules ()
+                          ((_ a) (define a (lambda () y)))))
+       (m x)
+       (define y 6)
+       (x)))
+   ==> 6
+   (let ()
+     (define y 5)
+     (let ()
+       (define-syntax m (syntax-rules ()
+                          ((_ a b) (define a (lambda (b) y)))))
+       (m x y)
+       (define y 6)
+       (x 7)))
+   ==> 6
+   (let ((y 5))
+     (define-syntax m (syntax-rules ()
+                        ((_ a) (define a (lambda () y)))))
+     (m x)
+     (define y 6)
+     (x))
+   ==> 6
+   (let ((y 5))
+     (define-syntax m (syntax-rules ()
+                        ((_ a b) (define a (lambda (b) y)))))
+     (m x y)
+     (define y 6)
+     (x 7))
+   ==> 6
+
    ;;; Different ways to intentionally choose the outermost binding of x to 6:
    (let ((x 6))
      (define-syntax (m2 stx)
