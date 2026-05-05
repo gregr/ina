@@ -48,16 +48,15 @@
 (define (let-binding-rhs b) (cdr b))
 
 (define-record-type 'hllvar make-hllvar hllvar?
-  (hllvar-name set-hllvar-name!)
-  hllvar-source
-  (hllvar-data set-hllvar-data!)
+  (hllvar-name     set-hllvar-name!)
+  (hllvar-source   set-hllvar-source!)
+  (hllvar-data     set-hllvar-data!)
   (hllvar-refcount set-hllvar-refcount!))
 (define (hllvar name source) (make-hllvar name source #f 0))
 (define (hllvar-copy x)
   (make-hllvar (hllvar-name x) (hllvar-source x) (hllvar-data x) (hllvar-refcount x)))
-(define (inc-hllvar-refcount!    x)   (set-hllvar-refcount! x (+ (hllvar-refcount x) 1)))
-;; NOTE: this assumes we only care whether the refcount is 0, 1, or greater than 1
-(define (join-hllvar-refcount!   x c) (set-hllvar-refcount! x (bitwise-ior (hllvar-refcount x) c)))
+(define (add-hllvar-refcount!    x c) (set-hllvar-refcount! x (+ (hllvar-refcount x) c)))
+(define (inc-hllvar-refcount!    x)   (add-hllvar-refcount! x 1))
 (define (hllvar-referenced?      x)   (< 0 (hllvar-refcount x)))
 (define (hllvar-referenced-once? x)   (= 1 (hllvar-refcount x)))
 
@@ -245,10 +244,10 @@
                          (let ((x (syntax-unwrap #'stx)))
                            (if (or (boolean? x) (number? x) (string? x))
                                #'(HLL:quote note stx)
-                               (mistake "invalid HLL: Expr" #'stx)))))))
+                               (mistake "invalid HLL: form" #'stx)))))))
    (define-syntax (HLL:-unrecognized stx)
      (syntax-case stx ()
-       ((_ e) (mistake "invalid HLL: Expr" (syntax->datum #'e)))))
+       ((_ e) (mistake "invalid HLL: form" (syntax->datum #'e)))))
    (define-syntax-rule (Expr e) (Expr/note #f e)))
   (define-syntax-rule (HLL: e) (Expr/note #f e)))
 
@@ -285,6 +284,7 @@
              (cl-clause (param->arity p) p (Expr/ctx ctx (cl-clause-body x)))))
          x*))
   (define (Expr/ctx ctx x)
+    (unless (and (vector? x) (< 0 (vector-length x))) (fail "invalid HLL" x ctx))
     (define note (HLL-note x))
     (HLL-case
       x
