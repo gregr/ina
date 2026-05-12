@@ -5250,7 +5250,7 @@ HLL-join-point*:
 HLL-sink-join-points:
 (letrec ((f.0 (case-lambda (() (quote f))))) (call (ref f.0)))
 join points:
-()
+(f)
 HLL-convert-letrec:
 (letrec ((f.0 (case-lambda (() (quote f))))) (call (ref f.0)))
 HLL-bind-lambda:
@@ -5349,7 +5349,7 @@ HLL-sink-join-points:
       (call (ref a.1)))))))
  (call (ref f.0)))
 join points:
-(a b c d e)
+(a b c d e f)
 HLL-convert-letrec:
 (letrec
  ((f.0
@@ -5517,7 +5517,7 @@ HLL-sink-join-points:
       (if (quote f) (call (ref g.6)) (call (ref b.2))))))))
  (call (ref f.0)))
 join points:
-(a b c d e g h)
+(a b c d e f g h)
 HLL-convert-letrec:
 (letrec
  ((f.0
@@ -5685,7 +5685,7 @@ HLL-sink-join-points:
       (if (quote f) (call (ref g.5)) (call (ref c.2))))))))
  (call (ref f.0)))
 join points:
-(a b c d e g h)
+(a b c d e f g h)
 HLL-convert-letrec:
 (letrec
  ((f.0

@@ -752,7 +752,7 @@
       ((apply/values rator rand) (HLL:apply/values note (Nontail rator) (Nontail rand)))
       ((case-values rand clc*)   (HLL:case-values note (Nontail rand) (CLC*/Expr Tail clc*)))
       ((late &e)                 (Tail (unbox &e)))))
-  (let ((P (Expr/k k.escape P))) (values join-point* P)))
+  (let ((P (Nontail P))) (values join-point* P)))
 
 (define (HLL-convert-letrec P)
   (let Expr ((x P))
