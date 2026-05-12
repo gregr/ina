@@ -1,7 +1,5 @@
 VHLL:
 123
-raw HLL:
-#(quote (source "test/hll.scm") 123)
 pretty HLL:
 (quote 123)
 HLL-check-letrec:
@@ -32,11 +30,6 @@ HLL-join-point*:
 
 VHLL:
 (+ 1 2)
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(quote (source "test/hll.scm") #<procedure +>)
-  (#(quote (source "test/hll.scm") 1) #(quote (source "test/hll.scm") 2)))
 pretty HLL:
 (call (quote #<procedure +>) (quote 1) (quote 2))
 HLL-check-letrec:
@@ -67,10 +60,6 @@ HLL-join-point*:
 
 VHLL:
 (lambda (#f #f) 5)
-raw HLL:
-#(case-lambda
-  (source "test/hll.scm")
-  (#(0 (#f #f) #(quote (source "test/hll.scm") 5))))
 pretty HLL:
 (case-lambda ((#t #t) (quote 5)))
 HLL-check-letrec:
@@ -103,27 +92,6 @@ HLL-join-point*:
 
 VHLL:
 (lambda (a b) (let ((c 3)) (+ (* a b) c)))
-raw HLL:
-#(case-lambda
-  (source "test/hll.scm")
-  (#(0
-     (#<hllvar> #<hllvar>)
-     #(call
-       (source "test/hll.scm")
-       #(case-lambda
-         #f
-         (#(0
-            (#<hllvar>)
-            #(call
-              (source "test/hll.scm")
-              #(quote (source "test/hll.scm") #<procedure +>)
-              (#(call
-                 (source "test/hll.scm")
-                 #(quote (source "test/hll.scm") #<procedure *>)
-                 (#(ref (source "test/hll.scm") #<hllvar>)
-                  #(ref (source "test/hll.scm") #<hllvar>)))
-               #(ref (source "test/hll.scm") #<hllvar>))))))
-       (#(quote (source "test/hll.scm") 3))))))
 pretty HLL:
 (case-lambda
  ((a.0 b.1)
@@ -239,69 +207,6 @@ VHLL:
    (loop
     (lambda (n total) (if (not (= n 0)) (loop (- n 1) (+ total n)) total))))
   (sum-to-n 10)))
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(case-lambda
-    #f
-    (#(0
-       (#<hllvar>)
-       #(letrec
-         (source "test/hll.scm")
-         ((#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0
-                (#<hllvar>)
-                #(call
-                  (source "test/hll.scm")
-                  #(ref (source "test/hll.scm") #<hllvar>)
-                  (#(ref (source "test/hll.scm") #<hllvar>)
-                   #(quote (source "test/hll.scm") 0)))))))
-          (#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0
-                (#<hllvar> #<hllvar>)
-                #(if
-                  (source "test/hll.scm")
-                  #(call
-                    (source "test/hll.scm")
-                    #(ref (source "test/hll.scm") #<hllvar>)
-                    (#(call
-                       (source "test/hll.scm")
-                       #(quote (source "test/hll.scm") #<procedure =>)
-                       (#(ref (source "test/hll.scm") #<hllvar>)
-                        #(quote (source "test/hll.scm") 0)))))
-                  #(call
-                    (source "test/hll.scm")
-                    #(ref (source "test/hll.scm") #<hllvar>)
-                    (#(call
-                       (source "test/hll.scm")
-                       #(quote (source "test/hll.scm") #<procedure ->)
-                       (#(ref (source "test/hll.scm") #<hllvar>)
-                        #(quote (source "test/hll.scm") 1)))
-                     #(call
-                       (source "test/hll.scm")
-                       #(quote (source "test/hll.scm") #<procedure +>)
-                       (#(ref (source "test/hll.scm") #<hllvar>)
-                        #(ref (source "test/hll.scm") #<hllvar>)))))
-                  #(ref (source "test/hll.scm") #<hllvar>)))))))
-         #(call
-           (source "test/hll.scm")
-           #(ref (source "test/hll.scm") #<hllvar>)
-           (#(quote (source "test/hll.scm") 10)))))))
-  (#(case-lambda
-     (source "test/hll.scm")
-     (#(0
-        (#<hllvar>)
-        #(if
-          (source "test/hll.scm")
-          #(ref (source "test/hll.scm") #<hllvar>)
-          #(quote (source "test/hll.scm") #f)
-          #(quote (source "test/hll.scm") #t)))))))
 pretty HLL:
 (call
  (case-lambda
@@ -483,85 +388,6 @@ VHLL:
       ((total (+ total n)) (n (- n 1)))
       (if (not (= n 0)) (loop n total) total)))))
   (sum-to-n 100)))
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(case-lambda
-    #f
-    (#(0
-       (#<hllvar>)
-       #(letrec
-         (source "test/hll.scm")
-         ((#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0
-                (#<hllvar>)
-                #(if
-                  (source "test/hll.scm")
-                  #(call
-                    (source "test/hll.scm")
-                    #(quote (source "test/hll.scm") #<procedure =>)
-                    (#(ref (source "test/hll.scm") #<hllvar>)
-                     #(quote (source "test/hll.scm") 0)))
-                  #(quote (source "test/hll.scm") 0)
-                  #(call
-                    (source "test/hll.scm")
-                    #(ref (source "test/hll.scm") #<hllvar>)
-                    (#(ref (source "test/hll.scm") #<hllvar>)
-                     #(quote (source "test/hll.scm") 0))))))))
-          (#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0
-                (#<hllvar> #<hllvar>)
-                #(call
-                  (source "test/hll.scm")
-                  #(case-lambda
-                    #f
-                    (#(0
-                       (#<hllvar> #<hllvar>)
-                       #(if
-                         (source "test/hll.scm")
-                         #(call
-                           (source "test/hll.scm")
-                           #(ref (source "test/hll.scm") #<hllvar>)
-                           (#(call
-                              (source "test/hll.scm")
-                              #(quote (source "test/hll.scm") #<procedure =>)
-                              (#(ref (source "test/hll.scm") #<hllvar>)
-                               #(quote (source "test/hll.scm") 0)))))
-                         #(call
-                           (source "test/hll.scm")
-                           #(ref (source "test/hll.scm") #<hllvar>)
-                           (#(ref (source "test/hll.scm") #<hllvar>)
-                            #(ref (source "test/hll.scm") #<hllvar>)))
-                         #(ref (source "test/hll.scm") #<hllvar>)))))
-                  (#(call
-                     (source "test/hll.scm")
-                     #(quote (source "test/hll.scm") #<procedure +>)
-                     (#(ref (source "test/hll.scm") #<hllvar>)
-                      #(ref (source "test/hll.scm") #<hllvar>)))
-                   #(call
-                     (source "test/hll.scm")
-                     #(quote (source "test/hll.scm") #<procedure ->)
-                     (#(ref (source "test/hll.scm") #<hllvar>)
-                      #(quote (source "test/hll.scm") 1))))))))))
-         #(call
-           (source "test/hll.scm")
-           #(ref (source "test/hll.scm") #<hllvar>)
-           (#(quote (source "test/hll.scm") 100)))))))
-  (#(case-lambda
-     (source "test/hll.scm")
-     (#(0
-        (#<hllvar>)
-        #(if
-          (source "test/hll.scm")
-          #(ref (source "test/hll.scm") #<hllvar>)
-          #(quote (source "test/hll.scm") #f)
-          #(quote (source "test/hll.scm") #t)))))))
 pretty HLL:
 (call
  (case-lambda
@@ -818,135 +644,6 @@ VHLL:
        (loop n)
        (unbox total))))))
   (sum-to-n 1000)))
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(case-lambda
-    #f
-    (#(0
-       (#<hllvar> #<hllvar> #<hllvar>)
-       #(call
-         (source "test/hll.scm")
-         #(case-lambda
-           #f
-           (#(0
-              (#<hllvar>)
-              #(call
-                (source "test/hll.scm")
-                #(ref (source "test/hll.scm") #<hllvar>)
-                (#(quote (source "test/hll.scm") 1000))))))
-         (#(case-lambda
-            (source "test/hll.scm")
-            (#(0
-               (#<hllvar>)
-               #(call
-                 (source "test/hll.scm")
-                 #(case-lambda
-                   #f
-                   (#(0
-                      (#<hllvar>)
-                      #(letrec
-                        (source "test/hll.scm")
-                        ((#<hllvar>
-                          .
-                          #(case-lambda
-                            (source "test/hll.scm")
-                            (#(0
-                               (#<hllvar>)
-                               #(begin
-                                 #f
-                                 #(call
-                                   (source "test/hll.scm")
-                                   #(ref (source "test/hll.scm") #<hllvar>)
-                                   (#(ref (source "test/hll.scm") #<hllvar>)
-                                    #(call
-                                      (source "test/hll.scm")
-                                      #(quote
-                                        (source "test/hll.scm")
-                                        #<procedure +>)
-                                      (#(call
-                                         (source "test/hll.scm")
-                                         #(ref
-                                           (source "test/hll.scm")
-                                           #<hllvar>)
-                                         (#(ref
-                                            (source "test/hll.scm")
-                                            #<hllvar>)))
-                                       #(ref
-                                         (source "test/hll.scm")
-                                         #<hllvar>)))))
-                                 #(if
-                                   (source "test/hll.scm")
-                                   #(call
-                                     (source "test/hll.scm")
-                                     #(quote
-                                       (source "test/hll.scm")
-                                       #<procedure <>)
-                                     (#(quote (source "test/hll.scm") 0)
-                                      #(ref
-                                        (source "test/hll.scm")
-                                        #<hllvar>)))
-                                   #(call
-                                     (source "test/hll.scm")
-                                     #(ref (source "test/hll.scm") #<hllvar>)
-                                     (#(call
-                                        (source "test/hll.scm")
-                                        #(quote
-                                          (source "test/hll.scm")
-                                          #<procedure ->)
-                                        (#(ref
-                                           (source "test/hll.scm")
-                                           #<hllvar>)
-                                         #(quote
-                                           (source "test/hll.scm")
-                                           1)))))
-                                   #(call
-                                     (source "test/hll.scm")
-                                     #(quote
-                                       (source "test/hll.scm")
-                                       #<procedure values>)
-                                     ()))))))))
-                        #(begin
-                          #f
-                          #(call
-                            (source "test/hll.scm")
-                            #(ref (source "test/hll.scm") #<hllvar>)
-                            (#(ref (source "test/hll.scm") #<hllvar>)))
-                          #(call
-                            (source "test/hll.scm")
-                            #(ref (source "test/hll.scm") #<hllvar>)
-                            (#(ref (source "test/hll.scm") #<hllvar>))))))))
-                 (#(call
-                    (source "test/hll.scm")
-                    #(ref (source "test/hll.scm") #<hllvar>)
-                    (#(quote (source "test/hll.scm") 0)))))))))))))
-  (#(case-lambda
-     (source "test/hll.scm")
-     (#(0
-        (#<hllvar>)
-        #(call
-          (source "test/hll.scm")
-          #(quote (source "test/hll.scm") #<procedure mvector.147>)
-          (#(ref (source "test/hll.scm") #<hllvar>))))))
-   #(case-lambda
-     (source "test/hll.scm")
-     (#(0
-        (#<hllvar>)
-        #(call
-          (source "test/hll.scm")
-          #(quote (source "test/hll.scm") #<procedure mvector-ref>)
-          (#(ref (source "test/hll.scm") #<hllvar>)
-           #(quote (source "test/hll.scm") 0))))))
-   #(case-lambda
-     (source "test/hll.scm")
-     (#(0
-        (#<hllvar> #<hllvar>)
-        #(call
-          (source "test/hll.scm")
-          #(quote (source "test/hll.scm") #<procedure mvector-set!>)
-          (#(ref (source "test/hll.scm") #<hllvar>)
-           #(quote (source "test/hll.scm") 0)
-           #(ref (source "test/hll.scm") #<hllvar>))))))))
 pretty HLL:
 (call
  (case-lambda
@@ -1310,62 +1007,6 @@ VHLL:
   ((a) (list (quote one) a))
   ((a b) (list (quote two) a b))
   ((a b . c*) (list (quote more) a b c*))))
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(case-lambda
-    #f
-    (#(0
-       (#<hllvar> #<hllvar>)
-       #(call
-         (source "test/hll.scm")
-         #(quote #f #<procedure call-with-values>)
-         (#(case-lambda
-            #f
-            (#(0
-               ()
-               #(call
-                 (source "test/hll.scm")
-                 #(ref (source "test/hll.scm") #<hllvar>)
-                 ()))))
-          #(case-lambda
-            #f
-            (#(0
-               (#<hllvar>)
-               #(call
-                 (source "test/hll.scm")
-                 #(ref (source "test/hll.scm") #<hllvar>)
-                 (#(quote () one) #(ref (source "test/hll.scm") #<hllvar>))))
-             #(0
-               (#<hllvar> #<hllvar>)
-               #(call
-                 (source "test/hll.scm")
-                 #(ref (source "test/hll.scm") #<hllvar>)
-                 (#(quote () two)
-                  #(ref (source "test/hll.scm") #<hllvar>)
-                  #(ref (source "test/hll.scm") #<hllvar>))))
-             #(0
-               (#<hllvar> #<hllvar> . #<hllvar>)
-               #(call
-                 (source "test/hll.scm")
-                 #(ref (source "test/hll.scm") #<hllvar>)
-                 (#(quote () more)
-                  #(ref (source "test/hll.scm") #<hllvar>)
-                  #(ref (source "test/hll.scm") #<hllvar>)
-                  #(ref (source "test/hll.scm") #<hllvar>)))))))))))
-  (#(case-lambda
-     (source "test/hll.scm")
-     (#(0 #<hllvar> #(ref (source "test/hll.scm") #<hllvar>))))
-   #(case-lambda
-     (source "test/hll.scm")
-     (#(0
-        ()
-        #(call
-          (source "test/hll.scm")
-          #(quote (source "test/hll.scm") #<procedure values>)
-          (#(quote (source "test/hll.scm") 1)
-           #(quote (source "test/hll.scm") 2)
-           #(quote (source "test/hll.scm") 3))))))))
 pretty HLL:
 (call
  (case-lambda
@@ -1525,24 +1166,6 @@ HLL-join-point*:
 
 VHLL:
 (let ((a 1)) (letrec ((b (lambda () d)) (c b) (d 5)) c))
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(case-lambda
-    #f
-    (#(0
-       (#<hllvar>)
-       #(letrec
-         (source "test/hll.scm")
-         ((#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0 () #(ref (source "test/hll.scm") #<hllvar>)))))
-          (#<hllvar> . #(ref (source "test/hll.scm") #<hllvar>))
-          (#<hllvar> . #(quote (source "test/hll.scm") 5)))
-         #(ref (source "test/hll.scm") #<hllvar>)))))
-  (#(quote (source "test/hll.scm") 1)))
 pretty HLL:
 (call
  (case-lambda
@@ -1653,31 +1276,6 @@ HLL-join-point*:
 
 VHLL:
 (let ((a 1)) (letrec ((b (lambda () (cons d c))) (c b) (d e) (e 5)) c))
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(case-lambda
-    #f
-    (#(0
-       (#<hllvar>)
-       #(letrec
-         (source "test/hll.scm")
-         ((#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0
-                ()
-                #(call
-                  (source "test/hll.scm")
-                  #(quote (source "test/hll.scm") #<procedure cons>)
-                  (#(ref (source "test/hll.scm") #<hllvar>)
-                   #(ref (source "test/hll.scm") #<hllvar>)))))))
-          (#<hllvar> . #(ref (source "test/hll.scm") #<hllvar>))
-          (#<hllvar> . #(ref (source "test/hll.scm") #<hllvar>))
-          (#<hllvar> . #(quote (source "test/hll.scm") 5)))
-         #(ref (source "test/hll.scm") #<hllvar>)))))
-  (#(quote (source "test/hll.scm") 1)))
 pretty HLL:
 (call
  (case-lambda
@@ -1951,46 +1549,6 @@ VHLL:
    (p (cons (quote c) c))
    (d 5))
   p))
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(case-lambda
-    #f
-    (#(0
-       (#<hllvar>)
-       #(letrec
-         (source "test/hll.scm")
-         ((#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0
-                ()
-                #(call
-                  (source "test/hll.scm")
-                  #(quote (source "test/hll.scm") #<procedure cons>)
-                  (#(ref (source "test/hll.scm") #<hllvar>)
-                   #(ref (source "test/hll.scm") #<hllvar>)))))))
-          (#<hllvar>
-           .
-           #(if
-             (source "test/hll.scm")
-             #(call
-               (source "test/hll.scm")
-               #(quote (source "test/hll.scm") #<procedure =>)
-               (#(ref (source "test/hll.scm") #<hllvar>)
-                #(quote (source "test/hll.scm") 0)))
-             #(quote (source "test/hll.scm") #f)
-             #(ref (source "test/hll.scm") #<hllvar>)))
-          (#<hllvar>
-           .
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure cons>)
-             (#(quote () c) #(ref (source "test/hll.scm") #<hllvar>))))
-          (#<hllvar> . #(quote (source "test/hll.scm") 5)))
-         #(ref (source "test/hll.scm") #<hllvar>)))))
-  (#(quote (source "test/hll.scm") 1)))
 pretty HLL:
 (call
  (case-lambda
@@ -2322,50 +1880,6 @@ VHLL:
    (p (cons (quote c) c))
    (d 5))
   p))
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(case-lambda
-    #f
-    (#(0
-       (#<hllvar>)
-       #(letrec
-         (source "test/hll.scm")
-         ((#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0
-                ()
-                #(call
-                  (source "test/hll.scm")
-                  #(quote (source "test/hll.scm") #<procedure cons>)
-                  (#(ref (source "test/hll.scm") #<hllvar>)
-                   #(ref (source "test/hll.scm") #<hllvar>)))))))
-          (#<hllvar>
-           .
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure cons>)
-             (#(quote () b?)
-              #(if
-                (source "test/hll.scm")
-                #(call
-                  (source "test/hll.scm")
-                  #(quote (source "test/hll.scm") #<procedure =>)
-                  (#(ref (source "test/hll.scm") #<hllvar>)
-                   #(quote (source "test/hll.scm") 0)))
-                #(quote (source "test/hll.scm") #f)
-                #(ref (source "test/hll.scm") #<hllvar>)))))
-          (#<hllvar>
-           .
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure cons>)
-             (#(quote () c) #(ref (source "test/hll.scm") #<hllvar>))))
-          (#<hllvar> . #(quote (source "test/hll.scm") 5)))
-         #(ref (source "test/hll.scm") #<hllvar>)))))
-  (#(quote (source "test/hll.scm") 1)))
 pretty HLL:
 (call
  (case-lambda
@@ -2796,53 +2310,6 @@ VHLL:
    (p (cons (quote c) c))
    (d 5))
   p))
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(case-lambda
-    #f
-    (#(0
-       (#<hllvar>)
-       #(letrec
-         (source "test/hll.scm")
-         ((#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0
-                ()
-                #(letrec
-                  (source "test/hll.scm")
-                  ((#<hllvar>
-                    .
-                    #(case-lambda
-                      (source "test/hll.scm")
-                      (#(0 () #(ref (source "test/hll.scm") #<hllvar>))))))
-                  #(call
-                    (source "test/hll.scm")
-                    #(quote (source "test/hll.scm") #<procedure cons>)
-                    (#(ref (source "test/hll.scm") #<hllvar>)
-                     #(ref (source "test/hll.scm") #<hllvar>))))))))
-          (#<hllvar>
-           .
-           #(if
-             (source "test/hll.scm")
-             #(call
-               (source "test/hll.scm")
-               #(quote (source "test/hll.scm") #<procedure =>)
-               (#(ref (source "test/hll.scm") #<hllvar>)
-                #(quote (source "test/hll.scm") 0)))
-             #(quote (source "test/hll.scm") #f)
-             #(ref (source "test/hll.scm") #<hllvar>)))
-          (#<hllvar>
-           .
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure cons>)
-             (#(quote () c) #(ref (source "test/hll.scm") #<hllvar>))))
-          (#<hllvar> . #(quote (source "test/hll.scm") 5)))
-         #(ref (source "test/hll.scm") #<hllvar>)))))
-  (#(quote (source "test/hll.scm") 1)))
 pretty HLL:
 (call
  (case-lambda
@@ -3189,57 +2656,6 @@ VHLL:
    (p (cons (quote c) c))
    (d 5))
   p))
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(case-lambda
-    #f
-    (#(0
-       (#<hllvar>)
-       #(letrec
-         (source "test/hll.scm")
-         ((#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0
-                ()
-                #(letrec
-                  (source "test/hll.scm")
-                  ((#<hllvar>
-                    .
-                    #(case-lambda
-                      (source "test/hll.scm")
-                      (#(0 () #(ref (source "test/hll.scm") #<hllvar>))))))
-                  #(call
-                    (source "test/hll.scm")
-                    #(quote (source "test/hll.scm") #<procedure cons>)
-                    (#(call
-                       (source "test/hll.scm")
-                       #(quote (source "test/hll.scm") #<procedure cons>)
-                       (#(ref (source "test/hll.scm") #<hllvar>)
-                        #(ref (source "test/hll.scm") #<hllvar>)))
-                     #(ref (source "test/hll.scm") #<hllvar>))))))))
-          (#<hllvar>
-           .
-           #(if
-             (source "test/hll.scm")
-             #(call
-               (source "test/hll.scm")
-               #(quote (source "test/hll.scm") #<procedure =>)
-               (#(ref (source "test/hll.scm") #<hllvar>)
-                #(quote (source "test/hll.scm") 0)))
-             #(quote (source "test/hll.scm") #f)
-             #(ref (source "test/hll.scm") #<hllvar>)))
-          (#<hllvar>
-           .
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure cons>)
-             (#(quote () c) #(ref (source "test/hll.scm") #<hllvar>))))
-          (#<hllvar> . #(quote (source "test/hll.scm") 5)))
-         #(ref (source "test/hll.scm") #<hllvar>)))))
-  (#(quote (source "test/hll.scm") 1)))
 pretty HLL:
 (call
  (case-lambda
@@ -3707,61 +3123,6 @@ VHLL:
    (p (cons (quote c) c))
    (d 5))
   p))
-raw HLL:
-#(call
-  (source "test/hll.scm")
-  #(case-lambda
-    #f
-    (#(0
-       (#<hllvar>)
-       #(letrec
-         (source "test/hll.scm")
-         ((#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0
-                ()
-                #(letrec
-                  (source "test/hll.scm")
-                  ((#<hllvar>
-                    .
-                    #(case-lambda
-                      (source "test/hll.scm")
-                      (#(0 () #(ref (source "test/hll.scm") #<hllvar>))))))
-                  #(case-lambda
-                    (source "test/hll.scm")
-                    (#(0
-                       ()
-                       #(call
-                         (source "test/hll.scm")
-                         #(quote (source "test/hll.scm") #<procedure cons>)
-                         (#(call
-                            (source "test/hll.scm")
-                            #(quote (source "test/hll.scm") #<procedure cons>)
-                            (#(ref (source "test/hll.scm") #<hllvar>)
-                             #(ref (source "test/hll.scm") #<hllvar>)))
-                          #(ref (source "test/hll.scm") #<hllvar>)))))))))))
-          (#<hllvar>
-           .
-           #(if
-             (source "test/hll.scm")
-             #(call
-               (source "test/hll.scm")
-               #(quote (source "test/hll.scm") #<procedure =>)
-               (#(ref (source "test/hll.scm") #<hllvar>)
-                #(quote (source "test/hll.scm") 0)))
-             #(quote (source "test/hll.scm") #f)
-             #(ref (source "test/hll.scm") #<hllvar>)))
-          (#<hllvar>
-           .
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure cons>)
-             (#(quote () c) #(ref (source "test/hll.scm") #<hllvar>))))
-          (#<hllvar> . #(quote (source "test/hll.scm") 5)))
-         #(ref (source "test/hll.scm") #<hllvar>)))))
-  (#(quote (source "test/hll.scm") 1)))
 pretty HLL:
 (call
  (case-lambda
@@ -4247,67 +3608,6 @@ VHLL:
  (letrec
   ((f (lambda (n) (* (if (< 5 n) (inc (* 100 n)) (inc (* 10 n))) 2))))
   (lambda (m) (f (+ 20 m)))))
-raw HLL:
-#(letrec
-  (source "test/hll.scm")
-  ((#<hllvar>
-    .
-    #(case-lambda
-      (source "test/hll.scm")
-      (#(0
-         (#<hllvar>)
-         #(call
-           (source "test/hll.scm")
-           #(quote (source "test/hll.scm") #<procedure +>)
-           (#(ref (source "test/hll.scm") #<hllvar>)
-            #(quote (source "test/hll.scm") 1))))))))
-  #(letrec
-    (source "test/hll.scm")
-    ((#<hllvar>
-      .
-      #(case-lambda
-        (source "test/hll.scm")
-        (#(0
-           (#<hllvar>)
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure *>)
-             (#(if
-                (source "test/hll.scm")
-                #(call
-                  (source "test/hll.scm")
-                  #(quote (source "test/hll.scm") #<procedure <>)
-                  (#(quote (source "test/hll.scm") 5)
-                   #(ref (source "test/hll.scm") #<hllvar>)))
-                #(call
-                  (source "test/hll.scm")
-                  #(ref (source "test/hll.scm") #<hllvar>)
-                  (#(call
-                     (source "test/hll.scm")
-                     #(quote (source "test/hll.scm") #<procedure *>)
-                     (#(quote (source "test/hll.scm") 100)
-                      #(ref (source "test/hll.scm") #<hllvar>)))))
-                #(call
-                  (source "test/hll.scm")
-                  #(ref (source "test/hll.scm") #<hllvar>)
-                  (#(call
-                     (source "test/hll.scm")
-                     #(quote (source "test/hll.scm") #<procedure *>)
-                     (#(quote (source "test/hll.scm") 10)
-                      #(ref (source "test/hll.scm") #<hllvar>))))))
-              #(quote (source "test/hll.scm") 2))))))))
-    #(case-lambda
-      (source "test/hll.scm")
-      (#(0
-         (#<hllvar>)
-         #(call
-           (source "test/hll.scm")
-           #(ref (source "test/hll.scm") #<hllvar>)
-           (#(call
-              (source "test/hll.scm")
-              #(quote (source "test/hll.scm") #<procedure +>)
-              (#(quote (source "test/hll.scm") 20)
-               #(ref (source "test/hll.scm") #<hllvar>))))))))))
 pretty HLL:
 (letrec
  ((inc.0
@@ -4484,71 +3784,6 @@ VHLL:
    ((f
      (lambda (n) (* (if (< threshold n) (inc (* 100 n)) (inc (* 10 n))) 2))))
    (lambda (m) (f (+ base m))))))
-raw HLL:
-#(case-lambda
-  (source "test/hll.scm")
-  (#(0
-     (#<hllvar> #<hllvar>)
-     #(letrec
-       (source "test/hll.scm")
-       ((#<hllvar>
-         .
-         #(case-lambda
-           (source "test/hll.scm")
-           (#(0
-              (#<hllvar>)
-              #(call
-                (source "test/hll.scm")
-                #(quote (source "test/hll.scm") #<procedure +>)
-                (#(ref (source "test/hll.scm") #<hllvar>)
-                 #(quote (source "test/hll.scm") 1))))))))
-       #(letrec
-         (source "test/hll.scm")
-         ((#<hllvar>
-           .
-           #(case-lambda
-             (source "test/hll.scm")
-             (#(0
-                (#<hllvar>)
-                #(call
-                  (source "test/hll.scm")
-                  #(quote (source "test/hll.scm") #<procedure *>)
-                  (#(if
-                     (source "test/hll.scm")
-                     #(call
-                       (source "test/hll.scm")
-                       #(quote (source "test/hll.scm") #<procedure <>)
-                       (#(ref (source "test/hll.scm") #<hllvar>)
-                        #(ref (source "test/hll.scm") #<hllvar>)))
-                     #(call
-                       (source "test/hll.scm")
-                       #(ref (source "test/hll.scm") #<hllvar>)
-                       (#(call
-                          (source "test/hll.scm")
-                          #(quote (source "test/hll.scm") #<procedure *>)
-                          (#(quote (source "test/hll.scm") 100)
-                           #(ref (source "test/hll.scm") #<hllvar>)))))
-                     #(call
-                       (source "test/hll.scm")
-                       #(ref (source "test/hll.scm") #<hllvar>)
-                       (#(call
-                          (source "test/hll.scm")
-                          #(quote (source "test/hll.scm") #<procedure *>)
-                          (#(quote (source "test/hll.scm") 10)
-                           #(ref (source "test/hll.scm") #<hllvar>))))))
-                   #(quote (source "test/hll.scm") 2))))))))
-         #(case-lambda
-           (source "test/hll.scm")
-           (#(0
-              (#<hllvar>)
-              #(call
-                (source "test/hll.scm")
-                #(ref (source "test/hll.scm") #<hllvar>)
-                (#(call
-                   (source "test/hll.scm")
-                   #(quote (source "test/hll.scm") #<procedure +>)
-                   (#(ref (source "test/hll.scm") #<hllvar>)
-                    #(ref (source "test/hll.scm") #<hllvar>)))))))))))))
 pretty HLL:
 (case-lambda
  ((threshold.0 base.1)
@@ -4780,85 +4015,6 @@ VHLL:
    (eqv? tag (quote one))
    (even? x)
    (if (eqv? tag (quote two)) (even? y) (even? (+ x y))))))
-raw HLL:
-#(letrec
-  (source "test/hll.scm")
-  ((#<hllvar>
-    .
-    #(case-lambda
-      (source "test/hll.scm")
-      (#(0
-         (#<hllvar>)
-         #(if
-           (source "test/hll.scm")
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure =>)
-             (#(quote (source "test/hll.scm") 0)
-              #(ref (source "test/hll.scm") #<hllvar>)))
-           #(quote (source "test/hll.scm") #t)
-           #(call
-             (source "test/hll.scm")
-             #(ref (source "test/hll.scm") #<hllvar>)
-             (#(call
-                (source "test/hll.scm")
-                #(quote (source "test/hll.scm") #<procedure ->)
-                (#(ref (source "test/hll.scm") #<hllvar>)
-                 #(quote (source "test/hll.scm") 1))))))))))
-   (#<hllvar>
-    .
-    #(case-lambda
-      (source "test/hll.scm")
-      (#(0
-         (#<hllvar>)
-         #(if
-           (source "test/hll.scm")
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure =>)
-             (#(quote (source "test/hll.scm") 0)
-              #(ref (source "test/hll.scm") #<hllvar>)))
-           #(quote (source "test/hll.scm") #f)
-           #(call
-             (source "test/hll.scm")
-             #(ref (source "test/hll.scm") #<hllvar>)
-             (#(call
-                (source "test/hll.scm")
-                #(quote (source "test/hll.scm") #<procedure ->)
-                (#(ref (source "test/hll.scm") #<hllvar>)
-                 #(quote (source "test/hll.scm") 1)))))))))))
-  #(case-lambda
-    (source "test/hll.scm")
-    (#(0
-       (#<hllvar> #<hllvar> #<hllvar>)
-       #(if
-         (source "test/hll.scm")
-         #(call
-           (source "test/hll.scm")
-           #(quote (source "test/hll.scm") #<procedure eqv?>)
-           (#(ref (source "test/hll.scm") #<hllvar>) #(quote () one)))
-         #(call
-           (source "test/hll.scm")
-           #(ref (source "test/hll.scm") #<hllvar>)
-           (#(ref (source "test/hll.scm") #<hllvar>)))
-         #(if
-           (source "test/hll.scm")
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure eqv?>)
-             (#(ref (source "test/hll.scm") #<hllvar>) #(quote () two)))
-           #(call
-             (source "test/hll.scm")
-             #(ref (source "test/hll.scm") #<hllvar>)
-             (#(ref (source "test/hll.scm") #<hllvar>)))
-           #(call
-             (source "test/hll.scm")
-             #(ref (source "test/hll.scm") #<hllvar>)
-             (#(call
-                (source "test/hll.scm")
-                #(quote (source "test/hll.scm") #<procedure +>)
-                (#(ref (source "test/hll.scm") #<hllvar>)
-                 #(ref (source "test/hll.scm") #<hllvar>)))))))))))
 pretty HLL:
 (letrec
  ((even?.0
@@ -5112,90 +4268,6 @@ VHLL:
    (eqv? tag (quote one))
    (even? x)
    (if (eqv? tag (quote two)) (even? y) (letrec ((z (+ x y))) (even? z))))))
-raw HLL:
-#(letrec
-  (source "test/hll.scm")
-  ((#<hllvar>
-    .
-    #(case-lambda
-      (source "test/hll.scm")
-      (#(0
-         (#<hllvar>)
-         #(if
-           (source "test/hll.scm")
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure =>)
-             (#(quote (source "test/hll.scm") 0)
-              #(ref (source "test/hll.scm") #<hllvar>)))
-           #(quote (source "test/hll.scm") #t)
-           #(call
-             (source "test/hll.scm")
-             #(ref (source "test/hll.scm") #<hllvar>)
-             (#(call
-                (source "test/hll.scm")
-                #(quote (source "test/hll.scm") #<procedure ->)
-                (#(ref (source "test/hll.scm") #<hllvar>)
-                 #(quote (source "test/hll.scm") 1))))))))))
-   (#<hllvar>
-    .
-    #(case-lambda
-      (source "test/hll.scm")
-      (#(0
-         (#<hllvar>)
-         #(if
-           (source "test/hll.scm")
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure =>)
-             (#(quote (source "test/hll.scm") 0)
-              #(ref (source "test/hll.scm") #<hllvar>)))
-           #(quote (source "test/hll.scm") #f)
-           #(call
-             (source "test/hll.scm")
-             #(ref (source "test/hll.scm") #<hllvar>)
-             (#(call
-                (source "test/hll.scm")
-                #(quote (source "test/hll.scm") #<procedure ->)
-                (#(ref (source "test/hll.scm") #<hllvar>)
-                 #(quote (source "test/hll.scm") 1)))))))))))
-  #(case-lambda
-    (source "test/hll.scm")
-    (#(0
-       (#<hllvar> #<hllvar> #<hllvar>)
-       #(if
-         (source "test/hll.scm")
-         #(call
-           (source "test/hll.scm")
-           #(quote (source "test/hll.scm") #<procedure eqv?>)
-           (#(ref (source "test/hll.scm") #<hllvar>) #(quote () one)))
-         #(call
-           (source "test/hll.scm")
-           #(ref (source "test/hll.scm") #<hllvar>)
-           (#(ref (source "test/hll.scm") #<hllvar>)))
-         #(if
-           (source "test/hll.scm")
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure eqv?>)
-             (#(ref (source "test/hll.scm") #<hllvar>) #(quote () two)))
-           #(call
-             (source "test/hll.scm")
-             #(ref (source "test/hll.scm") #<hllvar>)
-             (#(ref (source "test/hll.scm") #<hllvar>)))
-           #(letrec
-             (source "test/hll.scm")
-             ((#<hllvar>
-               .
-               #(call
-                 (source "test/hll.scm")
-                 #(quote (source "test/hll.scm") #<procedure +>)
-                 (#(ref (source "test/hll.scm") #<hllvar>)
-                  #(ref (source "test/hll.scm") #<hllvar>)))))
-             #(call
-               (source "test/hll.scm")
-               #(ref (source "test/hll.scm") #<hllvar>)
-               (#(ref (source "test/hll.scm") #<hllvar>))))))))))
 pretty HLL:
 (letrec
  ((even?.0
@@ -5481,91 +4553,6 @@ VHLL:
    (eqv? tag (quote one))
    (even? x)
    (if (eqv? tag (quote two)) (even? y) (letrec ((z (+ x y 1))) (odd? z))))))
-raw HLL:
-#(letrec
-  (source "test/hll.scm")
-  ((#<hllvar>
-    .
-    #(case-lambda
-      (source "test/hll.scm")
-      (#(0
-         (#<hllvar>)
-         #(if
-           (source "test/hll.scm")
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure =>)
-             (#(quote (source "test/hll.scm") 0)
-              #(ref (source "test/hll.scm") #<hllvar>)))
-           #(quote (source "test/hll.scm") #t)
-           #(call
-             (source "test/hll.scm")
-             #(ref (source "test/hll.scm") #<hllvar>)
-             (#(call
-                (source "test/hll.scm")
-                #(quote (source "test/hll.scm") #<procedure ->)
-                (#(ref (source "test/hll.scm") #<hllvar>)
-                 #(quote (source "test/hll.scm") 1))))))))))
-   (#<hllvar>
-    .
-    #(case-lambda
-      (source "test/hll.scm")
-      (#(0
-         (#<hllvar>)
-         #(if
-           (source "test/hll.scm")
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure =>)
-             (#(quote (source "test/hll.scm") 0)
-              #(ref (source "test/hll.scm") #<hllvar>)))
-           #(quote (source "test/hll.scm") #f)
-           #(call
-             (source "test/hll.scm")
-             #(ref (source "test/hll.scm") #<hllvar>)
-             (#(call
-                (source "test/hll.scm")
-                #(quote (source "test/hll.scm") #<procedure ->)
-                (#(ref (source "test/hll.scm") #<hllvar>)
-                 #(quote (source "test/hll.scm") 1)))))))))))
-  #(case-lambda
-    (source "test/hll.scm")
-    (#(0
-       (#<hllvar> #<hllvar> #<hllvar>)
-       #(if
-         (source "test/hll.scm")
-         #(call
-           (source "test/hll.scm")
-           #(quote (source "test/hll.scm") #<procedure eqv?>)
-           (#(ref (source "test/hll.scm") #<hllvar>) #(quote () one)))
-         #(call
-           (source "test/hll.scm")
-           #(ref (source "test/hll.scm") #<hllvar>)
-           (#(ref (source "test/hll.scm") #<hllvar>)))
-         #(if
-           (source "test/hll.scm")
-           #(call
-             (source "test/hll.scm")
-             #(quote (source "test/hll.scm") #<procedure eqv?>)
-             (#(ref (source "test/hll.scm") #<hllvar>) #(quote () two)))
-           #(call
-             (source "test/hll.scm")
-             #(ref (source "test/hll.scm") #<hllvar>)
-             (#(ref (source "test/hll.scm") #<hllvar>)))
-           #(letrec
-             (source "test/hll.scm")
-             ((#<hllvar>
-               .
-               #(call
-                 (source "test/hll.scm")
-                 #(quote (source "test/hll.scm") #<procedure +>)
-                 (#(ref (source "test/hll.scm") #<hllvar>)
-                  #(ref (source "test/hll.scm") #<hllvar>)
-                  #(quote (source "test/hll.scm") 1)))))
-             #(call
-               (source "test/hll.scm")
-               #(ref (source "test/hll.scm") #<hllvar>)
-               (#(ref (source "test/hll.scm") #<hllvar>))))))))))
 pretty HLL:
 (letrec
  ((even?.0
@@ -5840,4 +4827,1119 @@ HLL-well-known-procedure*:
 (odd?.6 even?.4)
 HLL-join-point*:
 (odd?.6 even?.4)
+
+VHLL:
+(letrec
+ ((even? (lambda (n) (if (= 0 n) #t (odd? (- n 1)))))
+  (odd? (lambda (n) (if (= 0 n) #f (even? (- n 1))))))
+ even?)
+pretty HLL:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (ref even?.0))
+HLL-check-letrec:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (ref even?.0))
+HLL-convert-letrec:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (ref even?.0))
+HLL-bind-lambda:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (ref even?.0))
+HLL-procedure=>free-variable*:
+(odd?.2 ())
+(even?.0 ())
+HLL-well-known-procedure*:
+(odd?.2)
+HLL-join-point*:
+()
+### Alternative passes:
+HLL-sink-join-points:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (ref even?.0))
+join points:
+()
+HLL-convert-letrec:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (ref even?.0))
+HLL-bind-lambda:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (ref even?.0))
+HLL-procedure=>free-variable*:
+(odd?.2 ())
+(even?.0 ())
+HLL-well-known-procedure*:
+(odd?.2)
+HLL-join-point*:
+()
+
+VHLL:
+(letrec
+ ((even? (lambda (n) (if (= 0 n) #t (odd? (- n 1)))))
+  (odd? (lambda (n) (if (= 0 n) #f (even? (- n 1))))))
+ (cons even? odd?))
+pretty HLL:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (call (quote #<procedure cons>) (ref even?.0) (ref odd?.2)))
+HLL-check-letrec:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (call (quote #<procedure cons>) (ref even?.0) (ref odd?.2)))
+HLL-convert-letrec:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (call (quote #<procedure cons>) (ref even?.0) (ref odd?.2)))
+HLL-bind-lambda:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (call (quote #<procedure cons>) (ref even?.0) (ref odd?.2)))
+HLL-procedure=>free-variable*:
+(odd?.2 ())
+(even?.0 ())
+HLL-well-known-procedure*:
+()
+HLL-join-point*:
+()
+### Alternative passes:
+HLL-sink-join-points:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (call (quote #<procedure cons>) (ref even?.0) (ref odd?.2)))
+join points:
+()
+HLL-convert-letrec:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (call (quote #<procedure cons>) (ref even?.0) (ref odd?.2)))
+HLL-bind-lambda:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (call (quote #<procedure cons>) (ref even?.0) (ref odd?.2)))
+HLL-procedure=>free-variable*:
+(odd?.2 ())
+(even?.0 ())
+HLL-well-known-procedure*:
+()
+HLL-join-point*:
+()
+
+VHLL:
+(letrec
+ ((g (lambda (y) (- y 1))) (f (lambda (b) (+ (if b (g 13) (g 15)) 1))))
+ f)
+pretty HLL:
+(letrec
+ ((g.0
+   (case-lambda ((y.1) (call (quote #<procedure ->) (ref y.1) (quote 1)))))
+  (f.2
+   (case-lambda
+    ((b.3)
+     (call
+      (quote #<procedure +>)
+      (if (ref b.3) (call (ref g.0) (quote 13)) (call (ref g.0) (quote 15)))
+      (quote 1))))))
+ (ref f.2))
+HLL-check-letrec:
+(letrec
+ ((g.0
+   (case-lambda ((y.1) (call (quote #<procedure ->) (ref y.1) (quote 1)))))
+  (f.2
+   (case-lambda
+    ((b.3)
+     (call
+      (quote #<procedure +>)
+      (if (ref b.3) (call (ref g.0) (quote 13)) (call (ref g.0) (quote 15)))
+      (quote 1))))))
+ (ref f.2))
+HLL-convert-letrec:
+(letrec
+ ((g.0
+   (case-lambda ((y.1) (call (quote #<procedure ->) (ref y.1) (quote 1)))))
+  (f.2
+   (case-lambda
+    ((b.3)
+     (call
+      (quote #<procedure +>)
+      (if (ref b.3) (call (ref g.0) (quote 13)) (call (ref g.0) (quote 15)))
+      (quote 1))))))
+ (ref f.2))
+HLL-bind-lambda:
+(letrec
+ ((g.0
+   (case-lambda ((y.1) (call (quote #<procedure ->) (ref y.1) (quote 1)))))
+  (f.2
+   (case-lambda
+    ((b.3)
+     (call
+      (quote #<procedure +>)
+      (if (ref b.3) (call (ref g.0) (quote 13)) (call (ref g.0) (quote 15)))
+      (quote 1))))))
+ (ref f.2))
+HLL-procedure=>free-variable*:
+(f.2 ())
+(g.0 ())
+HLL-well-known-procedure*:
+(g.0)
+HLL-join-point*:
+()
+### Alternative passes:
+HLL-sink-join-points:
+(letrec
+ ((g.0
+   (case-lambda ((y.1) (call (quote #<procedure ->) (ref y.1) (quote 1)))))
+  (f.2
+   (case-lambda
+    ((b.3)
+     (call
+      (quote #<procedure +>)
+      (if (ref b.3) (call (ref g.0) (quote 13)) (call (ref g.0) (quote 15)))
+      (quote 1))))))
+ (ref f.2))
+join points:
+()
+HLL-convert-letrec:
+(letrec
+ ((g.0
+   (case-lambda ((y.1) (call (quote #<procedure ->) (ref y.1) (quote 1)))))
+  (f.2
+   (case-lambda
+    ((b.3)
+     (call
+      (quote #<procedure +>)
+      (if (ref b.3) (call (ref g.0) (quote 13)) (call (ref g.0) (quote 15)))
+      (quote 1))))))
+ (ref f.2))
+HLL-bind-lambda:
+(letrec
+ ((g.0
+   (case-lambda ((y.1) (call (quote #<procedure ->) (ref y.1) (quote 1)))))
+  (f.2
+   (case-lambda
+    ((b.3)
+     (call
+      (quote #<procedure +>)
+      (if (ref b.3) (call (ref g.0) (quote 13)) (call (ref g.0) (quote 15)))
+      (quote 1))))))
+ (ref f.2))
+HLL-procedure=>free-variable*:
+(f.2 ())
+(g.0 ())
+HLL-well-known-procedure*:
+(g.0)
+HLL-join-point*:
+()
+
+VHLL:
+(letrec
+ ((g (lambda (y k) (k (- y 1))))
+  (f
+   (lambda
+    (b k)
+    (letrec ((k0 (lambda (x) (k (+ x 1))))) (if b (g 13 k0) (g 15 k0))))))
+ f)
+pretty HLL:
+(letrec
+ ((g.0
+   (case-lambda
+    ((y.1 k.2)
+     (call (ref k.2) (call (quote #<procedure ->) (ref y.1) (quote 1))))))
+  (f.3
+   (case-lambda
+    ((b.4 k.5)
+     (letrec
+      ((k0.6
+        (case-lambda
+         ((x.7)
+          (call
+           (ref k.5)
+           (call (quote #<procedure +>) (ref x.7) (quote 1)))))))
+      (if
+       (ref b.4)
+       (call (ref g.0) (quote 13) (ref k0.6))
+       (call (ref g.0) (quote 15) (ref k0.6))))))))
+ (ref f.3))
+HLL-check-letrec:
+(letrec
+ ((g.0
+   (case-lambda
+    ((y.1 k.2)
+     (call (ref k.2) (call (quote #<procedure ->) (ref y.1) (quote 1))))))
+  (f.3
+   (case-lambda
+    ((b.4 k.5)
+     (letrec
+      ((k0.6
+        (case-lambda
+         ((x.7)
+          (call
+           (ref k.5)
+           (call (quote #<procedure +>) (ref x.7) (quote 1)))))))
+      (if
+       (ref b.4)
+       (call (ref g.0) (quote 13) (ref k0.6))
+       (call (ref g.0) (quote 15) (ref k0.6))))))))
+ (ref f.3))
+HLL-convert-letrec:
+(letrec
+ ((g.0
+   (case-lambda
+    ((y.1 k.2)
+     (call (ref k.2) (call (quote #<procedure ->) (ref y.1) (quote 1))))))
+  (f.3
+   (case-lambda
+    ((b.4 k.5)
+     (letrec
+      ((k0.6
+        (case-lambda
+         ((x.7)
+          (call
+           (ref k.5)
+           (call (quote #<procedure +>) (ref x.7) (quote 1)))))))
+      (if
+       (ref b.4)
+       (call (ref g.0) (quote 13) (ref k0.6))
+       (call (ref g.0) (quote 15) (ref k0.6))))))))
+ (ref f.3))
+HLL-bind-lambda:
+(letrec
+ ((g.0
+   (case-lambda
+    ((y.1 k.2)
+     (call (ref k.2) (call (quote #<procedure ->) (ref y.1) (quote 1))))))
+  (f.3
+   (case-lambda
+    ((b.4 k.5)
+     (letrec
+      ((k0.6
+        (case-lambda
+         ((x.7)
+          (call
+           (ref k.5)
+           (call (quote #<procedure +>) (ref x.7) (quote 1)))))))
+      (if
+       (ref b.4)
+       (call (ref g.0) (quote 13) (ref k0.6))
+       (call (ref g.0) (quote 15) (ref k0.6))))))))
+ (ref f.3))
+HLL-procedure=>free-variable*:
+(k0.6 (k.5))
+(f.3 ())
+(g.0 ())
+HLL-well-known-procedure*:
+(g.0)
+HLL-join-point*:
+()
+### Alternative passes:
+HLL-sink-join-points:
+(letrec
+ ((g.0
+   (case-lambda
+    ((y.1 k.2)
+     (call (ref k.2) (call (quote #<procedure ->) (ref y.1) (quote 1))))))
+  (f.3
+   (case-lambda
+    ((b.4 k.5)
+     (letrec
+      ((k0.6
+        (case-lambda
+         ((x.7)
+          (call
+           (ref k.5)
+           (call (quote #<procedure +>) (ref x.7) (quote 1)))))))
+      (if
+       (ref b.4)
+       (call (ref g.0) (quote 13) (ref k0.6))
+       (call (ref g.0) (quote 15) (ref k0.6))))))))
+ (ref f.3))
+join points:
+()
+HLL-convert-letrec:
+(letrec
+ ((g.0
+   (case-lambda
+    ((y.1 k.2)
+     (call (ref k.2) (call (quote #<procedure ->) (ref y.1) (quote 1))))))
+  (f.3
+   (case-lambda
+    ((b.4 k.5)
+     (letrec
+      ((k0.6
+        (case-lambda
+         ((x.7)
+          (call
+           (ref k.5)
+           (call (quote #<procedure +>) (ref x.7) (quote 1)))))))
+      (if
+       (ref b.4)
+       (call (ref g.0) (quote 13) (ref k0.6))
+       (call (ref g.0) (quote 15) (ref k0.6))))))))
+ (ref f.3))
+HLL-bind-lambda:
+(letrec
+ ((g.0
+   (case-lambda
+    ((y.1 k.2)
+     (call (ref k.2) (call (quote #<procedure ->) (ref y.1) (quote 1))))))
+  (f.3
+   (case-lambda
+    ((b.4 k.5)
+     (letrec
+      ((k0.6
+        (case-lambda
+         ((x.7)
+          (call
+           (ref k.5)
+           (call (quote #<procedure +>) (ref x.7) (quote 1)))))))
+      (if
+       (ref b.4)
+       (call (ref g.0) (quote 13) (ref k0.6))
+       (call (ref g.0) (quote 15) (ref k0.6))))))))
+ (ref f.3))
+HLL-procedure=>free-variable*:
+(k0.6 (k.5))
+(f.3 ())
+(g.0 ())
+HLL-well-known-procedure*:
+(g.0)
+HLL-join-point*:
+()
+
+VHLL:
+(letrec
+ ((f
+   (lambda
+    (b k)
+    (letrec
+     ((k0 (lambda (x) (k (+ x 1)))) (g (lambda (y k) (k0 (- y 1)))))
+     (if b (g 13) (g 15))))))
+ f)
+pretty HLL:
+(letrec
+ ((f.0
+   (case-lambda
+    ((b.1 k.2)
+     (letrec
+      ((k0.3
+        (case-lambda
+         ((x.4)
+          (call
+           (ref k.2)
+           (call (quote #<procedure +>) (ref x.4) (quote 1))))))
+       (g.5
+        (case-lambda
+         ((y.6 k.7)
+          (call
+           (ref k0.3)
+           (call (quote #<procedure ->) (ref y.6) (quote 1)))))))
+      (if
+       (ref b.1)
+       (call (ref g.5) (quote 13))
+       (call (ref g.5) (quote 15))))))))
+ (ref f.0))
+HLL-check-letrec:
+(letrec
+ ((f.0
+   (case-lambda
+    ((b.1 k.2)
+     (letrec
+      ((k0.3
+        (case-lambda
+         ((x.4)
+          (call
+           (ref k.2)
+           (call (quote #<procedure +>) (ref x.4) (quote 1))))))
+       (g.5
+        (case-lambda
+         ((y.6 k.7)
+          (call
+           (ref k0.3)
+           (call (quote #<procedure ->) (ref y.6) (quote 1)))))))
+      (if
+       (ref b.1)
+       (call (ref g.5) (quote 13))
+       (call (ref g.5) (quote 15))))))))
+ (ref f.0))
+HLL-convert-letrec:
+(letrec
+ ((f.0
+   (case-lambda
+    ((b.1 k.2)
+     (letrec
+      ((k0.3
+        (case-lambda
+         ((x.4)
+          (call
+           (ref k.2)
+           (call (quote #<procedure +>) (ref x.4) (quote 1))))))
+       (g.5
+        (case-lambda
+         ((y.6 k.7)
+          (call
+           (ref k0.3)
+           (call (quote #<procedure ->) (ref y.6) (quote 1)))))))
+      (if
+       (ref b.1)
+       (call (ref g.5) (quote 13))
+       (call (ref g.5) (quote 15))))))))
+ (ref f.0))
+HLL-bind-lambda:
+(letrec
+ ((f.0
+   (case-lambda
+    ((b.1 k.2)
+     (letrec
+      ((k0.3
+        (case-lambda
+         ((x.4)
+          (call
+           (ref k.2)
+           (call (quote #<procedure +>) (ref x.4) (quote 1))))))
+       (g.5
+        (case-lambda
+         ((y.6 k.7)
+          (call
+           (ref k0.3)
+           (call (quote #<procedure ->) (ref y.6) (quote 1)))))))
+      (if
+       (ref b.1)
+       (call (ref g.5) (quote 13))
+       (call (ref g.5) (quote 15))))))))
+ (ref f.0))
+HLL-procedure=>free-variable*:
+(g.5 (k0.3))
+(k0.3 (k.2))
+(f.0 ())
+HLL-well-known-procedure*:
+(g.5 k0.3)
+HLL-join-point*:
+(g.5 k0.3)
+### Alternative passes:
+HLL-sink-join-points:
+(letrec
+ ((f.0
+   (case-lambda
+    ((b.1 k.2)
+     (letrec
+      ((k0.3
+        (case-lambda
+         ((x.4)
+          (call
+           (ref k.2)
+           (call (quote #<procedure +>) (ref x.4) (quote 1))))))
+       (g.5
+        (case-lambda
+         ((y.6 k.7)
+          (call
+           (ref k0.3)
+           (call (quote #<procedure ->) (ref y.6) (quote 1)))))))
+      (if
+       (ref b.1)
+       (call (ref g.5) (quote 13))
+       (call (ref g.5) (quote 15))))))))
+ (ref f.0))
+join points:
+(k0 g)
+HLL-convert-letrec:
+(letrec
+ ((f.0
+   (case-lambda
+    ((b.1 k.2)
+     (letrec
+      ((k0.3
+        (case-lambda
+         ((x.4)
+          (call
+           (ref k.2)
+           (call (quote #<procedure +>) (ref x.4) (quote 1))))))
+       (g.5
+        (case-lambda
+         ((y.6 k.7)
+          (call
+           (ref k0.3)
+           (call (quote #<procedure ->) (ref y.6) (quote 1)))))))
+      (if
+       (ref b.1)
+       (call (ref g.5) (quote 13))
+       (call (ref g.5) (quote 15))))))))
+ (ref f.0))
+HLL-bind-lambda:
+(letrec
+ ((f.0
+   (case-lambda
+    ((b.1 k.2)
+     (letrec
+      ((k0.3
+        (case-lambda
+         ((x.4)
+          (call
+           (ref k.2)
+           (call (quote #<procedure +>) (ref x.4) (quote 1))))))
+       (g.5
+        (case-lambda
+         ((y.6 k.7)
+          (call
+           (ref k0.3)
+           (call (quote #<procedure ->) (ref y.6) (quote 1)))))))
+      (if
+       (ref b.1)
+       (call (ref g.5) (quote 13))
+       (call (ref g.5) (quote 15))))))))
+ (ref f.0))
+HLL-procedure=>free-variable*:
+(g.5 (k0.3))
+(k0.3 (k.2))
+(f.0 ())
+HLL-well-known-procedure*:
+(g.5 k0.3)
+HLL-join-point*:
+(g.5 k0.3)
+
+VHLL:
+(letrec
+ ((fm (lambda () (cons (quote fm) (f))))
+  (f (lambda () (g)))
+  (g (lambda () (quote g))))
+ (cons 111 fm))
+pretty HLL:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (quote fm) (call (ref f.1))))))
+  (f.1 (case-lambda (() (call (ref g.2)))))
+  (g.2 (case-lambda (() (quote g)))))
+ (call (quote #<procedure cons>) (quote 111) (ref fm.0)))
+HLL-check-letrec:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (quote fm) (call (ref f.1))))))
+  (f.1 (case-lambda (() (call (ref g.2)))))
+  (g.2 (case-lambda (() (quote g)))))
+ (call (quote #<procedure cons>) (quote 111) (ref fm.0)))
+HLL-convert-letrec:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (quote fm) (call (ref f.1))))))
+  (f.1 (case-lambda (() (call (ref g.2)))))
+  (g.2 (case-lambda (() (quote g)))))
+ (call (quote #<procedure cons>) (quote 111) (ref fm.0)))
+HLL-bind-lambda:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (quote fm) (call (ref f.1))))))
+  (f.1 (case-lambda (() (call (ref g.2)))))
+  (g.2 (case-lambda (() (quote g)))))
+ (call (quote #<procedure cons>) (quote 111) (ref fm.0)))
+HLL-procedure=>free-variable*:
+(g.2 ())
+(f.1 ())
+(fm.0 ())
+HLL-well-known-procedure*:
+(g.2 f.1)
+HLL-join-point*:
+()
+### Alternative passes:
+HLL-sink-join-points:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (quote fm) (call (ref f.1))))))
+  (f.1 (case-lambda (() (call (ref g.2)))))
+  (g.2 (case-lambda (() (quote g)))))
+ (call (quote #<procedure cons>) (quote 111) (ref fm.0)))
+join points:
+()
+HLL-convert-letrec:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (quote fm) (call (ref f.1))))))
+  (f.1 (case-lambda (() (call (ref g.2)))))
+  (g.2 (case-lambda (() (quote g)))))
+ (call (quote #<procedure cons>) (quote 111) (ref fm.0)))
+HLL-bind-lambda:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (quote fm) (call (ref f.1))))))
+  (f.1 (case-lambda (() (call (ref g.2)))))
+  (g.2 (case-lambda (() (quote g)))))
+ (call (quote #<procedure cons>) (quote 111) (ref fm.0)))
+HLL-procedure=>free-variable*:
+(g.2 ())
+(f.1 ())
+(fm.0 ())
+HLL-well-known-procedure*:
+(g.2 f.1)
+HLL-join-point*:
+()
+
+VHLL:
+(letrec
+ ((fm (lambda () (cons (quote fm) (if (quote ?) (f) (g)))))
+  (f (lambda () (if (quote ?) (g) (h))))
+  (g (lambda () (if (quote ?) (f) (h))))
+  (h (lambda () (quote h))))
+ (cons 222 fm))
+pretty HLL:
+(letrec
+ ((fm.0
+   (case-lambda
+    (()
+     (call
+      (quote #<procedure cons>)
+      (quote fm)
+      (if (quote ?) (call (ref f.1)) (call (ref g.2)))))))
+  (f.1 (case-lambda (() (if (quote ?) (call (ref g.2)) (call (ref h.3))))))
+  (g.2 (case-lambda (() (if (quote ?) (call (ref f.1)) (call (ref h.3))))))
+  (h.3 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 222) (ref fm.0)))
+HLL-check-letrec:
+(letrec
+ ((fm.0
+   (case-lambda
+    (()
+     (call
+      (quote #<procedure cons>)
+      (quote fm)
+      (if (quote ?) (call (ref f.1)) (call (ref g.2)))))))
+  (f.1 (case-lambda (() (if (quote ?) (call (ref g.2)) (call (ref h.3))))))
+  (g.2 (case-lambda (() (if (quote ?) (call (ref f.1)) (call (ref h.3))))))
+  (h.3 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 222) (ref fm.0)))
+HLL-convert-letrec:
+(letrec
+ ((fm.0
+   (case-lambda
+    (()
+     (call
+      (quote #<procedure cons>)
+      (quote fm)
+      (if (quote ?) (call (ref f.1)) (call (ref g.2)))))))
+  (f.1 (case-lambda (() (if (quote ?) (call (ref g.2)) (call (ref h.3))))))
+  (g.2 (case-lambda (() (if (quote ?) (call (ref f.1)) (call (ref h.3))))))
+  (h.3 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 222) (ref fm.0)))
+HLL-bind-lambda:
+(letrec
+ ((fm.0
+   (case-lambda
+    (()
+     (call
+      (quote #<procedure cons>)
+      (quote fm)
+      (if (quote ?) (call (ref f.1)) (call (ref g.2)))))))
+  (f.1 (case-lambda (() (if (quote ?) (call (ref g.2)) (call (ref h.3))))))
+  (g.2 (case-lambda (() (if (quote ?) (call (ref f.1)) (call (ref h.3))))))
+  (h.3 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 222) (ref fm.0)))
+HLL-procedure=>free-variable*:
+(h.3 ())
+(g.2 ())
+(f.1 ())
+(fm.0 ())
+HLL-well-known-procedure*:
+(h.3 g.2 f.1)
+HLL-join-point*:
+()
+### Alternative passes:
+HLL-sink-join-points:
+(letrec
+ ((fm.0
+   (case-lambda
+    (()
+     (call
+      (quote #<procedure cons>)
+      (quote fm)
+      (if (quote ?) (call (ref f.1)) (call (ref g.2)))))))
+  (f.1 (case-lambda (() (if (quote ?) (call (ref g.2)) (call (ref h.3))))))
+  (g.2 (case-lambda (() (if (quote ?) (call (ref f.1)) (call (ref h.3))))))
+  (h.3 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 222) (ref fm.0)))
+join points:
+()
+HLL-convert-letrec:
+(letrec
+ ((fm.0
+   (case-lambda
+    (()
+     (call
+      (quote #<procedure cons>)
+      (quote fm)
+      (if (quote ?) (call (ref f.1)) (call (ref g.2)))))))
+  (f.1 (case-lambda (() (if (quote ?) (call (ref g.2)) (call (ref h.3))))))
+  (g.2 (case-lambda (() (if (quote ?) (call (ref f.1)) (call (ref h.3))))))
+  (h.3 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 222) (ref fm.0)))
+HLL-bind-lambda:
+(letrec
+ ((fm.0
+   (case-lambda
+    (()
+     (call
+      (quote #<procedure cons>)
+      (quote fm)
+      (if (quote ?) (call (ref f.1)) (call (ref g.2)))))))
+  (f.1 (case-lambda (() (if (quote ?) (call (ref g.2)) (call (ref h.3))))))
+  (g.2 (case-lambda (() (if (quote ?) (call (ref f.1)) (call (ref h.3))))))
+  (h.3 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 222) (ref fm.0)))
+HLL-procedure=>free-variable*:
+(h.3 ())
+(g.2 ())
+(f.1 ())
+(fm.0 ())
+HLL-well-known-procedure*:
+(h.3 g.2 f.1)
+HLL-join-point*:
+()
+
+VHLL:
+(letrec
+ ((fm (lambda () (cons (f) (f))))
+  (f (lambda () (if (quote ??) (g1) (g2))))
+  (g1 (lambda () (h)))
+  (g2 (lambda () (h)))
+  (h (lambda () (quote h))))
+ (cons 333 fm))
+pretty HLL:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (call (ref f.1)) (call (ref f.1))))))
+  (f.1 (case-lambda (() (if (quote ??) (call (ref g1.2)) (call (ref g2.3))))))
+  (g1.2 (case-lambda (() (call (ref h.4)))))
+  (g2.3 (case-lambda (() (call (ref h.4)))))
+  (h.4 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 333) (ref fm.0)))
+HLL-check-letrec:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (call (ref f.1)) (call (ref f.1))))))
+  (f.1 (case-lambda (() (if (quote ??) (call (ref g1.2)) (call (ref g2.3))))))
+  (g1.2 (case-lambda (() (call (ref h.4)))))
+  (g2.3 (case-lambda (() (call (ref h.4)))))
+  (h.4 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 333) (ref fm.0)))
+HLL-convert-letrec:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (call (ref f.1)) (call (ref f.1))))))
+  (f.1 (case-lambda (() (if (quote ??) (call (ref g1.2)) (call (ref g2.3))))))
+  (g1.2 (case-lambda (() (call (ref h.4)))))
+  (g2.3 (case-lambda (() (call (ref h.4)))))
+  (h.4 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 333) (ref fm.0)))
+HLL-bind-lambda:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (call (ref f.1)) (call (ref f.1))))))
+  (f.1 (case-lambda (() (if (quote ??) (call (ref g1.2)) (call (ref g2.3))))))
+  (g1.2 (case-lambda (() (call (ref h.4)))))
+  (g2.3 (case-lambda (() (call (ref h.4)))))
+  (h.4 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 333) (ref fm.0)))
+HLL-procedure=>free-variable*:
+(h.4 ())
+(g2.3 ())
+(g1.2 ())
+(f.1 ())
+(fm.0 ())
+HLL-well-known-procedure*:
+(h.4 g2.3 g1.2 f.1)
+HLL-join-point*:
+()
+### Alternative passes:
+HLL-sink-join-points:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (call (ref f.1)) (call (ref f.1))))))
+  (f.1 (case-lambda (() (if (quote ??) (call (ref g1.2)) (call (ref g2.3))))))
+  (g1.2 (case-lambda (() (call (ref h.4)))))
+  (g2.3 (case-lambda (() (call (ref h.4)))))
+  (h.4 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 333) (ref fm.0)))
+join points:
+()
+HLL-convert-letrec:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (call (ref f.1)) (call (ref f.1))))))
+  (f.1 (case-lambda (() (if (quote ??) (call (ref g1.2)) (call (ref g2.3))))))
+  (g1.2 (case-lambda (() (call (ref h.4)))))
+  (g2.3 (case-lambda (() (call (ref h.4)))))
+  (h.4 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 333) (ref fm.0)))
+HLL-bind-lambda:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (call (ref f.1)) (call (ref f.1))))))
+  (f.1 (case-lambda (() (if (quote ??) (call (ref g1.2)) (call (ref g2.3))))))
+  (g1.2 (case-lambda (() (call (ref h.4)))))
+  (g2.3 (case-lambda (() (call (ref h.4)))))
+  (h.4 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 333) (ref fm.0)))
+HLL-procedure=>free-variable*:
+(h.4 ())
+(g2.3 ())
+(g1.2 ())
+(f.1 ())
+(fm.0 ())
+HLL-well-known-procedure*:
+(h.4 g2.3 g1.2 f.1)
+HLL-join-point*:
+()
 
