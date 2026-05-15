@@ -47,7 +47,7 @@
 (define (let-binding-lhs b) (car b))
 (define (let-binding-rhs b) (cdr b))
 
-(define-record-type 'hllvar make-hllvar hllvar?
+(define-record-type (lambda (v) (list 'hllvar (hllvar-name v))) make-hllvar hllvar?
   (hllvar-name     set-hllvar-name!)
   (hllvar-source   set-hllvar-source!)
   (hllvar-data     set-hllvar-data!)
