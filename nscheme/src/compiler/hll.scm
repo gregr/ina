@@ -256,6 +256,7 @@
     x
     ((ref _) #t) ((primop _) #t) ((quote _) #t) ((case-lambda _) #t)
     ((if c t f) (and (HLL-pure? c) (HLL-pure? t) (HLL-pure? f)))
+    ((late &e) (HLL-pure? (unbox &e)))
     ;; TODO: some primop calls can also be #t
     (_ #f)))
 
@@ -838,7 +839,8 @@
                    (HLL:case-lambda (HLL-note x) (CLC*/Expr (lambda (x) (Expr/k k x)) clc*))))))
   (define (Expr/k k x)
     (define (Tail x) (Expr/k k x))
-    (define (Rator x) (HLL-case x ((ref v) (Ref k v x)) (_ (Nontail x))))
+    (define (Rator x)
+      (HLL-case x ((ref v) (Ref k v x)) ((late &e) (Rator (unbox &e))) (_ (Nontail x))))
     (define note (HLL-note x))
     (HLL-case
       x
