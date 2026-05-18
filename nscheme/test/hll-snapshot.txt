@@ -4,6 +4,8 @@ pretty HLL:
 (quote 123)
 HLL-check-letrec:
 (quote 123)
+HLL-bind-known-lambda:
+(quote 123)
 HLL-stratify-letrec:
 (quote 123)
 HLL-sink-join-points:
@@ -26,6 +28,8 @@ pretty HLL:
 (call (quote #<procedure +>) (quote 1) (quote 2))
 HLL-check-letrec:
 (call (quote #<procedure +>) (quote 1) (quote 2))
+HLL-bind-known-lambda:
+(call (quote #<procedure +>) (quote 1) (quote 2))
 HLL-stratify-letrec:
 (call (quote #<procedure +>) (quote 1) (quote 2))
 HLL-sink-join-points:
@@ -47,6 +51,8 @@ VHLL:
 pretty HLL:
 (case-lambda ((#t #t) (quote 5)))
 HLL-check-letrec:
+(case-lambda ((#t #t) (quote 5)))
+HLL-bind-known-lambda:
 (case-lambda ((#t #t) (quote 5)))
 HLL-stratify-letrec:
 (case-lambda ((#t #t) (quote 5)))
@@ -79,6 +85,17 @@ pretty HLL:
       (ref c.2))))
    (quote 3))))
 HLL-check-letrec:
+(case-lambda
+ ((a.0 b.1)
+  (call
+   (case-lambda
+    ((c.2)
+     (call
+      (quote #<procedure +>)
+      (call (quote #<procedure *>) (ref a.0) (ref b.1))
+      (ref c.2))))
+   (quote 3))))
+HLL-bind-known-lambda:
 (case-lambda
  ((a.0 b.1)
   (call
@@ -177,6 +194,25 @@ pretty HLL:
     (call (ref sum-to-n.1) (quote 10)))))
  (case-lambda ((x.6) (if (ref x.6) (quote #f) (quote #t)))))
 HLL-check-letrec:
+(call
+ (case-lambda
+  ((not.0)
+   (letrec
+    ((sum-to-n.1
+      (case-lambda ((n.2) (call (ref loop.3) (ref n.2) (quote 0)))))
+     (loop.3
+      (case-lambda
+       ((n.4 total.5)
+        (if
+         (call (ref not.0) (call (quote #<procedure =>) (ref n.4) (quote 0)))
+         (call
+          (ref loop.3)
+          (call (quote #<procedure ->) (ref n.4) (quote 1))
+          (call (quote #<procedure +>) (ref total.5) (ref n.4)))
+         (ref total.5))))))
+    (call (ref sum-to-n.1) (quote 10)))))
+ (case-lambda ((x.6) (if (ref x.6) (quote #f) (quote #t)))))
+HLL-bind-known-lambda:
 (call
  (case-lambda
   ((not.0)
@@ -335,6 +371,34 @@ pretty HLL:
     (call (ref sum-to-n.1) (quote 100)))))
  (case-lambda ((x.8) (if (ref x.8) (quote #f) (quote #t)))))
 HLL-check-letrec:
+(call
+ (case-lambda
+  ((not.0)
+   (letrec
+    ((sum-to-n.1
+      (case-lambda
+       ((n.2)
+        (if
+         (call (quote #<procedure =>) (ref n.2) (quote 0))
+         (quote 0)
+         (call (ref loop.3) (ref n.2) (quote 0))))))
+     (loop.3
+      (case-lambda
+       ((n.4 total.5)
+        (call
+         (case-lambda
+          ((total.6 n.7)
+           (if
+            (call
+             (ref not.0)
+             (call (quote #<procedure =>) (ref n.7) (quote 0)))
+            (call (ref loop.3) (ref n.7) (ref total.6))
+            (ref total.6))))
+         (call (quote #<procedure +>) (ref total.5) (ref n.4))
+         (call (quote #<procedure ->) (ref n.4) (quote 1)))))))
+    (call (ref sum-to-n.1) (quote 100)))))
+ (case-lambda ((x.8) (if (ref x.8) (quote #f) (quote #t)))))
+HLL-bind-known-lambda:
 (call
  (case-lambda
   ((not.0)
@@ -559,6 +623,45 @@ pretty HLL:
   ((b.10 x.11)
    (call (quote #<procedure mvector-set!>) (ref b.10) (quote 0) (ref x.11)))))
 HLL-check-letrec:
+(call
+ (case-lambda
+  ((box.0 unbox.1 set-box!.2)
+   (call
+    (case-lambda ((sum-to-n.3) (call (ref sum-to-n.3) (quote 1000))))
+    (case-lambda
+     ((n.4)
+      (call
+       (case-lambda
+        ((total.5)
+         (letrec
+          ((loop.6
+            (case-lambda
+             ((n.7)
+              (begin
+               (call
+                (ref set-box!.2)
+                (ref total.5)
+                (call
+                 (quote #<procedure +>)
+                 (call (ref unbox.1) (ref total.5))
+                 (ref n.7)))
+               (if
+                (call (quote #<procedure <>) (quote 0) (ref n.7))
+                (call
+                 (ref loop.6)
+                 (call (quote #<procedure ->) (ref n.7) (quote 1)))
+                (call (quote #<procedure values>))))))))
+          (begin
+           (call (ref loop.6) (ref n.4))
+           (call (ref unbox.1) (ref total.5))))))
+       (call (ref box.0) (quote 0))))))))
+ (case-lambda ((x.8) (call (quote #<procedure mvector.147>) (ref x.8))))
+ (case-lambda
+  ((b.9) (call (quote #<procedure mvector-ref>) (ref b.9) (quote 0))))
+ (case-lambda
+  ((b.10 x.11)
+   (call (quote #<procedure mvector-set!>) (ref b.10) (quote 0) (ref x.11)))))
+HLL-bind-known-lambda:
 (call
  (case-lambda
   ((box.0 unbox.1 set-box!.2)
@@ -833,6 +936,21 @@ HLL-check-letrec:
  (case-lambda (x*.8 (ref x*.8)))
  (case-lambda
   (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3)))))
+HLL-bind-known-lambda:
+(call
+ (case-lambda
+  ((list.0 ^x*.1)
+   (call
+    (quote #<procedure call-with-values>)
+    (case-lambda (() (call (ref ^x*.1))))
+    (case-lambda
+     ((a.2) (call (ref list.0) (quote one) (ref a.2)))
+     ((a.3 b.4) (call (ref list.0) (quote two) (ref a.3) (ref b.4)))
+     ((a.5 b.6 . c*.7)
+      (call (ref list.0) (quote more) (ref a.5) (ref b.6) (ref c*.7)))))))
+ (case-lambda (x*.8 (ref x*.8)))
+ (case-lambda
+  (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3)))))
 HLL-stratify-letrec:
 (call
  (case-lambda
@@ -938,6 +1056,14 @@ HLL-check-letrec:
     ((b.1 (case-lambda (() (ref d.3)))) (c.2 (ref b.1)) (d.3 (quote 5)))
     (ref c.2))))
  (quote 1))
+HLL-bind-known-lambda:
+(call
+ (case-lambda
+  ((a.0)
+   (letrec
+    ((b.1 (case-lambda (() (ref d.3)))) (c.2 (ref b.1)) (d.3 (quote 5)))
+    (ref c.2))))
+ (quote 1))
 HLL-stratify-letrec:
 (call
  (case-lambda
@@ -1000,6 +1126,34 @@ pretty HLL:
     (ref c.2))))
  (quote 1))
 HLL-check-letrec:
+(call
+ (case-lambda
+  ((a.0)
+   (let*
+    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    (letrec
+     ((b.2
+       (case-lambda
+        (() (call (quote #<procedure cons>) (ref d.4) (ref c.3)))))
+      (c.3 (ref b.2))
+      (d.4
+       (if
+        (call (primop mvector-ref) (ref init?.1) (quote 0))
+        (ref e.5)
+        (call
+         (primop panic)
+         (quote #f)
+         (quote "referenced uninitialized variable")
+         (quote e))))
+      (e.5
+       (let*
+        ((_.6 (quote 5)))
+        (begin
+         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (ref _.6)))))
+     (ref c.3)))))
+ (quote 1))
+HLL-bind-known-lambda:
 (call
  (case-lambda
   ((a.0)
@@ -1214,6 +1368,41 @@ pretty HLL:
     (ref p.3))))
  (quote 1))
 HLL-check-letrec:
+(call
+ (case-lambda
+  ((a.0)
+   (let*
+    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    (letrec
+     ((b.2
+       (case-lambda
+        (()
+         (call
+          (quote #<procedure cons>)
+          (if
+           (call (primop mvector-ref) (ref init?.1) (quote 0))
+           (ref d.5)
+           (call
+            (primop panic)
+            (quote #f)
+            (quote "referenced uninitialized variable")
+            (quote d)))
+          (ref c.3)))))
+      (c.3
+       (if
+        (call (quote #<procedure =>) (ref a.0) (quote 0))
+        (quote #f)
+        (ref b.2)))
+      (p.4 (call (quote #<procedure cons>) (quote c) (ref c.3)))
+      (d.5
+       (let*
+        ((_.6 (quote 5)))
+        (begin
+         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (ref _.6)))))
+     (ref p.4)))))
+ (quote 1))
+HLL-bind-known-lambda:
 (call
  (case-lambda
   ((a.0)
@@ -1466,6 +1655,57 @@ pretty HLL:
     (ref p.3))))
  (quote 1))
 HLL-check-letrec:
+(call
+ (case-lambda
+  ((a.0)
+   (let*
+    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
+     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    (letrec
+     ((b.3
+       (case-lambda
+        (()
+         (call
+          (quote #<procedure cons>)
+          (if
+           (call (primop mvector-ref) (ref init?.1) (quote 0))
+           (ref d.7)
+           (call
+            (primop panic)
+            (quote #f)
+            (quote "referenced uninitialized variable")
+            (quote d)))
+          (if
+           (call (primop mvector-ref) (ref init?.2) (quote 0))
+           (ref c.4)
+           (call
+            (primop panic)
+            (quote #f)
+            (quote "referenced uninitialized variable")
+            (quote c)))))))
+      (c.4
+       (let*
+        ((_.5
+          (call
+           (quote #<procedure cons>)
+           (quote b?)
+           (if
+            (call (quote #<procedure =>) (ref a.0) (quote 0))
+            (quote #f)
+            (ref b.3)))))
+        (begin
+         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (ref _.5))))
+      (p.6 (call (quote #<procedure cons>) (quote c) (ref c.4)))
+      (d.7
+       (let*
+        ((_.8 (quote 5)))
+        (begin
+         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (ref _.8)))))
+     (ref p.6)))))
+ (quote 1))
+HLL-bind-known-lambda:
 (call
  (case-lambda
   ((a.0)
@@ -1839,6 +2079,43 @@ HLL-check-letrec:
          (ref _.7)))))
      (ref p.5)))))
  (quote 1))
+HLL-bind-known-lambda:
+(call
+ (case-lambda
+  ((a.0)
+   (let*
+    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    (letrec
+     ((b.2
+       (case-lambda
+        (()
+         (letrec
+          ((z.3 (case-lambda (() (ref p.5)))))
+          (call
+           (quote #<procedure cons>)
+           (if
+            (call (primop mvector-ref) (ref init?.1) (quote 0))
+            (ref d.6)
+            (call
+             (primop panic)
+             (quote #f)
+             (quote "referenced uninitialized variable")
+             (quote d)))
+           (ref c.4))))))
+      (c.4
+       (if
+        (call (quote #<procedure =>) (ref a.0) (quote 0))
+        (quote #f)
+        (ref b.2)))
+      (p.5 (call (quote #<procedure cons>) (quote c) (ref c.4)))
+      (d.6
+       (let*
+        ((_.7 (quote 5)))
+        (begin
+         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (ref _.7)))))
+     (ref p.5)))))
+ (quote 1))
 HLL-stratify-letrec:
 (call
  (case-lambda
@@ -2063,6 +2340,62 @@ pretty HLL:
     (ref p.4))))
  (quote 1))
 HLL-check-letrec:
+(call
+ (case-lambda
+  ((a.0)
+   (let*
+    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
+     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    (letrec
+     ((b.3
+       (case-lambda
+        (()
+         (letrec
+          ((z.4
+            (case-lambda
+             (()
+              (if
+               (call (primop mvector-ref) (ref init?.2) (quote 0))
+               (ref p.6)
+               (call
+                (primop panic)
+                (quote #f)
+                (quote "referenced uninitialized variable")
+                (quote p)))))))
+          (call
+           (quote #<procedure cons>)
+           (call
+            (quote #<procedure cons>)
+            (if
+             (call (primop mvector-ref) (ref init?.1) (quote 0))
+             (ref d.8)
+             (call
+              (primop panic)
+              (quote #f)
+              (quote "referenced uninitialized variable")
+              (quote d)))
+            (ref c.5))
+           (ref z.4))))))
+      (c.5
+       (if
+        (call (quote #<procedure =>) (ref a.0) (quote 0))
+        (quote #f)
+        (ref b.3)))
+      (p.6
+       (let*
+        ((_.7 (call (quote #<procedure cons>) (quote c) (ref c.5))))
+        (begin
+         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (ref _.7))))
+      (d.8
+       (let*
+        ((_.9 (quote 5)))
+        (begin
+         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (ref _.9)))))
+     (ref p.6)))))
+ (quote 1))
+HLL-bind-known-lambda:
 (call
  (case-lambda
   ((a.0)
@@ -2489,6 +2822,64 @@ HLL-check-letrec:
          (ref _.9)))))
      (ref p.6)))))
  (quote 1))
+HLL-bind-known-lambda:
+(call
+ (case-lambda
+  ((a.0)
+   (let*
+    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
+     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    (letrec
+     ((b.3
+       (case-lambda
+        (()
+         (letrec
+          ((z.4
+            (case-lambda
+             (()
+              (if
+               (call (primop mvector-ref) (ref init?.2) (quote 0))
+               (ref p.6)
+               (call
+                (primop panic)
+                (quote #f)
+                (quote "referenced uninitialized variable")
+                (quote p)))))))
+          (case-lambda
+           (()
+            (call
+             (quote #<procedure cons>)
+             (call
+              (quote #<procedure cons>)
+              (if
+               (call (primop mvector-ref) (ref init?.1) (quote 0))
+               (ref d.8)
+               (call
+                (primop panic)
+                (quote #f)
+                (quote "referenced uninitialized variable")
+                (quote d)))
+              (ref c.5))
+             (ref z.4))))))))
+      (c.5
+       (if
+        (call (quote #<procedure =>) (ref a.0) (quote 0))
+        (quote #f)
+        (ref b.3)))
+      (p.6
+       (let*
+        ((_.7 (call (quote #<procedure cons>) (quote c) (ref c.5))))
+        (begin
+         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (ref _.7))))
+      (d.8
+       (let*
+        ((_.9 (quote 5)))
+        (begin
+         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (ref _.9)))))
+     (ref p.6)))))
+ (quote 1))
 HLL-stratify-letrec:
 (call
  (case-lambda
@@ -2821,6 +3212,24 @@ HLL-check-letrec:
   (case-lambda
    ((m.4)
     (call (ref f.2) (call (quote #<procedure +>) (quote 20) (ref m.4)))))))
+HLL-bind-known-lambda:
+(letrec
+ ((inc.0
+   (case-lambda ((n.1) (call (quote #<procedure +>) (ref n.1) (quote 1))))))
+ (letrec
+  ((f.2
+    (case-lambda
+     ((n.3)
+      (call
+       (quote #<procedure *>)
+       (if
+        (call (quote #<procedure <>) (quote 5) (ref n.3))
+        (call (ref inc.0) (call (quote #<procedure *>) (quote 100) (ref n.3)))
+        (call (ref inc.0) (call (quote #<procedure *>) (quote 10) (ref n.3))))
+       (quote 2))))))
+  (case-lambda
+   ((m.4)
+    (call (ref f.2) (call (quote #<procedure +>) (quote 20) (ref m.4)))))))
 HLL-stratify-letrec:
 (let*
  ((inc.0
@@ -2958,6 +3367,32 @@ pretty HLL:
        (ref f.4)
        (call (quote #<procedure +>) (ref base.1) (ref m.6)))))))))
 HLL-check-letrec:
+(case-lambda
+ ((threshold.0 base.1)
+  (letrec
+   ((inc.2
+     (case-lambda ((n.3) (call (quote #<procedure +>) (ref n.3) (quote 1))))))
+   (letrec
+    ((f.4
+      (case-lambda
+       ((n.5)
+        (call
+         (quote #<procedure *>)
+         (if
+          (call (quote #<procedure <>) (ref threshold.0) (ref n.5))
+          (call
+           (ref inc.2)
+           (call (quote #<procedure *>) (quote 100) (ref n.5)))
+          (call
+           (ref inc.2)
+           (call (quote #<procedure *>) (quote 10) (ref n.5))))
+         (quote 2))))))
+    (case-lambda
+     ((m.6)
+      (call
+       (ref f.4)
+       (call (quote #<procedure +>) (ref base.1) (ref m.6)))))))))
+HLL-bind-known-lambda:
 (case-lambda
  ((threshold.0 base.1)
   (letrec
@@ -3151,6 +3586,37 @@ pretty HLL:
       (ref even?.0)
       (call (quote #<procedure +>) (ref x.5) (ref y.6))))))))
 HLL-check-letrec:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (case-lambda
+  ((tag.4 x.5 y.6)
+   (if
+    (call (quote #<procedure eqv?>) (ref tag.4) (quote one))
+    (call (ref even?.0) (ref x.5))
+    (if
+     (call (quote #<procedure eqv?>) (ref tag.4) (quote two))
+     (call (ref even?.0) (ref y.6))
+     (call
+      (ref even?.0)
+      (call (quote #<procedure +>) (ref x.5) (ref y.6))))))))
+HLL-bind-known-lambda:
 (letrec
  ((even?.0
    (case-lambda
@@ -3394,6 +3860,37 @@ HLL-check-letrec:
      (letrec
       ((z.7 (call (quote #<procedure +>) (ref x.5) (ref y.6))))
       (call (ref even?.0) (ref z.7))))))))
+HLL-bind-known-lambda:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (case-lambda
+  ((tag.4 x.5 y.6)
+   (if
+    (call (quote #<procedure eqv?>) (ref tag.4) (quote one))
+    (call (ref even?.0) (ref x.5))
+    (if
+     (call (quote #<procedure eqv?>) (ref tag.4) (quote two))
+     (call (ref even?.0) (ref y.6))
+     (letrec
+      ((z.7 (call (quote #<procedure +>) (ref x.5) (ref y.6))))
+      (call (ref even?.0) (ref z.7))))))))
 HLL-stratify-letrec:
 (letrec
  ((even?.0
@@ -3577,6 +4074,37 @@ pretty HLL:
       ((z.7 (call (quote #<procedure +>) (ref x.5) (ref y.6) (quote 1))))
       (call (ref odd?.2) (ref z.7))))))))
 HLL-check-letrec:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (case-lambda
+  ((tag.4 x.5 y.6)
+   (if
+    (call (quote #<procedure eqv?>) (ref tag.4) (quote one))
+    (call (ref even?.0) (ref x.5))
+    (if
+     (call (quote #<procedure eqv?>) (ref tag.4) (quote two))
+     (call (ref even?.0) (ref y.6))
+     (letrec
+      ((z.7 (call (quote #<procedure +>) (ref x.5) (ref y.6) (quote 1))))
+      (call (ref odd?.2) (ref z.7))))))))
+HLL-bind-known-lambda:
 (letrec
  ((even?.0
    (case-lambda
@@ -3792,6 +4320,27 @@ HLL-check-letrec:
        (ref even?.0)
        (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
  (ref even?.0))
+HLL-bind-known-lambda:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (ref even?.0))
 HLL-stratify-letrec:
 (letrec
  ((even?.0
@@ -3936,6 +4485,27 @@ HLL-check-letrec:
        (ref even?.0)
        (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
  (call (quote #<procedure cons>) (ref even?.0) (ref odd?.2)))
+HLL-bind-known-lambda:
+(letrec
+ ((even?.0
+   (case-lambda
+    ((n.1)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.1))
+      (quote #t)
+      (call
+       (ref odd?.2)
+       (call (quote #<procedure ->) (ref n.1) (quote 1)))))))
+  (odd?.2
+   (case-lambda
+    ((n.3)
+     (if
+      (call (quote #<procedure =>) (quote 0) (ref n.3))
+      (quote #f)
+      (call
+       (ref even?.0)
+       (call (quote #<procedure ->) (ref n.3) (quote 1))))))))
+ (call (quote #<procedure cons>) (ref even?.0) (ref odd?.2)))
 HLL-stratify-letrec:
 (letrec
  ((even?.0
@@ -4057,6 +4627,15 @@ HLL-check-letrec:
   (e.4 (case-lambda (() (call (ref f.5)))))
   (f.5 (case-lambda (() (quote f)))))
  (call (ref f.5)))
+HLL-bind-known-lambda:
+(letrec
+ ((a.0 (case-lambda (() (call (ref b.1)))))
+  (b.1 (case-lambda (() (call (ref c.2)))))
+  (c.2 (case-lambda (() (call (ref d.3)))))
+  (d.3 (case-lambda (() (call (ref e.4)))))
+  (e.4 (case-lambda (() (call (ref f.5)))))
+  (f.5 (case-lambda (() (quote f)))))
+ (call (ref f.5)))
 HLL-stratify-letrec:
 (let*
  ((f.0 (case-lambda (() (quote f))))
@@ -4100,6 +4679,15 @@ pretty HLL:
   (f.5 (case-lambda (() (call (ref a.0))))))
  (call (ref f.5)))
 HLL-check-letrec:
+(letrec
+ ((a.0 (case-lambda (() (call (ref b.1)))))
+  (b.1 (case-lambda (() (call (ref c.2)))))
+  (c.2 (case-lambda (() (call (ref d.3)))))
+  (d.3 (case-lambda (() (call (ref e.4)))))
+  (e.4 (case-lambda (() (call (ref f.5)))))
+  (f.5 (case-lambda (() (call (ref a.0))))))
+ (call (ref f.5)))
+HLL-bind-known-lambda:
 (letrec
  ((a.0 (case-lambda (() (call (ref b.1)))))
   (b.1 (case-lambda (() (call (ref c.2)))))
@@ -4251,6 +4839,17 @@ HLL-check-letrec:
   (g.6 (case-lambda (() (if (quote g) (call (ref b.1)) (call (ref h.7))))))
   (h.7 (case-lambda (() (call (ref a.0))))))
  (call (ref f.5)))
+HLL-bind-known-lambda:
+(letrec
+ ((a.0 (case-lambda (() (if (quote a) (call (ref h.7)) (call (ref b.1))))))
+  (b.1 (case-lambda (() (if (quote b) (call (ref c.2)) (call (ref d.3))))))
+  (c.2 (case-lambda (() (if (quote c) (call (ref d.3)) (call (ref e.4))))))
+  (d.3 (case-lambda (() (if (quote d) (call (ref a.0)) (call (ref e.4))))))
+  (e.4 (case-lambda (() (if (quote e) (call (ref g.6)) (call (ref f.5))))))
+  (f.5 (case-lambda (() (if (quote f) (call (ref g.6)) (call (ref b.1))))))
+  (g.6 (case-lambda (() (if (quote g) (call (ref b.1)) (call (ref h.7))))))
+  (h.7 (case-lambda (() (call (ref a.0))))))
+ (call (ref f.5)))
 HLL-stratify-letrec:
 (letrec
  ((a.0 (case-lambda (() (if (quote a) (call (ref h.7)) (call (ref b.1))))))
@@ -4382,6 +4981,17 @@ pretty HLL:
   (h.7 (case-lambda (() (call (ref a.0))))))
  (call (ref f.5)))
 HLL-check-letrec:
+(letrec
+ ((a.0 (case-lambda (() (if (quote a) (call (ref b.1)) (call (ref c.2))))))
+  (b.1 (case-lambda (() (if (quote b) (call (ref c.2)) (call (ref d.3))))))
+  (c.2 (case-lambda (() (if (quote c) (call (ref d.3)) (call (ref e.4))))))
+  (d.3 (case-lambda (() (if (quote d) (call (ref b.1)) (call (ref e.4))))))
+  (e.4 (case-lambda (() (if (quote e) (call (ref c.2)) (call (ref f.5))))))
+  (f.5 (case-lambda (() (if (quote f) (call (ref g.6)) (call (ref c.2))))))
+  (g.6 (case-lambda (() (if (quote g) (call (ref b.1)) (call (ref h.7))))))
+  (h.7 (case-lambda (() (call (ref a.0))))))
+ (call (ref f.5)))
+HLL-bind-known-lambda:
 (letrec
  ((a.0 (case-lambda (() (if (quote a) (call (ref b.1)) (call (ref c.2))))))
   (b.1 (case-lambda (() (if (quote b) (call (ref c.2)) (call (ref d.3))))))
@@ -4541,6 +5151,29 @@ pretty HLL:
   (h.7 (case-lambda (() (call (ref a.0))))))
  (call (ref f.5)))
 HLL-check-letrec:
+(letrec
+ ((a.0 (case-lambda (() (if (quote a) (call (ref b.1)) (call (ref c.2))))))
+  (b.1 (case-lambda (() (if (quote b) (call (ref c.2)) (call (ref d.3))))))
+  (c.2 (case-lambda (() (if (quote c) (call (ref d.3)) (call (ref e.4))))))
+  (d.3
+   (case-lambda
+    (()
+     (if
+      (quote d)
+      (call (quote #<procedure cons>) (quote d) (call (ref b.1)))
+      (call (ref e.4))))))
+  (e.4
+   (case-lambda
+    (()
+     (if
+      (quote e)
+      (call (quote #<procedure cons>) (quote e) (call (ref c.2)))
+      (call (ref f.5))))))
+  (f.5 (case-lambda (() (if (quote f) (call (ref g.6)) (call (ref c.2))))))
+  (g.6 (case-lambda (() (if (quote g) (call (ref b.1)) (call (ref h.7))))))
+  (h.7 (case-lambda (() (call (ref a.0))))))
+ (call (ref f.5)))
+HLL-bind-known-lambda:
 (letrec
  ((a.0 (case-lambda (() (if (quote a) (call (ref b.1)) (call (ref c.2))))))
   (b.1 (case-lambda (() (if (quote b) (call (ref c.2)) (call (ref d.3))))))
@@ -4770,6 +5403,29 @@ HLL-check-letrec:
   (g.6 (case-lambda (() (if (quote g) (call (ref b.1)) (call (ref h.7))))))
   (h.7 (case-lambda (() (call (ref a.0))))))
  (call (ref f.5)))
+HLL-bind-known-lambda:
+(letrec
+ ((a.0 (case-lambda (() (if (quote a) (call (ref b.1)) (call (ref c.2))))))
+  (b.1 (case-lambda (() (if (quote b) (call (ref c.2)) (call (ref d.3))))))
+  (c.2 (case-lambda (() (if (quote c) (call (ref d.3)) (call (ref e.4))))))
+  (d.3
+   (case-lambda
+    (()
+     (if
+      (quote d)
+      (call (quote #<procedure cons>) (quote d) (call (ref b.1)))
+      (call (ref e.4))))))
+  (e.4
+   (case-lambda
+    (()
+     (if
+      (quote e)
+      (call (quote #<procedure cons>) (quote e) (call (ref c.2)))
+      (call (ref f.5))))))
+  (f.5 (case-lambda (() (if (quote f) (call (ref c.2)) (call (ref g.6))))))
+  (g.6 (case-lambda (() (if (quote g) (call (ref b.1)) (call (ref h.7))))))
+  (h.7 (case-lambda (() (call (ref a.0))))))
+ (call (ref f.5)))
 HLL-stratify-letrec:
 (letrec
  ((a.0 (case-lambda (() (if (quote a) (call (ref b.1)) (call (ref c.2))))))
@@ -4948,6 +5604,18 @@ HLL-check-letrec:
       (if (ref b.3) (call (ref g.0) (quote 13)) (call (ref g.0) (quote 15)))
       (quote 1))))))
  (ref f.2))
+HLL-bind-known-lambda:
+(letrec
+ ((g.0
+   (case-lambda ((y.1) (call (quote #<procedure ->) (ref y.1) (quote 1)))))
+  (f.2
+   (case-lambda
+    ((b.3)
+     (call
+      (quote #<procedure +>)
+      (if (ref b.3) (call (ref g.0) (quote 13)) (call (ref g.0) (quote 15)))
+      (quote 1))))))
+ (ref f.2))
 HLL-stratify-letrec:
 (let*
  ((g.0
@@ -5042,6 +5710,27 @@ pretty HLL:
        (call (ref g.0) (quote 15) (ref k0.6))))))))
  (ref f.3))
 HLL-check-letrec:
+(letrec
+ ((g.0
+   (case-lambda
+    ((y.1 k.2)
+     (call (ref k.2) (call (quote #<procedure ->) (ref y.1) (quote 1))))))
+  (f.3
+   (case-lambda
+    ((b.4 k.5)
+     (letrec
+      ((k0.6
+        (case-lambda
+         ((x.7)
+          (call
+           (ref k.5)
+           (call (quote #<procedure +>) (ref x.7) (quote 1)))))))
+      (if
+       (ref b.4)
+       (call (ref g.0) (quote 13) (ref k0.6))
+       (call (ref g.0) (quote 15) (ref k0.6))))))))
+ (ref f.3))
+HLL-bind-known-lambda:
 (letrec
  ((g.0
    (case-lambda
@@ -5221,6 +5910,29 @@ HLL-check-letrec:
        (call (ref g.5) (quote 13))
        (call (ref g.5) (quote 15))))))))
  (ref f.0))
+HLL-bind-known-lambda:
+(letrec
+ ((f.0
+   (case-lambda
+    ((b.1 k.2)
+     (letrec
+      ((k0.3
+        (case-lambda
+         ((x.4)
+          (call
+           (ref k.2)
+           (call (quote #<procedure +>) (ref x.4) (quote 1))))))
+       (g.5
+        (case-lambda
+         ((y.6 k.7)
+          (call
+           (ref k0.3)
+           (call (quote #<procedure ->) (ref y.6) (quote 1)))))))
+      (if
+       (ref b.1)
+       (call (ref g.5) (quote 13))
+       (call (ref g.5) (quote 15))))))))
+ (ref f.0))
 HLL-stratify-letrec:
 (let*
  ((f.0
@@ -5347,6 +6059,14 @@ HLL-check-letrec:
   (f.1 (case-lambda (() (call (ref g.2)))))
   (g.2 (case-lambda (() (quote g)))))
  (call (quote #<procedure cons>) (quote 111) (ref fm.0)))
+HLL-bind-known-lambda:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (quote fm) (call (ref f.1))))))
+  (f.1 (case-lambda (() (call (ref g.2)))))
+  (g.2 (case-lambda (() (quote g)))))
+ (call (quote #<procedure cons>) (quote 111) (ref fm.0)))
 HLL-stratify-letrec:
 (let*
  ((g.0 (case-lambda (() (quote g))))
@@ -5427,6 +6147,19 @@ pretty HLL:
   (h.3 (case-lambda (() (quote h)))))
  (call (quote #<procedure cons>) (quote 222) (ref fm.0)))
 HLL-check-letrec:
+(letrec
+ ((fm.0
+   (case-lambda
+    (()
+     (call
+      (quote #<procedure cons>)
+      (quote fm)
+      (if (quote ?) (call (ref f.1)) (call (ref g.2)))))))
+  (f.1 (case-lambda (() (if (quote ?) (call (ref g.2)) (call (ref h.3))))))
+  (g.2 (case-lambda (() (if (quote ?) (call (ref f.1)) (call (ref h.3))))))
+  (h.3 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 222) (ref fm.0)))
+HLL-bind-known-lambda:
 (letrec
  ((fm.0
    (case-lambda
@@ -5539,6 +6272,16 @@ pretty HLL:
   (h.4 (case-lambda (() (quote h)))))
  (call (quote #<procedure cons>) (quote 333) (ref fm.0)))
 HLL-check-letrec:
+(letrec
+ ((fm.0
+   (case-lambda
+    (() (call (quote #<procedure cons>) (call (ref f.1)) (call (ref f.1))))))
+  (f.1 (case-lambda (() (if (quote ??) (call (ref g1.2)) (call (ref g2.3))))))
+  (g1.2 (case-lambda (() (call (ref h.4)))))
+  (g2.3 (case-lambda (() (call (ref h.4)))))
+  (h.4 (case-lambda (() (quote h)))))
+ (call (quote #<procedure cons>) (quote 333) (ref fm.0)))
+HLL-bind-known-lambda:
 (letrec
  ((fm.0
    (case-lambda
@@ -5713,6 +6456,64 @@ HLL-check-letrec:
      (ref e.5)
      (ref g.11)))))
  (case-lambda (x*.17 (ref x*.17))))
+HLL-bind-known-lambda:
+(call
+ (case-lambda
+  ((list.0)
+   (letrec
+    ((abx.1
+      (case-lambda
+       ((a.2 b.3 x*.4)
+        (call
+         (ref list.0)
+         (quote a)
+         (ref a.2)
+         (quote b)
+         (ref b.3)
+         (quote x*)
+         (ref x*.4)))))
+     (e.5
+      (case-lambda
+       (() (quote e0))
+       ((x.6 y.7)
+        (if (ref x.6) (call (ref f.8) (ref y.7) (quote 0)) (quote e)))))
+     (f.8
+      (case-lambda
+       ((x.9 y.10)
+        (if (ref x.9) (call (ref g.14) (ref y.10) (quote 11)) (quote f)))))
+     (f.11
+      (case-lambda
+       (() (quote f0))
+       ((x.12 y.13) (call (ref f.8) (ref x.12) (ref y.13)))))
+     (g.14
+      (case-lambda
+       ((x.15 y.16)
+        (if (ref x.15) (call (ref h.20) (ref y.16) (quote 22)) (quote g)))))
+     (g.17
+      (case-lambda
+       (() (quote g0))
+       ((x.18 y.19) (call (ref g.14) (ref x.18) (ref y.19)))))
+     (h.20
+      (case-lambda
+       ((x.21 y.22)
+        (if (ref x.21) (quote h) (call (ref f.8) (ref y.22) (quote 33)))))))
+    (call
+     (ref list.0)
+     (call
+      (ref abx.1)
+      (quote 1)
+      (quote 2)
+      (call
+       (primop cons)
+       (quote 3)
+       (call
+        (primop cons)
+        (quote 4)
+        (call (primop cons) (quote 5) (quote ())))))
+     (call (ref f.11) (quote 6))
+     (ref e.5)
+     (ref g.17)))))
+ (case-lambda (x*.23 (ref x*.23))))
 HLL-stratify-letrec:
 (call
  (case-lambda
@@ -5720,7 +6521,7 @@ HLL-stratify-letrec:
    (let*
     ((abx.1
       (case-lambda
-       ((a.2 b.3 . x*.4)
+       ((a.2 b.3 x*.4)
         (call
          (ref list.0)
          (quote a)
@@ -5732,17 +6533,14 @@ HLL-stratify-letrec:
     (letrec
      ((f.5
        (case-lambda
-        (() (quote f0))
         ((x.6 y.7)
          (if (ref x.6) (call (ref g.8) (ref y.7) (quote 11)) (quote f)))))
       (g.8
        (case-lambda
-        (() (quote g0))
         ((x.9 y.10)
          (if (ref x.9) (call (ref h.11) (ref y.10) (quote 22)) (quote g)))))
       (h.11
        (case-lambda
-        (() (quote h0))
         ((x.12 y.13)
          (if (ref x.12) (quote h) (call (ref f.5) (ref y.13) (quote 33)))))))
      (let*
@@ -5750,14 +6548,32 @@ HLL-stratify-letrec:
         (case-lambda
          (() (quote e0))
          ((x.15 y.16)
-          (if (ref x.15) (call (ref f.5) (ref y.16) (quote 0)) (quote e))))))
+          (if (ref x.15) (call (ref f.5) (ref y.16) (quote 0)) (quote e)))))
+       (f.17
+        (case-lambda
+         (() (quote f0))
+         ((x.18 y.19) (call (ref f.5) (ref x.18) (ref y.19)))))
+       (g.20
+        (case-lambda
+         (() (quote g0))
+         ((x.21 y.22) (call (ref g.8) (ref x.21) (ref y.22))))))
       (call
        (ref list.0)
-       (call (ref abx.1) (quote 1) (quote 2) (quote 3) (quote 4) (quote 5))
-       (call (ref f.5) (quote 6))
+       (call
+        (ref abx.1)
+        (quote 1)
+        (quote 2)
+        (call
+         (primop cons)
+         (quote 3)
+         (call
+          (primop cons)
+          (quote 4)
+          (call (primop cons) (quote 5) (quote ())))))
+       (call (ref f.17) (quote 6))
        (ref e.14)
-       (ref g.8)))))))
- (case-lambda (x*.17 (ref x*.17))))
+       (ref g.20)))))))
+ (case-lambda (x*.23 (ref x*.23))))
 HLL-sink-join-points:
 (call
  (case-lambda
@@ -5765,17 +6581,14 @@ HLL-sink-join-points:
    (letrec
     ((f.1
       (case-lambda
-       (() (quote f0))
        ((x.2 y.3)
         (if (ref x.2) (call (ref g.4) (ref y.3) (quote 11)) (quote f)))))
      (g.4
       (case-lambda
-       (() (quote g0))
        ((x.5 y.6)
         (letrec
          ((h.7
            (case-lambda
-            (() (quote h0))
             ((x.8 y.9)
              (if
               (ref x.8)
@@ -5787,28 +6600,47 @@ HLL-sink-join-points:
        (case-lambda
         (() (quote e0))
         ((x.11 y.12)
-         (if (ref x.11) (call (ref f.1) (ref y.12) (quote 0)) (quote e))))))
+         (if (ref x.11) (call (ref f.1) (ref y.12) (quote 0)) (quote e)))))
+      (g.13
+       (case-lambda
+        (() (quote g0))
+        ((x.14 y.15) (call (ref g.4) (ref x.14) (ref y.15))))))
      (call
       (ref list.0)
       (let*
-       ((abx.13
+       ((abx.16
          (case-lambda
-          ((a.14 b.15 . x*.16)
+          ((a.17 b.18 x*.19)
            (call
             (ref list.0)
             (quote a)
-            (ref a.14)
+            (ref a.17)
             (quote b)
-            (ref b.15)
+            (ref b.18)
             (quote x*)
-            (ref x*.16))))))
-       (call (ref abx.13) (quote 1) (quote 2) (quote 3) (quote 4) (quote 5)))
-      (call (ref f.1) (quote 6))
+            (ref x*.19))))))
+       (call
+        (ref abx.16)
+        (quote 1)
+        (quote 2)
+        (call
+         (primop cons)
+         (quote 3)
+         (call
+          (primop cons)
+          (quote 4)
+          (call (primop cons) (quote 5) (quote ()))))))
+      (let*
+       ((f.20
+         (case-lambda
+          (() (quote f0))
+          ((x.21 y.22) (call (ref f.1) (ref x.21) (ref y.22))))))
+       (call (ref f.20) (quote 6)))
       (ref e.10)
-      (ref g.4))))))
- (case-lambda (x*.17 (ref x*.17))))
+      (ref g.13))))))
+ (case-lambda (x*.23 (ref x*.23))))
 join points:
-(abx h)
+(abx h f)
 HLL-convert-letrec:
 (call
  (case-lambda
@@ -5816,17 +6648,14 @@ HLL-convert-letrec:
    (letrec
     ((f.1
       (case-lambda
-       (() (quote f0))
        ((x.2 y.3)
         (if (ref x.2) (call (ref g.4) (ref y.3) (quote 11)) (quote f)))))
      (g.4
       (case-lambda
-       (() (quote g0))
        ((x.5 y.6)
         (letrec
          ((h.7
            (case-lambda
-            (() (quote h0))
             ((x.8 y.9)
              (if
               (ref x.8)
@@ -5838,26 +6667,45 @@ HLL-convert-letrec:
        (case-lambda
         (() (quote e0))
         ((x.11 y.12)
-         (if (ref x.11) (call (ref f.1) (ref y.12) (quote 0)) (quote e))))))
+         (if (ref x.11) (call (ref f.1) (ref y.12) (quote 0)) (quote e)))))
+      (g.13
+       (case-lambda
+        (() (quote g0))
+        ((x.14 y.15) (call (ref g.4) (ref x.14) (ref y.15))))))
      (call
       (ref list.0)
       (let*
-       ((abx.13
+       ((abx.16
          (case-lambda
-          ((a.14 b.15 . x*.16)
+          ((a.17 b.18 x*.19)
            (call
             (ref list.0)
             (quote a)
-            (ref a.14)
+            (ref a.17)
             (quote b)
-            (ref b.15)
+            (ref b.18)
             (quote x*)
-            (ref x*.16))))))
-       (call (ref abx.13) (quote 1) (quote 2) (quote 3) (quote 4) (quote 5)))
-      (call (ref f.1) (quote 6))
+            (ref x*.19))))))
+       (call
+        (ref abx.16)
+        (quote 1)
+        (quote 2)
+        (call
+         (primop cons)
+         (quote 3)
+         (call
+          (primop cons)
+          (quote 4)
+          (call (primop cons) (quote 5) (quote ()))))))
+      (let*
+       ((f.20
+         (case-lambda
+          (() (quote f0))
+          ((x.21 y.22) (call (ref f.1) (ref x.21) (ref y.22))))))
+       (call (ref f.20) (quote 6)))
       (ref e.10)
-      (ref g.4))))))
- (case-lambda (x*.17 (ref x*.17))))
+      (ref g.13))))))
+ (case-lambda (x*.23 (ref x*.23))))
 HLL-bind-lambda:
 (call
  (letrec
@@ -5867,25 +6715,25 @@ HLL-bind-lambda:
       (letrec
        ((f.2
          (case-lambda
-          (() (quote f0))
-          ((x.3 y.4)
-           (if (ref x.3) (call (ref g.5) (ref y.4) (quote 11)) (quote f)))))
+          ((x.3.22 y.4.23)
+           (if
+            (ref x.3.22)
+            (call (ref g.5) (ref y.4.23) (quote 11))
+            (quote f)))))
         (g.5
          (case-lambda
-          (() (quote g0))
-          ((x.6 y.7)
+          ((x.6.15 y.7.16)
            (letrec
             ((h.8
               (case-lambda
-               (() (quote h0))
                ((x.9 y.10)
                 (if
                  (ref x.9)
                  (quote h)
                  (call (ref f.2) (ref y.10) (quote 33)))))))
             (if
-             (ref x.6)
-             (call (ref h.8) (ref y.7) (quote 22))
+             (ref x.6.15)
+             (call (ref h.8) (ref y.7.16) (quote 22))
              (quote g)))))))
        (letrec
         ((e.11
@@ -5896,42 +6744,58 @@ HLL-bind-lambda:
              (ref x.12)
              (call (ref f.2) (ref y.13) (quote 0))
              (quote e))))))
-        (call
-         (ref list.1)
-         (letrec
-          ((abx.14
-            (case-lambda
-             ((a.15 b.16 . x*.17)
-              (call
-               (ref list.1)
-               (quote a)
-               (ref a.15)
-               (quote b)
-               (ref b.16)
-               (quote x*)
-               (ref x*.17))))))
-          (call
-           (ref abx.14)
-           (quote 1)
-           (quote 2)
-           (quote 3)
-           (quote 4)
-           (quote 5)))
-         (call (ref f.2) (quote 6))
-         (ref e.11)
-         (ref g.5))))))))
+        (letrec
+         ((g.14
+           (case-lambda
+            (() (quote g0))
+            ((x.6.15 y.7.16) (call (ref g.5) (ref x.6.15) (ref y.7.16))))))
+         (call
+          (ref list.1)
+          (letrec
+           ((abx.17
+             (case-lambda
+              ((a.18 b.19 x*.20)
+               (call
+                (ref list.1)
+                (quote a)
+                (ref a.18)
+                (quote b)
+                (ref b.19)
+                (quote x*)
+                (ref x*.20))))))
+           (call
+            (ref abx.17)
+            (quote 1)
+            (quote 2)
+            (call
+             (primop cons)
+             (quote 3)
+             (call
+              (primop cons)
+              (quote 4)
+              (call (primop cons) (quote 5) (quote ()))))))
+          (letrec
+           ((f.21
+             (case-lambda
+              (() (quote f0))
+              ((x.3.22 y.4.23) (call (ref f.2) (ref x.3.22) (ref y.4.23))))))
+           (call (ref f.21) (quote 6)))
+          (ref e.11)
+          (ref g.14)))))))))
   (ref _.0))
- (letrec ((_.18 (case-lambda (x*.19 (ref x*.19))))) (ref _.18)))
+ (letrec ((_.24 (case-lambda (x*.25 (ref x*.25))))) (ref _.24)))
 HLL-procedure=>free-variable*:
-(_.18 ())
-(abx.14 (list.1))
+(_.24 ())
+(f.21 (f.2))
+(abx.17 (list.1))
+(g.14 (g.5))
 (e.11 (f.2))
 (h.8 (f.2))
 (g.5 (f.2))
 (f.2 (g.5))
 (_.0 ())
 HLL-well-known-procedure*:
-(abx.14 h.8 f.2)
+(f.21 abx.17 h.8 g.5 f.2)
 HLL-join-point*:
-(abx.14 h.8)
+(f.21 abx.17 h.8)
 
