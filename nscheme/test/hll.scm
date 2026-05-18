@@ -194,8 +194,6 @@
       (displayln "HLL-stratify-letrec:")
       (let ((P (HLL-stratify-letrec P)))
         (pretty-write (HLL-pretty-uid P))
-        (HLL-common (HLL-copy P))
-        (displayln "### Alternative passes:")
         (displayln "HLL-sink-join-points:")
         (let-values (((jp* P) (HLL-sink-join-points P)))
           (pretty-write (HLL-pretty-uid P))
