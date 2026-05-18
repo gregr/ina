@@ -426,4 +426,19 @@
                 (g2 (lambda () (h)))
                 (h  (lambda () 'h)))
          (cons 333 fm))
-       )))
+       (let ((list (lambda x* x*)))
+         (letrec
+           ((abx (lambda (a b . x*) (list 'a a 'b b 'x* x*)))
+            (e (case-lambda
+                 (() 'e0)
+                 ((x y) (if x (f y 0) 'e))))
+            (f (case-lambda
+                 (() 'f0)
+                 ((x y) (if x (g y 11) 'f))))
+            (g (case-lambda
+                 (() 'g0)
+                 ((x y) (if x (h y 22) 'g))))
+            (h (case-lambda
+                 (() 'h0)
+                 ((x y) (if x 'h (f y 33))))))
+           (list (abx 1 2 3 4 5) (f 6) e g))))))
