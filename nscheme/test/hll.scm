@@ -157,11 +157,15 @@
           (else (default)))))
 
 (define name=>primop
-  (aquote values call/values
-          null? number? symbol? string? pair? eqv?
-          cons car cdr
-          + - * = < <= > >=
-          mvector mvector-ref mvector-set!))
+  (aquote panic apply values call/values make-record-type describe
+          eqv? null? boolean? procedure? symbol? rational? integer?
+          pair? vector? mvector? bytes? mbytes?
+          cons car cdr vector vector-length vector-ref
+          make-mvector mvector->vector mvector-length mvector-ref mvector-set!
+          bytes bytes-length bytes-ref bytes->symbol symbol->bytes
+          make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
+          bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
+          integer-floor-divmod numerator denominator = <= >= < > + - * /))
 
 (define (HLL-test P)
   (define (HLL-common P)
@@ -233,7 +237,7 @@
                                 (loop n total)
                                 total)))))
            (sum-to-n 100)))
-       (let ((box (lambda (x) (mvector x)))
+       (let ((box (lambda (x) (make-mvector 1 x)))
              (unbox (lambda (b) (mvector-ref b 0)))
              (set-box! (lambda (b x) (mvector-set! b 0 x))))
          (let ((sum-to-n
@@ -343,9 +347,40 @@
        (letrec ((even? (lambda (n) (if (= 0 n) #t (odd? (- n 1)))))
                 (odd?  (lambda (n) (if (= 0 n) #f (even? (- n 1))))))
          even?)
+
+       ;; Some examples adapted from Chapter 5 of Andy Keep's dissertation:
+       ;; https://andykeep.com/pubs/dissertation.pdf
        (letrec ((even? (lambda (n) (if (= 0 n) #t (odd? (- n 1)))))
                 (odd?  (lambda (n) (if (= 0 n) #f (even? (- n 1))))))
          (cons even? odd?))
+       (lambda (z)
+         (letrec ((even? (lambda (n) (if (= z n) #t (odd? (- n 1)))))
+                  (odd?  (lambda (n) (if (= z n) #f (even? (- n 1))))))
+           (cons even? odd?)))
+       (lambda (x)
+         (letrec ((f (lambda (a) (a x)))
+                  (g (lambda () (f (h x))))
+                  (h (lambda (z) (g)))
+                  (q (lambda (y) (+ (vector-length y) 1))))
+           (q (g))))
+       (lambda (x)
+         (letrec ((f (lambda (a) (a x)))
+                  (g (lambda () (f (h x))))
+                  (h (lambda (z) (g)))
+                  (q (lambda (y) (+ (vector-length y) 1))))
+           (vector (q (g)) (q (h (f (g)))))))
+       (lambda (x y)
+         (letrec ((f (lambda (a) (a x)))
+                  (g (lambda () (f (h x))))
+                  (h (lambda (z) (cons (g) y)))
+                  (q (lambda (y) (+ (vector-length y) 1))))
+           (vector (q (g)) (q (h (f (g)))))))
+       (lambda (x y)
+         (letrec ((f (lambda (a) (a x)))
+                  (g (lambda () (f (h x))))
+                  (h (lambda (z) (cons (g) y)))
+                  (q (lambda (y) (+ (vector-length y) 1))))
+           (vector g (q (g)) (q (h (f (g)))))))
 
        (letrec ((a (lambda () (b)))
                 (b (lambda () (c)))
