@@ -61,18 +61,16 @@ and resuming snapshots of a running system.
   - Records are distinct, vector-like types whose fields can be mutable.  They are disjoint from the
     s-expression types.
 - Equality and identity:
-  - Every instance of an opaque type, such as a record or procedure, and every value of a mutable
-    type, such as an mvector or mbytes, including empty ones, has a unique identity.
-  - For two values of types that should have a unique identity, `eqv?` returns `#t` if and only if
-    the values have the same identity.
-  - For any two values that are not structurally equal, `eqv?` returns `#f`.
-  - For any two values that are `()`, `#t`, `#f`, numbers, symbols, or bytess, `eqv?`
-    returns `#t` if the two values are structurally equal.
-  - For two structurally equal values of all other types, `eqv?` may nondeterministically return
-    `#t` or `#f`.  Even if a call to `eqv?` returns `#t` once, the same call could return `#f` in
-    the future.  Even `(eqv? x x)` could theoretically return `#f` for such values.
-    - For instance, `(list (eq? x x) (eq? x x))` for such values could theoretically return any of:
-      `(#t #t)` `(#f #f)` `(#t #f)` `(#f #t)`
+  - For any two values, `eqv?` returns `#t` if they are identical, and `#f` otherwise.
+  - Two values are identical if they were produced by the same evaluation of a constructor.
+  - Two values of a record or mutable type, such as an mvector or mbytes, including empty
+    ones, are identical only if they were both produced by the same evaluation of a constructor.
+  - Two values that are not structurally equal are not identical.
+  - Two values that are structurally equal may be identical even if they were not both produced by
+    the same evaluation of a constructor.  That is, two different evaluations may share an identity.
+  - Two values that are `()`, `#t`, `#f`, numbers, symbols, or bytess (strings), are identical
+    if they are structurally equal.
+  - Two procedures are considered structurally equal if they behave the same way when applied.
   - `eq?` is not provided.
 - There is no primitive character type.  String and bytes are the same type, whose external
   representation assumes a UTF-8 encoding when possible.
