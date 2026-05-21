@@ -20,7 +20,7 @@
 
 ;; TODO: arity is not specific enough
 (splicing-local
-  ((define rtd.primop (make-rtd 'primop 2 #f 'primop))  ; TODO: behavioral properties and open code
+  ((define rtd.primop (make-rtd 'primop '#(#f #f) 'primop))  ; TODO: behavioral properties and open code
    (define primop-ref (rtd-accessor rtd.primop)))
   (define primop  (rtd-constructor rtd.primop))
   (define primop? (rtd-predicate rtd.primop))
