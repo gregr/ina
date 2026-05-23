@@ -20,7 +20,8 @@
 
 ;; TODO: arity is not specific enough
 (splicing-local
-  ((define rtd.primop (make-rtd 'primop '#(#f #f) 'primop))  ; TODO: behavioral properties and open code
+  ((define rtd.primop (make-rtd 'primop '#(#f #f) (lambda (p) (list 'primop (primop-name p)))))
+   ;; TODO: behavioral properties and open code
    (define primop-ref (rtd-accessor rtd.primop)))
   (define primop  (rtd-constructor rtd.primop))
   (define primop? (rtd-predicate rtd.primop))
@@ -50,6 +51,10 @@
       (and (string? x) (string-immediate? x))
       (and (vector? x) (= (vector-length x) 0))))
 
+(define primop.make-closure (primop 'make-closure #f))
+(define primop.closure-ref  (primop 'closure-ref  #f))
+(define primop.closure-set! (primop 'closure-set! #f))
+(define primop.closure-call (primop 'closure-call #f))
 (define procedure->primop
   (let ((proc=>primop
           (map (lambda (n=>p) (cons (cdr n=>p) (primop (car n=>p) #f)))
