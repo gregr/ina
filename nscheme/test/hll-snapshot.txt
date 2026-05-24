@@ -1136,7 +1136,7 @@ HLL-check-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.2
        (case-lambda
@@ -1144,10 +1144,10 @@ HLL-check-letrec:
       (c.3 (ref b.2))
       (d.4
        (if
-        (call (primop mvector-ref) (ref init?.1) (quote 0))
+        (prim-call mvector-ref (ref init?.1) (quote 0))
         (ref e.5)
-        (call
-         (primop panic)
+        (prim-call
+         panic
          (quote #f)
          (quote "referenced uninitialized variable")
          (quote e))))
@@ -1155,7 +1155,7 @@ HLL-check-letrec:
        (let*
         ((_.6 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.6)))))
      (ref c.3)))))
  (quote 1))
@@ -1164,7 +1164,7 @@ HLL-bind-known-lambda:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.2
        (case-lambda
@@ -1172,10 +1172,10 @@ HLL-bind-known-lambda:
       (c.3 (ref b.2))
       (d.4
        (if
-        (call (primop mvector-ref) (ref init?.1) (quote 0))
+        (prim-call mvector-ref (ref init?.1) (quote 0))
         (ref e.5)
-        (call
-         (primop panic)
+        (prim-call
+         panic
          (quote #f)
          (quote "referenced uninitialized variable")
          (quote e))))
@@ -1183,7 +1183,7 @@ HLL-bind-known-lambda:
        (let*
         ((_.6 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.6)))))
      (ref c.3)))))
  (quote 1))
@@ -1192,22 +1192,22 @@ HLL-stratify-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.2 (quote 5)))
      (letrec
       ((d.3
         (if
-         (call (primop mvector-ref) (ref init?.1) (quote 0))
+         (prim-call mvector-ref (ref init?.1) (quote 0))
          (ref e.4)
-         (call
-          (primop panic)
+         (prim-call
+          panic
           (quote #f)
           (quote "referenced uninitialized variable")
           (quote e))))
        (e.4
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.2))))
       (letrec
        ((b.5
@@ -1221,22 +1221,22 @@ HLL-sink-join-points:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.2 (quote 5)))
      (letrec
       ((d.3
         (if
-         (call (primop mvector-ref) (ref init?.1) (quote 0))
+         (prim-call mvector-ref (ref init?.1) (quote 0))
          (ref e.4)
-         (call
-          (primop panic)
+         (prim-call
+          panic
           (quote #f)
           (quote "referenced uninitialized variable")
           (quote e))))
        (e.4
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.2))))
       (letrec
        ((b.5
@@ -1252,45 +1252,45 @@ HLL-convert-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.2 (quote 5)))
      (let*
-      ((d.3 (call (primop make-mvector) (quote 1) (quote #t)))
-       (e.4 (call (primop make-mvector) (quote 1) (quote #t))))
+      ((d.3 (prim-call make-mvector (quote 1) (quote #t)))
+       (e.4 (prim-call make-mvector (quote 1) (quote #t))))
       (begin
-       (call
-        (primop mvector-set!)
+       (prim-call
+        mvector-set!
         (ref d.3)
         (quote 0)
         (if
-         (call (primop mvector-ref) (ref init?.1) (quote 0))
-         (call (primop mvector-ref) (ref e.4) (quote 0))
-         (call
-          (primop panic)
+         (prim-call mvector-ref (ref init?.1) (quote 0))
+         (prim-call mvector-ref (ref e.4) (quote 0))
+         (prim-call
+          panic
           (quote #f)
           (quote "referenced uninitialized variable")
           (quote e))))
-       (call
-        (primop mvector-set!)
+       (prim-call
+        mvector-set!
         (ref e.4)
         (quote 0)
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.2)))
        (let*
-        ((c.5 (call (primop make-mvector) (quote 1) (quote #t))))
+        ((c.5 (prim-call make-mvector (quote 1) (quote #t))))
         (letrec
          ((b.6
            (case-lambda
             (()
              (call
               (quote #<procedure cons>)
-              (call (primop mvector-ref) (ref d.3) (quote 0))
-              (call (primop mvector-ref) (ref c.5) (quote 0)))))))
+              (prim-call mvector-ref (ref d.3) (quote 0))
+              (prim-call mvector-ref (ref c.5) (quote 0)))))))
          (begin
-          (call (primop mvector-set!) (ref c.5) (quote 0) (ref b.6))
-          (call (primop mvector-ref) (ref c.5) (quote 0)))))))))))
+          (prim-call mvector-set! (ref c.5) (quote 0) (ref b.6))
+          (prim-call mvector-ref (ref c.5) (quote 0)))))))))))
  (quote 1))
 HLL-bind-lambda:
 (call
@@ -1299,45 +1299,45 @@ HLL-bind-lambda:
     (case-lambda
      ((a.1)
       (let*
-       ((init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+       ((init?.2 (prim-call make-mvector (quote 1) (quote #f))))
        (let*
         ((_.3 (quote 5)))
         (let*
-         ((d.4 (call (primop make-mvector) (quote 1) (quote #t)))
-          (e.5 (call (primop make-mvector) (quote 1) (quote #t))))
+         ((d.4 (prim-call make-mvector (quote 1) (quote #t)))
+          (e.5 (prim-call make-mvector (quote 1) (quote #t))))
          (begin
-          (call
-           (primop mvector-set!)
+          (prim-call
+           mvector-set!
            (ref d.4)
            (quote 0)
            (if
-            (call (primop mvector-ref) (ref init?.2) (quote 0))
-            (call (primop mvector-ref) (ref e.5) (quote 0))
-            (call
-             (primop panic)
+            (prim-call mvector-ref (ref init?.2) (quote 0))
+            (prim-call mvector-ref (ref e.5) (quote 0))
+            (prim-call
+             panic
              (quote #f)
              (quote "referenced uninitialized variable")
              (quote e))))
-          (call
-           (primop mvector-set!)
+          (prim-call
+           mvector-set!
            (ref e.5)
            (quote 0)
            (begin
-            (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+            (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
             (ref _.3)))
           (let*
-           ((c.6 (call (primop make-mvector) (quote 1) (quote #t))))
+           ((c.6 (prim-call make-mvector (quote 1) (quote #t))))
            (letrec
             ((b.7
               (case-lambda
                (()
                 (call
                  (quote #<procedure cons>)
-                 (call (primop mvector-ref) (ref d.4) (quote 0))
-                 (call (primop mvector-ref) (ref c.6) (quote 0)))))))
+                 (prim-call mvector-ref (ref d.4) (quote 0))
+                 (prim-call mvector-ref (ref c.6) (quote 0)))))))
             (begin
-             (call (primop mvector-set!) (ref c.6) (quote 0) (ref b.7))
-             (call (primop mvector-ref) (ref c.6) (quote 0)))))))))))))
+             (prim-call mvector-set! (ref c.6) (quote 0) (ref b.7))
+             (prim-call mvector-ref (ref c.6) (quote 0)))))))))))))
   (ref _.0))
  (quote 1))
 HLL-procedure=>free-variable*:
@@ -1378,7 +1378,7 @@ HLL-check-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.2
        (case-lambda
@@ -1386,10 +1386,10 @@ HLL-check-letrec:
          (call
           (quote #<procedure cons>)
           (if
-           (call (primop mvector-ref) (ref init?.1) (quote 0))
+           (prim-call mvector-ref (ref init?.1) (quote 0))
            (ref d.5)
-           (call
-            (primop panic)
+           (prim-call
+            panic
             (quote #f)
             (quote "referenced uninitialized variable")
             (quote d)))
@@ -1404,7 +1404,7 @@ HLL-check-letrec:
        (let*
         ((_.6 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.6)))))
      (ref p.4)))))
  (quote 1))
@@ -1413,7 +1413,7 @@ HLL-bind-known-lambda:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.2
        (case-lambda
@@ -1421,10 +1421,10 @@ HLL-bind-known-lambda:
          (call
           (quote #<procedure cons>)
           (if
-           (call (primop mvector-ref) (ref init?.1) (quote 0))
+           (prim-call mvector-ref (ref init?.1) (quote 0))
            (ref d.5)
-           (call
-            (primop panic)
+           (prim-call
+            panic
             (quote #f)
             (quote "referenced uninitialized variable")
             (quote d)))
@@ -1439,7 +1439,7 @@ HLL-bind-known-lambda:
        (let*
         ((_.6 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.6)))))
      (ref p.4)))))
  (quote 1))
@@ -1448,7 +1448,7 @@ HLL-stratify-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.2 (quote 5)))
      (letrec
@@ -1458,10 +1458,10 @@ HLL-stratify-letrec:
           (call
            (quote #<procedure cons>)
            (if
-            (call (primop mvector-ref) (ref init?.1) (quote 0))
+            (prim-call mvector-ref (ref init?.1) (quote 0))
             (ref d.6)
-            (call
-             (primop panic)
+            (prim-call
+             panic
              (quote #f)
              (quote "referenced uninitialized variable")
              (quote d)))
@@ -1474,7 +1474,7 @@ HLL-stratify-letrec:
        (p.5 (call (quote #<procedure cons>) (quote c) (ref c.4)))
        (d.6
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.2))))
       (ref p.5))))))
  (quote 1))
@@ -1483,7 +1483,7 @@ HLL-sink-join-points:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.2 (quote 5)))
      (letrec
@@ -1493,10 +1493,10 @@ HLL-sink-join-points:
           (call
            (quote #<procedure cons>)
            (if
-            (call (primop mvector-ref) (ref init?.1) (quote 0))
+            (prim-call mvector-ref (ref init?.1) (quote 0))
             (ref d.6)
-            (call
-             (primop panic)
+            (prim-call
+             panic
              (quote #f)
              (quote "referenced uninitialized variable")
              (quote d)))
@@ -1509,7 +1509,7 @@ HLL-sink-join-points:
        (p.5 (call (quote #<procedure cons>) (quote c) (ref c.4)))
        (d.6
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.2))))
       (ref p.5))))))
  (quote 1))
@@ -1520,13 +1520,13 @@ HLL-convert-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.2 (quote 5)))
      (let*
-      ((c.3 (call (primop make-mvector) (quote 1) (quote #t)))
-       (p.4 (call (primop make-mvector) (quote 1) (quote #t)))
-       (d.5 (call (primop make-mvector) (quote 1) (quote #t))))
+      ((c.3 (prim-call make-mvector (quote 1) (quote #t)))
+       (p.4 (prim-call make-mvector (quote 1) (quote #t)))
+       (d.5 (prim-call make-mvector (quote 1) (quote #t))))
       (letrec
        ((b.6
          (case-lambda
@@ -1534,39 +1534,39 @@ HLL-convert-letrec:
            (call
             (quote #<procedure cons>)
             (if
-             (call (primop mvector-ref) (ref init?.1) (quote 0))
-             (call (primop mvector-ref) (ref d.5) (quote 0))
-             (call
-              (primop panic)
+             (prim-call mvector-ref (ref init?.1) (quote 0))
+             (prim-call mvector-ref (ref d.5) (quote 0))
+             (prim-call
+              panic
               (quote #f)
               (quote "referenced uninitialized variable")
               (quote d)))
-            (call (primop mvector-ref) (ref c.3) (quote 0)))))))
+            (prim-call mvector-ref (ref c.3) (quote 0)))))))
        (begin
-        (call
-         (primop mvector-set!)
+        (prim-call
+         mvector-set!
          (ref c.3)
          (quote 0)
          (if
           (call (quote #<procedure =>) (ref a.0) (quote 0))
           (quote #f)
           (ref b.6)))
-        (call
-         (primop mvector-set!)
+        (prim-call
+         mvector-set!
          (ref p.4)
          (quote 0)
          (call
           (quote #<procedure cons>)
           (quote c)
-          (call (primop mvector-ref) (ref c.3) (quote 0))))
-        (call
-         (primop mvector-set!)
+          (prim-call mvector-ref (ref c.3) (quote 0))))
+        (prim-call
+         mvector-set!
          (ref d.5)
          (quote 0)
          (begin
-          (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+          (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
           (ref _.2)))
-        (call (primop mvector-ref) (ref p.4) (quote 0)))))))))
+        (prim-call mvector-ref (ref p.4) (quote 0)))))))))
  (quote 1))
 HLL-bind-lambda:
 (call
@@ -1575,13 +1575,13 @@ HLL-bind-lambda:
     (case-lambda
      ((a.1)
       (let*
-       ((init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+       ((init?.2 (prim-call make-mvector (quote 1) (quote #f))))
        (let*
         ((_.3 (quote 5)))
         (let*
-         ((c.4 (call (primop make-mvector) (quote 1) (quote #t)))
-          (p.5 (call (primop make-mvector) (quote 1) (quote #t)))
-          (d.6 (call (primop make-mvector) (quote 1) (quote #t))))
+         ((c.4 (prim-call make-mvector (quote 1) (quote #t)))
+          (p.5 (prim-call make-mvector (quote 1) (quote #t)))
+          (d.6 (prim-call make-mvector (quote 1) (quote #t))))
          (letrec
           ((b.7
             (case-lambda
@@ -1589,39 +1589,39 @@ HLL-bind-lambda:
               (call
                (quote #<procedure cons>)
                (if
-                (call (primop mvector-ref) (ref init?.2) (quote 0))
-                (call (primop mvector-ref) (ref d.6) (quote 0))
-                (call
-                 (primop panic)
+                (prim-call mvector-ref (ref init?.2) (quote 0))
+                (prim-call mvector-ref (ref d.6) (quote 0))
+                (prim-call
+                 panic
                  (quote #f)
                  (quote "referenced uninitialized variable")
                  (quote d)))
-               (call (primop mvector-ref) (ref c.4) (quote 0)))))))
+               (prim-call mvector-ref (ref c.4) (quote 0)))))))
           (begin
-           (call
-            (primop mvector-set!)
+           (prim-call
+            mvector-set!
             (ref c.4)
             (quote 0)
             (if
              (call (quote #<procedure =>) (ref a.1) (quote 0))
              (quote #f)
              (ref b.7)))
-           (call
-            (primop mvector-set!)
+           (prim-call
+            mvector-set!
             (ref p.5)
             (quote 0)
             (call
              (quote #<procedure cons>)
              (quote c)
-             (call (primop mvector-ref) (ref c.4) (quote 0))))
-           (call
-            (primop mvector-set!)
+             (prim-call mvector-ref (ref c.4) (quote 0))))
+           (prim-call
+            mvector-set!
             (ref d.6)
             (quote 0)
             (begin
-             (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+             (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
              (ref _.3)))
-           (call (primop mvector-ref) (ref p.5) (quote 0)))))))))))
+           (prim-call mvector-ref (ref p.5) (quote 0)))))))))))
   (ref _.0))
  (quote 1))
 HLL-procedure=>free-variable*:
@@ -1665,8 +1665,8 @@ HLL-check-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.3
        (case-lambda
@@ -1674,18 +1674,18 @@ HLL-check-letrec:
          (call
           (quote #<procedure cons>)
           (if
-           (call (primop mvector-ref) (ref init?.1) (quote 0))
+           (prim-call mvector-ref (ref init?.1) (quote 0))
            (ref d.7)
-           (call
-            (primop panic)
+           (prim-call
+            panic
             (quote #f)
             (quote "referenced uninitialized variable")
             (quote d)))
           (if
-           (call (primop mvector-ref) (ref init?.2) (quote 0))
+           (prim-call mvector-ref (ref init?.2) (quote 0))
            (ref c.4)
-           (call
-            (primop panic)
+           (prim-call
+            panic
             (quote #f)
             (quote "referenced uninitialized variable")
             (quote c)))))))
@@ -1700,14 +1700,14 @@ HLL-check-letrec:
             (quote #f)
             (ref b.3)))))
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.5))))
       (p.6 (call (quote #<procedure cons>) (quote c) (ref c.4)))
       (d.7
        (let*
         ((_.8 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.8)))))
      (ref p.6)))))
  (quote 1))
@@ -1716,8 +1716,8 @@ HLL-bind-known-lambda:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.3
        (case-lambda
@@ -1725,18 +1725,18 @@ HLL-bind-known-lambda:
          (call
           (quote #<procedure cons>)
           (if
-           (call (primop mvector-ref) (ref init?.1) (quote 0))
+           (prim-call mvector-ref (ref init?.1) (quote 0))
            (ref d.7)
-           (call
-            (primop panic)
+           (prim-call
+            panic
             (quote #f)
             (quote "referenced uninitialized variable")
             (quote d)))
           (if
-           (call (primop mvector-ref) (ref init?.2) (quote 0))
+           (prim-call mvector-ref (ref init?.2) (quote 0))
            (ref c.4)
-           (call
-            (primop panic)
+           (prim-call
+            panic
             (quote #f)
             (quote "referenced uninitialized variable")
             (quote c)))))))
@@ -1751,14 +1751,14 @@ HLL-bind-known-lambda:
             (quote #f)
             (ref b.3)))))
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.5))))
       (p.6 (call (quote #<procedure cons>) (quote c) (ref c.4)))
       (d.7
        (let*
         ((_.8 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.8)))))
      (ref p.6)))))
  (quote 1))
@@ -1767,8 +1767,8 @@ HLL-stratify-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.3 (quote 5)))
      (letrec
@@ -1778,18 +1778,18 @@ HLL-stratify-letrec:
           (call
            (quote #<procedure cons>)
            (if
-            (call (primop mvector-ref) (ref init?.1) (quote 0))
+            (prim-call mvector-ref (ref init?.1) (quote 0))
             (ref d.8)
-            (call
-             (primop panic)
+            (prim-call
+             panic
              (quote #f)
              (quote "referenced uninitialized variable")
              (quote d)))
            (if
-            (call (primop mvector-ref) (ref init?.2) (quote 0))
+            (prim-call mvector-ref (ref init?.2) (quote 0))
             (ref c.6)
-            (call
-             (primop panic)
+            (prim-call
+             panic
              (quote #f)
              (quote "referenced uninitialized variable")
              (quote c)))))))
@@ -1803,12 +1803,12 @@ HLL-stratify-letrec:
           (ref b.4))))
        (c.6
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.5)))
        (p.7 (call (quote #<procedure cons>) (quote c) (ref c.6)))
        (d.8
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.3))))
       (ref p.7))))))
  (quote 1))
@@ -1817,8 +1817,8 @@ HLL-sink-join-points:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.3 (quote 5)))
      (letrec
@@ -1828,18 +1828,18 @@ HLL-sink-join-points:
           (call
            (quote #<procedure cons>)
            (if
-            (call (primop mvector-ref) (ref init?.1) (quote 0))
+            (prim-call mvector-ref (ref init?.1) (quote 0))
             (ref d.8)
-            (call
-             (primop panic)
+            (prim-call
+             panic
              (quote #f)
              (quote "referenced uninitialized variable")
              (quote d)))
            (if
-            (call (primop mvector-ref) (ref init?.2) (quote 0))
+            (prim-call mvector-ref (ref init?.2) (quote 0))
             (ref c.6)
-            (call
-             (primop panic)
+            (prim-call
+             panic
              (quote #f)
              (quote "referenced uninitialized variable")
              (quote c)))))))
@@ -1853,12 +1853,12 @@ HLL-sink-join-points:
           (ref b.4))))
        (c.6
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.5)))
        (p.7 (call (quote #<procedure cons>) (quote c) (ref c.6)))
        (d.8
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.3))))
       (ref p.7))))))
  (quote 1))
@@ -1869,15 +1869,15 @@ HLL-convert-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.3 (quote 5)))
      (let*
-      ((_.4 (call (primop make-mvector) (quote 1) (quote #t)))
-       (c.5 (call (primop make-mvector) (quote 1) (quote #t)))
-       (p.6 (call (primop make-mvector) (quote 1) (quote #t)))
-       (d.7 (call (primop make-mvector) (quote 1) (quote #t))))
+      ((_.4 (prim-call make-mvector (quote 1) (quote #t)))
+       (c.5 (prim-call make-mvector (quote 1) (quote #t)))
+       (p.6 (prim-call make-mvector (quote 1) (quote #t)))
+       (d.7 (prim-call make-mvector (quote 1) (quote #t))))
       (letrec
        ((b.8
          (case-lambda
@@ -1885,24 +1885,24 @@ HLL-convert-letrec:
            (call
             (quote #<procedure cons>)
             (if
-             (call (primop mvector-ref) (ref init?.1) (quote 0))
-             (call (primop mvector-ref) (ref d.7) (quote 0))
-             (call
-              (primop panic)
+             (prim-call mvector-ref (ref init?.1) (quote 0))
+             (prim-call mvector-ref (ref d.7) (quote 0))
+             (prim-call
+              panic
               (quote #f)
               (quote "referenced uninitialized variable")
               (quote d)))
             (if
-             (call (primop mvector-ref) (ref init?.2) (quote 0))
-             (call (primop mvector-ref) (ref c.5) (quote 0))
-             (call
-              (primop panic)
+             (prim-call mvector-ref (ref init?.2) (quote 0))
+             (prim-call mvector-ref (ref c.5) (quote 0))
+             (prim-call
+              panic
               (quote #f)
               (quote "referenced uninitialized variable")
               (quote c))))))))
        (begin
-        (call
-         (primop mvector-set!)
+        (prim-call
+         mvector-set!
          (ref _.4)
          (quote 0)
          (call
@@ -1912,29 +1912,29 @@ HLL-convert-letrec:
            (call (quote #<procedure =>) (ref a.0) (quote 0))
            (quote #f)
            (ref b.8))))
-        (call
-         (primop mvector-set!)
+        (prim-call
+         mvector-set!
          (ref c.5)
          (quote 0)
          (begin
-          (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
-          (call (primop mvector-ref) (ref _.4) (quote 0))))
-        (call
-         (primop mvector-set!)
+          (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
+          (prim-call mvector-ref (ref _.4) (quote 0))))
+        (prim-call
+         mvector-set!
          (ref p.6)
          (quote 0)
          (call
           (quote #<procedure cons>)
           (quote c)
-          (call (primop mvector-ref) (ref c.5) (quote 0))))
-        (call
-         (primop mvector-set!)
+          (prim-call mvector-ref (ref c.5) (quote 0))))
+        (prim-call
+         mvector-set!
          (ref d.7)
          (quote 0)
          (begin
-          (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+          (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
           (ref _.3)))
-        (call (primop mvector-ref) (ref p.6) (quote 0)))))))))
+        (prim-call mvector-ref (ref p.6) (quote 0)))))))))
  (quote 1))
 HLL-bind-lambda:
 (call
@@ -1943,15 +1943,15 @@ HLL-bind-lambda:
     (case-lambda
      ((a.1)
       (let*
-       ((init?.2 (call (primop make-mvector) (quote 1) (quote #f)))
-        (init?.3 (call (primop make-mvector) (quote 1) (quote #f))))
+       ((init?.2 (prim-call make-mvector (quote 1) (quote #f)))
+        (init?.3 (prim-call make-mvector (quote 1) (quote #f))))
        (let*
         ((_.4 (quote 5)))
         (let*
-         ((_.5 (call (primop make-mvector) (quote 1) (quote #t)))
-          (c.6 (call (primop make-mvector) (quote 1) (quote #t)))
-          (p.7 (call (primop make-mvector) (quote 1) (quote #t)))
-          (d.8 (call (primop make-mvector) (quote 1) (quote #t))))
+         ((_.5 (prim-call make-mvector (quote 1) (quote #t)))
+          (c.6 (prim-call make-mvector (quote 1) (quote #t)))
+          (p.7 (prim-call make-mvector (quote 1) (quote #t)))
+          (d.8 (prim-call make-mvector (quote 1) (quote #t))))
          (letrec
           ((b.9
             (case-lambda
@@ -1959,24 +1959,24 @@ HLL-bind-lambda:
               (call
                (quote #<procedure cons>)
                (if
-                (call (primop mvector-ref) (ref init?.2) (quote 0))
-                (call (primop mvector-ref) (ref d.8) (quote 0))
-                (call
-                 (primop panic)
+                (prim-call mvector-ref (ref init?.2) (quote 0))
+                (prim-call mvector-ref (ref d.8) (quote 0))
+                (prim-call
+                 panic
                  (quote #f)
                  (quote "referenced uninitialized variable")
                  (quote d)))
                (if
-                (call (primop mvector-ref) (ref init?.3) (quote 0))
-                (call (primop mvector-ref) (ref c.6) (quote 0))
-                (call
-                 (primop panic)
+                (prim-call mvector-ref (ref init?.3) (quote 0))
+                (prim-call mvector-ref (ref c.6) (quote 0))
+                (prim-call
+                 panic
                  (quote #f)
                  (quote "referenced uninitialized variable")
                  (quote c))))))))
           (begin
-           (call
-            (primop mvector-set!)
+           (prim-call
+            mvector-set!
             (ref _.5)
             (quote 0)
             (call
@@ -1986,29 +1986,29 @@ HLL-bind-lambda:
               (call (quote #<procedure =>) (ref a.1) (quote 0))
               (quote #f)
               (ref b.9))))
-           (call
-            (primop mvector-set!)
+           (prim-call
+            mvector-set!
             (ref c.6)
             (quote 0)
             (begin
-             (call (primop mvector-set!) (ref init?.3) (quote 0) (quote #t))
-             (call (primop mvector-ref) (ref _.5) (quote 0))))
-           (call
-            (primop mvector-set!)
+             (prim-call mvector-set! (ref init?.3) (quote 0) (quote #t))
+             (prim-call mvector-ref (ref _.5) (quote 0))))
+           (prim-call
+            mvector-set!
             (ref p.7)
             (quote 0)
             (call
              (quote #<procedure cons>)
              (quote c)
-             (call (primop mvector-ref) (ref c.6) (quote 0))))
-           (call
-            (primop mvector-set!)
+             (prim-call mvector-ref (ref c.6) (quote 0))))
+           (prim-call
+            mvector-set!
             (ref d.8)
             (quote 0)
             (begin
-             (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+             (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
              (ref _.4)))
-           (call (primop mvector-ref) (ref p.7) (quote 0)))))))))))
+           (prim-call mvector-ref (ref p.7) (quote 0)))))))))))
   (ref _.0))
  (quote 1))
 HLL-procedure=>free-variable*:
@@ -2053,7 +2053,7 @@ HLL-check-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.2
        (case-lambda
@@ -2063,10 +2063,10 @@ HLL-check-letrec:
           (call
            (quote #<procedure cons>)
            (if
-            (call (primop mvector-ref) (ref init?.1) (quote 0))
+            (prim-call mvector-ref (ref init?.1) (quote 0))
             (ref d.6)
-            (call
-             (primop panic)
+            (prim-call
+             panic
              (quote #f)
              (quote "referenced uninitialized variable")
              (quote d)))
@@ -2081,7 +2081,7 @@ HLL-check-letrec:
        (let*
         ((_.7 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.7)))))
      (ref p.5)))))
  (quote 1))
@@ -2090,7 +2090,7 @@ HLL-bind-known-lambda:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.2
        (case-lambda
@@ -2100,10 +2100,10 @@ HLL-bind-known-lambda:
           (call
            (quote #<procedure cons>)
            (if
-            (call (primop mvector-ref) (ref init?.1) (quote 0))
+            (prim-call mvector-ref (ref init?.1) (quote 0))
             (ref d.6)
-            (call
-             (primop panic)
+            (prim-call
+             panic
              (quote #f)
              (quote "referenced uninitialized variable")
              (quote d)))
@@ -2118,7 +2118,7 @@ HLL-bind-known-lambda:
        (let*
         ((_.7 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.7)))))
      (ref p.5)))))
  (quote 1))
@@ -2127,7 +2127,7 @@ HLL-stratify-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.2 (quote 5)))
      (letrec
@@ -2139,10 +2139,10 @@ HLL-stratify-letrec:
            (call
             (quote #<procedure cons>)
             (if
-             (call (primop mvector-ref) (ref init?.1) (quote 0))
+             (prim-call mvector-ref (ref init?.1) (quote 0))
              (ref d.7)
-             (call
-              (primop panic)
+             (prim-call
+              panic
               (quote #f)
               (quote "referenced uninitialized variable")
               (quote d)))
@@ -2155,7 +2155,7 @@ HLL-stratify-letrec:
        (p.6 (call (quote #<procedure cons>) (quote c) (ref c.5)))
        (d.7
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.2))))
       (ref p.6))))))
  (quote 1))
@@ -2164,7 +2164,7 @@ HLL-sink-join-points:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.2 (quote 5)))
      (letrec
@@ -2174,10 +2174,10 @@ HLL-sink-join-points:
           (call
            (quote #<procedure cons>)
            (if
-            (call (primop mvector-ref) (ref init?.1) (quote 0))
+            (prim-call mvector-ref (ref init?.1) (quote 0))
             (ref d.6)
-            (call
-             (primop panic)
+            (prim-call
+             panic
              (quote #f)
              (quote "referenced uninitialized variable")
              (quote d)))
@@ -2190,7 +2190,7 @@ HLL-sink-join-points:
        (p.5 (call (quote #<procedure cons>) (quote c) (ref c.4)))
        (d.6
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.2))))
       (ref p.5))))))
  (quote 1))
@@ -2201,13 +2201,13 @@ HLL-convert-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.2 (quote 5)))
      (let*
-      ((c.3 (call (primop make-mvector) (quote 1) (quote #t)))
-       (p.4 (call (primop make-mvector) (quote 1) (quote #t)))
-       (d.5 (call (primop make-mvector) (quote 1) (quote #t))))
+      ((c.3 (prim-call make-mvector (quote 1) (quote #t)))
+       (p.4 (prim-call make-mvector (quote 1) (quote #t)))
+       (d.5 (prim-call make-mvector (quote 1) (quote #t))))
       (letrec
        ((b.6
          (case-lambda
@@ -2215,39 +2215,39 @@ HLL-convert-letrec:
            (call
             (quote #<procedure cons>)
             (if
-             (call (primop mvector-ref) (ref init?.1) (quote 0))
-             (call (primop mvector-ref) (ref d.5) (quote 0))
-             (call
-              (primop panic)
+             (prim-call mvector-ref (ref init?.1) (quote 0))
+             (prim-call mvector-ref (ref d.5) (quote 0))
+             (prim-call
+              panic
               (quote #f)
               (quote "referenced uninitialized variable")
               (quote d)))
-            (call (primop mvector-ref) (ref c.3) (quote 0)))))))
+            (prim-call mvector-ref (ref c.3) (quote 0)))))))
        (begin
-        (call
-         (primop mvector-set!)
+        (prim-call
+         mvector-set!
          (ref c.3)
          (quote 0)
          (if
           (call (quote #<procedure =>) (ref a.0) (quote 0))
           (quote #f)
           (ref b.6)))
-        (call
-         (primop mvector-set!)
+        (prim-call
+         mvector-set!
          (ref p.4)
          (quote 0)
          (call
           (quote #<procedure cons>)
           (quote c)
-          (call (primop mvector-ref) (ref c.3) (quote 0))))
-        (call
-         (primop mvector-set!)
+          (prim-call mvector-ref (ref c.3) (quote 0))))
+        (prim-call
+         mvector-set!
          (ref d.5)
          (quote 0)
          (begin
-          (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+          (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
           (ref _.2)))
-        (call (primop mvector-ref) (ref p.4) (quote 0)))))))))
+        (prim-call mvector-ref (ref p.4) (quote 0)))))))))
  (quote 1))
 HLL-bind-lambda:
 (call
@@ -2256,13 +2256,13 @@ HLL-bind-lambda:
     (case-lambda
      ((a.1)
       (let*
-       ((init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+       ((init?.2 (prim-call make-mvector (quote 1) (quote #f))))
        (let*
         ((_.3 (quote 5)))
         (let*
-         ((c.4 (call (primop make-mvector) (quote 1) (quote #t)))
-          (p.5 (call (primop make-mvector) (quote 1) (quote #t)))
-          (d.6 (call (primop make-mvector) (quote 1) (quote #t))))
+         ((c.4 (prim-call make-mvector (quote 1) (quote #t)))
+          (p.5 (prim-call make-mvector (quote 1) (quote #t)))
+          (d.6 (prim-call make-mvector (quote 1) (quote #t))))
          (letrec
           ((b.7
             (case-lambda
@@ -2270,39 +2270,39 @@ HLL-bind-lambda:
               (call
                (quote #<procedure cons>)
                (if
-                (call (primop mvector-ref) (ref init?.2) (quote 0))
-                (call (primop mvector-ref) (ref d.6) (quote 0))
-                (call
-                 (primop panic)
+                (prim-call mvector-ref (ref init?.2) (quote 0))
+                (prim-call mvector-ref (ref d.6) (quote 0))
+                (prim-call
+                 panic
                  (quote #f)
                  (quote "referenced uninitialized variable")
                  (quote d)))
-               (call (primop mvector-ref) (ref c.4) (quote 0)))))))
+               (prim-call mvector-ref (ref c.4) (quote 0)))))))
           (begin
-           (call
-            (primop mvector-set!)
+           (prim-call
+            mvector-set!
             (ref c.4)
             (quote 0)
             (if
              (call (quote #<procedure =>) (ref a.1) (quote 0))
              (quote #f)
              (ref b.7)))
-           (call
-            (primop mvector-set!)
+           (prim-call
+            mvector-set!
             (ref p.5)
             (quote 0)
             (call
              (quote #<procedure cons>)
              (quote c)
-             (call (primop mvector-ref) (ref c.4) (quote 0))))
-           (call
-            (primop mvector-set!)
+             (prim-call mvector-ref (ref c.4) (quote 0))))
+           (prim-call
+            mvector-set!
             (ref d.6)
             (quote 0)
             (begin
-             (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+             (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
              (ref _.3)))
-           (call (primop mvector-ref) (ref p.5) (quote 0)))))))))))
+           (prim-call mvector-ref (ref p.5) (quote 0)))))))))))
   (ref _.0))
  (quote 1))
 HLL-procedure=>free-variable*:
@@ -2350,8 +2350,8 @@ HLL-check-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.3
        (case-lambda
@@ -2361,10 +2361,10 @@ HLL-check-letrec:
             (case-lambda
              (()
               (if
-               (call (primop mvector-ref) (ref init?.2) (quote 0))
+               (prim-call mvector-ref (ref init?.2) (quote 0))
                (ref p.6)
-               (call
-                (primop panic)
+               (prim-call
+                panic
                 (quote #f)
                 (quote "referenced uninitialized variable")
                 (quote p)))))))
@@ -2373,10 +2373,10 @@ HLL-check-letrec:
            (call
             (quote #<procedure cons>)
             (if
-             (call (primop mvector-ref) (ref init?.1) (quote 0))
+             (prim-call mvector-ref (ref init?.1) (quote 0))
              (ref d.8)
-             (call
-              (primop panic)
+             (prim-call
+              panic
               (quote #f)
               (quote "referenced uninitialized variable")
               (quote d)))
@@ -2391,13 +2391,13 @@ HLL-check-letrec:
        (let*
         ((_.7 (call (quote #<procedure cons>) (quote c) (ref c.5))))
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.7))))
       (d.8
        (let*
         ((_.9 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.9)))))
      (ref p.6)))))
  (quote 1))
@@ -2406,8 +2406,8 @@ HLL-bind-known-lambda:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.3
        (case-lambda
@@ -2417,10 +2417,10 @@ HLL-bind-known-lambda:
             (case-lambda
              (()
               (if
-               (call (primop mvector-ref) (ref init?.2) (quote 0))
+               (prim-call mvector-ref (ref init?.2) (quote 0))
                (ref p.6)
-               (call
-                (primop panic)
+               (prim-call
+                panic
                 (quote #f)
                 (quote "referenced uninitialized variable")
                 (quote p)))))))
@@ -2429,10 +2429,10 @@ HLL-bind-known-lambda:
            (call
             (quote #<procedure cons>)
             (if
-             (call (primop mvector-ref) (ref init?.1) (quote 0))
+             (prim-call mvector-ref (ref init?.1) (quote 0))
              (ref d.8)
-             (call
-              (primop panic)
+             (prim-call
+              panic
               (quote #f)
               (quote "referenced uninitialized variable")
               (quote d)))
@@ -2447,13 +2447,13 @@ HLL-bind-known-lambda:
        (let*
         ((_.7 (call (quote #<procedure cons>) (quote c) (ref c.5))))
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.7))))
       (d.8
        (let*
         ((_.9 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.9)))))
      (ref p.6)))))
  (quote 1))
@@ -2462,8 +2462,8 @@ HLL-stratify-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.3 (quote 5)))
      (letrec
@@ -2475,10 +2475,10 @@ HLL-stratify-letrec:
              (case-lambda
               (()
                (if
-                (call (primop mvector-ref) (ref init?.2) (quote 0))
+                (prim-call mvector-ref (ref init?.2) (quote 0))
                 (ref p.8)
-                (call
-                 (primop panic)
+                (prim-call
+                 panic
                  (quote #f)
                  (quote "referenced uninitialized variable")
                  (quote p)))))))
@@ -2487,10 +2487,10 @@ HLL-stratify-letrec:
             (call
              (quote #<procedure cons>)
              (if
-              (call (primop mvector-ref) (ref init?.1) (quote 0))
+              (prim-call mvector-ref (ref init?.1) (quote 0))
               (ref d.9)
-              (call
-               (primop panic)
+              (prim-call
+               panic
                (quote #f)
                (quote "referenced uninitialized variable")
                (quote d)))
@@ -2504,11 +2504,11 @@ HLL-stratify-letrec:
        (_.7 (call (quote #<procedure cons>) (quote c) (ref c.6)))
        (p.8
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.7)))
        (d.9
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.3))))
       (ref p.8))))))
  (quote 1))
@@ -2517,8 +2517,8 @@ HLL-sink-join-points:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.3 (quote 5)))
      (letrec
@@ -2530,10 +2530,10 @@ HLL-sink-join-points:
              (case-lambda
               (()
                (if
-                (call (primop mvector-ref) (ref init?.2) (quote 0))
+                (prim-call mvector-ref (ref init?.2) (quote 0))
                 (ref p.8)
-                (call
-                 (primop panic)
+                (prim-call
+                 panic
                  (quote #f)
                  (quote "referenced uninitialized variable")
                  (quote p)))))))
@@ -2542,10 +2542,10 @@ HLL-sink-join-points:
             (call
              (quote #<procedure cons>)
              (if
-              (call (primop mvector-ref) (ref init?.1) (quote 0))
+              (prim-call mvector-ref (ref init?.1) (quote 0))
               (ref d.9)
-              (call
-               (primop panic)
+              (prim-call
+               panic
                (quote #f)
                (quote "referenced uninitialized variable")
                (quote d)))
@@ -2559,11 +2559,11 @@ HLL-sink-join-points:
        (_.7 (call (quote #<procedure cons>) (quote c) (ref c.6)))
        (p.8
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.7)))
        (d.9
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.3))))
       (ref p.8))))))
  (quote 1))
@@ -2574,15 +2574,15 @@ HLL-convert-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.3 (quote 5)))
      (let*
-      ((c.4 (call (primop make-mvector) (quote 1) (quote #t)))
-       (_.5 (call (primop make-mvector) (quote 1) (quote #t)))
-       (p.6 (call (primop make-mvector) (quote 1) (quote #t)))
-       (d.7 (call (primop make-mvector) (quote 1) (quote #t))))
+      ((c.4 (prim-call make-mvector (quote 1) (quote #t)))
+       (_.5 (prim-call make-mvector (quote 1) (quote #t)))
+       (p.6 (prim-call make-mvector (quote 1) (quote #t)))
+       (d.7 (prim-call make-mvector (quote 1) (quote #t))))
       (letrec
        ((b.8
          (case-lambda
@@ -2592,10 +2592,10 @@ HLL-convert-letrec:
               (case-lambda
                (()
                 (if
-                 (call (primop mvector-ref) (ref init?.2) (quote 0))
-                 (call (primop mvector-ref) (ref p.6) (quote 0))
-                 (call
-                  (primop panic)
+                 (prim-call mvector-ref (ref init?.2) (quote 0))
+                 (prim-call mvector-ref (ref p.6) (quote 0))
+                 (prim-call
+                  panic
                   (quote #f)
                   (quote "referenced uninitialized variable")
                   (quote p)))))))
@@ -2604,47 +2604,47 @@ HLL-convert-letrec:
              (call
               (quote #<procedure cons>)
               (if
-               (call (primop mvector-ref) (ref init?.1) (quote 0))
-               (call (primop mvector-ref) (ref d.7) (quote 0))
-               (call
-                (primop panic)
+               (prim-call mvector-ref (ref init?.1) (quote 0))
+               (prim-call mvector-ref (ref d.7) (quote 0))
+               (prim-call
+                panic
                 (quote #f)
                 (quote "referenced uninitialized variable")
                 (quote d)))
-              (call (primop mvector-ref) (ref c.4) (quote 0)))
+              (prim-call mvector-ref (ref c.4) (quote 0)))
              (ref z.9)))))))
        (begin
-        (call
-         (primop mvector-set!)
+        (prim-call
+         mvector-set!
          (ref c.4)
          (quote 0)
          (if
           (call (quote #<procedure =>) (ref a.0) (quote 0))
           (quote #f)
           (ref b.8)))
-        (call
-         (primop mvector-set!)
+        (prim-call
+         mvector-set!
          (ref _.5)
          (quote 0)
          (call
           (quote #<procedure cons>)
           (quote c)
-          (call (primop mvector-ref) (ref c.4) (quote 0))))
-        (call
-         (primop mvector-set!)
+          (prim-call mvector-ref (ref c.4) (quote 0))))
+        (prim-call
+         mvector-set!
          (ref p.6)
          (quote 0)
          (begin
-          (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
-          (call (primop mvector-ref) (ref _.5) (quote 0))))
-        (call
-         (primop mvector-set!)
+          (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
+          (prim-call mvector-ref (ref _.5) (quote 0))))
+        (prim-call
+         mvector-set!
          (ref d.7)
          (quote 0)
          (begin
-          (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+          (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
           (ref _.3)))
-        (call (primop mvector-ref) (ref p.6) (quote 0)))))))))
+        (prim-call mvector-ref (ref p.6) (quote 0)))))))))
  (quote 1))
 HLL-bind-lambda:
 (call
@@ -2653,15 +2653,15 @@ HLL-bind-lambda:
     (case-lambda
      ((a.1)
       (let*
-       ((init?.2 (call (primop make-mvector) (quote 1) (quote #f)))
-        (init?.3 (call (primop make-mvector) (quote 1) (quote #f))))
+       ((init?.2 (prim-call make-mvector (quote 1) (quote #f)))
+        (init?.3 (prim-call make-mvector (quote 1) (quote #f))))
        (let*
         ((_.4 (quote 5)))
         (let*
-         ((c.5 (call (primop make-mvector) (quote 1) (quote #t)))
-          (_.6 (call (primop make-mvector) (quote 1) (quote #t)))
-          (p.7 (call (primop make-mvector) (quote 1) (quote #t)))
-          (d.8 (call (primop make-mvector) (quote 1) (quote #t))))
+         ((c.5 (prim-call make-mvector (quote 1) (quote #t)))
+          (_.6 (prim-call make-mvector (quote 1) (quote #t)))
+          (p.7 (prim-call make-mvector (quote 1) (quote #t)))
+          (d.8 (prim-call make-mvector (quote 1) (quote #t))))
          (letrec
           ((b.9
             (case-lambda
@@ -2671,10 +2671,10 @@ HLL-bind-lambda:
                  (case-lambda
                   (()
                    (if
-                    (call (primop mvector-ref) (ref init?.3) (quote 0))
-                    (call (primop mvector-ref) (ref p.7) (quote 0))
-                    (call
-                     (primop panic)
+                    (prim-call mvector-ref (ref init?.3) (quote 0))
+                    (prim-call mvector-ref (ref p.7) (quote 0))
+                    (prim-call
+                     panic
                      (quote #f)
                      (quote "referenced uninitialized variable")
                      (quote p)))))))
@@ -2683,47 +2683,47 @@ HLL-bind-lambda:
                 (call
                  (quote #<procedure cons>)
                  (if
-                  (call (primop mvector-ref) (ref init?.2) (quote 0))
-                  (call (primop mvector-ref) (ref d.8) (quote 0))
-                  (call
-                   (primop panic)
+                  (prim-call mvector-ref (ref init?.2) (quote 0))
+                  (prim-call mvector-ref (ref d.8) (quote 0))
+                  (prim-call
+                   panic
                    (quote #f)
                    (quote "referenced uninitialized variable")
                    (quote d)))
-                 (call (primop mvector-ref) (ref c.5) (quote 0)))
+                 (prim-call mvector-ref (ref c.5) (quote 0)))
                 (ref z.10)))))))
           (begin
-           (call
-            (primop mvector-set!)
+           (prim-call
+            mvector-set!
             (ref c.5)
             (quote 0)
             (if
              (call (quote #<procedure =>) (ref a.1) (quote 0))
              (quote #f)
              (ref b.9)))
-           (call
-            (primop mvector-set!)
+           (prim-call
+            mvector-set!
             (ref _.6)
             (quote 0)
             (call
              (quote #<procedure cons>)
              (quote c)
-             (call (primop mvector-ref) (ref c.5) (quote 0))))
-           (call
-            (primop mvector-set!)
+             (prim-call mvector-ref (ref c.5) (quote 0))))
+           (prim-call
+            mvector-set!
             (ref p.7)
             (quote 0)
             (begin
-             (call (primop mvector-set!) (ref init?.3) (quote 0) (quote #t))
-             (call (primop mvector-ref) (ref _.6) (quote 0))))
-           (call
-            (primop mvector-set!)
+             (prim-call mvector-set! (ref init?.3) (quote 0) (quote #t))
+             (prim-call mvector-ref (ref _.6) (quote 0))))
+           (prim-call
+            mvector-set!
             (ref d.8)
             (quote 0)
             (begin
-             (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+             (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
              (ref _.4)))
-           (call (primop mvector-ref) (ref p.7) (quote 0)))))))))))
+           (prim-call mvector-ref (ref p.7) (quote 0)))))))))))
   (ref _.0))
  (quote 1))
 HLL-procedure=>free-variable*:
@@ -2775,8 +2775,8 @@ HLL-check-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.3
        (case-lambda
@@ -2786,10 +2786,10 @@ HLL-check-letrec:
             (case-lambda
              (()
               (if
-               (call (primop mvector-ref) (ref init?.2) (quote 0))
+               (prim-call mvector-ref (ref init?.2) (quote 0))
                (ref p.6)
-               (call
-                (primop panic)
+               (prim-call
+                panic
                 (quote #f)
                 (quote "referenced uninitialized variable")
                 (quote p)))))))
@@ -2800,10 +2800,10 @@ HLL-check-letrec:
              (call
               (quote #<procedure cons>)
               (if
-               (call (primop mvector-ref) (ref init?.1) (quote 0))
+               (prim-call mvector-ref (ref init?.1) (quote 0))
                (ref d.8)
-               (call
-                (primop panic)
+               (prim-call
+                panic
                 (quote #f)
                 (quote "referenced uninitialized variable")
                 (quote d)))
@@ -2818,13 +2818,13 @@ HLL-check-letrec:
        (let*
         ((_.7 (call (quote #<procedure cons>) (quote c) (ref c.5))))
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.7))))
       (d.8
        (let*
         ((_.9 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.9)))))
      (ref p.6)))))
  (quote 1))
@@ -2833,8 +2833,8 @@ HLL-bind-known-lambda:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (letrec
      ((b.3
        (case-lambda
@@ -2844,10 +2844,10 @@ HLL-bind-known-lambda:
             (case-lambda
              (()
               (if
-               (call (primop mvector-ref) (ref init?.2) (quote 0))
+               (prim-call mvector-ref (ref init?.2) (quote 0))
                (ref p.6)
-               (call
-                (primop panic)
+               (prim-call
+                panic
                 (quote #f)
                 (quote "referenced uninitialized variable")
                 (quote p)))))))
@@ -2858,10 +2858,10 @@ HLL-bind-known-lambda:
              (call
               (quote #<procedure cons>)
               (if
-               (call (primop mvector-ref) (ref init?.1) (quote 0))
+               (prim-call mvector-ref (ref init?.1) (quote 0))
                (ref d.8)
-               (call
-                (primop panic)
+               (prim-call
+                panic
                 (quote #f)
                 (quote "referenced uninitialized variable")
                 (quote d)))
@@ -2876,13 +2876,13 @@ HLL-bind-known-lambda:
        (let*
         ((_.7 (call (quote #<procedure cons>) (quote c) (ref c.5))))
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.7))))
       (d.8
        (let*
         ((_.9 (quote 5)))
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.9)))))
      (ref p.6)))))
  (quote 1))
@@ -2891,8 +2891,8 @@ HLL-stratify-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.3 (quote 5)))
      (letrec
@@ -2904,10 +2904,10 @@ HLL-stratify-letrec:
              (case-lambda
               (()
                (if
-                (call (primop mvector-ref) (ref init?.2) (quote 0))
+                (prim-call mvector-ref (ref init?.2) (quote 0))
                 (ref p.8)
-                (call
-                 (primop panic)
+                (prim-call
+                 panic
                  (quote #f)
                  (quote "referenced uninitialized variable")
                  (quote p)))))))
@@ -2918,10 +2918,10 @@ HLL-stratify-letrec:
               (call
                (quote #<procedure cons>)
                (if
-                (call (primop mvector-ref) (ref init?.1) (quote 0))
+                (prim-call mvector-ref (ref init?.1) (quote 0))
                 (ref d.9)
-                (call
-                 (primop panic)
+                (prim-call
+                 panic
                  (quote #f)
                  (quote "referenced uninitialized variable")
                  (quote d)))
@@ -2935,11 +2935,11 @@ HLL-stratify-letrec:
        (_.7 (call (quote #<procedure cons>) (quote c) (ref c.6)))
        (p.8
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.7)))
        (d.9
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.3))))
       (ref p.8))))))
  (quote 1))
@@ -2948,8 +2948,8 @@ HLL-sink-join-points:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.3 (quote 5)))
      (letrec
@@ -2961,10 +2961,10 @@ HLL-sink-join-points:
              (case-lambda
               (()
                (if
-                (call (primop mvector-ref) (ref init?.2) (quote 0))
+                (prim-call mvector-ref (ref init?.2) (quote 0))
                 (ref p.8)
-                (call
-                 (primop panic)
+                (prim-call
+                 panic
                  (quote #f)
                  (quote "referenced uninitialized variable")
                  (quote p)))))))
@@ -2975,10 +2975,10 @@ HLL-sink-join-points:
               (call
                (quote #<procedure cons>)
                (if
-                (call (primop mvector-ref) (ref init?.1) (quote 0))
+                (prim-call mvector-ref (ref init?.1) (quote 0))
                 (ref d.9)
-                (call
-                 (primop panic)
+                (prim-call
+                 panic
                  (quote #f)
                  (quote "referenced uninitialized variable")
                  (quote d)))
@@ -2992,11 +2992,11 @@ HLL-sink-join-points:
        (_.7 (call (quote #<procedure cons>) (quote c) (ref c.6)))
        (p.8
         (begin
-         (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
          (ref _.7)))
        (d.9
         (begin
-         (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+         (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
          (ref _.3))))
       (ref p.8))))))
  (quote 1))
@@ -3007,15 +3007,15 @@ HLL-convert-letrec:
  (case-lambda
   ((a.0)
    (let*
-    ((init?.1 (call (primop make-mvector) (quote 1) (quote #f)))
-     (init?.2 (call (primop make-mvector) (quote 1) (quote #f))))
+    ((init?.1 (prim-call make-mvector (quote 1) (quote #f)))
+     (init?.2 (prim-call make-mvector (quote 1) (quote #f))))
     (let*
      ((_.3 (quote 5)))
      (let*
-      ((c.4 (call (primop make-mvector) (quote 1) (quote #t)))
-       (_.5 (call (primop make-mvector) (quote 1) (quote #t)))
-       (p.6 (call (primop make-mvector) (quote 1) (quote #t)))
-       (d.7 (call (primop make-mvector) (quote 1) (quote #t))))
+      ((c.4 (prim-call make-mvector (quote 1) (quote #t)))
+       (_.5 (prim-call make-mvector (quote 1) (quote #t)))
+       (p.6 (prim-call make-mvector (quote 1) (quote #t)))
+       (d.7 (prim-call make-mvector (quote 1) (quote #t))))
       (letrec
        ((b.8
          (case-lambda
@@ -3025,10 +3025,10 @@ HLL-convert-letrec:
               (case-lambda
                (()
                 (if
-                 (call (primop mvector-ref) (ref init?.2) (quote 0))
-                 (call (primop mvector-ref) (ref p.6) (quote 0))
-                 (call
-                  (primop panic)
+                 (prim-call mvector-ref (ref init?.2) (quote 0))
+                 (prim-call mvector-ref (ref p.6) (quote 0))
+                 (prim-call
+                  panic
                   (quote #f)
                   (quote "referenced uninitialized variable")
                   (quote p)))))))
@@ -3039,47 +3039,47 @@ HLL-convert-letrec:
                (call
                 (quote #<procedure cons>)
                 (if
-                 (call (primop mvector-ref) (ref init?.1) (quote 0))
-                 (call (primop mvector-ref) (ref d.7) (quote 0))
-                 (call
-                  (primop panic)
+                 (prim-call mvector-ref (ref init?.1) (quote 0))
+                 (prim-call mvector-ref (ref d.7) (quote 0))
+                 (prim-call
+                  panic
                   (quote #f)
                   (quote "referenced uninitialized variable")
                   (quote d)))
-                (call (primop mvector-ref) (ref c.4) (quote 0)))
+                (prim-call mvector-ref (ref c.4) (quote 0)))
                (ref z.9)))))))))
        (begin
-        (call
-         (primop mvector-set!)
+        (prim-call
+         mvector-set!
          (ref c.4)
          (quote 0)
          (if
           (call (quote #<procedure =>) (ref a.0) (quote 0))
           (quote #f)
           (ref b.8)))
-        (call
-         (primop mvector-set!)
+        (prim-call
+         mvector-set!
          (ref _.5)
          (quote 0)
          (call
           (quote #<procedure cons>)
           (quote c)
-          (call (primop mvector-ref) (ref c.4) (quote 0))))
-        (call
-         (primop mvector-set!)
+          (prim-call mvector-ref (ref c.4) (quote 0))))
+        (prim-call
+         mvector-set!
          (ref p.6)
          (quote 0)
          (begin
-          (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
-          (call (primop mvector-ref) (ref _.5) (quote 0))))
-        (call
-         (primop mvector-set!)
+          (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
+          (prim-call mvector-ref (ref _.5) (quote 0))))
+        (prim-call
+         mvector-set!
          (ref d.7)
          (quote 0)
          (begin
-          (call (primop mvector-set!) (ref init?.1) (quote 0) (quote #t))
+          (prim-call mvector-set! (ref init?.1) (quote 0) (quote #t))
           (ref _.3)))
-        (call (primop mvector-ref) (ref p.6) (quote 0)))))))))
+        (prim-call mvector-ref (ref p.6) (quote 0)))))))))
  (quote 1))
 HLL-bind-lambda:
 (call
@@ -3088,15 +3088,15 @@ HLL-bind-lambda:
     (case-lambda
      ((a.1)
       (let*
-       ((init?.2 (call (primop make-mvector) (quote 1) (quote #f)))
-        (init?.3 (call (primop make-mvector) (quote 1) (quote #f))))
+       ((init?.2 (prim-call make-mvector (quote 1) (quote #f)))
+        (init?.3 (prim-call make-mvector (quote 1) (quote #f))))
        (let*
         ((_.4 (quote 5)))
         (let*
-         ((c.5 (call (primop make-mvector) (quote 1) (quote #t)))
-          (_.6 (call (primop make-mvector) (quote 1) (quote #t)))
-          (p.7 (call (primop make-mvector) (quote 1) (quote #t)))
-          (d.8 (call (primop make-mvector) (quote 1) (quote #t))))
+         ((c.5 (prim-call make-mvector (quote 1) (quote #t)))
+          (_.6 (prim-call make-mvector (quote 1) (quote #t)))
+          (p.7 (prim-call make-mvector (quote 1) (quote #t)))
+          (d.8 (prim-call make-mvector (quote 1) (quote #t))))
          (letrec
           ((b.9
             (case-lambda
@@ -3106,10 +3106,10 @@ HLL-bind-lambda:
                  (case-lambda
                   (()
                    (if
-                    (call (primop mvector-ref) (ref init?.3) (quote 0))
-                    (call (primop mvector-ref) (ref p.7) (quote 0))
-                    (call
-                     (primop panic)
+                    (prim-call mvector-ref (ref init?.3) (quote 0))
+                    (prim-call mvector-ref (ref p.7) (quote 0))
+                    (prim-call
+                     panic
                      (quote #f)
                      (quote "referenced uninitialized variable")
                      (quote p)))))))
@@ -3122,48 +3122,48 @@ HLL-bind-lambda:
                      (call
                       (quote #<procedure cons>)
                       (if
-                       (call (primop mvector-ref) (ref init?.2) (quote 0))
-                       (call (primop mvector-ref) (ref d.8) (quote 0))
-                       (call
-                        (primop panic)
+                       (prim-call mvector-ref (ref init?.2) (quote 0))
+                       (prim-call mvector-ref (ref d.8) (quote 0))
+                       (prim-call
+                        panic
                         (quote #f)
                         (quote "referenced uninitialized variable")
                         (quote d)))
-                      (call (primop mvector-ref) (ref c.5) (quote 0)))
+                      (prim-call mvector-ref (ref c.5) (quote 0)))
                      (ref z.10))))))
                 (ref _.11)))))))
           (begin
-           (call
-            (primop mvector-set!)
+           (prim-call
+            mvector-set!
             (ref c.5)
             (quote 0)
             (if
              (call (quote #<procedure =>) (ref a.1) (quote 0))
              (quote #f)
              (ref b.9)))
-           (call
-            (primop mvector-set!)
+           (prim-call
+            mvector-set!
             (ref _.6)
             (quote 0)
             (call
              (quote #<procedure cons>)
              (quote c)
-             (call (primop mvector-ref) (ref c.5) (quote 0))))
-           (call
-            (primop mvector-set!)
+             (prim-call mvector-ref (ref c.5) (quote 0))))
+           (prim-call
+            mvector-set!
             (ref p.7)
             (quote 0)
             (begin
-             (call (primop mvector-set!) (ref init?.3) (quote 0) (quote #t))
-             (call (primop mvector-ref) (ref _.6) (quote 0))))
-           (call
-            (primop mvector-set!)
+             (prim-call mvector-set! (ref init?.3) (quote 0) (quote #t))
+             (prim-call mvector-ref (ref _.6) (quote 0))))
+           (prim-call
+            mvector-set!
             (ref d.8)
             (quote 0)
             (begin
-             (call (primop mvector-set!) (ref init?.2) (quote 0) (quote #t))
+             (prim-call mvector-set! (ref init?.2) (quote 0) (quote #t))
              (ref _.4)))
-           (call (primop mvector-ref) (ref p.7) (quote 0)))))))))))
+           (prim-call mvector-ref (ref p.7) (quote 0)))))))))))
   (ref _.0))
  (quote 1))
 HLL-procedure=>free-variable*:
@@ -7385,13 +7385,10 @@ HLL-bind-known-lambda:
       (ref abx.1)
       (quote 1)
       (quote 2)
-      (call
-       (primop cons)
+      (prim-call
+       cons
        (quote 3)
-       (call
-        (primop cons)
-        (quote 4)
-        (call (primop cons) (quote 5) (quote ())))))
+       (prim-call cons (quote 4) (prim-call cons (quote 5) (quote ())))))
      (call (ref f.11) (quote 6))
      (ref e.5)
      (ref g.17)))))
@@ -7445,13 +7442,10 @@ HLL-stratify-letrec:
         (ref abx.1)
         (quote 1)
         (quote 2)
-        (call
-         (primop cons)
+        (prim-call
+         cons
          (quote 3)
-         (call
-          (primop cons)
-          (quote 4)
-          (call (primop cons) (quote 5) (quote ())))))
+         (prim-call cons (quote 4) (prim-call cons (quote 5) (quote ())))))
        (call (ref f.17) (quote 6))
        (ref e.14)
        (ref g.20)))))))
@@ -7505,13 +7499,10 @@ HLL-sink-join-points:
         (ref abx.16)
         (quote 1)
         (quote 2)
-        (call
-         (primop cons)
+        (prim-call
+         cons
          (quote 3)
-         (call
-          (primop cons)
-          (quote 4)
-          (call (primop cons) (quote 5) (quote ()))))))
+         (prim-call cons (quote 4) (prim-call cons (quote 5) (quote ()))))))
       (let*
        ((f.20
          (case-lambda
@@ -7572,13 +7563,10 @@ HLL-convert-letrec:
         (ref abx.16)
         (quote 1)
         (quote 2)
-        (call
-         (primop cons)
+        (prim-call
+         cons
          (quote 3)
-         (call
-          (primop cons)
-          (quote 4)
-          (call (primop cons) (quote 5) (quote ()))))))
+         (prim-call cons (quote 4) (prim-call cons (quote 5) (quote ()))))))
       (let*
        ((f.20
          (case-lambda
@@ -7649,13 +7637,13 @@ HLL-bind-lambda:
             (ref abx.17)
             (quote 1)
             (quote 2)
-            (call
-             (primop cons)
+            (prim-call
+             cons
              (quote 3)
-             (call
-              (primop cons)
+             (prim-call
+              cons
               (quote 4)
-              (call (primop cons) (quote 5) (quote ()))))))
+              (prim-call cons (quote 5) (quote ()))))))
           (letrec
            ((f.21
              (case-lambda

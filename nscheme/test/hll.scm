@@ -177,7 +177,7 @@
         (HLL-distinguish-variable-names! P)
         (pretty-write (HLL-pretty P))
         (displayln "HLL-procedure=>free-variable*:")
-        (let ((lhs=>free*  (HLL-procedure=>free-variable* P)))
+        (let ((lhs=>free* (HLL-procedure=>free-variable* P)))
           (alist-for-each
             (lambda (lhs free*) (pretty-write (list (hllvar-name lhs) (map hllvar-name free*))))
             lhs=>free*)
