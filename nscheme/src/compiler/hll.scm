@@ -4,7 +4,7 @@
 ;;; HLL ;;;
 ;;;;;;;;;;;
 ;; Expr               ::= #(ref          Note Var)
-;;                      | #(primop       Note <primop>)
+;;                      | #(prim-ref     Note <primop>)
 ;;                      | #(quote        Note <value>)
 ;;                      | #(if           Note Expr Expr Expr)
 ;;                      | #(begin        Note Expr^ Expr)
@@ -26,7 +26,7 @@
 ;; Var                ::= <hllvar>
 ;; Note               ::= <value>
 (define (HLL:ref          note var)         (vector 'ref          note var))
-(define (HLL:primop       note p)           (vector 'primop       note p))
+(define (HLL:prim-ref     note p)           (vector 'prim-ref     note p))
 (define (HLL:quote        note val)         (vector 'quote        note val))
 (define (HLL:if           note c t f)       (vector 'if           note c t f))
 (define (HLL:begin        note e^ e)        (vector 'begin        note e^ e))
@@ -144,12 +144,12 @@
 
 (splicing-local
   ((define-syntax HLL-case-build
-     (syntax-rules (ref primop quote if begin call prim-call case-lambda letrec let* apply/values
+     (syntax-rules (ref prim-ref quote if begin call prim-call case-lambda letrec let* apply/values
                         case-values late)
        ((_ x (((ref a) . body) . clause*) v1* v2* v3*)
         (HLL-case-build x clause* ((ref . (lambda (a) . body)) . v1*) v2* v3*))
-       ((_ x (((primop a) . body) . clause*) v1* v2* v3*)
-        (HLL-case-build x clause* ((primop . (lambda (a) . body)) . v1*) v2* v3*))
+       ((_ x (((prim-ref a) . body) . clause*) v1* v2* v3*)
+        (HLL-case-build x clause* ((prim-ref . (lambda (a) . body)) . v1*) v2* v3*))
        ((_ x (((quote a) . body) . clause*) v1* v2* v3*)
         (HLL-case-build x clause* ((quote . (lambda (a) . body)) . v1*) v2* v3*))
        ((_ x (((case-lambda a) . body) . clause*) v1* v2* v3*)
@@ -196,12 +196,12 @@
 
 (splicing-local
   ((define-syntax Expr/note
-     (syntax-rules (unquote /note ref primop quote if begin call prim-call case-lambda lambda
+     (syntax-rules (unquote /note ref prim-ref quote if begin call prim-call case-lambda lambda
                             letrec let* apply/values case-values apply values panic
                             box unbox set-box! cons list)
        ((_ note ,x)                             x)
        ((_ note (ref ,v))                       (HLL:ref note v))
-       ((_ note (primop ,p))                    (HLL:primop note p))
+       ((_ note (prim-ref ,p))                  (HLL:prim-ref note p))
        ((_ note (quote ,v))                     (HLL:quote note v))
        ((_ note (quote v))                      (HLL:quote note 'v))
        ((_ note (if c t f))                     (HLL:if note (Expr c) (Expr t) (Expr f)))
@@ -262,10 +262,10 @@
 (define (HLL-pure? x)
   (HLL-case
     x
-    ((ref _) #t) ((primop _) #t) ((quote _) #t) ((case-lambda _) #t)
+    ((ref _) #t) ((prim-ref _) #t) ((quote _) #t) ((case-lambda _) #t)
     ((if c t f) (and (HLL-pure? c) (HLL-pure? t) (HLL-pure? f)))
     ((late &e) (HLL-pure? (unbox &e)))
-    ;; TODO: some primop calls can also be #t
+    ;; TODO: prim-call might also be #t
     (_ #f)))
 
 (define (HLL-initialize P)
@@ -312,7 +312,7 @@
                                    (unless (hllvar? new) (fail "unbound Var" v x ctx))
                                    (inc-hllvar-refcount! new)
                                    (HLL:ref note new)))
-      ((primop p)                (primop?! p) x)
+      ((prim-ref p)              (primop?! p) x)
       ((quote val)               x)
       ((if c t f)                (HLL:if note (Expr/ctx x c) (Expr/ctx x t) (Expr/ctx x f)))
       ((begin e^ e)              (HLL:begin note (Expr^/ctx x e^) (Expr/ctx x e)))
@@ -345,7 +345,7 @@
     (HLL-case
       x
       ((ref v)                   (inc-hllvar-refcount! v))
-      ((primop _)                (values))
+      ((prim-ref _)              (values))
       ((quote v)                 (values))
       ((if c t f)                (Expr c) (Expr t) (Expr f))
       ((begin e^ e)              (tree-for-each Expr e^) (Expr e))
@@ -375,7 +375,7 @@
     (HLL-case
       x
       ((ref v)                   (HLL:ref note (hllvar-data v)))
-      ((primop _)                x)
+      ((prim-ref _)              x)
       ((quote v)                 x)
       ((if c t f)                (HLL:if note (Expr c) (Expr t) (Expr f)))
       ((begin e^ e)              (HLL:begin note (tree-map Expr e^) (Expr e)))
@@ -402,7 +402,7 @@
     (HLL-case
       x
       ((ref _)                   (values))
-      ((primop _)                (values))
+      ((prim-ref _)              (values))
       ((quote _)                 (values))
       ((if c t f)                (Expr c) (Expr t) (Expr f))
       ((begin e^ e)              (tree-for-each Expr e^) (Expr e))
@@ -434,7 +434,7 @@
     (HLL-case
       x
       ((ref v)                   (list 'ref (param-pretty v)))
-      ((primop p)                (list 'primop (primop-name p)))
+      ((prim-ref p)              (list 'primop (primop-name p)))
       ((quote val)               (list 'quote val))
       ((if c t f)                (list 'if (loop c) (loop t) (loop f)))
       ((begin e^ e)              (cons 'begin (tree-map-flatten loop e^ (list (loop e)))))
@@ -500,7 +500,7 @@
                    (when outer-bnd (binding-defer! outer-bnd (lambda () (binding-force! bnd)))))
                x)
              x)))
-      ((primop _)          x)
+      ((prim-ref _)        x)
       ((quote _)           x)
       ((if c t f)          (HLL:if note (Expr/no-escape c) (loop t) (loop f)))
       ((begin e^ e)        (HLL:begin note (tree-map Expr/no-escape e^) (loop e)))
@@ -667,7 +667,7 @@
     (HLL-case
       x
       ((ref v)      (let ((cld (hllvar-data v))) (when cld (cld-escape! cld))) x)
-      ((primop _)   x)
+      ((prim-ref _) x)
       ((quote _)    x)
       ((if c t f)   (HLL:if note (Expr c) (Expr t) (Expr f)))
       ((begin e^ e) (HLL:begin note (tree-map Expr e^) (Expr e)))
@@ -721,7 +721,7 @@
     (HLL-case
       x
       ((ref v)             (let ((n (hllvar-data v))) (when n (node-active-src-link! n))) x)
-      ((primop _)          x)
+      ((prim-ref _)        x)
       ((quote v)           x)
       ((if c t f)          (HLL:if note (Expr c) (Expr t) (Expr f)))
       ((begin e^ e)        (HLL:begin note (tree-map Expr e^) (Expr e)))
@@ -988,7 +988,7 @@
     (HLL-case
       x
       ((ref v)             (Ref k.escape v x))
-      ((primop _)          x)
+      ((prim-ref _)        x)
       ((quote _)           x)
       ((if c t f)          (HLL:if note (Nontail c) (Tail t) (Tail f)))
       ((begin e^ e)        (HLL:begin note (tree-map Nontail e^) (Tail e)))
@@ -1070,7 +1070,7 @@
     (HLL-case
       x
       ((ref v)             (if (hllvar-data v) (HLL: (/note note (unbox v))) x))
-      ((primop _)          x)
+      ((prim-ref _)        x)
       ((quote v)           x)
       ((if c t f)          (HLL:if note (Expr c) (Expr t) (Expr f)))
       ((begin e^ e)        (HLL:begin note (tree-map Expr e^) (Expr e)))
@@ -1122,7 +1122,7 @@
     (HLL-case
       x
       ((ref _)             (k x))
-      ((primop _)          (k x))
+      ((prim-ref _)        (k x))
       ((quote _)           (k x))
       ((if c t f)          (k (HLL:if note (Expr c) (Expr t) (Expr f))))
       ((begin e^ e)        (k (HLL:begin note (tree-map Expr e^) (Expr e))))
@@ -1168,7 +1168,7 @@
     (HLL-case
       x
       ((ref _)                   x)
-      ((primop _)                x)
+      ((prim-ref _)              x)
       ((quote v)                 (f x note v))
       ((if c t f)                (HLL:if note (Expr c) (Expr t) (Expr f)))
       ((begin e^ e)              (HLL:begin note (tree-map Expr e^) (Expr e)))
@@ -1185,7 +1185,7 @@
 (define (HLL-normalize-quote P)
   (mdefine lb* '())
   (define (proc->primop proc note) (let ((p (procedure->primop proc)))
-                                     (if p (HLL:primop note p) (HLL:quote note proc))))
+                                     (if p (HLL:prim-ref note p) (HLL:quote note proc))))
   (define p.cons   (proc->primop cons #f))
   (define p.vector (proc->primop vector #f))
   (let ((x (HLL-map-quote
@@ -1243,7 +1243,7 @@
                  (let ((depth (- depth 1)) (clo* (cdr clo*)))
                    (if (< d depth) (loop depth clo*) (k d c* clo*))))
                (k depth (drop (- d depth) c*) clo*)))))
-      ((primop _)                (values))
+      ((prim-ref _)              (values))
       ((quote _)                 (values))
       ((if c t f)                (loop c) (loop t) (loop f))
       ((begin e^ e)              (tree-for-each loop e^) (loop e))
@@ -1268,7 +1268,7 @@
     (HLL-case
       x
       ((ref v)                   (unless rator? (set-hllvar-data! v #f)))
-      ((primop _)                (values))
+      ((prim-ref _)              (values))
       ((quote _)                 (values))
       ((if c t f)                (Expr c) (Expr t) (Expr f))
       ((begin e^ e)              (tree-for-each Expr e^) (Expr e))
@@ -1307,7 +1307,7 @@
                                    (when (and c (not (eqv? (candidate-level c) level)))
                                      (set-hllvar-data! v #f)
                                      (set! non-tail* (cons c non-tail*)))))
-      ((primop _)                (values))
+      ((prim-ref _)              (values))
       ((quote _)                 (values))
       ((if c t f)                (Expr c) (Tail t) (Tail f))
       ((begin e^ e)              (tree-for-each Expr e^) (Tail e))
