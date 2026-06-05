@@ -1362,15 +1362,7 @@
       ((if c t f)          (HLL:if note (Expr c) (Expr t) (Expr f)))
       ((begin e^ e)        (HLL:begin note (tree-map Expr e^) (Expr e)))
       ((prim-call p rand*) (HLL:prim-call note p (map Expr rand*)))
-      ((call rator rand*)
-       (define (k rator) (HLL:closure-call note rator (cons rator (map Expr rand*))))
-       (let retry ((rator (Expr rator)))
-         (HLL-case
-           rator
-           ((ref _)   (k rator))
-           ((late &e) (retry (unbox &e)))
-           (_         (let* ((x (hllvar #f #f))) (HLL:let* #f (list (let-binding x rator))
-                                                           (k (HLL:ref #f x))))))))
+      ((call rator rand*)  (HLL:closure-call note (Expr rator) (map Expr rand*)))
       ((case-lambda clc*)
        (define (make-cl a p b)
          (let* ((pclo (hllvar 'clo #f)) (clo (HLL:ref #f pclo)))
