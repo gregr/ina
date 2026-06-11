@@ -141,7 +141,10 @@
   (define (HLL:list         note rand*)   (let loop ((note note) (rand* rand*))
                                             (if (null? rand*)
                                                 (HLL:quote note '())
-                                                (HLL:cons note (car rand*) (loop #f (cdr rand*)))))))
+                                                (HLL:cons note (car rand*) (loop #f (cdr rand*))))))
+  (define (HLL:unsafe-vector-ref note v i) (HLL:prim-call note primop.unsafe-vector-ref (list v i)))
+  (define (HLL:unsafe-car        note x)   (HLL:prim-call note primop.unsafe-car        (list x)))
+  (define (HLL:unsafe-cdr        note x)   (HLL:prim-call note primop.unsafe-cdr        (list x))))
 
 (splicing-local
   ((define-syntax HLL-case-build

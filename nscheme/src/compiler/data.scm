@@ -54,7 +54,10 @@
 (define primop.make-closure (primop 'make-closure #f))
 (define primop.closure-ref  (primop 'closure-ref  #f))
 (define primop.closure-set! (primop 'closure-set! #f))
-(define primop.closure-call (primop 'closure-call #f))
+(define primop.closure-call (primop 'closure-call #f))  ; checks that the operator is a procedure
+(define primop.unsafe-vector-ref (primop 'unsafe-vector-ref #f))
+(define primop.unsafe-car (primop 'unsafe-car #f))
+(define primop.unsafe-cdr (primop 'unsafe-cdr #f))
 (define procedure->primop
   (let ((proc=>primop
           (map (lambda (n=>p) (cons (cdr n=>p) (primop (car n=>p) #f)))
