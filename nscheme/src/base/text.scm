@@ -708,7 +708,7 @@
                                   (begin (mbytes-set! mbv i byte:-)
                                          (+ i 1))
                                   i)))
-                      (set-nat-radix-digits! mbv i power-digit-count power radix)
+                      (set-nat-radix-digits! mbv i power-digit-count (abs power) radix)
                       (mbytes->bytes mbv)))))))
         (lambda (n) (let ((mag (abs n)))
                       (cond ((and exp-below (< mag exp-below)) (go n mag (floor-log mag radix)))
