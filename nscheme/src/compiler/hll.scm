@@ -1097,7 +1097,8 @@
                        (let retry ((rhs rhs))
                          (HLL-case
                            rhs
-                           ((case-lambda clc*) (set! lb*.lam (cons (let-binding lhs rhs) lb*.lam)))
+                           ((case-lambda clc*)
+                            (when lhs (set! lb*.lam (cons (let-binding lhs rhs) lb*.lam))))
                            ((late &e) (retry (unbox &e)))
                            (_ (when lhs (set-hllvar-data! lhs #t))
                               (set! lb*.other (cons (let-binding lhs rhs) lb*.other))))))
@@ -1161,12 +1162,16 @@
                                     (define (k rhs)
                                       (split-loop lb* (cons (let-binding lhs rhs) prev*)))
                                     (define (k.lambda rhs)
-                                      (HLL: (/note note (let* ,(reverse prev*)
-                                                          (letrec ((lhs ,rhs))
-                                                            ,(outer-loop #f lb*))))))
+                                      (if lhs
+                                          (HLL: (/note note (let* ,(reverse prev*)
+                                                              (letrec ((lhs ,rhs))
+                                                                ,(outer-loop #f lb*)))))
+                                          (split-loop lb* prev*)))
                                     (Expr/k rhs k k.lambda))))))
-                        (define (k.lambda rhs) (HLL: (/note note (letrec ((lhs ,rhs))
-                                                                   ,(outer-loop #f lb*)))))
+                        (define (k.lambda rhs)
+                          (if lhs
+                              (HLL: (/note note (letrec ((lhs ,rhs)) ,(outer-loop #f lb*))))
+                              (outer-loop note lb*)))
                         (Expr/k rhs k k.lambda))))))))
       ((apply/values rator rand) (k (HLL:apply/values note (Expr rator) (Expr rand))))
       ((case-values rand clc*)   (k (HLL:case-values note (Expr rand) (CLC* clc*))))
