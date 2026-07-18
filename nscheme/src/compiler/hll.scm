@@ -1432,7 +1432,7 @@
                                                 (let-binding l (CL fv* r))))
                                 lb*))
                   (cb* (alist-map (lambda (l cd) (let-binding l (cd->mclo cd))) lc*)))
-             (HLL:letrec note lb* (HLL:let* #f cb* (HLL:begin #f (lc*->cset!^ lc*) (Expr body)))))))
+             (HLL:let* #f cb* (HLL:letrec note lb* (HLL:begin #f (lc*->cset!^ lc*) (Expr body)))))))
       ((let* lb* body)
        (HLL:let* note (lb*-map (lambda (l r) (let-binding l (Expr r))) lb*) (Expr body)))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
