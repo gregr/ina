@@ -1523,15 +1523,13 @@
                                 be))
                          b)))
           (if be
-              (let* ((vlam.be (be-vlam be))
-                     (fv=>e (cons (cons vlam.be #f) fv=>e))
-                     (len (if (eqv? (hllvar-data vlam.be) tag.seen) (- len 1) len)))
+              (let* ((vlam.be (be-vlam be)) (fv=>e (cons (cons vlam.be #f) fv=>e)))
                 (set-hllvar-data! vlam vlam.be)
                 (set-hllvar-data! vlam.be 0)
                 (let loop ((fv* (be-fv* be)) (i 1)) (unless (null? fv*)
                                                       (set-hllvar-data! (car fv*) i)
                                                       (loop (cdr fv*) (+ i 1))))
-                (values len fv=>e))
+                (values (be-len be) fv=>e))
               (begin (alist-for-each set-hllvar-data! fv=>e) (values len #f))))))
   (define (CL CLC x) (let retry ((x x)) (HLL-case
                                           x
