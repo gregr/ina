@@ -1538,7 +1538,7 @@
                                           ((late &e) (retry (unbox &e))))))
   (define (LB* CLC lb*) (lb*-map (lambda (l r) (let-binding l (CL CLC r))) lb*))
   (define (Expr/bank bank x)
-    (define ((CL/fv*/clo-ref clo-ref) bank fv* x)
+    (define ((CL/fv*/clo-ref clo-ref) fv* x)
       (let ((fv=>i (map (lambda (fv) (cons fv (hllvar-data fv))) fv*))
             (bank  (bank-filter bank fv*)))
         (CL (lambda (a p b)
@@ -1563,7 +1563,7 @@
     (define (wk-rhs wk) (vector-ref wk 1))
     (define (wk-fv* wk) (vector-ref wk 2))
     (define (wk-normalize wk) (make-wk (wk-lhs wk) (wk-rhs wk) (fv*-normalize (wk-fv* wk))))
-    (define (Not-well-known-letrec bank note lb* body)
+    (define (Not-well-known-letrec note lb* body)
       ;; There is at least one not-well-known procedure bound by this letrec.  All well-known
       ;; procedures bound here can share a with one of the not-well-known procedures.  We choose to
       ;; share the closure of an arbitrary not-well-known that references at least one such
@@ -1580,8 +1580,7 @@
               (let* ((wk* (map wk-normalize wk*)) (fv*.wk (append* (map wk-fv* wk*))))
                 (let loop ((nwk* nwk*) (clo* '()) (init^ #f) (lb* '()))
                   (if (null? nwk*)
-                      (HLL:let* #f clo* (HLL:letrec note lb* (HLL:begin #f init^
-                                                                        (Expr/bank bank body))))
+                      (HLL:let* #f clo* (HLL:letrec note lb* (HLL:begin #f init^ (Expr body))))
                       (let* ((nwk (car nwk*))
                              (nwk* (cdr nwk*)) (lhs (vector-ref nwk 0)) (rhs (vector-ref nwk 1))
                              (v.clo (vector-ref nwk 3)) (e.clo (hllvar-data lhs))
@@ -1602,11 +1601,11 @@
                                  (lb*.wk (if (eqv? lhs v.share)
                                              (map (lambda (wk)
                                                     (let-binding (wk-lhs wk)
-                                                                 (CL/fv*.clo bank (wk-fv* wk)
+                                                                 (CL/fv*.clo (wk-fv* wk)
                                                                              (wk-rhs wk))))
                                                   wk*)
                                              '()))
-                                 (lb* (cons (let-binding lhs (CL/fv*.clo bank fv* rhs))
+                                 (lb* (cons (let-binding lhs (CL/fv*.clo fv* rhs))
                                             (append lb*.wk lb*))))
                             (alist-for-each set-hllvar-data! fv=>e)
                             (set-hllvar-data! lhs e.clo)  ; reference the closure from now on
@@ -1618,7 +1617,7 @@
                     (let* ((v.clo (hllvar 'clo #f)) (e.clo (HLL:ref #f v.clo)))
                       (set-hllvar-data! lhs e.clo)  ; all must reference closure before any fv*-slot
                       (partition lb* wk* (cons (vector lhs rhs fv* v.clo) nwk*)))))))))
-    (define (Well-known-letrec bank note lb* body)
+    (define (Well-known-letrec note lb* body)
       ;; All procedures bound by this letrec can share the same closure.  That closure does not need
       ;; a code header, so it can use a simpler representation.
       (let* ((v.share (hllvar 'clo #f))
@@ -1631,8 +1630,7 @@
              (fv*.union (fv*-normalize (cons v.share (append* (map wk-fv* wk*)))))
              (len.fv* (length fv*.union)))
         (define (rebuild CL/fv*.X fv=>e deposit?)
-          (let ((lb* (map (lambda (wk) (let-binding (wk-lhs wk)
-                                                    (CL/fv*.X bank (wk-fv* wk) (wk-rhs wk))))
+          (let ((lb* (map (lambda (wk) (let-binding (wk-lhs wk) (CL/fv*.X (wk-fv* wk) (wk-rhs wk))))
                           wk*)))
             (alist-for-each set-hllvar-data! fv=>e)
             (let ((bank (if deposit? (bank-deposit bank v.share fv*.union len.fv*) bank)))
@@ -1640,16 +1638,16 @@
         (case len.fv*
           ((1) (for-each (lambda (wk) (set-hllvar-data! (wk-lhs wk) #f)) wk*)
                (HLL:letrec note (LB* (lambda (a p b) (cl-clause a p (Expr/bank bank.empty b))) lb*)
-                           (Expr/bank bank body)))
+                           (Expr body)))
           ((2) (let* ((fv* (cdr fv*.union))
                       (fv.single (car fv*)) (e.single (hllvar-data fv.single)))
                  (for-each (lambda (wk) (set-hllvar-data! (wk-lhs wk) fv.single)) wk*)
                  (set-hllvar-data! fv.single 0)
                  (let ((lb* (map (lambda (wk) (let-binding (wk-lhs wk)
-                                                           (CL/fv*.single bank fv* (wk-rhs wk))))
+                                                           (CL/fv*.single fv* (wk-rhs wk))))
                                  wk*)))
                    (set-hllvar-data! fv.single e.single)
-                   (HLL:letrec note lb* (Expr/bank bank body)))))
+                   (HLL:letrec note lb* (Expr body)))))
           (else (let-values (((len.fv* fv=>e) (bank-find bank v.share fv*.union len.fv*)))
                   (if (eqv? len.fv* 3)
                       (if fv=>e
@@ -1664,7 +1662,7 @@
                             (HLL:let* #f (list (let-binding v.share
                                                             (HLL:vector #f (cdr (reverse slot*)))))
                                       (rebuild CL/fv*.vec fv=>e #t))))))))))
-    (define (No-free-variables-letrec bank note lb* body)
+    (define (No-free-variables-letrec note lb* body)
       ;; For each procedure bound by this letrec, if it is well-known it does not require a closure
       ;; at all, and if it is not-well-known then it needs a closure that only contains a
       ;; code-header, and the procedure body can ignore its closure parameter (i.e., it can be #f).
@@ -1674,7 +1672,7 @@
                   (nwk* (LB* (lambda (a p b)
                                (cl-clause (arity+ a 1) (cons #f p) (Expr/bank bank.empty b)))
                              nwk*))
-                  (body (Expr/bank bank body)))
+                  (body (Expr body)))
               (if (null? nwk*)
                   (HLL:letrec note wk* body)
                   (HLL:let* #f clo* (HLL:letrec note (append wk* nwk*) (HLL:begin #f init^ body)))))
@@ -1688,18 +1686,17 @@
                           (init (HLL:closure-set! #f e.clo (HLL:quote #f 0) (HLL:ref #f lhs))))
                       (loop lb* wk* (cons lb nwk*) (cons clo clo*)
                             (if init^ (cons init^ init) init)))))))))
-    (define (Join-point-letrec bank note lb* body)
+    (define (Join-point-letrec note lb* body)
       (lb*-for-each (lambda (lhs _) (known! lhs) (set-hllvar-data! lhs #f)) lb*)
-      (HLL:letrec note (LB* (lambda (a p b) (cl-clause a p (Expr/bank bank b))) lb*)
-                  (Expr/bank bank body)))
-    (define (Letrec bank note lb* body)
+      (HLL:letrec note (LB* (lambda (a p b) (cl-clause a p (Expr b))) lb*) (Expr body)))
+    (define (Letrec note lb* body)
       (let* ((lb (car lb*)) (lhs (let-binding-lhs lb)) (fv* (hllvar-data lhs)))
         ;; Following HLL-stratify-letrec, if any fv*=(), then all fv*=()
-        (cond ((eqv? fv* tag.join-point) (Join-point-letrec bank note lb* body))
-              ((null? fv*) (No-free-variables-letrec bank note lb* body))
+        (cond ((eqv? fv* tag.join-point) (Join-point-letrec note lb* body))
+              ((null? fv*) (No-free-variables-letrec note lb* body))
               ((andmap (lambda (lb) (well-known? (let-binding-lhs lb))) lb*)
-               (Well-known-letrec bank note lb* body))
-              (else (Not-well-known-letrec bank note lb* body)))))
+               (Well-known-letrec note lb* body))
+              (else (Not-well-known-letrec note lb* body)))))
     (define (Expr x) (Expr/bank bank x))
     (define note (HLL-note x))
     (HLL-case
@@ -1720,7 +1717,7 @@
                             (else             (HLL:call note rator rand*))))
              ((late &e) (retry (unbox &e)))
              (_         (HLL:closure-call note (Expr rator) rand*))))))
-      ((letrec lb* body) (if (null? lb*) (Expr body) (Letrec bank note lb* body)))
+      ((letrec lb* body) (if (null? lb*) (Expr body) (Letrec note lb* body)))
       ((let* lb* body)
        (HLL:let* note (lb*-map (lambda (l r) (let-binding l (Expr r))) lb*) (Expr body)))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
