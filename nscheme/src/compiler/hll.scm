@@ -1614,6 +1614,7 @@
                     (let* ((v.clo (hllvar 'clo #f)) (e.clo (HLL:ref #f v.clo)))
                       (set-hllvar-data! lhs e.clo)  ; all must reference closure before any fv*-slot
                       (partition lb* wk* (cons (vector lhs rhs fv* v.clo) nwk*)))))))))
+    (define (lb*-wk-empty lb*) (LB* (lambda (a p b) (cl-clause a p (Expr/bank bank.empty b))) lb*))
     (define (Well-known-letrec note lb* body)
       ;; All procedures bound by this letrec can share the same closure.  That closure does not need
       ;; a code header, so it can use a simpler representation.
@@ -1633,8 +1634,7 @@
               (HLL:letrec note lb* (Expr/bank bank body)))))
         (case len.fv*
           ((1) (for-each (lambda (wk) (set-hllvar-data! (wk-lhs wk) #f)) wk*)
-               (HLL:letrec note (LB* (lambda (a p b) (cl-clause a p (Expr/bank bank.empty b))) lb*)
-                           (Expr body)))
+               (HLL:letrec note (lb*-wk-empty lb*) (Expr body)))
           ((2) (let* ((fv* (cdr fv*.union))
                       (fv.single (car fv*)) (e.single (hllvar-data fv.single))
                       (wk* (map (lambda (wk) (let ((lhs (wk-lhs wk)))
@@ -1665,7 +1665,7 @@
       ;; code-header, and the procedure body can ignore its closure parameter (i.e., it can be #f).
       (let loop ((lb* lb*) (wk* '()) (nwk* '()) (clo* '()) (init^ #f))
         (if (null? lb*)
-            (let ((wk* (LB* (lambda (a p b) (cl-clause a p (Expr/bank bank.empty b))) wk*))
+            (let ((wk* (lb*-wk-empty wk*))
                   (nwk* (LB* (lambda (a p b)
                                (cl-clause (arity+ a 1) (cons #f p) (Expr/bank bank.empty b)))
                              nwk*))
