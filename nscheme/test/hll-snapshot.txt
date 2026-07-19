@@ -7490,49 +7490,37 @@ HLL-create-closures:
              (quote #<procedure vector>)
              (prim-call unsafe-cdr (ref clo.6))
              (prim-call unsafe-car (ref clo.6)))))))
-        (let*
-         ((clo.7 (prim-call vector (ref clo.4) (ref b.2.3) (ref a.1.2))))
+        (letrec
+         ((g.4.7
+           (case-lambda
+            ((clo.8)
+             (prim-call
+              closure-call
+              (quote #<procedure vector>)
+              (prim-call unsafe-cdr (ref clo.8))
+              (prim-call unsafe-car (ref clo.8))
+              (call (ref f.3.5) (ref clo.8))
+              (call (ref f.3.5) (ref clo.8)))))))
          (letrec
-          ((g.4.8
+          ((h.5.9
             (case-lambda
-             ((clo.9)
+             ((clo.10)
               (prim-call
                closure-call
                (quote #<procedure vector>)
-               (prim-call unsafe-vector-ref (ref clo.9) (quote 2))
-               (prim-call unsafe-vector-ref (ref clo.9) (quote 1))
-               (call
-                (ref f.3.5)
-                (prim-call unsafe-vector-ref (ref clo.9) (quote 0)))
-               (call
-                (ref f.3.5)
-                (prim-call unsafe-vector-ref (ref clo.9) (quote 0))))))))
-          (let*
-           ((clo.10 (prim-call vector (ref clo.4) (ref b.2.3) (ref a.1.2))))
-           (letrec
-            ((h.5.11
-              (case-lambda
-               ((clo.12)
-                (prim-call
-                 closure-call
-                 (quote #<procedure vector>)
-                 (prim-call unsafe-vector-ref (ref clo.12) (quote 2))
-                 (prim-call unsafe-vector-ref (ref clo.12) (quote 1))
-                 (call
-                  (ref f.3.5)
-                  (prim-call unsafe-vector-ref (ref clo.12) (quote 0)))
-                 (call
-                  (ref f.3.5)
-                  (prim-call unsafe-vector-ref (ref clo.12) (quote 0))))))))
-            (prim-call
-             closure-call
-             (quote #<procedure vector>)
-             (ref a.1.2)
-             (ref b.2.3)
-             (call (ref g.4.8) (ref clo.7))
-             (call (ref g.4.8) (ref clo.7))
-             (call (ref h.5.11) (ref clo.10))
-             (call (ref h.5.11) (ref clo.10)))))))))))))
+               (prim-call unsafe-cdr (ref clo.10))
+               (prim-call unsafe-car (ref clo.10))
+               (call (ref f.3.5) (ref clo.10))
+               (call (ref f.3.5) (ref clo.10)))))))
+          (prim-call
+           closure-call
+           (quote #<procedure vector>)
+           (ref a.1.2)
+           (ref b.2.3)
+           (call (ref g.4.7) (ref clo.4))
+           (call (ref g.4.7) (ref clo.4))
+           (call (ref h.5.9) (ref clo.4))
+           (call (ref h.5.9) (ref clo.4)))))))))))
   (begin
    (prim-call closure-set! (ref clo.0) (quote 0) (ref _.0.1))
    (ref clo.0))))
@@ -7810,49 +7798,37 @@ HLL-create-closures:
              (quote #<procedure vector>)
              (prim-call unsafe-cdr (ref clo.6))
              (prim-call unsafe-car (ref clo.6)))))))
-        (let*
-         ((clo.7 (prim-call vector (ref clo.4) (ref b.2.3) (ref a.1.2))))
+        (letrec
+         ((g.4.7
+           (case-lambda
+            ((clo.8)
+             (prim-call
+              closure-call
+              (quote #<procedure vector>)
+              (prim-call unsafe-cdr (ref clo.8))
+              (prim-call unsafe-car (ref clo.8))
+              (call (ref f.3.5) (ref clo.8))
+              (call (ref f.3.5) (ref clo.8)))))))
          (letrec
-          ((g.4.8
+          ((h.5.9
             (case-lambda
-             ((clo.9)
+             ((clo.10)
               (prim-call
                closure-call
                (quote #<procedure vector>)
-               (prim-call unsafe-vector-ref (ref clo.9) (quote 2))
-               (prim-call unsafe-vector-ref (ref clo.9) (quote 1))
-               (call
-                (ref f.3.5)
-                (prim-call unsafe-vector-ref (ref clo.9) (quote 0)))
-               (call
-                (ref f.3.5)
-                (prim-call unsafe-vector-ref (ref clo.9) (quote 0))))))))
-          (let*
-           ((clo.10 (prim-call vector (ref clo.7) (ref b.2.3) (ref a.1.2))))
-           (letrec
-            ((h.5.11
-              (case-lambda
-               ((clo.12)
-                (prim-call
-                 closure-call
-                 (quote #<procedure vector>)
-                 (prim-call unsafe-vector-ref (ref clo.12) (quote 2))
-                 (prim-call unsafe-vector-ref (ref clo.12) (quote 1))
-                 (call
-                  (ref g.4.8)
-                  (prim-call unsafe-vector-ref (ref clo.12) (quote 0)))
-                 (call
-                  (ref g.4.8)
-                  (prim-call unsafe-vector-ref (ref clo.12) (quote 0))))))))
-            (prim-call
-             closure-call
-             (quote #<procedure vector>)
-             (ref a.1.2)
-             (ref b.2.3)
-             (call (ref g.4.8) (ref clo.7))
-             (call (ref g.4.8) (ref clo.7))
-             (call (ref h.5.11) (ref clo.10))
-             (call (ref h.5.11) (ref clo.10)))))))))))))
+               (prim-call unsafe-cdr (ref clo.10))
+               (prim-call unsafe-car (ref clo.10))
+               (call (ref g.4.7) (ref clo.10))
+               (call (ref g.4.7) (ref clo.10)))))))
+          (prim-call
+           closure-call
+           (quote #<procedure vector>)
+           (ref a.1.2)
+           (ref b.2.3)
+           (call (ref g.4.7) (ref clo.4))
+           (call (ref g.4.7) (ref clo.4))
+           (call (ref h.5.9) (ref clo.4))
+           (call (ref h.5.9) (ref clo.4)))))))))))
   (begin
    (prim-call closure-set! (ref clo.0) (quote 0) (ref _.0.1))
    (ref clo.0))))
