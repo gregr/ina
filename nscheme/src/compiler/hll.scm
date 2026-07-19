@@ -1444,10 +1444,10 @@
 ;; Create flat closures, omitting free-variable fields for self-references and unnecessary
 ;; mutually-recursive references, omitting closures for empty well-known procedures and join points,
 ;; simplifying closure representations for well-known procedures, and sharing closures when it does
-;; not jeopardize space-safety.  When determining closures that are safe to share, the call graph of
-;; procedures bound by each letrec is assumed to consist of a single, strongly-connected component,
-;; implying that they all share the same lifetime.  We can satisfy this assumption by running
-;; HLL-stratify-letrec first.
+;; not jeopardize space-safety.  When determining emptiness and closures that are safe to share, the
+;; call graph of procedures bound by each letrec is assumed to consist of a single,
+;; strongly-connected component, implying that they all share the same lifetime.  We can satisfy
+;; this assumption by running HLL-stratify-letrec first.
 ;; For more detail about closure optimization, see Andy Keep's dissertation, Chapter 5:
 ;; https://andykeep.com/pubs/dissertation.pdf
 ;; and Optimizing Closures in O(0) time:
@@ -1566,9 +1566,9 @@
     (define ((wk-lb/CL/fv* CL/fv*) wk) (let-binding (wk-lhs wk) (CL/fv* (wk-fv* wk) (wk-rhs wk))))
     (define (Not-well-known-letrec note lb* body)
       ;; There is at least one not-well-known procedure bound by this letrec.  All well-known
-      ;; procedures bound here can share a with one of the not-well-known procedures.  We choose to
-      ;; share the closure of an arbitrary not-well-known that references at least one such
-      ;; well-known procedure as a free variable.
+      ;; procedures bound here can share a closure with one of the not-well-known procedures.  We
+      ;; choose to share the closure of an arbitrary not-well-known that references at least one
+      ;; such well-known procedure as a free variable.
       (let partition ((lb* lb*) (wk* '()) (nwk* '()))
         (if (null? lb*)
             (let ((v.share (and (pair? wk*)
@@ -1616,7 +1616,7 @@
                       (partition lb* wk* (cons (vector lhs rhs fv* v.clo) nwk*)))))))))
     (define (lb*-wk-empty lb*) (LB* (lambda (a p b) (cl-clause a p (Expr/bank bank.empty b))) lb*))
     (define (Well-known-letrec note lb* body)
-      ;; All procedures bound by this letrec can share the same closure.  That closure does not need
+      ;; All procedures bound by this letrec can share the same closure.  This closure does not need
       ;; a code header, so it can use a simpler representation.
       (let* ((v.share (hllvar 'clo #f))
              (wk* (lb*-map (lambda (lhs rhs) (let ((fv* (hllvar-data lhs)))
