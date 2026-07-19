@@ -386,6 +386,17 @@
                   (q (lambda (y) (+ (vector-length y) 1))))
            (vector g (q (g)) (q (h (f (g)))))))
 
+       (lambda (a b)
+         (letrec ((f (lambda () (vector a b)))
+                  (g (lambda () (vector a b (f) (f))))
+                  (h (lambda () (vector a b (f) (f)))))
+           (vector a b (g) (g) (h) (h))))
+       (lambda (a b)
+         (letrec ((f (lambda () (vector a b)))
+                  (g (lambda () (vector a b (f) (f))))
+                  (h (lambda () (vector a b (g) (g)))))
+           (vector a b (g) (g) (h) (h))))
+
        (letrec ((a (lambda () (b)))
                 (b (lambda () (c)))
                 (c (lambda () (d)))
