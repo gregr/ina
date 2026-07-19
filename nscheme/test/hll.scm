@@ -189,10 +189,7 @@
               (pretty-write (map hllvar-name join-point*))
               (displayln "HLL-create-closures:")
               ;(let ((P (HLL-create-closures P lhs=>free*)))
-              (let ((P (HLL-create-optimized-closures P lhs=>free* well-known*
-                                                      '()
-                                                      ;join-point*
-                                                      )))
+              (let ((P (HLL-create-optimized-closures P lhs=>free* well-known* join-point*)))
                 (pretty-write (HLL-pretty-uid P)))))))))
   ;(displayln "raw HLL:")
   ;(pretty-write P)

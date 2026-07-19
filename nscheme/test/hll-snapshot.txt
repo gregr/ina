@@ -386,47 +386,45 @@ HLL-create-closures:
        (letrec
         ((loop.2.3
           (case-lambda
-           ((clo.4 n.3.5 total.4.6)
+           ((n.3.4 total.4.5)
             (if
              (prim-call
               closure-call
-              (ref clo.4)
+              (ref not.1.2)
               (prim-call
                closure-call
                (quote #<procedure =>)
-               (ref n.3.5)
+               (ref n.3.4)
                (quote 0)))
              (call
               (ref loop.2.3)
-              (ref clo.4)
               (prim-call
                closure-call
                (quote #<procedure ->)
-               (ref n.3.5)
+               (ref n.3.4)
                (quote 1))
               (prim-call
                closure-call
                (quote #<procedure +>)
-               (ref total.4.6)
-               (ref n.3.5)))
-             (ref total.4.6))))))
+               (ref total.4.5)
+               (ref n.3.4)))
+             (ref total.4.5))))))
         (letrec
-         ((sum-to-n.5.7
+         ((sum-to-n.5.6
            (case-lambda
-            ((clo.8 n.6.9)
-             (call (ref loop.2.3) (ref clo.8) (ref n.6.9) (quote 0))))))
-         (call (ref sum-to-n.5.7) (ref not.1.2) (quote 10))))))))
+            ((n.6.7) (call (ref loop.2.3) (ref n.6.7) (quote 0))))))
+         (call (ref sum-to-n.5.6) (quote 10))))))))
    (begin
     (prim-call closure-set! (ref clo.0) (quote 0) (ref _.0.1))
     (ref clo.0))))
  (let*
-  ((clo.10 (prim-call make-closure (quote 1))))
+  ((clo.8 (prim-call make-closure (quote 1))))
   (letrec
-   ((_.7.11
-     (case-lambda ((#t x.8.12) (if (ref x.8.12) (quote #f) (quote #t))))))
+   ((_.7.9
+     (case-lambda ((#t x.8.10) (if (ref x.8.10) (quote #f) (quote #t))))))
    (begin
-    (prim-call closure-set! (ref clo.10) (quote 0) (ref _.7.11))
-    (ref clo.10)))))
+    (prim-call closure-set! (ref clo.8) (quote 0) (ref _.7.9))
+    (ref clo.8)))))
 
 VHLL:
 (let
@@ -713,27 +711,27 @@ HLL-create-closures:
         (letrec
          ((sum-to-n.8.12
            (case-lambda
-            ((clo.13 n.9.14)
+            ((n.9.13)
              (if
               (prim-call
                closure-call
                (quote #<procedure =>)
-               (ref n.9.14)
+               (ref n.9.13)
                (quote 0))
               (quote 0)
-              (call (ref loop.2.3) (ref clo.13) (ref n.9.14) (quote 0)))))))
-         (call (ref sum-to-n.8.12) (ref not.1.2) (quote 100))))))))
+              (call (ref loop.2.3) (ref not.1.2) (ref n.9.13) (quote 0)))))))
+         (call (ref sum-to-n.8.12) (quote 100))))))))
    (begin
     (prim-call closure-set! (ref clo.0) (quote 0) (ref _.0.1))
     (ref clo.0))))
  (let*
-  ((clo.15 (prim-call make-closure (quote 1))))
+  ((clo.14 (prim-call make-closure (quote 1))))
   (letrec
-   ((_.10.16
-     (case-lambda ((#t x.11.17) (if (ref x.11.17) (quote #f) (quote #t))))))
+   ((_.10.15
+     (case-lambda ((#t x.11.16) (if (ref x.11.16) (quote #f) (quote #t))))))
    (begin
-    (prim-call closure-set! (ref clo.15) (quote 0) (ref _.10.16))
-    (ref clo.15)))))
+    (prim-call closure-set! (ref clo.14) (quote 0) (ref _.10.15))
+    (ref clo.14)))))
 
 VHLL:
 (let
@@ -1111,63 +1109,42 @@ HLL-create-closures:
                    (case-lambda
                     ((clo.14 total.9.15)
                      (begin
-                      (let*
-                       ((share.16
-                         (prim-call
-                          vector
-                          (prim-call closure-ref (ref clo.14) (quote 2))
-                          (ref total.9.15)
-                          (prim-call closure-ref (ref clo.14) (quote 3)))))
-                       (letrec
-                        ((loop.10.17
-                          (case-lambda
-                           ((clo.18 n.11.19)
-                            (begin
+                      (letrec
+                       ((loop.10.16
+                         (case-lambda
+                          ((n.11.17)
+                           (begin
+                            (prim-call
+                             closure-call
+                             (prim-call closure-ref (ref clo.14) (quote 3))
+                             (ref total.9.15)
                              (prim-call
                               closure-call
-                              (prim-call
-                               unsafe-vector-ref
-                               (ref clo.18)
-                               (quote 2))
-                              (prim-call
-                               unsafe-vector-ref
-                               (ref clo.18)
-                               (quote 1))
+                              (quote #<procedure +>)
                               (prim-call
                                closure-call
-                               (quote #<procedure +>)
-                               (prim-call
-                                closure-call
-                                (prim-call
-                                 unsafe-vector-ref
-                                 (ref clo.18)
-                                 (quote 0))
-                                (prim-call
-                                 unsafe-vector-ref
-                                 (ref clo.18)
-                                 (quote 1)))
-                               (ref n.11.19)))
-                             (if
+                               (prim-call closure-ref (ref clo.14) (quote 2))
+                               (ref total.9.15))
+                              (ref n.11.17)))
+                            (if
+                             (prim-call
+                              closure-call
+                              (quote #<procedure <>)
+                              (quote 0)
+                              (ref n.11.17))
+                             (call
+                              (ref loop.10.16)
                               (prim-call
                                closure-call
-                               (quote #<procedure <>)
-                               (quote 0)
-                               (ref n.11.19))
-                              (call
-                               (ref loop.10.17)
-                               (ref clo.18)
-                               (prim-call
-                                closure-call
-                                (quote #<procedure ->)
-                                (ref n.11.19)
-                                (quote 1)))
-                              (prim-call
-                               closure-call
-                               (quote #<procedure values>))))))))
-                        (call
-                         (ref loop.10.17)
-                         (ref share.16)
-                         (prim-call closure-ref (ref clo.14) (quote 1)))))
+                               (quote #<procedure ->)
+                               (ref n.11.17)
+                               (quote 1)))
+                             (prim-call
+                              closure-call
+                              (quote #<procedure values>))))))))
+                       (call
+                        (ref loop.10.16)
+                        (prim-call closure-ref (ref clo.14) (quote 1))))
                       (prim-call
                        closure-call
                        (prim-call closure-ref (ref clo.14) (quote 2))
@@ -1200,48 +1177,48 @@ HLL-create-closures:
     (prim-call closure-set! (ref clo.0) (quote 0) (ref _.0.1))
     (ref clo.0))))
  (let*
-  ((clo.20 (prim-call make-closure (quote 1))))
+  ((clo.18 (prim-call make-closure (quote 1))))
   (letrec
-   ((_.12.21
+   ((_.12.19
      (case-lambda
-      ((#t x.13.22)
+      ((#t x.13.20)
        (prim-call
         closure-call
         (quote #<procedure make-mvector>)
         (quote 1)
-        (ref x.13.22))))))
+        (ref x.13.20))))))
    (begin
-    (prim-call closure-set! (ref clo.20) (quote 0) (ref _.12.21))
-    (ref clo.20))))
+    (prim-call closure-set! (ref clo.18) (quote 0) (ref _.12.19))
+    (ref clo.18))))
  (let*
-  ((clo.23 (prim-call make-closure (quote 1))))
+  ((clo.21 (prim-call make-closure (quote 1))))
   (letrec
-   ((_.14.24
+   ((_.14.22
      (case-lambda
-      ((#t b.15.25)
+      ((#t b.15.23)
        (prim-call
         closure-call
         (quote #<procedure mvector-ref>)
-        (ref b.15.25)
+        (ref b.15.23)
         (quote 0))))))
    (begin
-    (prim-call closure-set! (ref clo.23) (quote 0) (ref _.14.24))
-    (ref clo.23))))
+    (prim-call closure-set! (ref clo.21) (quote 0) (ref _.14.22))
+    (ref clo.21))))
  (let*
-  ((clo.26 (prim-call make-closure (quote 1))))
+  ((clo.24 (prim-call make-closure (quote 1))))
   (letrec
-   ((_.16.27
+   ((_.16.25
      (case-lambda
-      ((#t b.17.28 x.18.29)
+      ((#t b.17.26 x.18.27)
        (prim-call
         closure-call
         (quote #<procedure mvector-set!>)
-        (ref b.17.28)
+        (ref b.17.26)
         (quote 0)
-        (ref x.18.29))))))
+        (ref x.18.27))))))
    (begin
-    (prim-call closure-set! (ref clo.26) (quote 0) (ref _.16.27))
-    (ref clo.26)))))
+    (prim-call closure-set! (ref clo.24) (quote 0) (ref _.16.25))
+    (ref clo.24)))))
 
 VHLL:
 (let
@@ -4703,43 +4680,42 @@ HLL-create-closures:
             (letrec
              ((f.5.8
                (case-lambda
-                ((clo.9 n.6.10)
+                ((n.6.9)
                  (prim-call
                   closure-call
                   (quote #<procedure *>)
                   (letrec
-                   ((inc.7.11
+                   ((inc.7.10
                      (case-lambda
-                      ((n.8.12)
+                      ((n.8.11)
                        (prim-call
                         closure-call
                         (quote #<procedure +>)
-                        (ref n.8.12)
+                        (ref n.8.11)
                         (quote 1))))))
                    (if
                     (prim-call
                      closure-call
                      (quote #<procedure <>)
-                     (ref clo.9)
-                     (ref n.6.10))
+                     (prim-call closure-ref (ref clo.6) (quote 2))
+                     (ref n.6.9))
                     (call
-                     (ref inc.7.11)
+                     (ref inc.7.10)
                      (prim-call
                       closure-call
                       (quote #<procedure *>)
                       (quote 100)
-                      (ref n.6.10)))
+                      (ref n.6.9)))
                     (call
-                     (ref inc.7.11)
+                     (ref inc.7.10)
                      (prim-call
                       closure-call
                       (quote #<procedure *>)
                       (quote 10)
-                      (ref n.6.10)))))
+                      (ref n.6.9)))))
                   (quote 2))))))
              (call
               (ref f.5.8)
-              (prim-call closure-ref (ref clo.6) (quote 2))
               (prim-call
                closure-call
                (quote #<procedure +>)
@@ -5011,21 +4987,20 @@ HLL-create-closures:
            (letrec
             ((odd?.6.7
               (case-lambda
-               ((clo.8 n.7.9)
+               ((n.7.8)
                 (if
                  (prim-call
                   closure-call
                   (quote #<procedure =>)
                   (quote 0)
-                  (ref n.7.9))
+                  (ref n.7.8))
                  (quote #f)
                  (call
                   (ref even?.4.5)
-                  (ref clo.8)
                   (prim-call
                    closure-call
                    (quote #<procedure ->)
-                   (ref n.7.9)
+                   (ref n.7.8)
                    (quote 1))))))))
             (if
              (prim-call
@@ -5036,7 +5011,6 @@ HLL-create-closures:
              (quote #t)
              (call
               (ref odd?.6.7)
-              (ref even?.4.5)
               (prim-call
                closure-call
                (quote #<procedure ->)
@@ -5324,21 +5298,20 @@ HLL-create-closures:
            (letrec
             ((odd?.6.7
               (case-lambda
-               ((clo.8 n.7.9)
+               ((n.7.8)
                 (if
                  (prim-call
                   closure-call
                   (quote #<procedure =>)
                   (quote 0)
-                  (ref n.7.9))
+                  (ref n.7.8))
                  (quote #f)
                  (call
                   (ref even?.4.5)
-                  (ref clo.8)
                   (prim-call
                    closure-call
                    (quote #<procedure ->)
-                   (ref n.7.9)
+                   (ref n.7.8)
                    (quote 1))))))))
             (if
              (prim-call
@@ -5349,7 +5322,6 @@ HLL-create-closures:
              (quote #t)
              (call
               (ref odd?.6.7)
-              (ref even?.4.5)
               (prim-call
                closure-call
                (quote #<procedure ->)
@@ -5370,13 +5342,13 @@ HLL-create-closures:
           (quote two))
          (call (ref even?.4.5) (ref y.3.4))
          (let*
-          ((z.8.10
+          ((z.8.9
             (prim-call
              closure-call
              (quote #<procedure +>)
              (ref x.2.3)
              (ref y.3.4))))
-          (call (ref even?.4.5) (ref z.8.10))))))))))
+          (call (ref even?.4.5) (ref z.8.9))))))))))
   (begin
    (prim-call closure-set! (ref clo.0) (quote 0) (ref _.0.1))
    (ref clo.0))))
@@ -5629,39 +5601,39 @@ HLL-create-closures:
     (case-lambda
      ((#t tag.1.2 x.2.3 y.3.4)
       (letrec
-       ((even?.4.5
+       ((odd?.6.5
          (case-lambda
-          ((n.5.6)
+          ((n.7.6)
            (if
             (prim-call
              closure-call
              (quote #<procedure =>)
              (quote 0)
-             (ref n.5.6))
-            (quote #t)
-            (call
-             (ref odd?.6.7)
-             (prim-call
-              closure-call
-              (quote #<procedure ->)
-              (ref n.5.6)
-              (quote 1)))))))
-        (odd?.6.7
-         (case-lambda
-          ((n.7.8)
-           (if
-            (prim-call
-             closure-call
-             (quote #<procedure =>)
-             (quote 0)
-             (ref n.7.8))
+             (ref n.7.6))
             (quote #f)
             (call
-             (ref even?.4.5)
+             (ref even?.4.7)
              (prim-call
               closure-call
               (quote #<procedure ->)
-              (ref n.7.8)
+              (ref n.7.6)
+              (quote 1)))))))
+        (even?.4.7
+         (case-lambda
+          ((n.5.8)
+           (if
+            (prim-call
+             closure-call
+             (quote #<procedure =>)
+             (quote 0)
+             (ref n.5.8))
+            (quote #t)
+            (call
+             (ref odd?.6.5)
+             (prim-call
+              closure-call
+              (quote #<procedure ->)
+              (ref n.5.8)
               (quote 1))))))))
        (if
         (prim-call
@@ -5669,14 +5641,14 @@ HLL-create-closures:
          (quote #<procedure eqv?>)
          (ref tag.1.2)
          (quote one))
-        (call (ref even?.4.5) (ref x.2.3))
+        (call (ref even?.4.7) (ref x.2.3))
         (if
          (prim-call
           closure-call
           (quote #<procedure eqv?>)
           (ref tag.1.2)
           (quote two))
-         (call (ref even?.4.5) (ref y.3.4))
+         (call (ref even?.4.7) (ref y.3.4))
          (let*
           ((z.8.9
             (prim-call
@@ -5685,7 +5657,7 @@ HLL-create-closures:
              (ref x.2.3)
              (ref y.3.4)
              (quote 1))))
-          (call (ref odd?.6.7) (ref z.8.9))))))))))
+          (call (ref odd?.6.5) (ref z.8.9))))))))))
   (begin
    (prim-call closure-set! (ref clo.0) (quote 0) (ref _.0.1))
    (ref clo.0))))
@@ -6510,29 +6482,25 @@ HLL-create-closures:
            (letrec
             ((f.3.5
               (case-lambda
-               ((clo.6 a.4.7)
-                (prim-call closure-call (ref a.4.7) (ref clo.6))))))
+               ((a.4.6) (prim-call closure-call (ref a.4.6) (ref clo.4))))))
             (call
              (ref f.3.5)
-             (ref clo.4)
              (letrec
-              ((h.5.8
-                (case-lambda
-                 ((clo.9 z.6.10) (call (ref g.2.3) (ref clo.9))))))
-              (call (ref h.5.8) (ref clo.4) (ref clo.4)))))))))
+              ((h.5.7 (case-lambda ((z.6.8) (call (ref g.2.3) (ref clo.4))))))
+              (call (ref h.5.7) (ref clo.4)))))))))
        (letrec
-        ((q.7.11
+        ((q.7.9
           (case-lambda
-           ((y.8.12)
+           ((y.8.10)
             (prim-call
              closure-call
              (quote #<procedure +>)
              (prim-call
               closure-call
               (quote #<procedure vector-length>)
-              (ref y.8.12))
+              (ref y.8.10))
              (quote 1))))))
-        (call (ref q.7.11) (call (ref g.2.3) (ref x.1.2)))))))))
+        (call (ref q.7.9) (call (ref g.2.3) (ref x.1.2)))))))))
   (begin
    (prim-call closure-set! (ref clo.0) (quote 0) (ref _.0.1))
    (ref clo.0))))
@@ -7643,45 +7611,28 @@ HLL-create-closures:
    (case-lambda
     (()
      (letrec
-      ((a.1.1
+      ((h.7.1 (case-lambda (() (call (ref a.1.7)))))
+       (g.6.2
         (case-lambda
-         (() (if (quote a) (call (ref h.7.11)) (call (ref b.2.2))))))
-       (b.2.2
+         (() (if (quote g) (call (ref b.2.3)) (call (ref h.7.1))))))
+       (b.2.3
         (case-lambda
          (()
-          (let*
-           ((share.3 (prim-call cons (ref a.1.1) (ref g.6.10))))
-           (letrec
-            ((c.3.4
-              (case-lambda
-               ((clo.5)
-                (if
-                 (quote c)
-                 (call (ref d.4.6) (ref clo.5))
-                 (call (ref e.5.8) (ref clo.5))))))
-             (d.4.6
-              (case-lambda
-               ((clo.7)
-                (if
-                 (quote d)
-                 (call (ref a.1.1) (prim-call unsafe-car (ref clo.7)))
-                 (call (ref e.5.8) (ref clo.7))))))
-             (e.5.8
-              (case-lambda
-               ((clo.9)
-                (if
-                 (quote e)
-                 (call (ref g.6.10) (prim-call unsafe-cdr (ref clo.9)))
-                 (call (ref f.0.0)))))))
-            (if
-             (quote b)
-             (call (ref c.3.4) (ref share.3))
-             (call (ref d.4.6) (ref share.3))))))))
-       (g.6.10
+          (letrec
+           ((e.5.4
+             (case-lambda
+              (() (if (quote e) (call (ref g.6.2)) (call (ref f.0.0))))))
+            (d.4.5
+             (case-lambda
+              (() (if (quote d) (call (ref a.1.7)) (call (ref e.5.4))))))
+            (c.3.6
+             (case-lambda
+              (() (if (quote c) (call (ref d.4.5)) (call (ref e.5.4)))))))
+           (if (quote b) (call (ref c.3.6)) (call (ref d.4.5)))))))
+       (a.1.7
         (case-lambda
-         (() (if (quote g) (call (ref b.2.2)) (call (ref h.7.11))))))
-       (h.7.11 (case-lambda (() (call (ref a.1.1))))))
-      (if (quote f) (call (ref g.6.10)) (call (ref b.2.2))))))))
+         (() (if (quote a) (call (ref h.7.1)) (call (ref b.2.3)))))))
+      (if (quote f) (call (ref g.6.2)) (call (ref b.2.3))))))))
  (call (ref f.0.0)))
 
 VHLL:
@@ -7847,49 +7798,33 @@ HLL-create-closures:
    (case-lambda
     (()
      (letrec
-      ((b.1.1
-        (case-lambda
-         (() (if (quote b) (call (ref c.2.2)) (call (ref d.3.3))))))
-       (c.2.2
-        (case-lambda
-         (() (if (quote c) (call (ref d.3.3)) (call (ref e.4.4))))))
-       (d.3.3
-        (case-lambda
-         (() (if (quote d) (call (ref b.1.1)) (call (ref e.4.4))))))
-       (e.4.4
-        (case-lambda
-         (() (if (quote e) (call (ref c.2.2)) (call (ref f.0.0))))))
-       (g.5.5
+      ((g.5.1
         (case-lambda
          (()
-          (let*
-           ((share.6 (prim-call cons (ref c.2.2) (ref b.1.1))))
-           (letrec
-            ((h.6.7
-              (case-lambda
-               ((clo.8)
-                (let*
-                 ((share.9
-                   (prim-call
-                    cons
-                    (prim-call unsafe-car (ref clo.8))
-                    (prim-call unsafe-cdr (ref clo.8)))))
-                 (letrec
-                  ((a.7.10
-                    (case-lambda
-                     ((clo.11)
-                      (if
-                       (quote a)
-                       (call (ref b.1.1) (prim-call unsafe-cdr (ref clo.11)))
-                       (call
-                        (ref c.2.2)
-                        (prim-call unsafe-car (ref clo.11))))))))
-                  (call (ref a.7.10) (ref share.9))))))))
-            (if
-             (quote g)
-             (call (ref b.1.1))
-             (call (ref h.6.7) (ref share.6)))))))))
-      (if (quote f) (call (ref g.5.5)) (call (ref c.2.2))))))))
+          (letrec
+           ((h.6.2
+             (case-lambda
+              (()
+               (letrec
+                ((a.7.3
+                  (case-lambda
+                   (()
+                    (if (quote a) (call (ref b.1.7)) (call (ref c.2.6)))))))
+                (call (ref a.7.3)))))))
+           (if (quote g) (call (ref b.1.7)) (call (ref h.6.2)))))))
+       (e.4.4
+        (case-lambda
+         (() (if (quote e) (call (ref c.2.6)) (call (ref f.0.0))))))
+       (d.3.5
+        (case-lambda
+         (() (if (quote d) (call (ref b.1.7)) (call (ref e.4.4))))))
+       (c.2.6
+        (case-lambda
+         (() (if (quote c) (call (ref d.3.5)) (call (ref e.4.4))))))
+       (b.1.7
+        (case-lambda
+         (() (if (quote b) (call (ref c.2.6)) (call (ref d.3.5)))))))
+      (if (quote f) (call (ref g.5.1)) (call (ref c.2.6))))))))
  (call (ref f.0.0)))
 
 VHLL:
@@ -8988,31 +8923,30 @@ HLL-create-closures:
       (letrec
        ((k0.3.4
          (case-lambda
-          ((clo.5 x.4.6)
+          ((x.4.5)
            (prim-call
             closure-call
-            (ref clo.5)
+            (ref k.2.3)
             (prim-call
              closure-call
              (quote #<procedure +>)
-             (ref x.4.6)
+             (ref x.4.5)
              (quote 1)))))))
        (letrec
-        ((g.5.7
+        ((g.5.6
           (case-lambda
-           ((clo.8 y.6.9 k.7.10)
+           ((y.6.7 k.7.8)
             (call
              (ref k0.3.4)
-             (ref clo.8)
              (prim-call
               closure-call
               (quote #<procedure ->)
-              (ref y.6.9)
+              (ref y.6.7)
               (quote 1)))))))
         (if
          (ref b.1.2)
-         (call (ref g.5.7) (ref k.2.3) (quote 13))
-         (call (ref g.5.7) (ref k.2.3) (quote 15)))))))))
+         (call (ref g.5.6) (quote 13))
+         (call (ref g.5.6) (quote 15)))))))))
   (begin
    (prim-call closure-set! (ref clo.0) (quote 0) (ref f.0.1))
    (ref clo.0))))
@@ -9119,8 +9053,8 @@ HLL-create-closures:
        (letrec
         ((g.1.2 (case-lambda (() (quote g)))))
         (letrec
-         ((f.2.3 (case-lambda ((clo.4) (call (ref g.1.2) (ref clo.4))))))
-         (call (ref f.2.3) (ref g.1.2)))))))))
+         ((f.2.3 (case-lambda (() (call (ref g.1.2))))))
+         (call (ref f.2.3)))))))))
   (begin
    (prim-call closure-set! (ref clo.0) (quote 0) (ref fm.0.1))
    (prim-call
@@ -9269,24 +9203,13 @@ HLL-create-closures:
        (letrec
         ((h.1.2 (case-lambda (() (quote h)))))
         (letrec
-         ((f.2.3
+         ((g.3.3
            (case-lambda
-            ((clo.4)
-             (if
-              (quote ?)
-              (call (ref g.3.5) (ref clo.4))
-              (call (ref h.1.2) (ref clo.4))))))
-          (g.3.5
+            (() (if (quote ?) (call (ref f.2.4)) (call (ref h.1.2))))))
+          (f.2.4
            (case-lambda
-            ((clo.6)
-             (if
-              (quote ?)
-              (call (ref f.2.3) (ref clo.6))
-              (call (ref h.1.2) (ref clo.6)))))))
-         (if
-          (quote ?)
-          (call (ref f.2.3) (ref h.1.2))
-          (call (ref g.3.5) (ref h.1.2))))))))))
+            (() (if (quote ?) (call (ref g.3.3)) (call (ref h.1.2)))))))
+         (if (quote ?) (call (ref f.2.4)) (call (ref g.3.3))))))))))
   (begin
    (prim-call closure-set! (ref clo.0) (quote 0) (ref fm.0.1))
    (prim-call
@@ -9409,17 +9332,14 @@ HLL-create-closures:
      (letrec
       ((h.1.1 (case-lambda (() (quote h)))))
       (letrec
-       ((g2.2.2 (case-lambda ((clo.3) (call (ref h.1.1) (ref clo.3))))))
+       ((g2.2.2 (case-lambda (() (call (ref h.1.1))))))
        (letrec
-        ((g1.3.4 (case-lambda ((clo.5) (call (ref h.1.1) (ref clo.5))))))
-        (if
-         (quote ??)
-         (call (ref g1.3.4) (ref h.1.1))
-         (call (ref g2.2.2) (ref h.1.1))))))))))
+        ((g1.3.3 (case-lambda (() (call (ref h.1.1))))))
+        (if (quote ??) (call (ref g1.3.3)) (call (ref g2.2.2))))))))))
  (let*
-  ((clo.6 (prim-call make-closure (quote 1))))
+  ((clo.4 (prim-call make-closure (quote 1))))
   (letrec
-   ((fm.4.7
+   ((fm.4.5
      (case-lambda
       ((#t)
        (prim-call
@@ -9428,12 +9348,12 @@ HLL-create-closures:
         (call (ref f.0.0))
         (call (ref f.0.0)))))))
    (begin
-    (prim-call closure-set! (ref clo.6) (quote 0) (ref fm.4.7))
+    (prim-call closure-set! (ref clo.4) (quote 0) (ref fm.4.5))
     (prim-call
      closure-call
      (quote #<procedure cons>)
      (quote 333)
-     (ref clo.6))))))
+     (ref clo.4))))))
 
 VHLL:
 (let
@@ -9884,71 +9804,66 @@ HLL-create-closures:
             (letrec
              ((h.8.9
                (case-lambda
-                ((clo.10 x.9.11 y.10.12)
+                ((x.9.10 y.10.11)
                  (if
-                  (ref x.9.11)
+                  (ref x.9.10)
                   (quote h)
-                  (call
-                   (ref f.2.3)
-                   (ref clo.10)
-                   (ref y.10.12)
-                   (quote 33)))))))
+                  (call (ref f.2.3) (ref y.10.11) (quote 33)))))))
              (if
               (ref x.6.15.7)
-              (call (ref h.8.9) (ref f.2.3) (ref y.7.16.8) (quote 22))
+              (call (ref h.8.9) (ref y.7.16.8) (quote 22))
               (quote g)))))))
         (let*
-         ((clo.13 (prim-call make-closure (quote 2))))
+         ((clo.12 (prim-call make-closure (quote 2))))
          (letrec
-          ((e.11.14
+          ((e.11.13
             (case-lambda
-             ((clo.15) (quote e0))
-             ((clo.16 x.12.17 y.13.18)
+             ((clo.14) (quote e0))
+             ((clo.15 x.12.16 y.13.17)
               (if
-               (ref x.12.17)
+               (ref x.12.16)
                (call
                 (ref f.2.3)
-                (prim-call closure-ref (ref clo.16) (quote 1))
-                (ref y.13.18)
+                (prim-call closure-ref (ref clo.15) (quote 1))
+                (ref y.13.17)
                 (quote 0))
                (quote e))))))
           (begin
-           (prim-call closure-set! (ref clo.13) (quote 0) (ref e.11.14))
-           (prim-call closure-set! (ref clo.13) (quote 1) (ref f.2.3))
+           (prim-call closure-set! (ref clo.12) (quote 0) (ref e.11.13))
+           (prim-call closure-set! (ref clo.12) (quote 1) (ref f.2.3))
            (let*
-            ((clo.19 (prim-call make-closure (quote 2))))
+            ((clo.18 (prim-call make-closure (quote 2))))
             (letrec
-             ((g.14.20
+             ((g.14.19
                (case-lambda
-                ((clo.21) (quote g0))
-                ((clo.22 x.6.15.23 y.7.16.24)
+                ((clo.20) (quote g0))
+                ((clo.21 x.6.15.22 y.7.16.23)
                  (call
                   (ref g.5.6)
-                  (prim-call closure-ref (ref clo.22) (quote 1))
-                  (ref x.6.15.23)
-                  (ref y.7.16.24))))))
+                  (prim-call closure-ref (ref clo.21) (quote 1))
+                  (ref x.6.15.22)
+                  (ref y.7.16.23))))))
              (begin
-              (prim-call closure-set! (ref clo.19) (quote 0) (ref g.14.20))
-              (prim-call closure-set! (ref clo.19) (quote 1) (ref g.5.6))
+              (prim-call closure-set! (ref clo.18) (quote 0) (ref g.14.19))
+              (prim-call closure-set! (ref clo.18) (quote 1) (ref g.5.6))
               (prim-call
                closure-call
                (ref list.1.2)
                (letrec
-                ((abx.17.25
+                ((abx.17.24
                   (case-lambda
-                   ((clo.26 a.18.27 b.19.28 x*.20.29)
+                   ((a.18.25 b.19.26 x*.20.27)
                     (prim-call
                      closure-call
-                     (ref clo.26)
+                     (ref list.1.2)
                      (quote a)
-                     (ref a.18.27)
+                     (ref a.18.25)
                      (quote b)
-                     (ref b.19.28)
+                     (ref b.19.26)
                      (quote x*)
-                     (ref x*.20.29))))))
+                     (ref x*.20.27))))))
                 (call
-                 (ref abx.17.25)
-                 (ref list.1.2)
+                 (ref abx.17.24)
                  (quote 1)
                  (quote 2)
                  (prim-call
@@ -9959,26 +9874,22 @@ HLL-create-closures:
                    (quote 4)
                    (prim-call cons (quote 5) (quote ()))))))
                (letrec
-                ((f.21.30
+                ((f.21.28
                   (case-lambda
-                   ((clo.31) (quote f0))
-                   ((clo.32 x.3.22.33 y.4.23.34)
-                    (call
-                     (ref f.2.3)
-                     (ref clo.32)
-                     (ref x.3.22.33)
-                     (ref y.4.23.34))))))
-                (call (ref f.21.30) (ref f.2.3) (quote 6)))
-               (ref clo.13)
-               (ref clo.19)))))))))))))
+                   (() (quote f0))
+                   ((x.3.22.29 y.4.23.30)
+                    (call (ref f.2.3) (ref x.3.22.29) (ref y.4.23.30))))))
+                (call (ref f.21.28) (quote 6)))
+               (ref clo.12)
+               (ref clo.18)))))))))))))
    (begin
     (prim-call closure-set! (ref clo.0) (quote 0) (ref _.0.1))
     (ref clo.0))))
  (let*
-  ((clo.35 (prim-call make-closure (quote 1))))
+  ((clo.31 (prim-call make-closure (quote 1))))
   (letrec
-   ((_.24.36 (case-lambda ((#t . x*.25.37) (ref x*.25.37)))))
+   ((_.24.32 (case-lambda ((#t . x*.25.33) (ref x*.25.33)))))
    (begin
-    (prim-call closure-set! (ref clo.35) (quote 0) (ref _.24.36))
-    (ref clo.35)))))
+    (prim-call closure-set! (ref clo.31) (quote 0) (ref _.24.32))
+    (ref clo.31)))))
 
