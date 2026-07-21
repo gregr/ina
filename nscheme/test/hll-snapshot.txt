@@ -11139,7 +11139,7 @@ HLL-create-closures:
               (call (ref h.8.9) (ref y.7.16.8) (quote 22))
               (quote g)))))))
         (let*
-         ((clo.12 (prim-call make-closure (quote 2))))
+         ((clo.12 (prim-call make-closure (quote 1))))
          (letrec
           ((e.11.13
             (case-lambda
@@ -11147,30 +11147,20 @@ HLL-create-closures:
              ((clo.15 x.12.16 y.13.17)
               (if
                (ref x.12.16)
-               (call
-                (ref f.2.3)
-                (prim-call closure-ref (ref clo.15) (quote 1))
-                (ref y.13.17)
-                (quote 0))
+               (call (ref f.2.3) (ref y.13.17) (quote 0))
                (quote e))))))
           (begin
            (prim-call closure-set! (ref clo.12) (quote 0) (ref e.11.13))
-           (prim-call closure-set! (ref clo.12) (quote 1) (ref f.2.3))
            (let*
-            ((clo.18 (prim-call make-closure (quote 2))))
+            ((clo.18 (prim-call make-closure (quote 1))))
             (letrec
              ((g.14.19
                (case-lambda
                 ((clo.20) (quote g0))
                 ((clo.21 x.6.15.22 y.7.16.23)
-                 (call
-                  (ref g.5.6)
-                  (prim-call closure-ref (ref clo.21) (quote 1))
-                  (ref x.6.15.22)
-                  (ref y.7.16.23))))))
+                 (call (ref g.5.6) (ref x.6.15.22) (ref y.7.16.23))))))
              (begin
               (prim-call closure-set! (ref clo.18) (quote 0) (ref g.14.19))
-              (prim-call closure-set! (ref clo.18) (quote 1) (ref g.5.6))
               (prim-call
                closure-call
                (ref list.1.2)
