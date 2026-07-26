@@ -1,5 +1,4 @@
 ;;; HLL includes `let*`, `apply/values`, and `case-values` to reduce closure allocation.
-;;; HLL includes `late` to support transformations that defer decisions.
 ;;;;;;;;;;;
 ;;; HLL ;;;
 ;;;;;;;;;;;
@@ -15,7 +14,6 @@
 ;;                      | #(let*         Note (Let-binding ...) Expr)
 ;;                      | #(apply/values Note Expr Expr)
 ;;                      | #(case-values  Note Expr (Case-lambda-clause ...))
-;;                      | #(late         Note &Expr)
 ;; Case-lambda-clause ::= #(Arity Param*~ Expr)
 ;; Arity              ::= <integer>  ; complemented (negative) if arity is variadic
 ;; Let-binding        ::= (Param . Expr)
@@ -37,7 +35,6 @@
 (define (HLL:let*         note lb* body)    (vector 'let*         note lb* body))
 (define (HLL:apply/values note rator rand)  (vector 'apply/values note rator rand))
 (define (HLL:case-values  note rand clc*)   (vector 'case-values  note rand clc*))
-(define (HLL:late         note &e)          (vector 'late         note &e))
 (define (HLL-note x) (vector-ref x 1))
 (define (HLL-note-set x note)
   (case (vector-length x)
@@ -160,7 +157,7 @@
 (splicing-local
   ((define-syntax HLL-case-build
      (syntax-rules (ref prim-ref quote if begin call prim-call case-lambda letrec let* apply/values
-                        case-values late)
+                        case-values)
        ((_ x (((ref a) . body) . clause*) v1* v2* v3*)
         (HLL-case-build x clause* ((ref . (lambda (a) . body)) . v1*) v2* v3*))
        ((_ x (((prim-ref a) . body) . clause*) v1* v2* v3*)
@@ -169,8 +166,6 @@
         (HLL-case-build x clause* ((quote . (lambda (a) . body)) . v1*) v2* v3*))
        ((_ x (((case-lambda a) . body) . clause*) v1* v2* v3*)
         (HLL-case-build x clause* ((case-lambda . (lambda (a) . body)) . v1*) v2* v3*))
-       ((_ x (((late a) . body) . clause*) v1* v2* v3*)
-        (HLL-case-build x clause* ((late . (lambda (a) . body)) . v1*) v2* v3*))
        ((_ x (((begin a b) . body) . clause*) v1* v2* v3*)
         (HLL-case-build x clause* v1* ((begin . (lambda (a b) . body)) . v2*) v3*))
        ((_ x (((call a b) . body) . clause*) v1* v2* v3*)
@@ -279,9 +274,33 @@
     x
     ((ref _) #t) ((prim-ref _) #t) ((quote _) #t) ((case-lambda _) #t)
     ((if c t f) (and (HLL-pure? c) (HLL-pure? t) (HLL-pure? f)))
-    ((late &e) (HLL-pure? (unbox &e)))
     ;; TODO: prim-call might also be #t
     (_ #f)))
+
+(define HLL:defer box)
+(define (HLL-undefer P)
+  (define (LB* lb*) (lb*-map (lambda (lhs rhs) (let-binding lhs (Expr rhs)))
+                             (lb*-map (lambda (lhs rhs) (let-binding lhs rhs)) lb*)))
+  (define (CLC* clc*) (clc*-map (lambda (a p body) (cl-clause a p (Expr body))) clc*))
+  (define (Expr x)
+    (if (mvector? x)
+        (Expr (unbox x))
+        (let ((note (HLL-note x)))
+          (HLL-case
+            x
+            ((ref v)                   x)
+            ((prim-ref _)              x)
+            ((quote v)                 x)
+            ((if c t f)                (HLL:if note (Expr c) (Expr t) (Expr f)))
+            ((begin e^ e)              (HLL:begin note (tree-map Expr e^) (Expr e)))
+            ((call rator rand*)        (HLL:call note (Expr rator) (map Expr rand*)))
+            ((prim-call p rand*)       (HLL:prim-call note p (map Expr rand*)))
+            ((case-lambda clc*)        (HLL:case-lambda note (CLC* clc*)))
+            ((letrec lb* body)         (HLL:letrec note (LB* lb*) (Expr body)))
+            ((let* lb* body)           (HLL:let*   note (LB* lb*) (Expr body)))
+            ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
+            ((case-values rand clc*)   (HLL:case-values note (Expr rand) (CLC* clc*)))))))
+  (Expr P))
 
 (define (HLL-initialize P)
   (mdefine old* '())
@@ -338,7 +357,6 @@
       ((let* lb* body)           (HLL:let*   note (LB*/ctx ctx lb*) (Expr/ctx x body)))
       ((apply/values rator rand) (HLL:apply/values note (Expr/ctx x rator) (Expr/ctx x rand)))
       ((case-values rand clc*)   (HLL:case-values note (Expr/ctx x rand) (CLC*/ctx x clc*)))
-      ((late &e)                 (Expr/ctx ctx (unbox &e)))
       (x                         (fail "not an Expr" x ctx))))
   (define (Expr*/ctx ctx x*) (list?!/ctx ctx x*) (map (lambda (x) (Expr/ctx ctx x)) x*))
   (define (Expr^/ctx ctx x^) (tree-map (lambda (x) (Expr/ctx ctx x)) x^))
@@ -370,8 +388,7 @@
       ((letrec lb* body)         (LET* lb* body))
       ((let* lb* body)           (LET* lb* body))
       ((apply/values rator rand) (Expr rator) (Expr rand))
-      ((case-values rand clc*)   (Expr rand) (CLC* clc*))
-      ((late &e)                 (Expr (unbox &e)))))
+      ((case-values rand clc*)   (Expr rand) (CLC* clc*))))
   (Expr P))
 
 (define (HLL-copy P)
@@ -400,8 +417,7 @@
       ((letrec lb* body)         (HLL:letrec note (LB* lb*) (Expr body)))
       ((let* lb* body)           (HLL:let*   note (LB* lb*) (Expr body)))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
-      ((case-values rand clc*)   (HLL:case-values note (Expr rand) (CLC* clc*)))
-      ((late &e)                 (Expr (unbox &e)))))
+      ((case-values rand clc*)   (HLL:case-values note (Expr rand) (CLC* clc*)))))
   (let ((P (Expr P)))
     (for-each (lambda (v) (set-hllvar-data! v (hllvar-data (hllvar-data v)))) old*)
     P))
@@ -427,8 +443,7 @@
       ((letrec lb* body)         (LB* lb*) (Expr body))
       ((let* lb* body)           (LB* lb*) (Expr body))
       ((apply/values rator rand) (Expr rator) (Expr rand))
-      ((case-values rand clc*)   (Expr rand) (CLC* clc*))
-      ((late &e)                 (Expr (unbox &e)))))
+      ((case-values rand clc*)   (Expr rand) (CLC* clc*))))
   (Expr P))
 
 (define (HLL-variable* P)
@@ -459,8 +474,7 @@
       ((letrec lb* body)         (list 'letrec (lb*-pretty lb*) (loop body)))
       ((let* lb* body)           (list 'let*   (lb*-pretty lb*) (loop body)))
       ((apply/values rator rand) (list 'apply/values (loop rator) (loop rand)))
-      ((case-values rand clc*)   (cons* 'case-values (loop rand) (clc*-pretty clc*)))
-      ((late &e)                 (loop (unbox &e)))))
+      ((case-values rand clc*)   (cons* 'case-values (loop rand) (clc*-pretty clc*)))))
   (loop P))
 
 (define (make-hllvar-rename!)
@@ -527,7 +541,7 @@
        (cond (escape?   (^expr))
              (outer-bnd (let ((&expr (box #f)))
                           (binding-defer! outer-bnd (lambda () (set-box! &expr (^expr))))
-                          (HLL:late #f &expr)))
+                          (HLL:defer &expr)))
              (else      (HLL:quote note #t))))
       ((letrec lb* body)
        (lb*-for-each (lambda (lhs _) (when lhs (bind-rec! lhs))) lb*)
@@ -565,8 +579,7 @@
                  (loop body)))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
       ((case-values rand clc*)   (define (CLC a p body) (cl-clause a p (loop body)))
-                                 (HLL:case-values note (Expr rand) (clc*-map CLC clc*)))
-      ((late &e)                 (loop (unbox &e)))))
+                                 (HLL:case-values note (Expr rand) (clc*-map CLC clc*)))))
   (let ((topvar (hllvar #f #f)))
     (bind-nonrec! topvar)
     (let ((P (Expr/binding (hllvar-data topvar) #f P)))
@@ -574,7 +587,7 @@
                      (set! bnd*.pending '())
                      (unless (null? bnd*) (for-each binding-force! bnd*) (loop))))
       (for-each (lambda (x) (set-hllvar-data! x #f)) var*.all)
-      P)))
+      (HLL-undefer P))))
 
 ;; HLL-bind-known-lambda may disconnect mutual recursion, so run it before HLL-stratify-letrec.
 (define (HLL-bind-known-lambda P)
@@ -653,8 +666,7 @@
                          (and (pair? clc*) (or (pair? (cdr clc*))
                                                (arity-variadic? (cl-clause-arity (car clc*))))
                               (make-cld lhs (HLL-note rhs) clc*)))
-                        ((late &e) (rhs->cld (unbox &e)))
-                        (_         #f)))
+                        (_ #f)))
             (let ((cld (and lhs (rhs->cld (let-binding-rhs lb)))))
               (if cld (begin (set-hllvar-data! lhs cld) (cons lhs lhs*.cl)) lhs*.cl))))))
   (define (CLC clc)
@@ -688,20 +700,17 @@
       ((begin e^ e) (HLL:begin note (tree-map Expr e^) (Expr e)))
       ((call rator rand*)
        (define (default) (HLL:call note (Expr rator) (map Expr rand*)))
-       (let retry ((rator rator))
-         (HLL-case
-           rator
-           ((ref v) (let ((cld (hllvar-data v)))
-                      (if cld (cld-call cld note rator (map Expr rand*)) (default))))
-           ((late &e) (retry (unbox &e)))
-           (_ (default)))))
+       (HLL-case
+         rator
+         ((ref v) (let ((cld (hllvar-data v)))
+                    (if cld (cld-call cld note rator (map Expr rand*)) (default))))
+         (_ (default))))
       ((prim-call p rand*)       (HLL:prim-call note p (map Expr rand*)))
       ((case-lambda clc*)        (HLL:case-lambda note (CLC* clc*)))
       ((letrec lb* body)         (Let HLL:letrec lb* body))
       ((let*   lb* body)         (Let HLL:let* lb* body))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
-      ((case-values rand clc*)   (HLL:case-values note (Expr rand) (CLC* clc*)))
-      ((late &e)                 (Expr (unbox &e)))))
+      ((case-values rand clc*)   (HLL:case-values note (Expr rand) (CLC* clc*)))))
   (Expr P))
 
 ;; HLL-stratify-letrec is an optional pass that is intended to be run before HLL-convert-letrec so
@@ -826,18 +835,16 @@
                           node*.tail
                           (let ((lb (car lb*)) (node* (loop (cdr lb*) node*.tail)))
                             (let handle-lb ((lhs (let-binding-lhs lb)) (rhs (let-binding-rhs lb)))
-                              (let retry ((rhs rhs))
-                                (define (finish cl?)
-                                  (let ((node (make-node lhs rhs cl? &active-src)))
-                                    (when lhs (set-hllvar-data! lhs node))
-                                    (cons node node*)))
-                                (HLL-case
-                                  rhs
-                                  ((letrec lb* body) (loop lb* (handle-lb lhs body)))
-                                  ((let*   lb* body) (loop lb* (handle-lb lhs body)))
-                                  ((late   &e)       (retry (unbox &e)))
-                                  ((case-lambda _)   (finish #t))
-                                  (_                 (finish #f))))))))))
+                              (define (finish cl?)
+                                (let ((node (make-node lhs rhs cl? &active-src)))
+                                  (when lhs (set-hllvar-data! lhs node))
+                                  (cons node node*)))
+                              (HLL-case
+                                rhs
+                                ((letrec lb* body) (loop lb* (handle-lb lhs body)))
+                                ((let*   lb* body) (loop lb* (handle-lb lhs body)))
+                                ((case-lambda _)   (finish #t))
+                                (_                 (finish #f)))))))))
          (let loop ((node* node*) (rlb* '()))
            (define (wrap-rlb* body) (if (null? rlb*) body (HLL:let* #f (reverse rlb*) body)))
            (if (null? node*)
@@ -859,8 +866,7 @@
       ((let* lb* body)           (let ((lb* (lb*-map (lambda (l r) (let-binding l (Expr r))) lb*)))
                                    (HLL:let* note lb* (Expr body))))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
-      ((case-values rand clc*)   (HLL:case-values note (Expr rand) (CLC* clc*)))
-      ((late &e)                 (Expr (unbox &e)))))
+      ((case-values rand clc*)   (HLL:case-values note (Expr rand) (CLC* clc*)))))
   (Expr P))
 
 ;; HLL-sink-join-points is a direct-style approach to contification.
@@ -964,19 +970,15 @@
       (if (null? lb*)
           '()
           (let ((lb (car lb*)) (lb* (loop (cdr lb*))))
-            (let ((lhs (let-binding-lhs lb)))
-              (let ((rhs (and lhs (let retry ((rhs (let-binding-rhs lb)))
-                                    (HLL-case rhs
-                                              ((case-lambda _) rhs)
-                                              ((late &e)       (retry (unbox &e)))
-                                              (_               #f))))))
+            (let ((lhs (let-binding-lhs lb)) (rhs (let-binding-rhs lb)))
+              (let ((rhs (and lhs (HLL-case rhs ((case-lambda _) rhs) (_ #f)))))
                 (if rhs
                     (begin (set-hllvar-data! lhs (make-candidate k.home rhs queue)) (cons lhs lb*))
                     lb*)))))))
   (define (CLC*/Expr Expr clc*) (clc*-map (lambda (a p b) (cl-clause a p (Expr b))) clc*))
-  (define (Late/k k x) (let ((e (Expr/k k x)) (b (knode-body k)))
-                         (if b (begin (set-box! b e) (HLL:late #f b)) e)))
-  (define (Nontail x) (Late/k (make-knode-nonrec k.escape) x))
+  (define (Defer/k k x) (let ((e (Expr/k k x)) (b (knode-body k)))
+                         (if b (begin (set-box! b e) (HLL:defer b)) e)))
+  (define (Nontail x) (Defer/k (make-knode-nonrec k.escape) x))
   (define (Ref k v x) (let ((c (hllvar-data v))) (when c (candidate-call! c k))) x)
   (define (JP-rec c)
     (let ((k (candidate-current-k c)) (x (candidate-rhs c)))
@@ -987,7 +989,7 @@
          (let ((x (HLL:case-lambda (HLL-note x) (CLC*/Expr (lambda (x)
                                                              (let ((k (make-knode-rec k)))
                                                                (set! body-k* (cons k body-k*))
-                                                               (Late/k k x)))
+                                                               (Defer/k k x)))
                                                            clc*))))
            (set-candidate-body-k*! c body-k*)
            x)))))
@@ -997,8 +999,7 @@
                    (HLL:case-lambda (HLL-note x) (CLC*/Expr (lambda (x) (Expr/k k x)) clc*))))))
   (define (Expr/k k x)
     (define (Tail x) (Expr/k k x))
-    (define (Rator x)
-      (HLL-case x ((ref v) (Ref k v x)) ((late &e) (Rator (unbox &e))) (_ (Nontail x))))
+    (define (Rator x) (HLL-case x ((ref v) (Ref k v x)) (_ (Nontail x))))
     (define note (HLL-note x))
     (HLL-case
       x
@@ -1074,9 +1075,8 @@
          (for-each (lambda (x) (set-hllvar-data! x #f)) registered*)
          (if (null? lb*) body (HLL:let* note lb* body))))
       ((apply/values rator rand) (HLL:apply/values note (Nontail rator) (Nontail rand)))
-      ((case-values rand clc*)   (HLL:case-values note (Nontail rand) (CLC*/Expr Tail clc*)))
-      ((late &e)                 (Tail (unbox &e)))))
-  (let ((P (Nontail P))) (values join-point* P)))
+      ((case-values rand clc*)   (HLL:case-values note (Nontail rand) (CLC*/Expr Tail clc*)))))
+  (let ((P (Nontail P))) (values join-point* (HLL-undefer P))))
 
 (define (HLL-convert-letrec P)
   (let Expr ((x P))
@@ -1096,14 +1096,12 @@
        (mdefine lb*.lam '())
        (mdefine lb*.other '())
        (lb*-for-each (lambda (lhs rhs)
-                       (let retry ((rhs rhs))
-                         (HLL-case
-                           rhs
-                           ((case-lambda clc*)
-                            (when lhs (set! lb*.lam (cons (let-binding lhs rhs) lb*.lam))))
-                           ((late &e) (retry (unbox &e)))
-                           (_ (when lhs (set-hllvar-data! lhs #t))
-                              (set! lb*.other (cons (let-binding lhs rhs) lb*.other))))))
+                       (HLL-case
+                         rhs
+                         ((case-lambda clc*)
+                          (when lhs (set! lb*.lam (cons (let-binding lhs rhs) lb*.lam))))
+                         (_ (when lhs (set-hllvar-data! lhs #t))
+                            (set! lb*.other (cons (let-binding lhs rhs) lb*.other)))))
                      lb*)
        (mdefine lb*.box '())
        (mdefine effect^ #f)
@@ -1125,8 +1123,7 @@
       ((let* lb* body)           (define (LB lhs rhs) (let-binding lhs (Expr rhs)))
                                  (HLL:let* note (lb*-map LB lb*) (Expr body)))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
-      ((case-values rand clc*)   (HLL:case-values note (Expr rand) (CLC* clc*)))
-      ((late &e)                 (Expr (unbox &e))))))
+      ((case-values rand clc*)   (HLL:case-values note (Expr rand) (CLC* clc*))))))
 
 (define (HLL-bind-lambda P)
   (define (CLC* clc*) (clc*-map (lambda (a p body) (cl-clause a p (Expr body))) clc*))
@@ -1176,8 +1173,7 @@
                               (outer-loop note lb*)))
                         (Expr/k rhs k k.lambda))))))))
       ((apply/values rator rand) (k (HLL:apply/values note (Expr rator) (Expr rand))))
-      ((case-values rand clc*)   (k (HLL:case-values note (Expr rand) (CLC* clc*))))
-      ((late &e)                 (Expr/current (unbox &e)))))
+      ((case-values rand clc*)   (k (HLL:case-values note (Expr rand) (CLC* clc*))))))
   (Expr P))
 
 (define (HLL-map-quote P f)
@@ -1198,8 +1194,7 @@
       ((letrec lb* body)         (HLL:letrec note (Let-binding* lb*) (Expr body)))
       ((let* lb* body)           (HLL:let*   note (Let-binding* lb*) (Expr body)))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
-      ((case-values rand clc*)   (HLL:case-values note (Expr rand) (CLC* clc*)))
-      ((late &e)                 (Expr (unbox &e)))))
+      ((case-values rand clc*)   (HLL:case-values note (Expr rand) (CLC* clc*)))))
   (Expr P))
 
 (define (HLL-normalize-quote P)
@@ -1244,8 +1239,7 @@
       x
       ((case-lambda clc*) (let* ((clo (make-clo)) (clo* (cons clo clo*)) (depth (+ depth 1)))
                             (set! lhs=>clo (cons (cons lhs clo) lhs=>clo))
-                            (CLC* clo* depth clc*)))
-      ((late &e)          (CL lhs clo* depth (unbox &e)))))
+                            (CLC* clo* depth clc*)))))
   (define (Expr/clo clo* depth x)
     (define (Expr x) (Expr/clo clo* depth x))
     (define (Let* lb* body)
@@ -1285,8 +1279,7 @@
       ((letrec lb* body)         (Letrec lb* body))
       ((let* lb* body)           (Let* lb* body))
       ((apply/values rator rand) (Expr rator) (Expr rand))
-      ((case-values rand clc*)   (Expr rand) (CLC* clo* depth clc*))
-      ((late &e)                 (Expr (unbox &e)))))
+      ((case-values rand clc*)   (Expr rand) (CLC* clo* depth clc*))))
   (Expr/clo '() 0 P)
   (alist-map-value unbox lhs=>clo))
 
@@ -1309,8 +1302,7 @@
       ((letrec lb* body)         (Let lb* body))
       ((let* lb* body)           (Let lb* body))
       ((apply/values rator rand) (Expr rator) (Expr rand))
-      ((case-values rand clc*)   (Expr rand) (CLC* clc*))
-      ((late &e)                 (Expr/rator? rator? (unbox &e)))))
+      ((case-values rand clc*)   (Expr rand) (CLC* clc*))))
   (Expr P)
   (filter (lambda (v) (let ((wk? (hllvar-data v))) (set-hllvar-data! v #f) wk?)) var*.procedure))
 
@@ -1356,8 +1348,7 @@
                                                lb*))
       ((let* lb* body)           (lb*-for-each (lambda (_ rhs) (Expr rhs)) lb*) (Tail body))
       ((apply/values rator rand) (Expr rator) (Expr rand))
-      ((case-values rand clc*)   (Expr rand) (CLC* clc*))
-      ((late &e)                 (Tail (unbox &e)))))
+      ((case-values rand clc*)   (Expr rand) (CLC* clc*))))
   (Expr/level 0 P)
   (let loop () (let ((c* non-tail*))
                  (unless (null? c*)
@@ -1395,8 +1386,7 @@
            (let ((b (Expr b)))
              (for-each (lambda (fv) (set-hllvar-data! fv (cref-prev (hllvar-data fv)))) fv*)
              (cl-clause (arity+ a 1) (cons pclo p) b))))
-       (HLL:case-lambda (HLL-note x) (clc*-map make-cl clc*)))
-      ((late &e) (CL fv* (unbox &e)))))
+       (HLL:case-lambda (HLL-note x) (clc*-map make-cl clc*)))))
   (define (Expr x)
     (define note (HLL-note x))
     (HLL-case
@@ -1437,8 +1427,8 @@
        (HLL:let* note (lb*-map (lambda (l r) (let-binding l (Expr r))) lb*) (Expr body)))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
       ((case-values rand clc*)
-       (HLL:case-values note (Expr rand) (clc*-map (lambda (a p b) (cl-clause a p (Expr b))) clc*)))
-      ((late &e) (Expr (unbox &e)))))
+       (HLL:case-values note (Expr rand) (clc*-map (lambda (a p b) (cl-clause a p (Expr b)))
+                                                   clc*)))))
   (Expr P))
 
 ;; Create flat closures, omitting free-variable fields for self-references and unnecessary
@@ -1532,11 +1522,8 @@
                                                       (loop (cdr fv*) (+ i 1))))
                 (values (be-len be) fv=>e))
               (begin (alist-for-each set-hllvar-data! fv=>e) (values len #f))))))
-  (define (CL CLC x) (let retry ((x x)) (HLL-case
-                                          x
-                                          ((case-lambda clc*)
-                                           (HLL:case-lambda (HLL-note x) (clc*-map CLC clc*)))
-                                          ((late &e) (retry (unbox &e))))))
+  (define (CL CLC x) (HLL-case x ((case-lambda clc*)
+                                  (HLL:case-lambda (HLL-note x) (clc*-map CLC clc*)))))
   (define (LB* CLC lb*) (lb*-map (lambda (l r) (let-binding l (CL CLC r))) lb*))
   (define (Expr/bank bank x)
     (define ((CL/fv*/clo-ref clo-ref) fv* x)
@@ -1707,21 +1694,18 @@
       ((prim-call p rand*) (HLL:prim-call note p (map Expr rand*)))
       ((call rator rand*)
        (let ((rand* (map Expr rand*)))
-         (let retry ((rator rator))
-           (HLL-case
-             rator
-             ((ref v) (cond ((not (known? v)) (HLL:closure-call note (var-ref v) rand*))
-                            ((hllvar-data v)  (HLL:call note rator (cons (var-ref v) rand*)))
-                            (else             (HLL:call note rator rand*))))
-             ((late &e) (retry (unbox &e)))
-             (_         (HLL:closure-call note (Expr rator) rand*))))))
+         (HLL-case
+           rator
+           ((ref v) (cond ((not (known? v)) (HLL:closure-call note (var-ref v) rand*))
+                          ((hllvar-data v)  (HLL:call note rator (cons (var-ref v) rand*)))
+                          (else             (HLL:call note rator rand*))))
+           (_       (HLL:closure-call note (Expr rator) rand*)))))
       ((letrec lb* body) (if (null? lb*) (Expr body) (Letrec note lb* body)))
       ((let* lb* body)
        (HLL:let* note (lb*-map (lambda (l r) (let-binding l (Expr r))) lb*) (Expr body)))
       ((apply/values rator rand) (HLL:apply/values note (Expr rator) (Expr rand)))
       ((case-values rand clc*)
-       (HLL:case-values note (Expr rand) (clc*-map (lambda (a p b) (cl-clause a p (Expr b))) clc*)))
-      ((late &e) (Expr (unbox &e)))))
+       (HLL:case-values note (Expr rand) (clc*-map (lambda (a p b) (cl-clause a p (Expr b))) clc*)))))
   (let ((P (Expr/bank bank.empty P)))
     (alist-for-each (lambda (v _) (set-hllvar-data! v #f)) proc=>fv*)
     (alist-for-each set-hllvar-data2! v=>data2)
