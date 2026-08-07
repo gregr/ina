@@ -181,7 +181,7 @@
           (displayln "join points:")
           (pretty-write (map hllvar-name jp*))
           (displayln "HLL-lift-static:")
-          (let ((P P))  ; TODO
+          (let ((P (HLL-lift-static P jp*)))
             (pretty-write (HLL-pretty-uid P))
             P)))))
   (define (HLL-lower P)
