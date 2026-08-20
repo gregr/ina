@@ -37,15 +37,13 @@
 (define current-thread-group (rkt-parameter->parameter rkt:current-thread-group))
 (define raw-current-panic-handler (make-parameter #f))
 (define current-panic-handler
-  (case-lambda
-    (()          (raw-current-panic-handler))
-    ((new thunk) (let ((old (raw-current-panic-handler)))
-                   (raw-current-panic-handler
-                    (lambda x*
-                      (raw-current-panic-handler old (lambda () (apply new x*) (apply panic x*))))
-                    thunk)))))
+  (lambda (new thunk)
+    (let ((old (raw-current-panic-handler)))
+      (raw-current-panic-handler
+        (lambda x* (raw-current-panic-handler old (lambda () (apply new x*) (apply panic x*))))
+        thunk))))
 (define (panic . x*)
-  (let ((handle (current-panic-handler))) (when handle (apply handle x*)))
+  (let ((handle (raw-current-panic-handler))) (when handle (apply handle x*)))
   (rkt:displayln "unhandled panic:" (current-error-port))
   (rkt:pretty-write (cons 'panic x*) (current-error-port))
   (let ((msg "panic"))
