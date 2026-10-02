@@ -133,7 +133,7 @@
               (lambda (width)
                 (utf8-ref/b0&width/k bv i b0 width kf (lambda (_) (loop (+ i width)))))))
           (kt)))))
-(define (utf8?! bv) (utf8?/k bv mistake       (lambda () (values))))
+(define (utf8?! bv) (utf8?/k bv mistake       (lambda () (void))))
 (define (utf8?  bv) (utf8?/k bv (lambda _ #f) (lambda () #t)))
 
 (define (utf8-ref bv i) (let* ((b0 (bytes-ref bv i)) (width (utf8-decode-width b0)))

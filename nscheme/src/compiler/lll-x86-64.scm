@@ -306,7 +306,7 @@
             ((u>) (k '=/=))
             (else (k op)))
           (k op)))
-    (define (No-op) (values))
+    (define (No-op) (void))
     (define (Binary-op op a b)
       (let ((iop (binop->op op)))
         (and iop (let ((simple (lambda () (set! carry? #f) (asm iop 8 a b)))

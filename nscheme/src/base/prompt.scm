@@ -67,8 +67,7 @@
         thunk))))
 
 (define (with-abort      desc on-abort thunk) (with-restart 'abort desc on-abort thunk))
-(define (with-continue   desc          thunk) (with-restart 'continue desc (lambda x* (values))
-                                                            thunk))
+(define (with-continue   desc          thunk) (with-restart 'continue desc void thunk))
 (define (with-retry      desc          thunk) (let loop () (with-restart 'retry desc loop thunk)))
 (define (with-use-value  desc          thunk) (with-restart 'use-value desc (lambda (x) x) thunk))
 (define (with-use-values desc          thunk) (with-restart 'use-values desc values thunk))

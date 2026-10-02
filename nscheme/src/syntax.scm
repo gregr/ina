@@ -180,7 +180,7 @@
         (case method
           ((ref/k)      (lambda (id kf k) (kf)))
           ((bind!/k)    (lambda (id x kf k) (mistake "cannot bind!/k read-only environment" id)))
-          ((read-only!) (values))
+          ((read-only!) (void))
           ((read-only)  env.empty)
           ((frozen?)    id-dict.empty)
           ((writable)   #f)
@@ -203,7 +203,7 @@
                                           (kf)
                                           (((car env*) 'ref/k) id (lambda () (loop (cdr env*))) k)))))
                     ((bind!/k)    (lambda (id x kf k) (mistake "cannot bind!/k env-conjoin environment" id)))
-                    ((read-only!) (values))
+                    ((read-only!) (void))
                     ((read-only)  self)
                     ((frozen?)    #f)
                     ((writable)   #f)
@@ -289,7 +289,7 @@
       (case method
         ((ref/k)      (lambda (id kf k) (if (memv id id*) (kf) ((env 'ref/k) id kf k))))
         ((bind!/k)    (lambda (id x kf k) (mistake "cannot bind!/k env-remove environment" id)))
-        ((read-only!) (values))
+        ((read-only!) (void))
         ((read-only)  self)
         ((frozen?)    #f)
         ((writable)   #f)
@@ -302,7 +302,7 @@
       (case method
         ((ref/k)      (lambda (id kf k) (let ((x (ref id))) (if x (k x) (kf)))))
         ((bind!/k)    (lambda (id x kf k) (mistake "cannot bind!/k read-only environment" id)))
-        ((read-only!) (values))
+        ((read-only!) (void))
         ((read-only)  self)
         ((frozen?)    #f)
         ((writable)   #f)

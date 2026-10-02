@@ -9,7 +9,7 @@
         (cons 'console     (list (cons 'input-port  empty-iport)
                                  (cons 'output-port full-oport)
                                  (cons 'output-port full-oport)))
-        (cons 'time        (list (cons 'sleep-seconds-nanoseconds (lambda (s ns) (values)))
+        (cons 'time        (list (cons 'sleep-seconds-nanoseconds (lambda (s ns) (void)))
                                  (cons 'seconds-nanoseconds/type  (lambda (type) (lambda () (values 0 0))))))
         (cons 'primitive-evaluate (case-lambda
                                     (()                 '())

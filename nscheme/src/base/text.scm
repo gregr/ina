@@ -126,8 +126,8 @@
 (define (layout:single-line printer)
   (define (space) (printer-print printer #" " #f))
   (make-layout (lambda (text attr) (printer-print printer text attr))
-               (lambda (indent)    (values))
-               (lambda ()          (values))
+               (lambda (indent)    (void))
+               (lambda ()          (void))
                space space space))
 
 (splicing-local

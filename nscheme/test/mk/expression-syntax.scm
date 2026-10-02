@@ -117,7 +117,7 @@
 
 (define-syntax test
   (syntax-rules ()
-    ((_)              (values))
+    ((_)              (void))
     ((_ expr . expr*) (begin (pretty-write 'expr)
                              (pretty-write (with-milliseconds displayln (lambda () expr)))
                              (newline)

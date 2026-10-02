@@ -33,7 +33,7 @@ static inline u64 LLL_atomic_cas(u64* loc, u64 expected, u64 new) {
           ((mloc? x) (when (Label? (mloc-disp x))
                        (mistake "LLL C does not support mloc with label displacement" x)))
           ((relocation? x) (mistake "LLL C does not support relocations" x))
-          (else (values)))))
+          (else (void)))))
 
 (define (LLL-emit-C P)
   (define u64-suffix "ull")
