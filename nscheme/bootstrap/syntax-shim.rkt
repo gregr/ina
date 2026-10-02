@@ -1,10 +1,13 @@
 #lang racket/base
 (provide
   apply/values set! case-values case let-values let*-values mlet mdefine aquote)
-(require (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
+(require "primitive.rkt" (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 
 (read-decimal-as-inexact #f)
 (rkt:pretty-print-exact-as-decimal #t)
+
+(define (mistake* detail*) (panic 'mistake detail*))
+(define (mistake . detail*) (mistake* detail*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Syntax extensions ;;;
@@ -15,14 +18,15 @@
 (define-syntax-rule (case-values e.values case-clauses ...)
   (apply/values (case-lambda case-clauses ...) e.values))
 
-(define-syntax case
+(define-syntax-rule (case e . clause) (let ((x e)) (case-etc x . clause)))
+(define-syntax case-etc
   (syntax-rules (else =>)
-    ((_ x)                              (values))
-    ((_ x (else => proc))               (proc x))
-    ((_ x (else rhs ...))               (let () rhs ...))
-    ((_ x ((d ...) rhs ...) clause ...) (if (rkt:member x '(d ...))
-                                            (let () rhs ...)
-                                            (case x clause ...)))))
+    ((_ x)                            (mistake "no matching case" x))
+    ((_ x (else => proc))             (proc x))
+    ((_ x (else rhs ...))             (let () rhs ...))
+    ((_ x ((d ...) rhs ...) . clause) (if (rkt:member x '(d ...))
+                                          (let () rhs ...)
+                                          (case-etc x . clause)))))
 
 ;; WARNING: these are only complete enough to run our bootstrapping process
 (define-syntax let-values
