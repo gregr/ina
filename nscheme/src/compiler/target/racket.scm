@@ -53,6 +53,8 @@ racket-primitive-definition-text))
   racket/list racket/path racket/port racket/set racket/tcp racket/udp racket/vector
   (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 
+(define (void . x*) (values))
+
 (define call/values call-with-values)
 (define (b->s b) (bytes->string/utf-8 b))
 (define (s->b s) (string->bytes/utf-8 s))
@@ -155,7 +157,7 @@ racket-primitive-definition-text))
                                            '()))))
     (let-values (((stype construct ? access mutate!)
                   (make-struct-type name #f field-count 0 #f prop* #f #f immutable* #f #f)))
-      (values construct ? access (lambda (r i v) (mutate! r i v) (values))))))
+      (values construct ? access (lambda (r i v) (mutate! r i v) (void))))))
 
 (struct mbytes (bv) #:name mbytes-struct #:constructor-name mbytes:new #:mutable #:prefab)
 (struct mvector (v) #:name mvector-struct #:constructor-name mvector:new #:mutable #:prefab)
@@ -163,7 +165,7 @@ racket-primitive-definition-text))
 (define (make-mvector   len x)  (mvector:new   (make-vector len x)))
 (define (mvector-length mv)     (vector-length (mvector-v mv)))
 (define (mvector-ref    mv i)   (vector-ref    (mvector-v mv) i))
-(define (mvector-set!   mv i x) (vector-set!   (mvector-v mv) i x) (values))
+(define (mvector-set!   mv i x) (vector-set!   (mvector-v mv) i x) (void))
 (define mvector->vector
   (case-lambda
     ((mv)             (vector-copy (mvector-v mv)))
@@ -173,7 +175,7 @@ racket-primitive-definition-text))
 (define (make-mbytes   len n)   (mbytes:new   (make-bytes len n)))
 (define (mbytes-length mbv)     (bytes-length (mbytes-bv mbv)))
 (define (mbytes-ref    mbv i)   (bytes-ref    (mbytes-bv mbv) i))
-(define (mbytes-set!   mbv i n) (bytes-set!   (mbytes-bv mbv) i n) (values))
+(define (mbytes-set!   mbv i n) (bytes-set!   (mbytes-bv mbv) i n) (void))
 (define mbytes->bytes
   (case-lambda
     ((mbv)             (bytes-copy (mbytes-bv mbv)))
@@ -594,8 +596,8 @@ racket-primitive-definition-text))
               ((err)       err)
               ((pid)       (subprocess-pid sp))
               ((wait)      (subprocess-wait sp) (subprocess-status sp))
-              ((kill)      (subprocess-kill sp #t) (values))
-              ((interrupt) (subprocess-kill sp #f) (values))
+              ((kill)      (subprocess-kill sp #t) (void))
+              ((interrupt) (subprocess-kill sp #f) (void))
               (else        (mistake #"not a posix-raw-process/k method" method)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;
@@ -609,13 +611,13 @@ racket-primitive-definition-text))
     ((procedure? handler) (hash-set!    posix-signal=>handler signal handler))
     ((not        handler) (hash-remove! posix-signal=>handler signal))
     (else                 (mistake 'posix-set-signal-handler! #"not a procedure or #f" signal handler)))
-  (values))
+  (void))
 (define (with-native-signal-handling thunk)
   (parameterize-break
    #f
    (let ((cc (rkt:current-custodian)) (cust (make-custodian)))
      (dynamic-wind
-      (lambda () (void))
+      (lambda () (rkt:void))
       (lambda ()
         (parameterize ((rkt:current-custodian cust))
           (let ((self (current-thread)))
@@ -637,7 +639,7 @@ racket-primitive-definition-text))
                                               ((posix-signal-handler signal) signal))
                                             (loop))))
                 (sync/enable-break (handle-evt ch (lambda (^return) (^return)))
-                                   (handle-evt (thread-dead-evt body) void)))))))
+                                   (handle-evt (thread-dead-evt body) rkt:void)))))))
       (lambda () (custodian-shutdown-all cust))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
