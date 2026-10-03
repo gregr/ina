@@ -280,10 +280,10 @@ consolidate thread and thread-dead-evt
     make-channel channel-put-evt
   - but we should probably add always-evt
     - although, we could express always-evt and never-evt using thread-dead-evt
-      - (define always-evt (thread-dead-evt (thread (lambda () (values)))))
+      - (define always-evt (thread-dead-evt (thread (lambda () (void)))))
       - (define never-evt (thread-dead-evt (thread (lambda () (sync)))))
       - and after getting rid of thread-dead evt:
-      - (define always-evt (thread (lambda () (values))))
+      - (define always-evt (thread (lambda () (void))))
       - (define never-evt (thread (lambda () (sync))))
     - so, get rid of never-evt too
 
