@@ -13,20 +13,20 @@
 ;;; Input memory ;;;
 ;;;;;;;;;;;;;;;;;;;;
 (define (imemory-close/k im kf k) (im 'close kf k))
-(define (imemory-close   im)      (imemory-close/k im raise-io-error values))
+(define (imemory-close   im)      (imemory-close/k im raise-io-error void))
 (define (imemory-size/k  im kf k) (im 'size kf k))
-(define (imemory-size    im)      (imemory-size/k im raise-io-error values))
+(define (imemory-size    im)      (imemory-size/k im raise-io-error void))
 ;; Returns EOF, the amount read, or a failure indication.
 ;; Blocks until at least (min count (max 1 available-bytes)) bytes are read.
 ;; Failure may occur after a partial read.
 (define (imemory-read/k im pos dst start count kf keof k) (im 'read pos dst start count kf keof k))
 (define (imemory-read im pos dst start count)
-  (imemory-read/k im pos dst start count raise-io-error values values))
+  (imemory-read/k im pos dst start count raise-io-error void identity))
 ;; Returns EOF, the byte read, or a failure indication.
 (define (imemory-read-byte/k im pos kf keof k)
   (let ((dst (make-mbytes 1 0)))
     (imemory-read/k im pos dst 0 1 kf keof (lambda (amount) (k (mbytes-ref dst 0))))))
-(define (imemory-read-byte im pos) (imemory-read-byte/k im pos raise-io-error values values))
+(define (imemory-read-byte im pos) (imemory-read-byte/k im pos raise-io-error void identity))
 ;; Returns EOF, the bytes read, or a failure indication.
 ;; Blocks until at least (min count (max 1 available-bytes)) bytes are read.
 ;; Failure may occur after a partial read.
@@ -34,7 +34,7 @@
   (let ((dst (make-mbytes count 0)))
     (imemory-read/k im pos dst 0 count kf keof (lambda (amount) (k (mbytes->bytes dst 0 amount))))))
 (define (imemory-read-bytes im pos count)
-  (imemory-read-bytes/k im pos count raise-io-error values values))
+  (imemory-read-bytes/k im pos count raise-io-error void identity))
 ;; Returns the amount read, or a failure indication.
 ;; Blocks until at least (min count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
@@ -48,7 +48,7 @@
                                           (lambda (amount) (loop (+ total amount))))
                           (k total))))))
 (define (imemory-read* im pos dst start count)
-  (imemory-read*/k im pos dst start count raise-io-error values))
+  (imemory-read*/k im pos dst start count raise-io-error identity))
 ;; Returns the amount read, or a failure indication.
 ;; Blocks until at least (min count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
@@ -57,28 +57,28 @@
     (imemory-read*/k im pos dst 0 count kf (lambda () (k #""))
                      (lambda (amount) (k (mbytes->bytes dst 0 amount))))))
 (define (imemory-read*-bytes im pos count)
-  (imemory-read*-bytes/k im pos count raise-io-error values))
+  (imemory-read*-bytes/k im pos count raise-io-error identity))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;;; Output memory ;;;
 ;;;;;;;;;;;;;;;;;;;;;
 (define (omemory-close/k   om kf k)      (om 'close kf k))
-(define (omemory-close     om)           (omemory-close/k om raise-io-error values))
+(define (omemory-close     om)           (omemory-close/k om raise-io-error void))
 (define (omemory-size/k    om kf k)      (om 'size kf k))
-(define (omemory-size      om)           (omemory-size/k om raise-io-error values))
+(define (omemory-size      om)           (omemory-size/k om raise-io-error identity))
 (define (omemory-resize!/k om size kf k) (om 'resize! size kf k))
-(define (omemory-resize!   om size)      (omemory-resize!/k om size raise-io-error values))
+(define (omemory-resize!   om size)      (omemory-resize!/k om size raise-io-error void))
 ;; May return a failure indication.
 ;; Blocks until count bytes are written.
 ;; Failure may occur after a partial write.
 (define (omemory-write/k om pos src start count kf k) (om 'write pos src start count kf k))
 (define (omemory-write om pos src start count)
-  (omemory-write/k om pos src start count raise-io-error values))
+  (omemory-write/k om pos src start count raise-io-error void))
 ;; May return a failure indication.
 ;; Blocks until the byte is written.
 (define (omemory-write-byte/k om pos byte kf k)
   (omemory-write/k om pos (bytes byte) 0 1 1 kf k))
-(define (omemory-write-byte om pos byte) (omemory-write-byte/k om pos byte raise-io-error values))
+(define (omemory-write-byte om pos byte) (omemory-write-byte/k om pos byte raise-io-error void))
 ;; May return a failure indication.
 ;; Blocks until the entire bytes is written.
 ;; Failure may occur after a partial write.
@@ -86,24 +86,24 @@
   (let ((count (if (mbytes? src) (mbytes-length src) (bytes-length src))))
     (omemory-write/k om pos src 0 count kf k)))
 (define (omemory-write-bytes om pos src)
-  (omemory-write-bytes/k om pos src raise-io-error values))
+  (omemory-write-bytes/k om pos src raise-io-error void))
 
 ;;;;;;;;;;;;;;;;;;;
 ;;; Input ports ;;;
 ;;;;;;;;;;;;;;;;;;;
 (define (iport-close/k p kf k) (p 'close kf k))
-(define (iport-close   p)      (iport-close/k p raise-io-error values))
+(define (iport-close   p)      (iport-close/k p raise-io-error void))
 ;; Returns EOF, the amount read, or a failure indication.
 ;; Blocks until at least (min count (max 1 available-bytes)) bytes are read.
 ;; Failure may occur after a partial read.
 (define (iport-read/k p dst start count kf keof k) (p 'read dst start count kf keof k))
 (define (iport-read p dst start count)
-  (iport-read/k p dst start count raise-io-error values values))
+  (iport-read/k p dst start count raise-io-error void identity))
 ;; Returns EOF, the byte read, or a failure indication.
 (define (iport-read-byte/k p kf keof k)
   (let ((dst (make-mbytes 1 0)))
     (iport-read/k p dst 0 1 kf keof (lambda (amount) (k (mbytes-ref dst 0))))))
-(define (iport-read-byte p) (iport-read-byte/k p raise-io-error values values))
+(define (iport-read-byte p) (iport-read-byte/k p raise-io-error void identity))
 ;; Returns EOF, the bytes read, or a failure indication.
 ;; Blocks until at least (min count (max 1 available-bytes)) bytes are read.
 ;; Failure may occur after a partial read.
@@ -111,7 +111,7 @@
   (let ((dst (make-mbytes count 0)))
     (iport-read/k p dst 0 count kf keof (lambda (amount) (k (mbytes->bytes dst 0 amount))))))
 (define (iport-read-bytes p count)
-  (iport-read-bytes/k p count raise-io-error values values))
+  (iport-read-bytes/k p count raise-io-error void identity))
 ;; Returns the amount read, or a failure indication.
 ;; Blocks until at least (min count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
@@ -125,7 +125,7 @@
                                       (lambda (amount) (loop (+ total amount))))
                         (k total))))))
 (define (iport-read* p dst start count)
-  (iport-read*/k p dst start count raise-io-error values))
+  (iport-read*/k p dst start count raise-io-error identity))
 ;; Returns the amount read, or a failure indication.
 ;; Blocks until at least (min count remaining-bytes) bytes are read.
 ;; Failure may occur after a partial read.
@@ -134,35 +134,35 @@
     (iport-read*/k p dst 0 count kf (lambda () (k #""))
                    (lambda (amount) (k (mbytes->bytes dst 0 amount))))))
 (define (iport-read*-bytes p count)
-  (iport-read*-bytes/k p count raise-io-error values))
+  (iport-read*-bytes/k p count raise-io-error identity))
 ;; Reverts the most recent read(s) of count bytes, provided by the mbytes src.
 ;; It is an error to unread different bytes from those that were originally read.
 ;; It is an error to unread more bytes than have been read since the last unread.
 ;; Each port implementation decides whether to enforce these constraints.
 (define (iport-unread/k p src start count kf k) (p 'unread src start count kf k))
-(define (iport-unread p src start count) (iport-unread/k p src start count raise-io-error values))
+(define (iport-unread p src start count) (iport-unread/k p src start count raise-io-error void))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Output ports ;;;
 ;;;;;;;;;;;;;;;;;;;;
 (define (oport-close/k p kf k) (p 'close kf k))
-(define (oport-close   p)      (oport-close/k p raise-io-error values))
+(define (oport-close   p)      (oport-close/k p raise-io-error void))
 ;; May return a failure indication.
 ;; Blocks until count bytes are written.
 ;; Failure may occur after a partial write.
 (define (oport-write/k p src start count kf k) (p 'write src start count kf k))
-(define (oport-write   p src start count) (oport-write/k p src start count raise-io-error values))
+(define (oport-write   p src start count) (oport-write/k p src start count raise-io-error void))
 ;; May return a failure indication.
 ;; Blocks until the byte is written.
 (define (oport-write-byte/k p byte kf k) (oport-write/k p (bytes byte) 0 1 kf k))
-(define (oport-write-byte   p byte)      (oport-write-byte/k p byte raise-io-error values))
+(define (oport-write-byte   p byte)      (oport-write-byte/k p byte raise-io-error void))
 ;; May return a failure indication.
 ;; Blocks until the entire bytes is written.
 ;; Failure may occur after a partial write.
 (define (oport-write-bytes/k p src kf k)
   (let ((count (if (mbytes? src) (mbytes-length src) (bytes-length src))))
     (oport-write/k p src 0 count kf k)))
-(define (oport-write-bytes p src) (oport-write-bytes/k p src raise-io-error values))
+(define (oport-write-bytes p src) (oport-write-bytes/k p src raise-io-error void))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;; Bytes memory ;;;
@@ -461,7 +461,7 @@
         (lambda (kf k) (oport-write/k port buf 0 pos kf (lambda () (set! pos 0) (k))))))))
 (define ((buffered-oport&flush/buffer-size buffer-size) port)
   (let-values (((p flush/k) ((buffered-oport&flush/k/buffer-size buffer-size) port)))
-    (values p (lambda () (flush/k raise-io-error values)))))
+    (values p (lambda () (flush/k raise-io-error void)))))
 (define ((buffered-oport/buffer-size buffer-size) port)
   (let-values (((p flush/k) ((buffered-oport&flush/k/buffer-size buffer-size) port))) p))
 (splicing-let ((typical-buffer-size 4096))
@@ -494,4 +494,4 @@
         in buffer 0 buffer-size kf k
         (lambda (amount) (oport-write/k out buffer 0 amount kf loop))))))
 (define iport-transfer-all/k (iport-transfer-all/k/buffer-size 4096))
-(define (iport-transfer-all in out) (iport-transfer-all/k in out raise-io-error values))
+(define (iport-transfer-all in out) (iport-transfer-all/k in out raise-io-error void))

@@ -8,7 +8,7 @@
 (define (posix-process-kill      p) (p 'kill))
 (define (posix-process-interrupt p) (p 'interrupt))
 (define (posix-process in out err path arg*)
-  (posix-process/k in out err path arg* raise-io-error raise-io-error values))
+  (posix-process/k in out err path arg* raise-io-error raise-io-error identity))
 (define (posix-process/k in out err path arg* handle-internal-error kf k)
   (define (x->fd x)
     (and x (let ((kv (assoc 'file-descriptor (port-describe x))))
@@ -25,10 +25,10 @@
             (thread (lambda () (iport-transfer-all/k in out handle-internal-error close!))))
           (define (fuse*-push t) (set! fuse* (cons t fuse*)) #f)
           (define (fuse-input in out)
-            (fuse-io in out (lambda () (oport-close/k out handle-internal-error values))))
+            (fuse-io in out (lambda () (oport-close/k out handle-internal-error void))))
           (define (fuse-output in out)
             (fuse*-push
-              (fuse-io in out (lambda () (iport-close/k in handle-internal-error values)))))
+              (fuse-io in out (lambda () (iport-close/k in handle-internal-error void)))))
           (let ((out (and out.p (if out (fuse-output out.p out) out.p)))
                 (err (and err.p (if err (fuse-output err.p err) err.p)))
                 (in  (and in.p
@@ -41,7 +41,7 @@
                                       (lambda ()
                                         (p 'wait)
                                         (custodian-shutdown-all cust)
-                                        (oport-close/k in.p handle-internal-error values))))))
+                                        (oport-close/k in.p handle-internal-error void))))))
                               in.p))))
             (k (if (null? fuse*)
                    p

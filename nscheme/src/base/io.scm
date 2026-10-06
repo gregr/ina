@@ -35,12 +35,12 @@
       ((x port) (go x port)))))
 
 (define (read/reader:data reader:data)
-  (let ((go (lambda (port) ((read/reader:data/k reader:data) port raise values values))))
+  (let ((go (lambda (port) ((read/reader:data/k reader:data) port raise void identity))))
     (case-lambda
       (()     (go (current-input-port)))
       ((port) (go port)))))
 (define (read*/reader:data reader:data)
-  (let ((go (lambda (port) ((read*/reader:data/k reader:data) port raise values))))
+  (let ((go (lambda (port) ((read*/reader:data/k reader:data) port raise identity))))
     (case-lambda
       (()     (go (current-input-port)))
       ((port) (go port)))))

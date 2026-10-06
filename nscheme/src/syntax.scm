@@ -310,16 +310,16 @@
         (else         (mistake "invalid environment operation" method))))
     self)
 
-  (define (env-ref          env id)        (env-ref/k    env id (lambda () #f) values))
+  (define (env-ref          env id)        (env-ref/k    env id (lambda () #f) identity))
   (define (env-ref/k        env id kf k)   ((env 'ref/k) id kf k))
   (define (env-read-only!   env)           (env 'read-only!))
   (define (env-read-only    env)           (env 'read-only))
   ;; TODO: sort and remove duplicates
   (define (env-describe     env)           (env 'describe))
   (define (env-bind!/k      env id x kf k) ((env 'bind!/k) id x kf k))
-  (define (env-rebind!      env id x)      (env-bind!/k env id x #f values))
+  (define (env-rebind!      env id x)      (env-bind!/k env id x #f void))
   (define (env-bind!        env id x)
-    (env-bind!/k env id x (lambda (x) (mistake 'env-bind! "already bound" id x)) values))
+    (env-bind!/k env id x (lambda (x) (mistake 'env-bind! "already bound" id x)) void))
   (define (env-identifier=? env a b)
     (or (identifier=? a b)
         (env-ref/k env a
