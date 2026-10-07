@@ -114,8 +114,6 @@
             ((4) (utf8-decode-4/k b0 (ref src (+ i 1)) (ref src (+ i 2)) (ref src (+ i 3)) kf k))
             (else (mistake "not a utf8 width" width)))))))
 
-(define (utf8-ref/b0&width bv i b0 width) (utf8-ref/b0&width/k bv i b0 width mistake (lambda (c) c)))
-(define (~utf8-ref/b0&width bv i b0 width) (utf8-ref/b0&width/k bv i b0 width (lambda _ #xfffd) (lambda (c) c)))
 (define (utf8?/k bv kf kt)
   (let ((len (bytes-length bv)))
     (let loop ((i 0))
@@ -129,10 +127,6 @@
 (define (utf8?! bv) (utf8?/k bv mistake       (lambda () (void))))
 (define (utf8?  bv) (utf8?/k bv (lambda _ #f) (lambda () #t)))
 
-(define (utf8-ref bv i) (let* ((b0 (bytes-ref bv i)) (width (utf8-decode-width b0)))
-                          (utf8-ref/b0&width bv i b0 width)))
-(define (~utf8-ref bv i) (let* ((b0 (bytes-ref bv i)) (width (~utf8-decode-width b0)))
-                           (~utf8-ref/b0&width bv i b0 width)))
 (define (utf8-next bv i) (+ (utf8-decode-width (bytes-ref bv i)) i))
 (define (~utf8-next bv i) (+ (~utf8-decode-width (bytes-ref bv i)) i))
 (define (utf8-length bv) (let ((len (bytes-length bv)))
@@ -161,3 +155,4 @@
 (define (unicode-hspace?  c) (case c ((9 32 160 5760 8239 8287 12288) #t) (else (<= 8192 c 8202))))
 (define (unicode-vspace?  c) (or (<= 10 c 13) (case c ((133 8232 8233) #t) (else #f))))
 (define (unicode-space?   c) (or (unicode-hspace? c) (unicode-vspace? c)))
+(define unicode.unknown #xfffd)
