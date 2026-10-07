@@ -7,11 +7,12 @@
                  (utf8-decode-width/k
                    b0 (lambda _ #f)
                    (lambda (width)
-                     (utf8-ref/b0&width/k
-                       v i b0 width (lambda _ #f)
-                       (lambda (c) (and (not (or (unicode-control? c) (unicode-space? c)
-                                                 (memv c (bytes->list #"\"#'(),;[\\]`{|}"))))
-                                        (loop (+ i width)))))))))))))
+                     (and (<= (+ i width) len)
+                          (utf8-ref/b0&width/k
+                            v i b0 width (lambda _ #f)
+                            (lambda (c) (and (not (or (unicode-control? c) (unicode-space? c)
+                                                      (memv c (bytes->list #"\"#'(),;[\\]`{|}"))))
+                                             (loop (+ i width))))))))))))))
 
 ;; TODO: optional stack traces for Racket platform debugging via:
 ;; - `(with-continuation-mark trace-key note EXPR)`
