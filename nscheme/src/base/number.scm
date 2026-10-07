@@ -1,10 +1,4 @@
-(define (exact? x) (rational? x))
-(define (number? x) (exact? x))
-
-(define (zero?     x) (= x 0))
-(define (positive? x) (> x 0))
-(define (negative? x) (< x 0))
-
+(define number? rational?)
 (define (nonnegative-integer?  x) (and (integer? x) (<= 0 x)))
 (define (nonnegative-integer?! x) (unless (nonnegative-integer? x)
                                     (mistake "not a nonnegative integer" x)))
