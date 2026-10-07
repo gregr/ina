@@ -1,8 +1,10 @@
 (define (sleep-seconds-nanoseconds s ns) ((current-sleep-seconds-nanoseconds) s ns))
 (define (sleep sec)
   (let ((denom (denominator sec)))
-    (let-values (((whole-seconds rem) (integer-floor-divmod (numerator sec) denom)))
-      (sleep-seconds-nanoseconds whole-seconds (integer-floor-div (* rem 1000000000) denom)))))
+    (integer-floor-divmod/k
+      (numerator sec) denom
+      (lambda (whole-seconds rem)
+        (sleep-seconds-nanoseconds whole-seconds (integer-floor-div (* rem 1000000000) denom))))))
 
 (define (seconds-nanoseconds/type type) ((current-seconds-nanoseconds/type) type))
 (define ((seconds/seconds-nanoseconds     sns)) (let-values (((s ns) (sns))) (+ s (/ ns 1000000000))))

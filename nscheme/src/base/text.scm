@@ -597,9 +597,11 @@
    (define (set-nat-radix-digits! mbv start count n radix)
      (let loop ((i (+ start count -1)) (n n))
        (when (<= start i)
-         (let-values (((q r) (integer-floor-divmod n radix)))
-           (mbytes-set! mbv i (if (< r 10) (+ r byte:0) (+ (- r 10) byte:A)))
-           (loop (- i 1) q))))))
+         (integer-floor-divmod/k
+           n radix
+           (lambda (q r)
+             (mbytes-set! mbv i (if (< r 10) (+ r byte:0) (+ (- r 10) byte:A)))
+             (loop (- i 1) q)))))))
   (define (make-number->utf8 notation)
     (let* ((notation  (notation-override number-notation.default notation))
            (iradix    (notation-ref notation '(implicit-radix)))

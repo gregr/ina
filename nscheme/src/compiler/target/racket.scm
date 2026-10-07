@@ -38,7 +38,7 @@
   bytes bytes-length bytes-ref bytes->symbol symbol->bytes
   make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
   bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
-  integer-floor-divmod numerator denominator = <= >= < > + - * /
+  integer-floor-div numerator denominator = <= >= < > + - * /
   make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
   current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
   sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt
@@ -130,11 +130,10 @@ racket-primitive-definition-text))
 (define (bitwise-asr n k)  (rkt:arithmetic-shift n (- k)))
 (define (bitwise-length n) (integer-length n))
 
-(define (integer-floor-divmod dividend divisor)
-  (unless (integer? dividend) (mistake 'integer-floor-divmod #"dividend is not an integer" dividend))
-  (unless (integer? divisor) (mistake 'integer-floor-divmod #"divisor is not an integer" divisor))
-  (let ((q (rkt:floor (/ dividend divisor))))
-    (values q (- dividend (* q divisor)))))
+(define (integer-floor-div dividend divisor)
+  (unless (integer? dividend) (mistake 'integer-floor-div #"dividend is not an integer" dividend))
+  (unless (integer? divisor) (mistake 'integer-floor-div #"divisor is not an integer" divisor))
+  (rkt:floor (/ dividend divisor)))
 
 (define-values (prop:representer record/representer? record-representer) (make-struct-type-property 'representer))
 (define (describe x)

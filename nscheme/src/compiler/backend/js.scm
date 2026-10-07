@@ -131,7 +131,7 @@
         mbytes-u8-ref mbytes-u8-set!
 
         bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right
-        bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-divmod
+        bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length integer-floor-div
 
         // TODO: not implemented:
         numerator denominator

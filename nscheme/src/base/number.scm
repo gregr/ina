@@ -16,8 +16,10 @@
 (define (negative-integer?  x) (and (integer? x) (< x 0)))
 (define (negative-integer?! x) (unless (negative-integer? x) (mistake "not a negative integer" x)))
 
-(define (integer-floor-div a b) (let-values (((d m) (integer-floor-divmod a b))) d))
-(define (integer-floor-mod a b) (let-values (((d m) (integer-floor-divmod a b))) m))
+(define (integer-floor-divmod/k dividend divisor k)
+  (let ((q (integer-floor-div dividend divisor))) (k q (- dividend (* q divisor)))))
+(define (integer-floor-mod dividend divisor)
+  (integer-floor-divmod/k dividend divisor (lambda (q m) m)))
 
 (define (even? x) (= (integer-floor-mod x 2) 0))
 (define (odd?  x) (= (integer-floor-mod x 2) 1))

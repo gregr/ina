@@ -9,7 +9,7 @@
        bytes bytes-length bytes-ref bytes->symbol symbol->bytes
        make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
        bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
-       integer-floor-divmod numerator denominator = <= >= < > + - * /
+       integer-floor-div numerator denominator = <= >= < > + - * /
        make-parameter current-panic-handler current-custodian make-custodian custodian-shutdown-all
        current-thread-group make-thread-group current-thread thread thread-wait thread-dead-evt
        sync sync/default handle-evt choice-evt guard-evt nack-guard-evt replace-evt never-evt

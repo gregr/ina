@@ -71,5 +71,5 @@
                  bytes bytes-length bytes-ref bytes->symbol symbol->bytes
                  make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
                  bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
-                 integer-floor-divmod numerator denominator = <= >= < > + - * /))))
+                 integer-floor-div numerator denominator = <= >= < > + - * /))))
     (lambda (proc) (let ((pp (assv proc proc=>primop))) (and pp (cdr pp))))))
