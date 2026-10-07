@@ -29,7 +29,6 @@
 (define (rcompose*  f*) (compose* (reverse f*)))
 (define (compose*   f*) (apply compose f*))
 (define compose (case-lambda
-                  (()         values)
                   ((f)        f)
                   ((f g . h*) (let loop ((f f) (g g) (h* h*))
                                 (let ((f (lambda x* (apply/values f (apply g x*)))))

@@ -15,10 +15,6 @@
 (define (printer:port port) (make-printer (lambda (t _) (oport-write-bytes port t))
                                           (lambda ()    (oport-write-byte port 10))))
 
-(define (printer-map p f)
-  (make-printer
-    (lambda (text attr) (let-values (((text attr) (f text attr))) (printer-print p text attr)))
-    (lambda ()          (printer-newline p))))
 (define (printer-map-text/attribute p f)
   (make-printer
     (lambda (text attr) (printer-print p (f text attr) attr))
