@@ -156,7 +156,7 @@ racket-primitive-definition-text))
                                            '()))))
     (let-values (((stype construct ? access mutate!)
                   (make-struct-type name #f field-count 0 #f prop* #f #f immutable* #f #f)))
-      (values construct ? access (lambda (r i v) (mutate! r i v) (void))))))
+      (vector construct ? access (lambda (r i v) (mutate! r i v) (void))))))
 
 (struct mbytes (bv) #:name mbytes-struct #:constructor-name mbytes:new #:mutable #:prefab)
 (struct mvector (v) #:name mvector-struct #:constructor-name mvector:new #:mutable #:prefab)
