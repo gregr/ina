@@ -282,7 +282,7 @@
                              (let loop ((result (result env)))
                                (if (procedure? result) (loop (result env)) result)))
                            result)))
-        (values (syntax-add-mark result m) env))))
+        (cons (syntax-add-mark result m) env))))
 
   (define (env-remove env id*)
     (define (self method)
