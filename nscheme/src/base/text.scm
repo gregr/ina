@@ -1006,6 +1006,7 @@
                                             (notate desc)
                                             (right-bracket text.special-rb))
                                      (atom #"#<procedure>"))))
+              ((void? x)       (atom #"#<void>"))
               ((describe x) => (lambda (desc)
                                  (left-bracket text.special-lb)
                                  (let loop ((i 0) (parent* mr*))
