@@ -154,7 +154,8 @@
       (define eval-def*
         (if quiet?
             eval-definition*
-            (eval-definition*/yield (lambda x* (for-each pretty-write x*)))))
+            (eval-definition*/yield
+              (lambda x* (for-each (lambda (x) (unless (void? x) (pretty-write x))) x*)))))
       (current-posix-argument*
         cli-arg*
         (lambda ()
