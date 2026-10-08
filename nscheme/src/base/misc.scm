@@ -30,10 +30,9 @@
 (define compose (case-lambda
                   ((f)        f)
                   ((f g . h*) (let loop ((f f) (g g) (h* h*))
-                                (let ((f (lambda x* (apply/values f (apply g x*)))))
-                                  (if (null? h*)
-                                      f
-                                      (loop f (car h*) (cdr h*))))))))
+                                (if (null? h*)
+                                    (lambda x* (f (apply g x*)))
+                                    (loop (lambda (x) (f (g x))) (car h*) (cdr h*)))))))
 
 (define (make-rtd name mutable-field?* representer)
   (let* ((rt          (make-record-type name mutable-field?* representer))
