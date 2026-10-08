@@ -1584,8 +1584,8 @@
              (iport-close in)
              (oport-write-bytes out #"abc")
              (oport-close out)
-             (values (list 'server result) (list 'client (channel-get ch.client)))))))))
-   ==> (values (server #"ABC") (client #"abc")))
+             (vector (list 'server result) (list 'client (channel-get ch.client)))))))))
+   ==> #((server #"ABC") (client #"abc")))
 
  '(posix-processes
    (call/oport:bytes
@@ -1602,9 +1602,9 @@
    #"hello world\n0"
    (let* ((oc (oport:bytes&current)) (out (car oc)) (current (cdr oc)))
      (let ((p (posix-process empty-iport out 'stdout (find-file "echo") '("hello world"))))
-       (values (posix-process-wait p) (current))))
+       (vector (posix-process-wait p) (current))))
    ==>
-   (values 0 #"hello world\n")
+   #(0 #"hello world\n")
    (call/oport:bytes
      (lambda (out)
        (let* ((p (posix-raw-process/k #f #f 'stdout (find-file "cat") '() panic identity))
@@ -1627,9 +1627,9 @@
    (let* ((oc (oport:bytes&current)) (out (car oc)) (current (cdr oc)))
      (let* ((in (iport:bytes #"another example"))
             (p  (posix-process in out 'stdout (find-file "cat") '())))
-       (values (posix-process-wait p) (current))))
+       (vector (posix-process-wait p) (current))))
    ==>
-   (values 0 #"another example")
+   #(0 #"another example")
    (call/oport:bytes
      (lambda (result)
        (let* ((p1     (posix-raw-process/k #f #f 'stdout (find-file "echo") '("pipe test")
@@ -1650,8 +1650,8 @@
    (let* ((rc (oport:bytes&current)) (result (car rc)) (current (cdr rc)))
      (let* ((p1 (posix-process empty-iport #f 'stdout (find-file "echo") '("pipe test")))
             (p2 (posix-process (posix-process-out p1) result 'stdout (find-file "cat") '())))
-       (values (posix-process-wait p1) (posix-process-wait p2) (current))))
+       (vector (posix-process-wait p1) (posix-process-wait p2) (current))))
    ==>
-   (values 0 0 #"pipe test\n")))
+   #(0 0 #"pipe test\n")))
 
 (exit (if at-least-one-test-failed? 1 0))
