@@ -190,10 +190,13 @@
                           (unless quiet? (displayln ";; Evaluate:"))
                           (thread
                             (lambda ()
-                              (case-values (read)
-                                (()    (exit))
-                                ((stx) (let ((env.new (eval-def* env (list stx))))
-                                         (channel-put ch.command (lambda () (loop (env-conjoin env.new env)))))))))
+                              (let ((stx (read)))
+                                (if (void? stx)
+                                    (exit)
+                                    (let ((env.new (eval-def* env (list stx))))
+                                      (channel-put ch.command
+                                                   (lambda ()
+                                                     (loop (env-conjoin env.new env)))))))))
                           ((channel-get ch.command)))))))))))))
     (let ((E.program
             (parse-bootstrapped-program-definition*

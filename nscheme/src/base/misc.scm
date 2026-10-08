@@ -1,5 +1,4 @@
 (define call-with-values call/values)
-(define (void . x*) (values))
 (define (identity x) x)
 (define (not x) (eqv? x #f))
 

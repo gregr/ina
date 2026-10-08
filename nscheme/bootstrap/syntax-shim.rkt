@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  apply/values set! case-values case let-values let*-values mlet mdefine aquote)
+  apply/values case-values case let-values let*-values mlet mdefine aquote)
 (require "primitive.rkt" (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 
 (read-decimal-as-inexact #f)
@@ -14,7 +14,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-syntax-rule (apply/values rator vrand) (call-with-values (lambda () vrand) rator))
-(define-syntax-rule (set! x e) (begin (rkt:set! x e) (values)))
 (define-syntax-rule (case-values e.values case-clauses ...)
   (apply/values (case-lambda case-clauses ...) e.values))
 

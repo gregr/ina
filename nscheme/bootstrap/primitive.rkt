@@ -2,8 +2,8 @@
 (provide
   panic apply values call/values make-record-type describe
   eqv? null? boolean? procedure? symbol? rational? integer?
-  pair? vector? mvector? bytes? mbytes?
-  cons car cdr vector vector-length vector-ref
+  pair? vector? mvector? bytes? mbytes? void?
+  void cons car cdr vector vector-length vector-ref
   make-mvector mvector->vector mvector-length mvector-ref mvector-set!
   bytes bytes-length bytes-ref bytes->symbol symbol->bytes
   make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
@@ -19,8 +19,6 @@
   ffi/unsafe/port ffi/unsafe/vm
   racket/list racket/path racket/port racket/set racket/tcp racket/udp racket/vector
   (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
-
-(define (void . x*) (values))
 
 (define call/values call-with-values)
 (define (b->s b) (bytes->string/utf-8 b))
@@ -123,7 +121,7 @@
                                            '()))))
     (let-values (((stype construct ? access mutate!)
                   (make-struct-type name #f field-count 0 #f prop* #f #f immutable* #f #f)))
-      (vector construct ? access (lambda (r i v) (mutate! r i v) (void))))))
+      (vector construct ? access (lambda (r i v) (mutate! r i v))))))
 
 (struct mbytes (bv) #:name mbytes-struct #:constructor-name mbytes:new #:mutable #:prefab)
 (struct mvector (v) #:name mvector-struct #:constructor-name mvector:new #:mutable #:prefab)
@@ -131,7 +129,7 @@
 (define (make-mvector   len x)  (mvector:new   (make-vector len x)))
 (define (mvector-length mv)     (vector-length (mvector-v mv)))
 (define (mvector-ref    mv i)   (vector-ref    (mvector-v mv) i))
-(define (mvector-set!   mv i x) (vector-set!   (mvector-v mv) i x) (void))
+(define (mvector-set!   mv i x) (vector-set!   (mvector-v mv) i x))
 (define mvector->vector
   (case-lambda
     ((mv)             (vector-copy (mvector-v mv)))
@@ -141,7 +139,7 @@
 (define (make-mbytes   len n)   (mbytes:new   (make-bytes len n)))
 (define (mbytes-length mbv)     (bytes-length (mbytes-bv mbv)))
 (define (mbytes-ref    mbv i)   (bytes-ref    (mbytes-bv mbv) i))
-(define (mbytes-set!   mbv i n) (bytes-set!   (mbytes-bv mbv) i n) (void))
+(define (mbytes-set!   mbv i n) (bytes-set!   (mbytes-bv mbv) i n))
 (define mbytes->bytes
   (case-lambda
     ((mbv)             (bytes-copy (mbytes-bv mbv)))
@@ -562,8 +560,8 @@
               ((err)       err)
               ((pid)       (subprocess-pid sp))
               ((wait)      (subprocess-wait sp) (subprocess-status sp))
-              ((kill)      (subprocess-kill sp #t) (void))
-              ((interrupt) (subprocess-kill sp #f) (void))
+              ((kill)      (subprocess-kill sp #t))
+              ((interrupt) (subprocess-kill sp #f))
               (else        (mistake #"not a posix-raw-process/k method" method)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;
@@ -576,14 +574,13 @@
   (cond
     ((procedure? handler) (hash-set!    posix-signal=>handler signal handler))
     ((not        handler) (hash-remove! posix-signal=>handler signal))
-    (else                 (mistake 'posix-set-signal-handler! #"not a procedure or #f" signal handler)))
-  (void))
+    (else                 (mistake 'posix-set-signal-handler! #"not a procedure or #f" signal handler))))
 (define (with-native-signal-handling thunk)
   (parameterize-break
    #f
    (let ((cc (rkt:current-custodian)) (cust (make-custodian)))
      (dynamic-wind
-      (lambda () (rkt:void))
+      (lambda () (void))
       (lambda ()
         (parameterize ((rkt:current-custodian cust))
           (let ((self (current-thread)))
@@ -605,7 +602,7 @@
                                               ((posix-signal-handler signal) signal))
                                             (loop))))
                 (sync/enable-break (handle-evt ch (lambda (^return) (^return)))
-                                   (handle-evt (thread-dead-evt body) rkt:void)))))))
+                                   (handle-evt (thread-dead-evt body) void)))))))
       (lambda () (custodian-shutdown-all cust))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;

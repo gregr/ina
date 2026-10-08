@@ -3,8 +3,8 @@
      (aquote
        panic apply values call/values make-record-type describe
        eqv? null? boolean? procedure? symbol? rational? integer?
-       pair? vector? mvector? bytes? mbytes?
-       cons car cdr vector vector-length vector-ref
+       pair? vector? mvector? bytes? mbytes? void?
+       void cons car cdr vector vector-length vector-ref
        make-mvector mvector->vector mvector-length mvector-ref mvector-set!
        bytes bytes-length bytes-ref bytes->symbol symbol->bytes
        make-mbytes mbytes->bytes mbytes-length mbytes-ref mbytes-set!
