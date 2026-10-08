@@ -182,9 +182,8 @@
                          addr*~* ^body*)))
       (E:case-lambda addr*~* body*)))
   (define ($letrec param* ^rhs*&body)
-    (let ((addr* (map param->address param*)))
-      (let-values (((rhs* body) (apply ^rhs*&body (map $ref addr*))))
-        (E:letrec addr* rhs* body)))))
+    (let* ((addr* (map param->address param*)) (rhs*&body (apply ^rhs*&body (map $ref addr*))))
+      (E:letrec addr* (car rhs*&body) (cdr rhs*&body)))))
 
 (define ($lambda param*~     ^body) ($case-lambda (list param*~) (list ^body)))
 (define ($let    param* rhs* ^body) ($call* ($lambda param* ^body) rhs*))
@@ -207,7 +206,7 @@
 (define ($let1/env env param rhs ^body) ($let/env env (list param) (list rhs) ^body))
 (define ($letrec/env env param* ^rhs*&body)
   ($letrec param* (lambda arg* (^rhs*&body (env-extend env param* arg*)))))
-(define ($loop name ^rhs) ($letrec (list name) (lambda ($self) (values (list (^rhs $self)) $self))))
+(define ($loop name ^rhs) ($letrec (list name) (lambda ($self) (cons (list (^rhs $self)) $self))))
 (define ($thunk body) ($lambda '() (lambda () body)))
 (define $and
   (case-lambda
@@ -411,7 +410,7 @@
                                (lambda (E*) (^E)))))
                ($letrec id* (lambda E*
                               (for-each (lambda (E! E) (E! E)) E!* E*)
-                              (values (map (lambda (^rhs) (^rhs)) ^rhs*) (E*->E E*))))))))))
+                              (cons (map (lambda (^rhs) (^rhs)) ^rhs*) (E*->E E*))))))))))
   (define (D->E         D) (D-compile D #f))
   (define (D->E/publish D) (D-compile D #t))
   (define ($d:begin . D*)           (D:begin D*))
