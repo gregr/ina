@@ -18,7 +18,7 @@
   (define (addr=>primitive-id&primitive=>addr)
     (let* ((addr=>primitive-id (map (lambda (n) (cons (make-address n #f) n)) (map car name=>primitive)))
            (primitive=>addr    (map cons (map cdr name=>primitive) (map car addr=>primitive-id))))
-      (values addr=>primitive-id primitive=>addr))))
+      (cons addr=>primitive-id primitive=>addr))))
 
 (define (E-fold E f)
   (let loop ((E E))

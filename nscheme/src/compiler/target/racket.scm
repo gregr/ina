@@ -1,5 +1,7 @@
 (define E-compile-rkt-text
-  (let-values (((addr=>primitive-id primitive=>addr) (addr=>primitive-id&primitive=>addr)))
+  (let* ((ap&pa (addr=>primitive-id&primitive=>addr))
+         (addr=>primitive-id (car ap&pa))
+         (primitive=>addr    (cdr ap&pa)))
     (define (rkt-expr->rkt-text form) (call/oport:bytes (lambda (out) (compact-write form out))))
     (define (E:bytes v) (E:call (E:quote bytes) (map (lambda (n) (E:quote n)) (bytes->list v))))
     (lambda (E)
