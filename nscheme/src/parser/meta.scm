@@ -1,16 +1,14 @@
 (define (with-higher-mark-level thunk) (current-mark-level (+ (current-mark-level) 1) thunk))
 
 (define (parse-begin-meta-definition* env stx*)
-  (let ((E (apply/values $quote-values
-                         (with-higher-mark-level
-                           (lambda () (E-eval (D->E/publish (parse-begin-definition* env stx*))))))))
+  (let ((E ($quote (with-higher-mark-level
+                     (lambda () (E-eval (D->E/publish (parse-begin-definition* env stx*))))))))
     ($d:expression (lambda () E))))
 (define (parse-begin-meta-definition env . stx*) (parse-begin-meta-definition* env stx*))
 
 (define (parse-begin-meta-expression* env stx*)
-  (apply/values $quote-values
-                (with-higher-mark-level
-                  (lambda () (E-eval ((operator-parser parse-begin-expression 1 #f) env stx*))))))
+  ($quote (with-higher-mark-level
+            (lambda () (E-eval ((operator-parser parse-begin-expression 1 #f) env stx*))))))
 (define (parse-begin-meta-expression env . stx*) (parse-begin-meta-expression* env stx*))
 
 (define ((parse-modify-in-vocabulary env-vocabulary-modify!*) env id.lhs . stx*)

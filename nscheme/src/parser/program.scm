@@ -24,7 +24,7 @@
 (define ((eval-definition*/yield yield) env stx*.def)
   (let* ((p     (make-program))
          (env.d (program-parse-definition* p env stx*.def)))
-    (apply/values yield (E-eval (program->E/publish p)))
+    (yield (E-eval (program->E/publish p)))
     env.d))
 
 (define eval-definition* (eval-definition*/yield void))

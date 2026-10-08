@@ -400,14 +400,9 @@
                                (lambda (E*)
                                  (define (publish-rhs*! rhs*)
                                    (for-each (lambda (E! rhs) (E! ($quote rhs))) E!* rhs*))
-                                 ($let '(result* rhs*)
-                                       (list ($apply/values
-                                               ($lambda 'result* (lambda ($result*) $result*))
-                                               (^E))
-                                             (apply $list E*))
-                                       (lambda ($result* $rhs*)
-                                         ($begin ($pcall publish-rhs*! $rhs*)
-                                                 ($pcall apply ($quote values) $result*)))))
+                                 ($let '(result rhs*) (list (^E) (apply $list E*))
+                                       (lambda ($result $rhs*)
+                                         ($begin ($pcall publish-rhs*! $rhs*) $result))))
                                (lambda (E*) (^E)))))
                ($letrec id* (lambda E*
                               (for-each (lambda (E! E) (E! E)) E!* E*)
