@@ -44,15 +44,11 @@
             (pretty-write c))
           (error:eval c))
         (lambda (escape)
-          (case-values (work-safely escape (lambda () (E-eval E)))
-            ((result) (when (< 0 verbosity)
-                        (displayln "VALUE:")
-                        (pretty-write result))
-                      result)
-            (result*  (when (< 0 verbosity)
-                        (displayln "VALUES:")
-                        (pretty-write result*))
-                      `(values . ,result*)))))))))
+          (let ((result (work-safely escape (lambda () (E-eval E)))))
+            (when (< 0 verbosity)
+              (displayln "VALUE:")
+              (pretty-write result))
+            result)))))))
 
 (define (display-border)
   (displayln "================================================================================"))
@@ -202,38 +198,6 @@
    (or 2 3)     ==> 2
    (or #f #f 4) ==> 4
    (or 2 #f 4)  ==> 2)
-
- '(when
-    (when 1 2)                         ==> 2
-    (let-values ((v* (when #f 3))) v*) ==> ())
-
- '(unless
-    (let-values ((v* (unless 1 2))) v*) ==> ()
-    (unless #f 3)                       ==> 3)
-
- '(case-values
-    (case-values (values 1 2 3)
-      (()         'nothing)
-      ((a)        (vector 'one a))
-      ((a b)      (vector 'two a b))
-      ((a b c)    (vector 'three a b c))
-      ((a b c d)  (vector 'four a b c d))
-      ((a b . x*) (vector '>=2 a b x*)))
-    ==> #(three 1 2 3)
-    (case-values (values 1 2 3)
-      (()         'nothing)
-      ((a)        (vector 'one a))
-      ((a b)      (vector 'two a b))
-      ((a b . x*) (vector '>=2 a b x*))
-      ((a b c)    (vector 'three a b c))
-      ((a b c d)  (vector 'four a b c d)))
-    ==> #(>=2 1 2 (3))
-    (case-values (values 1 2 3)
-      (()         'nothing)
-      ((a)        (vector 'one a))
-      ((a b)      (vector 'two a b))
-      ((a b c d)  (vector 'four a b c d)))
-    ==> error:eval)
 
   '(cond
      (cond (1 2))        ==> 2
@@ -416,22 +380,6 @@
     (let () (begin))      ==> error:parse
     (let () (define x 5)) ==> error:parse)
 
-  '(internal-define-values
-    (let ((a 5) (b 6))
-      (define-values (a b c) (values 1 2 3))
-      ((lambda x* x*) c b a))
-    ==> (3 2 1)
-    (let ((a 5) (b 6))
-      (define vec.value* 'irrelevant)
-      (define-values (a b c) (values 1 2 3))
-      ((lambda x* x*) c b a))
-    ==> (3 2 1)
-    (let ((a 5) (b 6))
-      (define-values (a b c) (values 1 2 3))
-      (define vec.value* 'irrelevant)
-      ((lambda x* x*) c b a))
-    ==> (3 2 1))
-
   ;; Ignoring a binding by using #f instead of an identifier is currently not supported.
   ;'(ignored-bindings
   ;  ((lambda (x y . #f) y) 10 11 12)   ==> 11
@@ -450,10 +398,6 @@
       (define x 5)
       (expression x))
     ==> 5
-    (let ()
-      (define x 5)
-      (expression (values x 6)))
-    ==> (values 5 6)
     (let ()
       (expression (define x 5))
       (expression x))
@@ -1492,8 +1436,9 @@
  ;    (oport-write-byte standard-output-port 65)
  ;    (oport-write-byte standard-output-port 66)
  ;    (oport-write-byte standard-output-port 67)
- ;    (oport-write-byte standard-output-port 10))
- ;  ==> (values)
+ ;    (oport-write-byte standard-output-port 10)
+ ;    'ok)
+ ;  ==> ok
  ;  (let ((standard-input-port (current-input-port))
  ;        (standard-error-port (current-error-port)))
  ;    (oport-write-bytes standard-error-port #"Type 'x' and hit enter: ")
