@@ -216,7 +216,7 @@
                     ((garbage-collector-real) 'time-collector-real)
                     (else (mistake 'current-seconds-nanoseconds #"not a time type" type)))))
         (lambda () (let ((time (chez:current-time type)))
-                     (values (chez:time-second time) (chez:time-nanosecond time))))))))
+                     (cons (chez:time-second time) (chez:time-nanosecond time))))))))
 (define platform.time (list (cons 'time (list (cons 'sleep-seconds-nanoseconds sleep-seconds-nanoseconds)
                                               (cons 'seconds-nanoseconds/type  seconds-nanoseconds/type)))))
 

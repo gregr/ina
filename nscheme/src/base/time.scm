@@ -7,13 +7,15 @@
         (sleep-seconds-nanoseconds whole-seconds (integer-floor-div (* rem 1000000000) denom))))))
 
 (define (seconds-nanoseconds/type type) ((current-seconds-nanoseconds/type) type))
-(define ((seconds/seconds-nanoseconds     sns)) (let-values (((s ns) (sns))) (+ s (/ ns 1000000000))))
-(define ((nanoseconds/seconds-nanoseconds sns)) (let-values (((s ns) (sns))) (+ (* s 1000000000) ns)))
+(define ((seconds/seconds-nanoseconds     ^sns)) (let* ((sns (^sns)) (s (car sns)) (ns (cdr sns)))
+                                                   (+ s (/ ns 1000000000))))
+(define ((nanoseconds/seconds-nanoseconds ^sns)) (let* ((sns (^sns)) (s (car sns)) (ns (cdr sns)))
+                                                   (+ (* s 1000000000) ns)))
 ;; NOTE: for security, we are intentionally deferring, and not caching the result of, the call to
 ;; (seconds-nanoseconds/type type) to ensure we always use the local platform capability.
 (define ((seconds/type     type)) ((seconds/seconds-nanoseconds     (seconds-nanoseconds/type type))))
 (define ((nanoseconds/type type)) ((nanoseconds/seconds-nanoseconds (seconds-nanoseconds/type type))))
-(define (whole-seconds-utc)       (let-values (((s ns) ((seconds-nanoseconds/type 'utc)))) s))
+(define (whole-seconds-utc)       (car ((seconds-nanoseconds/type 'utc))))
 (define seconds-utc                        (seconds/type     'utc))
 (define seconds-monotonic                  (seconds/type     'monotonic))
 (define seconds-process                    (seconds/type     'process))
