@@ -381,8 +381,10 @@
 (define (reader-newline              r loc codepoint)           ((vector-ref r 7) loc codepoint))
 (define (reader-eof                  r loc)                     ((vector-ref r 8) loc))
 (define (reader-error                r loc text desc)           ((vector-ref r 9) loc text desc))
-(define-values (read-error:kind read-error? read-error-location read-error-text)
-  (make-exception-kind-etc error:kind 'read-error '(location text)))
+(define read-error:kind     (make-exception-kind error:kind 'read-error '(location text)))
+(define read-error?         (exception-kind-?              read-error:kind))
+(define read-error-location (exception-kind-field-accessor read-error:kind 'location))
+(define read-error-text     (exception-kind-field-accessor read-error:kind 'text))
 (define (make-read-error desc location text)
   (make-exception read-error:kind (make-error desc) location text))
 (define make-read-error-location-update

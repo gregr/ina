@@ -1,8 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parsing helpers ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;
-(define-values (parse-error:kind parse-error? parse-error-syntax)
-  (make-exception-kind-etc error:kind 'parse-error '(syntax)))
+(define parse-error:kind   (make-exception-kind error:kind 'parse-error '(syntax)))
+(define parse-error?       (exception-kind-?              parse-error:kind))
+(define parse-error-syntax (exception-kind-field-accessor parse-error:kind 'syntax))
 (define (make-parse-error desc stx) (make-exception parse-error:kind (make-error desc) stx))
 (define (raise-parse-error . arg*) (raise (apply make-parse-error arg*)))
 

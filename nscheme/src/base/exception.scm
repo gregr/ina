@@ -19,17 +19,12 @@
   (cons (cons (exception-kind-tag kind) (map cons (exception-kind-field-name* kind) field*))
         (or super '())))
 
-(define (make-exception-kind-etc superkind tag field-name*)
-  (let ((kind (make-exception-kind superkind tag field-name*)))
-    (apply values kind (exception-kind-? kind)
-           (map (lambda (name) (exception-kind-field-accessor kind name))
-                (exception-kind-field-name* kind)))))
-
 ;;;;;;;;;;;;;
 ;;; Error ;;;
 ;;;;;;;;;;;;;
-(define-values (error:kind error? error-description)
-  (make-exception-kind-etc #f 'error '(description)))
+(define error:kind        (make-exception-kind #f 'error '(description)))
+(define error?            (exception-kind-?              error:kind))
+(define error-description (exception-kind-field-accessor error:kind 'description))
 (define (make-error  desc) (make-exception error:kind #f desc))
 (define (raise-error desc) (raise (make-error desc)))
 
@@ -49,7 +44,9 @@
 ;;; Depending on the operation variant, by convention these two values are either:
 ;;; - returned to a failure continuation for /k operations
 ;;; - raised as an io-error otherwise
-(define-values (io-error:kind io-error? io-error-tag io-error-context)
-  (make-exception-kind-etc error:kind 'io-error '(tag context)))
+(define io-error:kind    (make-exception-kind #f 'error '(tag context)))
+(define io-error?        (exception-kind-?              io-error:kind))
+(define io-error-tag     (exception-kind-field-accessor io-error:kind 'tag))
+(define io-error-context (exception-kind-field-accessor io-error:kind 'context))
 (define (make-io-error  tag context) (make-exception io-error:kind (make-error "IO error") tag context))
 (define (raise-io-error tag context) (raise (make-io-error tag context)))
