@@ -43,7 +43,7 @@
           (t0.real    (nanoseconds-monotonic))
           (t0.gc-cpu  (nanoseconds-garbage-collector-cpu))
           (t0.gc-real (nanoseconds-garbage-collector-real)))
-      (let-values ((x* (thunk)))
+      (let ((x (thunk)))
         (let ((t1.cpu     (nanoseconds-thread))
               (t1.real    (nanoseconds-monotonic))
               (t1.gc-cpu  (nanoseconds-garbage-collector-cpu))
@@ -52,7 +52,7 @@
                        (delta 'real    t1.real    t0.real)
                        (delta 'gc-cpu  t1.gc-cpu  t0.gc-cpu)
                        (delta 'gc-real t1.gc-real t0.gc-real)))
-          (apply values x*))))))
+          x)))))
 (define (with-milliseconds yield thunk)
   (with-nanoseconds
     (lambda (kv*)

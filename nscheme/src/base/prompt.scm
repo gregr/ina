@@ -1,21 +1,19 @@
 (define (with-local-custodian thunk)
   (let ((cust (make-custodian)))
-    (let-values ((x* (current-custodian
-                       cust
-                       (lambda ()
-                         (let ((parent (current-thread)))
-                           (thread (lambda () (thread-wait parent) (custodian-shutdown-all cust))))
-                         (thunk)))))
+    (let ((x (current-custodian
+               cust
+               (lambda () (let ((parent (current-thread)))
+                            (thread (lambda () (thread-wait parent) (custodian-shutdown-all cust))))
+                 (thunk)))))
       (custodian-shutdown-all cust)
-      (apply values x*))))
+      x)))
 
 (define (call-with-escape on-escape proc)
   (let* ((ch     (make-channel))
          (escape (lambda x* (channel-put ch (lambda () (apply on-escape x*))) (sync))))
     ((with-local-custodian
        (lambda ()
-         (thread (lambda () (let-values ((x* (proc escape)))
-                              (channel-put ch (lambda () (apply values x*))))))
+         (thread (lambda () (let ((x (proc escape))) (channel-put ch (lambda () x)))))
          (channel-get ch))))))
 (define call/escape call-with-escape)
 

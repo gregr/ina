@@ -358,9 +358,9 @@
 (define call/oport:bytes call-with-oport:bytes)
 (define (call-with-batched-oport p k)
   (let* ((oc (oport:bytes&current)) (out (car oc)) (current (cdr oc)))
-    (let-values ((x* (k out)))
+    (let ((x (k out)))
       (let ((b* (current))) (oport-write p b* 0 (bytes-length b*)))
-      (apply values x*))))
+      x)))
 (define call/batched-oport call-with-batched-oport)
 
 ;;;;;;;;;;;;;;;;;;;
@@ -469,9 +469,8 @@
   (define buffered-oport&flush/k (buffered-oport&flush/k/buffer-size typical-buffer-size))
   (define buffered-oport&flush   (buffered-oport&flush/buffer-size   typical-buffer-size))
   (define buffered-oport         (buffered-oport/buffer-size         typical-buffer-size)))
-(define (call-with-buffered-oport p k) (let ((out (buffered-oport p))) (let-values ((x* (k out)))
-                                                                         (oport-close out)
-                                                                         (apply values x*))))
+(define (call-with-buffered-oport p k) (let* ((out (buffered-oport p)) (x (k out)))
+                                         (oport-close out) x))
 (define call/buffered-oport call-with-buffered-oport)
 
 (define ((iport->bytes/buffer-size buffer-size) port)

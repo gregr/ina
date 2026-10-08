@@ -1,7 +1,5 @@
 (define (with-panic-finalizer finalize thunk)
-  (let-values ((x* (current-panic-handler (lambda _ (finalize)) thunk)))
-    (finalize)
-    (apply values x*)))
+  (let ((x (current-panic-handler (lambda _ (finalize)) thunk))) (finalize) x))
 (define (with-stty-fresh thunk)
   (let ((settings (stty-ref)))
     (display (bytes-append csi:cursor-save
