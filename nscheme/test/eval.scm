@@ -1610,7 +1610,7 @@
             ((b) (oport-write-byte out b) (loop)))))))
    ==>
    #"hello world\n0"
-   (let-values (((out current) (oport:bytes&current)))
+   (let* ((oc (oport:bytes&current)) (out (car oc)) (current (cdr oc)))
      (let ((p (posix-process empty-iport out 'stdout (find-file "echo") '("hello world"))))
        (values (posix-process-wait p) (current))))
    ==>
@@ -1632,7 +1632,7 @@
             ((b) (oport-write-byte out b) (loop)))))))
    ==>
    #"another example0"
-   (let-values (((out current) (oport:bytes&current)))
+   (let* ((oc (oport:bytes&current)) (out (car oc)) (current (cdr oc)))
      (let* ((in (iport:bytes #"another example"))
             (p  (posix-process in out 'stdout (find-file "cat") '())))
        (values (posix-process-wait p) (current))))
@@ -1653,7 +1653,7 @@
                  (oport-write-byte result (+ (posix-process-wait p2) 48)))
             ((b) (oport-write-byte result b) (loop)))))))
    ==> #"pipe test\n00"
-   (let-values (((result current) (oport:bytes&current)))
+   (let* ((rc (oport:bytes&current)) (result (car rc)) (current (cdr rc)))
      (let* ((p1 (posix-process empty-iport #f 'stdout (find-file "echo") '("pipe test")))
             (p2 (posix-process (posix-process-out p1) result 'stdout (find-file "cat") '())))
        (values (posix-process-wait p1) (posix-process-wait p2) (current))))

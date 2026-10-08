@@ -224,7 +224,7 @@
         (mbytes-copy! new 0 buf 0 end.copy)
         (set! buf.st new)
         new))
-    (values
+    (cons
       (lambda (method . arg*)
         (apply (case method
                  ((write)    (lambda (pos src start count kf k)
@@ -351,15 +351,16 @@
 (define (oport:mbytes buf) (oport:memory (omemory:mbytes buf) 0 #f))
 (define (oport:bytes&current) (oport:bytes&current/buffer-size 64))
 (define (oport:bytes&current/buffer-size buffer-size)
-  (let-values (((om current) (omemory:bytes&current/buffer-size buffer-size)))
-    (values (oport:memory om 0 #f) current)))
+  (let* ((omc (omemory:bytes&current/buffer-size buffer-size)) (om (car omc)) (current (cdr omc)))
+    (cons (oport:memory om 0 #f) current)))
 (define (call-with-oport:bytes k)
-  (let-values (((out current) (oport:bytes&current))) (k out) (current)))
+  (let* ((oc (oport:bytes&current)) (out (car oc)) (current (cdr oc))) (k out) (current)))
 (define call/oport:bytes call-with-oport:bytes)
 (define (call-with-batched-oport p k)
-  (let*-values (((out current) (oport:bytes&current)) (x* (k out)))
-    (let ((b* (current))) (oport-write p b* 0 (bytes-length b*)))
-    (apply values x*)))
+  (let* ((oc (oport:bytes&current)) (out (car oc)) (current (cdr oc)))
+    (let-values ((x* (k out)))
+      (let ((b* (current))) (oport-write p b* 0 (bytes-length b*)))
+      (apply values x*))))
 (define call/batched-oport call-with-batched-oport)
 
 ;;;;;;;;;;;;;;;;;;;
@@ -430,7 +431,7 @@
   (let ((description (cons '(type . buffered-oport) (port-describe port)))
         (buf         (make-mbytes buffer-size 0)))
     (mlet ((pos 0))
-      (values
+      (cons
         (lambda (method . arg*)
           (apply (case method
                    ((write)    (lambda (src start count kf k)
@@ -460,10 +461,10 @@
                  arg*))
         (lambda (kf k) (oport-write/k port buf 0 pos kf (lambda () (set! pos 0) (k))))))))
 (define ((buffered-oport&flush/buffer-size buffer-size) port)
-  (let-values (((p flush/k) ((buffered-oport&flush/k/buffer-size buffer-size) port)))
-    (values p (lambda () (flush/k raise-io-error void)))))
+  (let* ((pf ((buffered-oport&flush/k/buffer-size buffer-size) port)) (flush/k (cdr pf)))
+    (cons (car pf) (lambda () (flush/k raise-io-error void)))))
 (define ((buffered-oport/buffer-size buffer-size) port)
-  (let-values (((p flush/k) ((buffered-oport&flush/k/buffer-size buffer-size) port))) p))
+  (car ((buffered-oport&flush/k/buffer-size buffer-size) port)))
 (splicing-let ((typical-buffer-size 4096))
   (define buffered-oport&flush/k (buffered-oport&flush/k/buffer-size typical-buffer-size))
   (define buffered-oport&flush   (buffered-oport&flush/buffer-size   typical-buffer-size))
