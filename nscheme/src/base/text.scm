@@ -382,11 +382,13 @@
 (define (reader-eof                  r loc)                     ((vector-ref r 8) loc))
 (define (reader-error                r loc text desc)           ((vector-ref r 9) loc text desc))
 (define-values (read-error:kind read-error? read-error-location read-error-text)
-  (make-exception-kind-etc error:kind 'read-error '#(location text)))
+  (make-exception-kind-etc error:kind 'read-error '(location text)))
 (define (make-read-error desc location text)
-  (make-exception read-error:kind (vector desc location text)))
-(define ((make-read-error-location-update f) e)
-  (make-read-error (error-description e) (f (read-error-location e)) (read-error-text e)))
+  (make-exception read-error:kind (make-error desc) location text))
+(define make-read-error-location-update
+  (let ((updater (exception-kind-field-updater read-error:kind 'location)))
+    (lambda (f) (lambda (ex) (updater ex f)))))
+
 (define (raise-read-error . x*) (raise (apply make-read-error x*)))
 
 (define ((reader:data/annotate annotate) yf yeof yield)

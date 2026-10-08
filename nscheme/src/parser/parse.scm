@@ -2,8 +2,8 @@
 ;;; Parsing helpers ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;
 (define-values (parse-error:kind parse-error? parse-error-syntax)
-  (make-exception-kind-etc error:kind 'parse-error '#(syntax)))
-(define (make-parse-error desc stx) (make-exception parse-error:kind (vector desc stx)))
+  (make-exception-kind-etc error:kind 'parse-error '(syntax)))
+(define (make-parse-error desc stx) (make-exception parse-error:kind (make-error desc) stx))
 (define (raise-parse-error . arg*) (raise (apply make-parse-error arg*)))
 
 (define (syntax->improper-list s)
