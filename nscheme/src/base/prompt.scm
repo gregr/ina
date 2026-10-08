@@ -70,7 +70,6 @@
 (define (with-continue   desc          thunk) (with-restart 'continue desc void thunk))
 (define (with-retry      desc          thunk) (let loop () (with-restart 'retry desc loop thunk)))
 (define (with-use-value  desc          thunk) (with-restart 'use-value desc identity thunk))
-(define (with-use-values desc          thunk) (with-restart 'use-values desc values thunk))
 
 (define (with-continue-alternative* desc thunk . thunk*)
   (let loop ((thunk thunk) (thunk* thunk*))
@@ -91,7 +90,6 @@
 (define (continue)        (invoke-restart 'continue))
 (define (retry)           (invoke-restart 'retry))
 (define (use-value x)     (invoke-restart 'use-value x))
-(define (use-values . x*) (apply invoke-restart 'use-values x*))
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;; Raise handlers ;;;
