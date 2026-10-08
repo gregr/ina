@@ -176,7 +176,7 @@
       (let ((P (HLL-stratify-letrec P)))
         (pretty-write (HLL-pretty-uid P))
         (displayln "HLL-sink-join-points:")
-        (let-values (((jp* P) (HLL-sink-join-points P)))
+        (let* ((jp*&P (HLL-sink-join-points P)) (jp* (car jp*&P)) (P (cdr jp*&P)))
           (pretty-write (HLL-pretty-uid P))
           (displayln "join points:")
           (pretty-write (map hllvar-name jp*))
