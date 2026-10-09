@@ -815,7 +815,7 @@ VHLL:
          (lambda
           (n)
           (set-box! total (+ (unbox total) n))
-          (cond ((< 0 n) (loop (- n 1))) (else (values))))))
+          (cond ((< 0 n) (loop (- n 1))) (else (void))))))
        (loop n)
        (unbox total))))))
   (sum-to-n 1000)))
@@ -847,7 +847,7 @@ pretty HLL:
                 (call
                  (ref loop.6)
                  (call (quote #<procedure ->) (ref n.7) (quote 1)))
-                (call (quote #<procedure values>))))))))
+                (call (quote #<procedure void>))))))))
           (begin
            (call (ref loop.6) (ref n.4))
            (call (ref unbox.1) (ref total.5))))))
@@ -887,7 +887,7 @@ HLL-check-letrec:
                 (call
                  (ref loop.6)
                  (call (quote #<procedure ->) (ref n.7) (quote 1)))
-                (call (quote #<procedure values>))))))))
+                (call (quote #<procedure void>))))))))
           (begin
            (call (ref loop.6) (ref n.4))
            (call (ref unbox.1) (ref total.5))))))
@@ -927,7 +927,7 @@ HLL-bind-known-lambda:
                 (call
                  (ref loop.6)
                  (call (quote #<procedure ->) (ref n.7) (quote 1)))
-                (call (quote #<procedure values>))))))))
+                (call (quote #<procedure void>))))))))
           (begin
            (call (ref loop.6) (ref n.4))
            (call (ref unbox.1) (ref total.5))))))
@@ -967,7 +967,7 @@ HLL-stratify-letrec:
                 (call
                  (ref loop.6)
                  (call (quote #<procedure ->) (ref n.7) (quote 1)))
-                (call (quote #<procedure values>))))))))
+                (call (quote #<procedure void>))))))))
           (begin
            (call (ref loop.6) (ref n.4))
            (call (ref unbox.1) (ref total.5))))))
@@ -1008,7 +1008,7 @@ HLL-sink-join-points:
                  (call
                   (ref loop.6)
                   (call (quote #<procedure ->) (ref n.7) (quote 1)))
-                 (call (quote #<procedure values>))))))))
+                 (call (quote #<procedure void>))))))))
            (call (ref loop.6) (ref n.4)))
           (call (ref unbox.1) (ref total.5)))))
        (call (ref box.0) (quote 0))))))))
@@ -1050,7 +1050,7 @@ HLL-lift-static:
                  (call
                   (ref loop.6)
                   (call (quote #<procedure ->) (ref n.7) (quote 1)))
-                 (call (quote #<procedure values>))))))))
+                 (call (quote #<procedure void>))))))))
            (call (ref loop.6) (ref n.4)))
           (call (ref unbox.1) (ref total.5)))))
        (call (ref box.0) (quote 0))))))))
@@ -1090,7 +1090,7 @@ HLL-convert-letrec:
                  (call
                   (ref loop.6)
                   (call (quote #<procedure ->) (ref n.7) (quote 1)))
-                 (call (quote #<procedure values>))))))))
+                 (call (quote #<procedure void>))))))))
            (call (ref loop.6) (ref n.4)))
           (call (ref unbox.1) (ref total.5)))))
        (call (ref box.0) (quote 0))))))))
@@ -1139,7 +1139,7 @@ HLL-bind-lambda:
                           (call
                            (ref loop.10)
                            (call (quote #<procedure ->) (ref n.11) (quote 1)))
-                          (call (quote #<procedure values>))))))))
+                          (call (quote #<procedure void>))))))))
                     (call (ref loop.10) (ref n.7)))
                    (call (ref unbox.2) (ref total.9)))))))
               (ref _.8))
@@ -1247,7 +1247,7 @@ HLL-create-closures:
                                (quote 1)))
                              (prim-call
                               closure-call
-                              (quote #<procedure values>))))))))
+                              (quote #<procedure void>))))))))
                        (call
                         (ref loop.10.16)
                         (prim-call closure-ref (ref clo.14) (quote 1))))
@@ -1325,241 +1325,6 @@ HLL-create-closures:
    (begin
     (prim-call closure-set! (ref clo.24) (quote 0) (ref _.16.25))
     (ref clo.24)))))
-
-VHLL:
-(let
- ((list (lambda x* x*)) (^x* (lambda () (values 1 2 3))))
- (case-values
-  (^x*)
-  ((a) (list (quote one) a))
-  ((a b) (list (quote two) a b))
-  ((a b . c*) (list (quote more) a b c*))))
-pretty HLL:
-(call
- (case-lambda
-  ((list.0 ^x*.1)
-   (call
-    (quote #<procedure call-with-values>)
-    (case-lambda (() (call (ref ^x*.1))))
-    (case-lambda
-     ((a.2) (call (ref list.0) (quote one) (ref a.2)))
-     ((a.3 b.4) (call (ref list.0) (quote two) (ref a.3) (ref b.4)))
-     ((a.5 b.6 . c*.7)
-      (call (ref list.0) (quote more) (ref a.5) (ref b.6) (ref c*.7)))))))
- (case-lambda (x*.8 (ref x*.8)))
- (case-lambda
-  (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3)))))
-HLL-check-letrec:
-(call
- (case-lambda
-  ((list.0 ^x*.1)
-   (call
-    (quote #<procedure call-with-values>)
-    (case-lambda (() (call (ref ^x*.1))))
-    (case-lambda
-     ((a.2) (call (ref list.0) (quote one) (ref a.2)))
-     ((a.3 b.4) (call (ref list.0) (quote two) (ref a.3) (ref b.4)))
-     ((a.5 b.6 . c*.7)
-      (call (ref list.0) (quote more) (ref a.5) (ref b.6) (ref c*.7)))))))
- (case-lambda (x*.8 (ref x*.8)))
- (case-lambda
-  (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3)))))
-HLL-bind-known-lambda:
-(call
- (case-lambda
-  ((list.0 ^x*.1)
-   (call
-    (quote #<procedure call-with-values>)
-    (case-lambda (() (call (ref ^x*.1))))
-    (case-lambda
-     ((a.2) (call (ref list.0) (quote one) (ref a.2)))
-     ((a.3 b.4) (call (ref list.0) (quote two) (ref a.3) (ref b.4)))
-     ((a.5 b.6 . c*.7)
-      (call (ref list.0) (quote more) (ref a.5) (ref b.6) (ref c*.7)))))))
- (case-lambda (x*.8 (ref x*.8)))
- (case-lambda
-  (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3)))))
-HLL-stratify-letrec:
-(call
- (case-lambda
-  ((list.0 ^x*.1)
-   (call
-    (quote #<procedure call-with-values>)
-    (case-lambda (() (call (ref ^x*.1))))
-    (case-lambda
-     ((a.2) (call (ref list.0) (quote one) (ref a.2)))
-     ((a.3 b.4) (call (ref list.0) (quote two) (ref a.3) (ref b.4)))
-     ((a.5 b.6 . c*.7)
-      (call (ref list.0) (quote more) (ref a.5) (ref b.6) (ref c*.7)))))))
- (case-lambda (x*.8 (ref x*.8)))
- (case-lambda
-  (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3)))))
-HLL-sink-join-points:
-(call
- (case-lambda
-  ((list.0 ^x*.1)
-   (call
-    (quote #<procedure call-with-values>)
-    (case-lambda (() (call (ref ^x*.1))))
-    (case-lambda
-     ((a.2) (call (ref list.0) (quote one) (ref a.2)))
-     ((a.3 b.4) (call (ref list.0) (quote two) (ref a.3) (ref b.4)))
-     ((a.5 b.6 . c*.7)
-      (call (ref list.0) (quote more) (ref a.5) (ref b.6) (ref c*.7)))))))
- (case-lambda (x*.8 (ref x*.8)))
- (case-lambda
-  (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3)))))
-join points:
-()
-HLL-lift-static:
-(call
- (case-lambda
-  ((list.0 ^x*.1)
-   (call
-    (quote #<procedure call-with-values>)
-    (case-lambda (() (call (ref ^x*.1))))
-    (case-lambda
-     ((a.2) (call (ref list.0) (quote one) (ref a.2)))
-     ((a.3 b.4) (call (ref list.0) (quote two) (ref a.3) (ref b.4)))
-     ((a.5 b.6 . c*.7)
-      (call (ref list.0) (quote more) (ref a.5) (ref b.6) (ref c*.7)))))))
- (case-lambda (x*.8 (ref x*.8)))
- (case-lambda
-  (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3)))))
-HLL-convert-letrec:
-(call
- (case-lambda
-  ((list.0 ^x*.1)
-   (call
-    (quote #<procedure call-with-values>)
-    (case-lambda (() (call (ref ^x*.1))))
-    (case-lambda
-     ((a.2) (call (ref list.0) (quote one) (ref a.2)))
-     ((a.3 b.4) (call (ref list.0) (quote two) (ref a.3) (ref b.4)))
-     ((a.5 b.6 . c*.7)
-      (call (ref list.0) (quote more) (ref a.5) (ref b.6) (ref c*.7)))))))
- (case-lambda (x*.8 (ref x*.8)))
- (case-lambda
-  (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3)))))
-HLL-bind-lambda:
-(call
- (letrec
-  ((_.0
-    (case-lambda
-     ((list.1 ^x*.2)
-      (call
-       (quote #<procedure call-with-values>)
-       (letrec ((_.3 (case-lambda (() (call (ref ^x*.2)))))) (ref _.3))
-       (letrec
-        ((_.4
-          (case-lambda
-           ((a.5) (call (ref list.1) (quote one) (ref a.5)))
-           ((a.6 b.7) (call (ref list.1) (quote two) (ref a.6) (ref b.7)))
-           ((a.8 b.9 . c*.10)
-            (call
-             (ref list.1)
-             (quote more)
-             (ref a.8)
-             (ref b.9)
-             (ref c*.10))))))
-        (ref _.4)))))))
-  (ref _.0))
- (letrec ((_.11 (case-lambda (x*.12 (ref x*.12))))) (ref _.11))
- (letrec
-  ((_.13
-    (case-lambda
-     (() (call (quote #<procedure values>) (quote 1) (quote 2) (quote 3))))))
-  (ref _.13)))
-HLL-procedure=>free-variable*:
-(_.13 ())
-(_.11 ())
-(_.4 (list.1))
-(_.3 (^x*.2))
-(_.0 ())
-HLL-well-known-procedure*:
-()
-HLL-join-point*:
-()
-HLL-create-closures:
-(prim-call
- closure-call
- (let*
-  ((clo.0 (prim-call make-closure (quote 1))))
-  (letrec
-   ((_.0.1
-     (case-lambda
-      ((#t list.1.2 ^x*.2.3)
-       (prim-call
-        closure-call
-        (quote #<procedure call-with-values>)
-        (let*
-         ((clo.4 (prim-call make-closure (quote 2))))
-         (letrec
-          ((_.3.5
-            (case-lambda
-             ((clo.6)
-              (prim-call
-               closure-call
-               (prim-call closure-ref (ref clo.6) (quote 1)))))))
-          (begin
-           (prim-call closure-set! (ref clo.4) (quote 0) (ref _.3.5))
-           (prim-call closure-set! (ref clo.4) (quote 1) (ref ^x*.2.3))
-           (ref clo.4))))
-        (let*
-         ((clo.7 (prim-call make-closure (quote 2))))
-         (letrec
-          ((_.4.8
-            (case-lambda
-             ((clo.9 a.5.10)
-              (prim-call
-               closure-call
-               (prim-call closure-ref (ref clo.9) (quote 1))
-               (quote one)
-               (ref a.5.10)))
-             ((clo.11 a.6.12 b.7.13)
-              (prim-call
-               closure-call
-               (prim-call closure-ref (ref clo.11) (quote 1))
-               (quote two)
-               (ref a.6.12)
-               (ref b.7.13)))
-             ((clo.14 a.8.15 b.9.16 . c*.10.17)
-              (prim-call
-               closure-call
-               (prim-call closure-ref (ref clo.14) (quote 1))
-               (quote more)
-               (ref a.8.15)
-               (ref b.9.16)
-               (ref c*.10.17))))))
-          (begin
-           (prim-call closure-set! (ref clo.7) (quote 0) (ref _.4.8))
-           (prim-call closure-set! (ref clo.7) (quote 1) (ref list.1.2))
-           (ref clo.7)))))))))
-   (begin
-    (prim-call closure-set! (ref clo.0) (quote 0) (ref _.0.1))
-    (ref clo.0))))
- (let*
-  ((clo.18 (prim-call make-closure (quote 1))))
-  (letrec
-   ((_.11.19 (case-lambda ((#t . x*.12.20) (ref x*.12.20)))))
-   (begin
-    (prim-call closure-set! (ref clo.18) (quote 0) (ref _.11.19))
-    (ref clo.18))))
- (let*
-  ((clo.21 (prim-call make-closure (quote 1))))
-  (letrec
-   ((_.13.22
-     (case-lambda
-      ((#t)
-       (prim-call
-        closure-call
-        (quote #<procedure values>)
-        (quote 1)
-        (quote 2)
-        (quote 3))))))
-   (begin
-    (prim-call closure-set! (ref clo.21) (quote 0) (ref _.13.22))
-    (ref clo.21)))))
 
 VHLL:
 (let ((a 1)) (letrec ((b (lambda () d)) (c b) (d 5)) c))

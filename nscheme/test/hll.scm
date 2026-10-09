@@ -11,12 +11,10 @@
 ;;           | (quote <value>)
 ;;           | (if Expr Expr Expr)
 ;;           | (cond (Expr . Body) ... (else . Body))
-;;           | (apply/values Expr Expr)
 ;;           | (case-lambda (Param* . Body) ...)
 ;;           | (lambda Param* . Body)
 ;;           | (letrec ((Param Expr) ...) . Body)
 ;;           | (let ((Param Expr) ...) . Body)
-;;           | (case-values Expr (Param* . Body) ...)
 ;;           | (begin . Body)
 ;;           | Body  ; call
 ;; Body    ::= (Expr Expr ...)
@@ -127,12 +125,6 @@
                                          (_ (mistake "empty cond clause" stx)))
                                        c))))
                         (_ (mistake "operator arity mismatch" stx)))
-        'apply/values (case-lambda
-                        ((rator rand)
-                         (make-call note (primop 'call/values)
-                                    (make-case-lambda note.empty ($cl-clause '() (Expr rand)))
-                                    (Expr rator)))
-                        (_ (mistake "operator arity mismatch" stx)))
         'case-lambda  (lambda p&b* (HLL:case-lambda note (map Lambda-rand* p&b*)))
         'lambda       (lambda p&b  (make-case-lambda note (Lambda-rand* p&b)))
         'letrec       (Let-rand*/k
@@ -144,12 +136,6 @@
                         (lambda (env p* e* body)
                           (HLL:call note (make-case-lambda note.empty ($cl-clause p* body))
                                     (map Expr e*))))
-        'case-values  (case-lambda
-                        ((e . p&b*)
-                         (make-call note (primop 'call/values)
-                                    (make-case-lambda note.empty ($cl-clause '() (Expr e)))
-                                    (HLL:case-lambda note.empty (map Lambda-rand* p&b*))))
-                        (_ (mistake "operator arity mismatch" stx)))
         'begin        (lambda x* (make-begin note (Body x*)))))
     (cond ((or (not x) (eqv? x #t) (number? x) (string? x)) (HLL:quote note x))
           ((symbol? x) (env-ref/k env x (lambda () (mistake "unbound" stx))
@@ -157,7 +143,7 @@
           (else (default)))))
 
 (define name=>primop
-  (aquote panic apply values call/values make-record-type describe
+  (aquote panic apply make-record-type describe
           eqv? null? boolean? procedure? symbol? rational? integer?
           pair? vector? mvector? bytes? mbytes? void?
           void cons car cdr vector vector-length vector-ref
@@ -256,15 +242,10 @@
                      (letrec ((loop (lambda (n)
                                       (set-box! total (+ (unbox total) n))
                                       (cond ((< 0 n) (loop (- n 1)))
-                                            (else (values))))))
+                                            (else (void))))))
                        (loop n)
                        (unbox total))))))
            (sum-to-n 1000)))
-       (let ((list (lambda x* x*)) (^x* (lambda () (values 1 2 3))))
-         (case-values (^x*)
-           ((a)        (list 'one a))
-           ((a b)      (list 'two a b))
-           ((a b . c*) (list 'more a b c*))))
        (let ((a 1))
          (letrec ((b (lambda () d))
                   (c b)

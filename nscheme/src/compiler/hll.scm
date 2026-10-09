@@ -125,7 +125,6 @@
 
 (splicing-let
   ((primop.apply        (procedure->primop apply))
-   (primop.values       (procedure->primop values))
    (primop.panic        (procedure->primop panic))
    (primop.make-mvector (procedure->primop make-mvector))
    (primop.mvector-ref  (procedure->primop mvector-ref))
@@ -139,7 +138,6 @@
   (define (HLL:closure-set! note c i x)   (HLL:prim-call note primop.closure-set! (list c i x)))
   (define (HLL:closure-call note c rand*) (HLL:prim-call note primop.closure-call (cons c rand*)))
   (define (HLL:apply        note rand*)   (HLL:prim-call note primop.apply rand*))
-  (define (HLL:values       note rand*)   (HLL:prim-call note primop.values rand*))
   (define (HLL:panic        note rand*)   (HLL:prim-call note primop.panic rand*))
   (define (HLL:box          note val)     (HLL:prim-call note primop.make-mvector (list e.1 val)))
   (define (HLL:unbox        note b)       (HLL:prim-call note primop.mvector-ref  (list b e.0)))
@@ -233,7 +231,6 @@
        ((_ note (case-values rand ,clc*))       (HLL:case-values note (Expr rand) clc*))
        ((_ old (/note note e))                  (Expr/note note e))
        ((_ note (apply rand* ...))              (HLL:apply note (list (Expr rand*) ...)))
-       ((_ note (values rand* ...))             (HLL:values note (list (Expr rand*) ...)))
        ((_ note (panic rand* ...))              (HLL:panic note (list (Expr rand*) ...)))
        ((_ note (box e))                        (HLL:box note (Expr e)))
        ((_ note (unbox b))                      (HLL:unbox note (Expr b)))
