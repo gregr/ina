@@ -5,7 +5,6 @@
 ;; Block        ::= (fresh (Var ...) Values)
 ;; Values       ::= (if Condition Values Values)
 ;;                | (begin Effect ... Values)
-;;                | (case-set!-values Values (LHS* Values) ...)
 ;;                | Simple
 ;;                | (Binary-op2 Value Value)
 ;;                | (addc Value Value Value)
@@ -13,15 +12,12 @@
 ;;                | (values Value ...)
 ;; Value        ::= (if Condition Value Value)
 ;;                | (begin Effect ... Value)
-;;                | (case-set!-values Values (LHS* Value) ...)
 ;;                | Simple
 ;; Condition    ::= (if Condition Condition Condition)
 ;;                | (begin Effect ... Condition)
-;;                | (case-set!-values Values (LHS* Condition) ...)
 ;;                | Boolean
 ;; Effect       ::= (if Condition Effect Effect)
 ;;                | (begin Effect ... Effect)
-;;                | (case-set!-values Values (LHS* Effect) ...)
 ;;                | ()
 ;;                | (set!-values LHS* Values)
 ;;                | (set! Location Value)
@@ -34,7 +30,6 @@
 ;; Simple       ::= SU64 | Label | Location | (Binary-op Value Value) | Boolean | Call
 ;; Call         ::= (call Value Value ...)
 ;;                | (apply Value Value ...)
-;;                | (apply/values Value Values)
 ;; Boolean      ::= #f | #t | (Compare-op Value Value)
 ;; Binary-op    ::= + | - | * | and | ior | xor | asl | asr | lsl | lsr
 ;; Binary-op2   ::= +/carry | +/over | -/carry | -/over | */over | u128*
@@ -99,15 +94,11 @@
                                (_ (mistake "operator arity mismatch" x)))))
     (define (Boolean? x) (case x ((#f #t) #t) (else (Compare-op? x))))
     (define (Call? x)
-      (or (operation? x (lambda (t) (memv t '(call apply)))
-                      (case-lambda
-                        ((rator . rand*) (Value?!/ctx x rator)
-                                         (andmap (lambda (rand) (Value?!/ctx x rand)) rand*))
-                        (_ (mistake "operator arity mismatch" x))))
-          (operation? x 'apply/values
-                      (case-lambda
-                        ((rator vrand) (Value?!/ctx x rator) (Values?!/ctx x vrand))
-                        (_ (mistake "operator arity mismatch" x))))))
+      (operation? x (lambda (t) (memv t '(call apply)))
+                  (case-lambda
+                    ((rator . rand*) (Value?!/ctx x rator)
+                                     (andmap (lambda (rand) (Value?!/ctx x rand)) rand*))
+                    (_ (mistake "operator arity mismatch" x)))))
     (define (Simple? x)
       (or (SU64? x) (Label? x) (Location? x) (Binary-op? x) (Boolean? x) (Call? x)))
     (define (Foreign-call? x)
@@ -124,19 +115,7 @@
           (operation? x 'begin
                       (lambda x* (let ((rx* (reverse x*)))
                                    (andmap (lambda (e) (Effect?!/ctx x* e)) (reverse (cdr rx*)))
-                                   (Expr?!/ctx x* (car rx*)))))
-          (operation? x 'case-set!-values
-                      (case-lambda
-                        ((scrutinee . clause*)
-                         (Value?!/ctx x scrutinee)
-                         (andmap (lambda (c)
-                                   (unless (list? c) (mistake "not a list" c x))
-                                   (apply (case-lambda
-                                            ((p* e) (LHS*?!/ctx x p*) (Expr?!/ctx x e))
-                                            (_ (mistake "malformed case-set!-values clause" c x)))
-                                          c))
-                                 clause*))
-                        (_ (mistake "malformed case-set!-values" x))))))
+                                   (Expr?!/ctx x* (car rx*)))))))
     (define (CAS?/lhs lhs x)
       (operation? x 'atomic-cas
                   (case-lambda
