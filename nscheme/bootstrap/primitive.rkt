@@ -1,6 +1,6 @@
 #lang racket/base
 (provide
-  panic apply values call/values make-record-type describe
+  panic apply make-record-type describe
   eqv? null? boolean? procedure? symbol? rational? integer?
   pair? vector? mvector? bytes? mbytes? void?
   void cons car cdr vector vector-length vector-ref
@@ -20,7 +20,6 @@
   racket/list racket/path racket/port racket/set racket/tcp racket/udp racket/vector
   (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 
-(define call/values call-with-values)
 (define (b->s b) (bytes->string/utf-8 b))
 (define (s->b s) (string->bytes/utf-8 s))
 (define (sync/default handle-default . evt*) (apply sync/timeout handle-default evt*))

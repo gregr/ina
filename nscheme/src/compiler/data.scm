@@ -63,7 +63,7 @@
           (map (lambda (n=>p) (cons (cdr n=>p) (primop (car n=>p) #f)))
                ;; TODO: also build primops for procedures we might not have access to here
                (aquote
-                 panic apply values call/values make-record-type describe
+                 panic apply make-record-type describe
                  eqv? null? boolean? procedure? symbol? rational? integer?
                  pair? vector? mvector? bytes? mbytes? void?
                  void cons car cdr vector vector-length vector-ref

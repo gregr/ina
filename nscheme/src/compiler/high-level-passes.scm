@@ -1,7 +1,7 @@
 (splicing-let
   ((name=>primitive
      (aquote
-       panic apply values call/values make-record-type describe
+       panic apply make-record-type describe
        eqv? null? boolean? procedure? symbol? rational? integer?
        pair? vector? mvector? bytes? mbytes? void?
        void cons car cdr vector vector-length vector-ref
@@ -27,11 +27,11 @@
            E (lambda (E) (mistake 'E-fold "not an E" E))
            E:quote?       (lambda (_)              E)
            E:ref?         (lambda (_)              E)
-           E:if?          (lambda (c t f)          (E:if           (loop c) (loop t) (loop f)))
-           E:begin?       (lambda (e^ e)           (E:begin        (tree-map loop e^) (loop e)))
-           E:call?        (lambda (rator rand*)    (E:call         (loop rator) (map loop rand*)))
-           E:case-lambda? (lambda (param*~* body*) (E:case-lambda  param*~* (map loop body*)))
-           E:letrec?      (lambda (lhs* rhs* body) (E:letrec       lhs* (map loop rhs*) (loop body))))
+           E:if?          (lambda (c t f)          (E:if          (loop c) (loop t) (loop f)))
+           E:begin?       (lambda (e^ e)           (E:begin       (tree-map loop e^) (loop e)))
+           E:call?        (lambda (rator rand*)    (E:call        (loop rator) (map loop rand*)))
+           E:case-lambda? (lambda (param*~* body*) (E:case-lambda param*~* (map loop body*)))
+           E:letrec?      (lambda (lhs* rhs* body) (E:letrec      lhs* (map loop rhs*) (loop body))))
          (E-note E)))))
 
 (define (E-map-quote E f)
