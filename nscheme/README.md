@@ -50,8 +50,7 @@ and resuming snapshots of a running system.
       bookkeeping.
   - This behavior also allows us to introduce a shadowing identifier that may build off of the
     previous binding information of the same identifier.
-- Expressions that would typically return a single `(void)` value (like `set!`, `when`, etc.),
-  instead return 0 values (i.e., `(values)`).
+- All expressions produce a single value.  Multiple return values are not supported.
 - Variables are immutable by default.
   - `set!` is only supported for variables introduced by special binders.
 - All s-expression types are immutable.
@@ -96,7 +95,7 @@ and resuming snapshots of a running system.
   However, despite thread inheritence of parameters, limiting parameter modifications to
   parameterizations should resolve the compositionality issues affecting Racket that are discussed
   in: https://www.deinprogramm.de/sperber/papers/adding-threads.pdf
-- No primitive eof-object type: IO operations may return `#f` or `(values)` instead
+- No primitive eof-object type: IO operations may return `#f` or `(void)` instead, as appropriate
 - Inspired by: https://www.deinprogramm.de/sperber/papers/numerical-tower.pdf
   - All numeric literals describe exact numbers by default, for reproducibility and portability.
   - Inexact numbers are not s-expressions, and are not part of the base language.  But platforms
@@ -172,7 +171,7 @@ interrupt-handling will automatically prevent denial-of-service when manipulatin
 
 Need to implement these primitives:
 - bitwise-asl bitwise-asr bitwise-not bitwise-and bitwise-ior bitwise-xor bitwise-length
-  integer-floor-divmod numerator denominator = <= >= < > + - * /
+  integer-floor-div numerator denominator = <= >= < > + - * /
 
 low-level ops we can depend on:
 - `u64-addc u64-subc u64+/carry u64-/carry s64+/over s64-/over s64*/over u128*`
@@ -1200,6 +1199,124 @@ start working on an initial optimization pass inspired by cp0
 
 ### Implementation complexity notes
 
+## October 2026
+
+      61 ./src/posix/process.scm
+      16 ./src/posix/terminal/tty.scm
+      18 ./src/posix/terminal/text.scm
+      62 ./src/posix/terminal/csi.scm
+       4 ./src/posix/terminal/osc.scm
+      87 ./src/posix/terminal/sgr.scm
+       3 ./src/posix/network.scm
+      53 ./src/posix/cli.scm
+      21 ./src/posix/platform.scm
+     105 ./src/posix/filesystem.scm
+      11 ./src/posix/signal.scm
+     230 ./src/run-cli.scm
+     421 ./src/parser/parse.scm
+     320 ./src/parser/minimal.scm
+      30 ./src/parser/program.scm
+      62 ./src/parser/meta.scm
+     204 ./src/codegen/c.scm
+      20 ./src/codegen/asm.scm
+      12 ./src/build.scm
+     331 ./src/syntax.scm
+     459 ./src/extended/match.scm
+      39 ./src/extended/record.scm
+     360 ./src/extended/meta.scm
+      50 ./src/compiler/high-level-passes.scm
+      75 ./src/compiler/data.scm
+     158 ./src/compiler/lll-c.scm
+     185 ./src/compiler/ill.scm
+     154 ./src/compiler/high-level-ir.scm
+     258 ./src/compiler/lll.scm
+      83 ./src/compiler/target/posix-c.scm
+     686 ./src/compiler/target/racket.scm
+     206 ./src/compiler/backend/c.scm
+      63 ./src/compiler/backend/rkt.scm
+    1866 ./src/compiler/hll.scm
+       5 ./src/compiler/lll-aarch64.scm
+     381 ./src/compiler/lll-x86-64.scm
+     140 ./src/compiler/x86-64.scm
+     112 ./src/base/bytes.scm
+      11 ./src/base/coroutine.scm
+      52 ./src/base/exception.scm
+      50 ./src/base/misc.scm
+      50 ./src/base/mvector.scm
+    1386 ./src/base/text.scm
+      21 ./src/base/generator.scm
+      88 ./src/base/number.scm
+     158 ./src/base/unicode.scm
+     127 ./src/base/prompt.scm
+      60 ./src/base/time.scm
+     497 ./src/base/port.scm
+      24 ./src/base/platform.scm
+     334 ./src/base/list.scm
+      48 ./src/base/io.scm
+      28 ./src/base/vector.scm
+      48 ./src/base/mbytes.scm
+     156 ./src/library.scm
+   10489 total
+
+## August 2026
+
+      61 ./src/posix/process.scm
+      16 ./src/posix/terminal/tty.scm
+      18 ./src/posix/terminal/text.scm
+      62 ./src/posix/terminal/csi.scm
+       4 ./src/posix/terminal/osc.scm
+      87 ./src/posix/terminal/sgr.scm
+       3 ./src/posix/network.scm
+      53 ./src/posix/cli.scm
+      21 ./src/posix/platform.scm
+     121 ./src/posix/filesystem.scm
+      11 ./src/posix/signal.scm
+     226 ./src/run-cli.scm
+     427 ./src/parser/parse.scm
+     360 ./src/parser/minimal.scm
+      30 ./src/parser/program.scm
+      64 ./src/parser/meta.scm
+     204 ./src/codegen/c.scm
+      20 ./src/codegen/asm.scm
+      12 ./src/build.scm
+     331 ./src/syntax.scm
+     449 ./src/extended/match.scm
+      39 ./src/extended/record.scm
+     350 ./src/extended/meta.scm
+      50 ./src/compiler/high-level-passes.scm
+      75 ./src/compiler/data.scm
+     158 ./src/compiler/lll-c.scm
+     206 ./src/compiler/ill.scm
+     155 ./src/compiler/high-level-ir.scm
+     257 ./src/compiler/lll.scm
+      83 ./src/compiler/target/posix-c.scm
+     689 ./src/compiler/target/racket.scm
+     206 ./src/compiler/backend/c.scm
+      63 ./src/compiler/backend/rkt.scm
+    2932 ./src/compiler/hll.scm
+       5 ./src/compiler/lll-aarch64.scm
+     381 ./src/compiler/lll-x86-64.scm
+     140 ./src/compiler/x86-64.scm
+     112 ./src/base/bytes.scm
+      11 ./src/base/coroutine.scm
+     101 ./src/base/exception.scm
+      50 ./src/base/misc.scm
+      50 ./src/base/mvector.scm
+    1379 ./src/base/text.scm
+      21 ./src/base/generator.scm
+      97 ./src/base/number.scm
+     170 ./src/base/unicode.scm
+     132 ./src/base/prompt.scm
+      56 ./src/base/time.scm
+     497 ./src/base/port.scm
+      24 ./src/base/platform.scm
+     339 ./src/base/list.scm
+      48 ./src/base/io.scm
+      28 ./src/base/vector.scm
+      48 ./src/base/mbytes.scm
+     156 ./src/library.scm
+   11688 total
+
 ## July 2025
 
       61 ./src/posix/process.scm
@@ -2218,8 +2335,8 @@ A good scheme will:
         - TODO: bits that describe precision
       - C ... LLLtt010: short symbol or bytes
         - tt=01: symbol
-        - tt=10: bytes
-        - TODO: tt=11 is available: is there a good way to use it?
+        - tt=11: bytes
+        - TODO: tt=10 is available: is there a good way to use it?
         - LLL: 3-bit length
         - C ...: 7 bytes of code units
   - 100: pair
@@ -2649,9 +2766,9 @@ immediately become the return values, as if `values` had been called instead.
   - A `rational` is an exact, arbitrary-precision integer or fraction.
   - `integer` is a subtype of `rational`.  An `integer` is an exact, arbitrary-precision integer.
     - Primitive operators for `integer` values include:
-      `bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right bitwise-not bitwise-and bitwise-ior bitwise-xor integer-floor-divmod`
+      `bitwise-arithmetic-shift-left bitwise-arithmetic-shift-right bitwise-not bitwise-and bitwise-ior bitwise-xor integer-floor-div`
       - For consistency with bitwise arithmetic shifting on negative integers,
-        `integer-floor-divmod` performs a flooring division/modulo operation rather than the typical
+        `integer-floor-div` performs a flooring division/modulo operation rather than the typical
         truncating operation.
         - To understand the motivation for this choice, see:
           [Arithmetic Shifting Considered Harmful](https://dspace.mit.edu/bitstream/handle/1721.1/6090/AIM-378.pdf)
