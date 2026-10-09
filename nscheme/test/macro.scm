@@ -172,466 +172,462 @@
     ;  (()
     ;   ((case-lambda
     ;     ((if.0 tmp.1) ((case-lambda ((tmp.2) (if tmp.2 tmp.2 tmp.1))) if.0)))
-    ;    (quote #f)
-    ;    (quote 5)))))
+    ;    #f
+    ;    5))))
     ==> 5
 
-   (let ((x 'not-42))
-     (define-syntax-rule (bar)
-       (define x 42))
-     (bar)
-     x)
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda ((x.0) (letrec ((x.1 (quote 42))) x.0))) (quote not-42))
-   ==> not-42
+    (let ((x 'not-42))
+      (define-syntax-rule (bar)
+        (define x 42))
+      (bar)
+      x)
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda ((x.0) (letrec ((x.1 42)) x.0))) (quote not-42))
+    ==> not-42
 
-   (mlet ((cell #f))
-     (define x 'bad)
-     (define-syntax-rule (bar stmt)
-       (begin
-         (define x 42)
-         stmt
-         (set! cell x)))
-     (let ()
-       (bar (define y 5))
-       (vector
-         cell
-         y
-         x)))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;  ((cell.0)
-   ;   (letrec ((x.1 (quote bad)))
-   ;     ((case-lambda
-   ;       (()
-   ;        (letrec ((x.2 (quote 42)) (y.3 (quote 5)))
-   ;          (apply/values
-   ;           (case-lambda
-   ;            (X.4
-   ;             ((quote #<procedure:vector>)
-   ;              ((quote #<procedure:mvector-ref>) cell.0 (quote 0))
-   ;              y.3
-   ;              x.1)))
-   ;           ((quote #<procedure:mvector-set!>) cell.0 (quote 0) x.2)))))))))
-   ; ((quote #<procedure:make-mvector>) (quote 1) (quote #f)))
-   ==> #(42 5 bad)
+    (mlet ((cell #f))
+      (define x 'bad)
+      (define-syntax-rule (bar stmt)
+        (begin
+          (define x 42)
+          stmt
+          (set! cell x)))
+      (let ()
+        (bar (define y 5))
+        (vector
+          cell
+          y
+          x)))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda
+    ;  ((cell.0)
+    ;   (letrec
+    ;    ((x.1 (quote bad)))
+    ;    ((case-lambda
+    ;      (()
+    ;       (letrec
+    ;        ((x.2 42) (y.3 5))
+    ;        (begin
+    ;         ((case-lambda
+    ;           ((rhs.4) ((quote #<procedure mvector-set!>) cell.0 0 rhs.4)))
+    ;          x.2)
+    ;         ((quote #<procedure vector>)
+    ;          ((quote #<procedure mvector-ref>) cell.0 0)
+    ;          y.3
+    ;          x.1)))))))))
+    ; ((quote #<procedure make-mvector>) 1 #f))
+    ==> #(42 5 bad)
 
-   (let ()
-     (define x 'bad)
-     (define-syntax-rule (bar baz)
-       (begin
-         (define x 'good)
-         (define-syntax-rule (baz)
-           x)))
-     (let ()
-       (bar baz)
-       (baz)))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;  (()
-   ;   (letrec ((x.0 (quote bad)))
-   ;     ((case-lambda (() (letrec ((x.1 (quote good))) x.1))))))))
-   ==> good
+    (let ()
+      (define x 'bad)
+      (define-syntax-rule (bar baz)
+        (begin
+          (define x 'good)
+          (define-syntax-rule (baz)
+            x)))
+      (let ()
+        (bar baz)
+        (baz)))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda
+    ;  (()
+    ;   (letrec
+    ;    ((x.0 (quote bad)))
+    ;    ((case-lambda (() (letrec ((x.1 (quote good))) x.1))))))))
+    ==> good
 
-   (let ()
-     (define x 'bad)
-     (define y 'outer)
-     (let ()
-       (define-syntax-rule (bar arg)
-         (begin
-           (define y 'inner)
-           (define arg 'good)
-           x))
-       (bar x)))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;  (()
-   ;   (letrec ((x.0 (quote bad)) (y.1 (quote outer)))
-   ;     ((case-lambda
-   ;       (() (letrec ((y.2 (quote inner)) (x.3 (quote good))) x.3))))))))
-   ==> good
+    (let ()
+      (define x 'bad)
+      (define y 'outer)
+      (let ()
+        (define-syntax-rule (bar arg)
+          (begin
+            (define y 'inner)
+            (define arg 'good)
+            x))
+        (bar x)))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda
+    ;  (()
+    ;   (letrec
+    ;    ((x.0 (quote bad)) (y.1 (quote outer)))
+    ;    ((case-lambda
+    ;      (() (letrec ((y.2 (quote inner)) (x.3 (quote good))) x.3))))))))
+    ==> good
 
-   (let ()
-     (define x 5)
-     (let ()
-       (define-syntax m
-         (syntax-rules ()
-           ((_ def) (begin
-                      (define x 7)
-                      def))))
-       (m (define y (lambda () x)))
-       (define x 6)
-       (y)))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;   (()
-   ;    (letrec ((x.0 (quote 5)))
-   ;      ((case-lambda
-   ;         (()
-   ;          (letrec ((x.1 (quote 7)) (y.2 (case-lambda (() x.3))) (x.3 (quote 6)))
-   ;            (y.2)))))))))
-   ==> 6
+    (let ()
+      (define x 5)
+      (let ()
+        (define-syntax m
+          (syntax-rules ()
+            ((_ def) (begin
+                       (define x 7)
+                       def))))
+        (m (define y (lambda () x)))
+        (define x 6)
+        (y)))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda
+    ;  (()
+    ;   (letrec
+    ;    ((x.0 5))
+    ;    ((case-lambda
+    ;      (() (letrec ((x.1 7) (y.2 (case-lambda (() x.3))) (x.3 6)) (y.2)))))))))
+    ==> 6
 
-   (let ()
-     (define x 4)
-     (define-syntax intro-ref
-       (syntax-rules ()
-         ((_ v) (define v x))))
-     (let ()
-       (define x 5)
-       (intro-ref y)
-       y))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;   (()
-   ;    (letrec ((x.0 (quote 4)))
-   ;      ((case-lambda (() (letrec ((x.1 (quote 5)) (y.2 x.0)) y.2))))))))
-   ==> 4
+    (let ()
+      (define x 4)
+      (define-syntax intro-ref
+        (syntax-rules ()
+          ((_ v) (define v x))))
+      (let ()
+        (define x 5)
+        (intro-ref y)
+        y))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda
+    ;  (()
+    ;   (letrec ((x.0 4)) ((case-lambda (() (letrec ((x.1 5) (y.2 x.0)) y.2))))))))
+    ==> 4
 
-   (let ((x 5))
-     (let-syntax ((let-m (syntax-rules () ((_ m b)
-                                           (let-syntax ((m (syntax-rules () ((_) x))))
-                                             b)))))
-       (let ((x 4))
-         (let-m m (m)))))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;   ((x.0) ((case-lambda ((x.1) ((case-lambda (() x.0))))) (quote 4))))
-   ; (quote 5))
-   ==> 5
+    (let ((x 5))
+      (let-syntax ((let-m (syntax-rules () ((_ m b)
+                                            (let-syntax ((m (syntax-rules () ((_) x))))
+                                              b)))))
+        (let ((x 4))
+          (let-m m (m)))))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda
+    ;  ((x.0)
+    ;   ((case-lambda
+    ;     (()
+    ;      (begin
+    ;       (quote #<void>)
+    ;       ((case-lambda
+    ;         (()
+    ;          ((case-lambda
+    ;            ((x.1)
+    ;             ((case-lambda
+    ;               (() (begin (quote #<void>) ((case-lambda (() x.0)))))))))
+    ;           4))))))))))
+    ; 5)
+    ==> 5
 
-   (let ()
-     (define-syntax define-and-ref-x
-       (syntax-rules ()
-         ((_ a) (begin (define a 5) x))))
-     (define-and-ref-x x))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda (() (letrec ((x.0 5)) x.0))))
-   ==>
-   5
+    (let ()
+      (define-syntax define-and-ref-x
+        (syntax-rules ()
+          ((_ a) (begin (define a 5) x))))
+      (define-and-ref-x x))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda (() (letrec ((x.0 5)) x.0))))
+    ==>
+    5
 
-   (let ()
-     (define-syntax def-m
-       (syntax-rules ()
-         ((_ m given-x)
-          (begin (define x 1)
-                 (define-syntax m
-                   (syntax-rules ()
-                     ((_) (begin (define given-x 2) x))))))))
-     (def-m m x)
-     (m))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda (() (letrec ((x.0 1) (x.1 2)) x.0))))
-   ==>
-   1
+    (let ()
+      (define-syntax def-m
+        (syntax-rules ()
+          ((_ m given-x)
+           (begin (define x 1)
+                  (define-syntax m
+                    (syntax-rules ()
+                      ((_) (begin (define given-x 2) x))))))))
+      (def-m m x)
+      (m))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda (() (letrec ((x.0 1) (x.1 2)) x.0))))
+    ==>
+    1
 
-   (let ()
-     (begin-meta
-       (splicing-let ((x 5))
-         (define foo (quote-syntax x))))
-     (define-syntax (m stx)
-       (syntax-case stx ()
-         ((_) #`(let ((#,foo 7))
-                  #,foo))))
-     (splicing-let ((x 6))
-       (m)))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;   (()
-   ;    (letrec ((x.0
-   ;              (call-with-values
-   ;               (lambda () ((quote #<procedure:values>)))
-   ;               (case-lambda (_.1 (quote 6))))))
-   ;      ((case-lambda ((x.2) x.2)) (quote 7))))))
-   ==> 7
+    (let ()
+      (begin-meta
+        (splicing-let ((x 5))
+          (define foo (quote-syntax x))))
+      (define-syntax (m stx)
+        (syntax-case stx ()
+          ((_) #`(let ((#,foo 7))
+                   #,foo))))
+      (splicing-let ((x 6))
+        (m)))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda
+    ;  (()
+    ;   (letrec ((x.0 (begin (quote #<void>) 6))) ((case-lambda ((x.1) x.1)) 7)))))
+    ==> 7
 
-   (let ()
-     (begin-meta
-       (splicing-let ((x 5))
-         (define foo (quote-syntax x))))
-     (define-syntax (m stx)
-       (syntax-case stx ()
-         ((_ arg) #'(let ((arg 7))
-                      arg))))
-     (splicing-let ((x 6))
-       (m foo)))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;  (()
-   ;   (letrec ((x.0
-   ;             (call-with-values
-   ;              (lambda () ((quote #<procedure:values>)))
-   ;              (case-lambda (_.1 (quote 6))))))
-   ;     ((case-lambda ((foo.2) foo.2)) (quote 7))))))
-   ==> 7
+    (let ()
+      (begin-meta
+        (splicing-let ((x 5))
+          (define foo (quote-syntax x))))
+      (define-syntax (m stx)
+        (syntax-case stx ()
+          ((_ arg) #'(let ((arg 7))
+                       arg))))
+      (splicing-let ((x 6))
+        (m foo)))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda
+    ;  (()
+    ;   (letrec
+    ;    ((x.0 (begin (quote #<void>) 6)))
+    ;    ((case-lambda ((foo.1) foo.1)) 7)))))
+    ==> 7
 
-   (let ()
-     (begin-meta
-       (splicing-let ((x 5))
-         (define foo (quote-syntax x))))
-     (define-syntax (m stx)
-       (syntax-case stx ()
-         ((_ arg) #'arg)))
-     (splicing-let ((x 6))
-       (m foo)))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;  (()
-   ;   (letrec ((x.0
-   ;             (call-with-values
-   ;              (lambda () ((quote #<procedure:values>)))
-   ;              (case-lambda (_.1 (quote 6))))))
-   ;     (quote x)))))
-   ==> x
+    (let ()
+      (begin-meta
+        (splicing-let ((x 5))
+          (define foo (quote-syntax x))))
+      (define-syntax (m stx)
+        (syntax-case stx ()
+          ((_ arg) #'arg)))
+      (splicing-let ((x 6))
+        (m foo)))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda (() (letrec ((x.0 (begin (quote #<void>) 6))) (quote x)))))
+    ==> x
 
-   ;; unbound identifier
-   (let ()
-     (begin-meta
+    ;; unbound identifier
+    (let ()
+      (begin-meta
+        (splicing-let ((x 5))
+          (define foo (quote-syntax x))))
+      (define-syntax (m stx) foo)
+      (splicing-let ((x 6))
+        (m)))
+    ;PARSE ERROR:
+    ;#(panic
+    ;  raise
+    ;  ((parse-error (syntax . #<(syntax (marks 1) (datum x))>))
+    ;   (error (description expression "unbound identifier"))))
+    ==> error:parse
+
+    (let ()
+      (begin-meta
+        (splicing-let ((x 5))
+          (define foo (quote-syntax x))))
+      (splicing-let ((x 6))
+        (define-syntax (m stx) foo))
+      (splicing-let ((x 7))
+        (m)))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda (() (letrec ((x.0 (begin (quote #<void>) 6)) (x.1 7)) x.0))))
+    ==> 6
+
+    (let ()
       (splicing-let ((x 5))
-        (define foo (quote-syntax x))))
-     (define-syntax (m stx) foo)
-     (splicing-let ((x 6))
-       (m)))
-   ==> error:parse
+        (define-in-vocabulary foo 'test (quote-syntax x)))
+      (splicing-let ((x 6))
+        (define-syntax (m stx)
+          (lambda (env)
+            (env-vocabulary-ref env (quote-syntax foo) 'test))))
+      (splicing-let ((x 7))
+        (m)))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda (() (letrec ((x.0 5) (x.1 6) (x.2 7)) x.1))))
+    ==> 6
 
-   (let ()
-     (begin-meta
-       (splicing-let ((x 5))
-         (define foo (quote-syntax x))))
-     (splicing-let ((x 6))
-       (define-syntax (m stx) foo))
-     (splicing-let ((x 7))
-       (m)))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;  (()
-   ;   (letrec ((x.0
-   ;             (call-with-values
-   ;              (lambda () ((quote #<procedure:values>)))
-   ;              (case-lambda (_.2 (quote 6)))))
-   ;            (x.1 (quote 7)))
-   ;     x.0))))
-   ==> 6
+    (let ()
+      (splicing-let ((x 5))
+        (define-in-vocabulary foo
+          'env (current-environment)
+          'stx (quote-syntax x)))
+      (splicing-let ((x 6))
+        (define-in-vocabulary m
+          'expression
+          (lambda (env stx)
+            (parse-expression
+              (env-vocabulary-ref env (quote-syntax foo) 'env)
+              (env-vocabulary-ref env (quote-syntax foo) 'stx)))))
+      (splicing-let ((x 7))
+        (m)))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda (() (letrec ((x.0 5) (x.1 6) (x.2 7)) x.0))))
+    ==> 5
 
-   (let ()
-     (splicing-let ((x 5))
-       (define-in-vocabulary foo 'test (quote-syntax x)))
-     (splicing-let ((x 6))
-       (define-syntax (m stx)
-         (lambda (env)
-           (env-vocabulary-ref env (quote-syntax foo) 'test))))
-     (splicing-let ((x 7))
-       (m)))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;  (() (letrec ((x.0 (quote 5)) (x.1 (quote 6)) (x.2 (quote 7))) x.1))))
-   ==> 6
+    (let ()
+      (splicing-let ((x 5))
+        (define-in-vocabulary foo
+          'env (current-environment)
+          'stx (quote-syntax x)))
+      (splicing-let ((x 6))
+        (define-in-vocabulary m
+          'expression
+          (lambda (env stx)
+            (syntax-case-simple stx
+              ((_ arg) (parse-expression
+                         (env-vocabulary-ref env #'arg 'env)
+                         (env-vocabulary-ref env #'arg 'stx)))))))
+      (splicing-let ((x 7))
+        (m foo)))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda (() (letrec ((x.0 5) (x.1 6) (x.2 7)) x.0))))
+    ==> 5
 
-   (let ()
-     (splicing-let ((x 5))
-       (define-in-vocabulary foo
-         'env (current-environment)
-         'stx (quote-syntax x)))
-     (splicing-let ((x 6))
-       (define-in-vocabulary m
-         'expression
-         (lambda (env stx)
-           (parse-expression
-             (env-vocabulary-ref env (quote-syntax foo) 'env)
-             (env-vocabulary-ref env (quote-syntax foo) 'stx)))))
-     (splicing-let ((x 7))
-       (m)))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;  (() (letrec ((x.0 (quote 5)) (x.1 (quote 6)) (x.2 (quote 7))) x.0))))
-   ==> 5
+    (let ((x 88))
+      (define-syntax-rule (m a)
+        (begin (define a 77)
+               x))
+      (m x))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda ((x.0) ((case-lambda ((x.1) x.0)) 77))) 88)
+    ==> 77
 
-   (let ()
-     (splicing-let ((x 5))
-       (define-in-vocabulary foo
-         'env (current-environment)
-         'stx (quote-syntax x)))
-     (splicing-let ((x 6))
-       (define-in-vocabulary m
-         'expression
-         (lambda (env stx)
-           (syntax-case-simple stx
-             ((_ arg) (parse-expression
-                        (env-vocabulary-ref env #'arg 'env)
-                        (env-vocabulary-ref env #'arg 'stx)))))))
-     (splicing-let ((x 7))
-       (m foo)))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda
-   ;  (() (letrec ((x.0 (quote 5)) (x.1 (quote 6)) (x.2 (quote 7))) x.0))))
-   ==> 5
+    (let ((x 88))
+      (define-syntax-rule (m a)
+        (let ((a 77))
+          x))
+      (m x))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda ((x.0) ((case-lambda ((x.1) x.0)) 77))) 88)
+    ==> 88
 
-   (let ((x 88))
-     (define-syntax-rule (m a)
-       (begin (define a 77)
-              x))
-     (m x))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda ((x.0) (letrec ((x.1 (quote 77))) x.1))) (quote 88))
-   ==> 77
+    (let ()
+      (define-syntax-rule (m a b)
+        (begin (define a 1)
+               b))
+      (define-syntax-rule (n id)
+        (m id x))
+      (n x))
+    ;EQUIVALENT RACKET CODE:
+    ;((case-lambda (() (letrec ((x.0 1)) x.0))))
+    ==> 1
 
-   (let ((x 88))
-     (define-syntax-rule (m a)
-       (let ((a 77))
-         x))
-     (m x))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda ((x.0) ((case-lambda ((x.1) x.0)) (quote 77)))) (quote 88))
-   ==> 88
+    ;;; Examples demonstrating that the meaning of a free name can change after transcription:
+    (let ()
+      (define y 5)
+      (let ()
+        (define-syntax m (syntax-rules ()
+                           ((_ a) (define a (lambda () y)))))
+        (m x)
+        (define y 6)
+        (x)))
+    ==> 6
+    (let ()
+      (define y 5)
+      (let ()
+        (define-syntax m (syntax-rules ()
+                           ((_ a b) (define a (lambda (b) y)))))
+        (m x y)
+        (define y 6)
+        (x 7)))
+    ==> 6
+    (let ((y 5))
+      (define-syntax m (syntax-rules ()
+                         ((_ a) (define a (lambda () y)))))
+      (m x)
+      (define y 6)
+      (x))
+    ==> 6
+    (let ((y 5))
+      (define-syntax m (syntax-rules ()
+                         ((_ a b) (define a (lambda (b) y)))))
+      (m x y)
+      (define y 6)
+      (x 7))
+    ==> 6
 
-   (let ()
-     (define-syntax-rule (m a b)
-       (begin (define a 1)
-              b))
-     (define-syntax-rule (n id)
-       (m id x))
-     (n x))
-   ;EQUIVALENT RACKET CODE:
-   ;((case-lambda (() (letrec ((x.0 (quote 1))) x.0))))
-   ==> 1
-
-   ;;; Examples demonstrating that the meaning of a free name can change after transcription:
-   (let ()
-     (define y 5)
-     (let ()
-       (define-syntax m (syntax-rules ()
-                          ((_ a) (define a (lambda () y)))))
-       (m x)
-       (define y 6)
-       (x)))
-   ==> 6
-   (let ()
-     (define y 5)
-     (let ()
-       (define-syntax m (syntax-rules ()
-                          ((_ a b) (define a (lambda (b) y)))))
-       (m x y)
-       (define y 6)
-       (x 7)))
-   ==> 6
-   (let ((y 5))
-     (define-syntax m (syntax-rules ()
-                        ((_ a) (define a (lambda () y)))))
-     (m x)
-     (define y 6)
-     (x))
-   ==> 6
-   (let ((y 5))
-     (define-syntax m (syntax-rules ()
-                        ((_ a b) (define a (lambda (b) y)))))
-     (m x y)
-     (define y 6)
-     (x 7))
-   ==> 6
-
-   ;;; Different ways to intentionally choose the outermost binding of x to 6:
-   (let ((x 6))
-     (define-syntax (m2 stx)
-       (quote-syntax x))
-     (let ((x 5))
-       (m2)))
-   ==> 6
-   (let ((x 6))
-     (define-syntax (m stx)
-       (define id1 (quote-syntax x))
-       (quasiquote-syntax
-         (begin
-           (define-syntax (m3 stx)
-             (quote-syntax x))
-           (let ((#,id1 5))
-             (m3)))))
-     (m))
-   ==> 6
-   ;; These examples all require meta-level hygiene to behave properly.
-   (let ((x 6))
-     (define-syntax (m stx)
-       (define-syntax (m2 stx)
-         (quote-syntax
-           (quote-syntax x)))
-       (define id1 (quote-syntax x))
-       (define id2 (m2))
-       (quasiquote-syntax
-         (begin
-           (define-syntax (m3 stx)
-             (quote-syntax #,id2))
-           (let ((#,id1 5))
-             (m3)))))
-     (m))
-   ==> 6
-   (let ((x 6))
-     (define-syntax (m stx)
-       (define-syntax (m2 stx)
-         (quote-syntax
-           (quote-syntax x)))
-       (define id1 (quote-syntax x))
-       (define id2 (m2))
-       (quasiquote-syntax
-         (let ((#,id1 5))
-           #,id2)))
-     (m))
-   ==> 5
-   (let ((x 6))
-     (define-syntax (m stx)
-       (define-syntax (m2 stx)
-         (quote-syntax
-           (quote-syntax x)))
-       (define id1 (quote-syntax x))
-       (define id2 (m2))
-       (quasiquote-syntax
-         (let ((#,id2 5))
-           #,id1)))
-     (m))
-   ==> 5
-   (let ((x 44))
-     (define-syntax (m stx)
-       (define-syntax (m2 stx)
-         (quote-syntax (quote-syntax x)))
-       (quasiquote-syntax (let ((x 55)) #,(m2))))
-     (m))
-   ==> 55
-   (let ((x 44))
-     (define-syntax (m3 stx)
-       (define-syntax (m4 stx)
-         (quote-syntax (quote-syntax x)))
-       (quasiquote-syntax (let ((#,(m4) 55)) x)))
-     (m3))
-   ==> 55
-   (let ((x 44))
-     (define-syntax (m stx)
-       (define-syntax (m2 stx)
-         (quote-syntax
-           (quote-syntax x)))
-       (define id1 (quote-syntax x))
-       (define id2 (m2))
-       (quasiquote-syntax
-         (let ()
-           (define-syntax (m3 stx)
-             (let ((#,id1 55))
-               #,id2))
-           (m3))))
-     (m))
-   ==> 55
-   (let ((x 44))
-     (define-syntax (m stx)
-       (define-syntax (m2 stx)
-         (quote-syntax
-           (quote-syntax x)))
-       (define id1 (quote-syntax x))
-       (define id2 (m2))
-       (quasiquote-syntax
-         (let ()
-           (define-syntax (m3 stx)
-             (let ((#,id2 55))
-               #,id1))
-           (m3))))
-     (m))
-   ==> 55
-   ))
+    ;;; Different ways to intentionally choose the outermost binding of x to 6:
+    (let ((x 6))
+      (define-syntax (m2 stx)
+        (quote-syntax x))
+      (let ((x 5))
+        (m2)))
+    ==> 6
+    (let ((x 6))
+      (define-syntax (m stx)
+        (define id1 (quote-syntax x))
+        (quasiquote-syntax
+          (begin
+            (define-syntax (m3 stx)
+              (quote-syntax x))
+            (let ((#,id1 5))
+              (m3)))))
+      (m))
+    ==> 6
+    ;; These examples all require meta-level hygiene to behave properly.
+    (let ((x 6))
+      (define-syntax (m stx)
+        (define-syntax (m2 stx)
+          (quote-syntax
+            (quote-syntax x)))
+        (define id1 (quote-syntax x))
+        (define id2 (m2))
+        (quasiquote-syntax
+          (begin
+            (define-syntax (m3 stx)
+              (quote-syntax #,id2))
+            (let ((#,id1 5))
+              (m3)))))
+      (m))
+    ==> 6
+    (let ((x 6))
+      (define-syntax (m stx)
+        (define-syntax (m2 stx)
+          (quote-syntax
+            (quote-syntax x)))
+        (define id1 (quote-syntax x))
+        (define id2 (m2))
+        (quasiquote-syntax
+          (let ((#,id1 5))
+            #,id2)))
+      (m))
+    ==> 5
+    (let ((x 6))
+      (define-syntax (m stx)
+        (define-syntax (m2 stx)
+          (quote-syntax
+            (quote-syntax x)))
+        (define id1 (quote-syntax x))
+        (define id2 (m2))
+        (quasiquote-syntax
+          (let ((#,id2 5))
+            #,id1)))
+      (m))
+    ==> 5
+    (let ((x 44))
+      (define-syntax (m stx)
+        (define-syntax (m2 stx)
+          (quote-syntax (quote-syntax x)))
+        (quasiquote-syntax (let ((x 55)) #,(m2))))
+      (m))
+    ==> 55
+    (let ((x 44))
+      (define-syntax (m3 stx)
+        (define-syntax (m4 stx)
+          (quote-syntax (quote-syntax x)))
+        (quasiquote-syntax (let ((#,(m4) 55)) x)))
+      (m3))
+    ==> 55
+    (let ((x 44))
+      (define-syntax (m stx)
+        (define-syntax (m2 stx)
+          (quote-syntax
+            (quote-syntax x)))
+        (define id1 (quote-syntax x))
+        (define id2 (m2))
+        (quasiquote-syntax
+          (let ()
+            (define-syntax (m3 stx)
+              (let ((#,id1 55))
+                #,id2))
+            (m3))))
+      (m))
+    ==> 55
+    (let ((x 44))
+      (define-syntax (m stx)
+        (define-syntax (m2 stx)
+          (quote-syntax
+            (quote-syntax x)))
+        (define id1 (quote-syntax x))
+        (define id2 (m2))
+        (quasiquote-syntax
+          (let ()
+            (define-syntax (m3 stx)
+              (let ((#,id2 55))
+                #,id1))
+            (m3))))
+      (m))
+    ==> 55
+    ))
 
 (set! verbosity 0)
 (test-evaluation
