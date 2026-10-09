@@ -9,7 +9,6 @@
 (define runtime.js  ; rename to prim.js, and lift out the 'prim' field as the sole return value?
   (string-append
     "(function (){
-    const type_values  = -1;
     const type_symbol  = 0;
     const type_cons    = 1;
     const type_vector  = 2;
@@ -59,9 +58,7 @@
         'args': ,
         'proc': ,
         'env': ,
-        // idea for multi-value returns: return a single value (if any) in 'result' and additional values in 'args', call pc with the 'argc', and let it decide what to do
-        //'result': ,
-        //'values': ,
+        'result': ,
         'saved': ,  // Just a control stack in this case, like SICP-style register machine
       },
 
@@ -81,13 +78,6 @@
         'record-ref': function(x,i){be_record(x); return x[i+1];},
 
         'apply':,
-        'call-with-values':,
-
-        // TODO: primitives have to take a continuation ???
-        // or values has to construct a special object
-        // how do we make sure 1-value contexts don't mistaken a values object for a single value?
-
-        'values':, function(...args){},
 
         'eq?': function(a,b){return a===b;},
         // TODO: bigint, rational, bytes
