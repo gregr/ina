@@ -14,9 +14,8 @@
 (define (E:case-lambda param*~* body*) (vector 'case-lambda #f param*~* body*))
 (define (E:letrec      lhs* rhs* body) (vector 'letrec      #f lhs* rhs* body))
 
-(define (E:apply/values rator rand) (E:call (E:quote call/values) (list (E:lambda '() rand) rator)))
-(define (E:lambda param*~ body)     (E:case-lambda (list param*~) (list body)))
-(define (E:let lhs* rhs* body)      (E:call (E:lambda lhs* body) rhs*))
+(define (E:lambda param*~ body) (E:case-lambda (list param*~) (list body)))
+(define (E:let lhs* rhs* body)  (E:call (E:lambda lhs* body) rhs*))
 
 (splicing-local
   ((define (E-tagged? E len tag)

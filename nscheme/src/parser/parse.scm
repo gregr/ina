@@ -162,13 +162,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Expression construction ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define ($annotate     E note)        (E-annotate E note))
-(define ($quote        value)         (E:quote        value))
-(define ($ref          addr)          (E:ref          addr))
-(define ($if           c t f)         (E:if           c t f))
-(define ($apply/values rator vrand)   (E:apply/values rator vrand))
-(define ($call*        rator rand*)   (E:call         rator rand*))
-(define ($call         rator . rand*) ($call* rator rand*))
+(define ($annotate E note)        (E-annotate E note))
+(define ($quote    value)         (E:quote        value))
+(define ($ref      addr)          (E:ref          addr))
+(define ($if       c t f)         (E:if           c t f))
+(define ($call*    rator rand*)   (E:call         rator rand*))
+(define ($call     rator . rand*) ($call* rator rand*))
 
 (splicing-local
   ((define (param->address stx)
@@ -240,8 +239,6 @@
 (define ($vector-ref        v i) ($pcall vector-ref    v i))
 (define ($vector-length     v)   ($pcall vector-length v))
 (define ($vector           . x*) (apply $pcall vector x*))
-(define ($values           . x*) (apply $pcall values x*))
-(define ($quote-values     . x*) (apply $values (map $quote x*)))
 (define ($mistake     . detail*) (apply $pcall panic ($quote 'mistake) detail*))
 (define ($list             . x*) (let loop ((x* x*))
                                    (cond ((null? x*) ($quote '()))
