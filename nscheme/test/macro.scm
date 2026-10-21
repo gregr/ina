@@ -570,7 +570,7 @@
           (let ((#,id1 5))
             #,id2)))
       (m))
-    ==> 5
+    ==> 5  ; Chez returns 6
     (let ((x 6))
       (define-syntax (m stx)
         (define-syntax (m2 stx)
@@ -582,7 +582,7 @@
           (let ((#,id2 5))
             #,id1)))
       (m))
-    ==> 5
+    ==> 5  ; Chez and Racket both return 6
     (let ((x 44))
       (define-syntax (m stx)
         (define-syntax (m2 stx)
