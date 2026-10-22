@@ -156,8 +156,10 @@
 ;;; Syntax transformation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define ((syntax-transcribe/parse parse) stx op env.op env.use)
-  (let* ((se (syntax-transcribe stx op env.op env.use)) (stx (car se)) (env (cdr se)))
-    (parse env stx)))
+  (let* ((se (syntax-transcribe stx op env.op env.use))
+         (stx (car se)) (env (cdr se)) (result (parse env stx)))
+    (env-read-only! env)
+    result))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Expression construction ;;;
