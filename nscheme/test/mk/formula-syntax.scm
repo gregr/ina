@@ -177,8 +177,8 @@
    (define-in-vocabulary disj
      vocab.formula (operator-parser parse-disj 2 2)))
 
-  (define-definition-syntax define-relation
-    (syntax-rules-simple ((_ rhead . fm*) (define-relation0 rhead (fresh () . fm*)))))
+  (define-definition-syntax-rule
+    (define-relation rhead . fm*) (define-relation0 rhead (fresh () . fm*)))
 
   (define-syntax run
     (syntax-rules-simple
@@ -198,8 +198,7 @@
       ((_ fm*)        (fresh () . fm*))
       ((_ fm* . fm**) (disj (fresh () . fm*) (conde . fm**))))))
 
-(define-definition-syntax defrel
-  (syntax-rules-simple ((_ . stx*) (define-relation . stx*))))
+(define-definition-syntax-rule (defrel . stx*) (define-relation . stx*))
 
 (define-syntax test
   (syntax-rules-simple

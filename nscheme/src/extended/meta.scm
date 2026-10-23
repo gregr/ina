@@ -332,6 +332,10 @@
 
 (define-vocabulary-syntax-binder define-definition-syntax define-in-vocabulary vocab.definition parse-definition)
 (define-vocabulary-syntax-binder define-expression-syntax define-in-vocabulary vocab.expression parse-expression)
+(define-syntax-rule (define-definition-syntax-rule (keyword . pattern) template)
+  (define-definition-syntax keyword (syntax-rules-simple ((keyword . pattern) template))))
+(define-syntax-rule (define-expression-syntax-rule (keyword . pattern) template)
+  (define-expression-syntax keyword (syntax-rules-simple ((keyword . pattern) template))))
 
 (define-syntax define-identifier-syntax
   (syntax-rules-simple
