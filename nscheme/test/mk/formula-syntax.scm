@@ -178,31 +178,31 @@
      vocab.formula (operator-parser parse-disj 2 2)))
 
   (define-definition-syntax define-relation
-    (syntax-rules () ((_ rhead . fm*) (define-relation0 rhead (fresh () . fm*)))))
+    (syntax-rules-simple ((_ rhead . fm*) (define-relation0 rhead (fresh () . fm*)))))
 
   (define-syntax run
-    (syntax-rules ()
+    (syntax-rules-simple
       ((_ count (param ...) . body*) (run0 count q (fresh (param ...) (== q (list param ...)) . body*)))
       ((_ count param . body*)       (run0 count param (fresh () . body*)))))
 
   (define-syntax-rule (run* param . body*) (run #f param . body*))
 
   (define-formula-syntax fresh
-    (syntax-rules ()
+    (syntax-rules-simple
       ((_ () fm)            fm)
       ((_ () fm1 fm2 . fm*) (fresh () (conj fm1 fm2) . fm*))
       ((_ (x . x*) . fm*)   (fresh0 x (fresh x* . fm*)))))
 
   (define-formula-syntax conde
-    (syntax-rules ()
+    (syntax-rules-simple
       ((_ fm*)        (fresh () . fm*))
       ((_ fm* . fm**) (disj (fresh () . fm*) (conde . fm**))))))
 
 (define-definition-syntax defrel
-  (syntax-rules () ((_ . stx*) (define-relation . stx*))))
+  (syntax-rules-simple ((_ . stx*) (define-relation . stx*))))
 
 (define-syntax test
-  (syntax-rules ()
+  (syntax-rules-simple
     ((_)              (void))
     ((_ expr . expr*) (begin (pretty-write 'expr)
                              (pretty-write (with-milliseconds displayln (lambda () expr)))

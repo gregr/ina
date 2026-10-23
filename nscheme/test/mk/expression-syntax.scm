@@ -96,7 +96,7 @@
 ;;; miniKanren ;;;
 ;;;;;;;;;;;;;;;;;;
 (define-syntax run
-  (syntax-rules ()
+  (syntax-rules-simple
     ((_ count (param ...) . body*) (run count q (fresh (param ...) (== q (list param ...)) . body*)))
     ((_ count param . body*)       (map (lambda (st) (reify var.initial st))
                                         (s-take count (pause state.empty (let ((param var.initial))
@@ -105,18 +105,18 @@
 (define-syntax-rule (run* param . body*) (run #f param . body*))
 
 (define-syntax fresh
-  (syntax-rules ()
+  (syntax-rules-simple
     ((_ () fm)            fm)
     ((_ () fm1 fm2 . fm*) (fresh () (conj fm1 fm2) . fm*))
     ((_ (x . x*) . fm*)   (call/fresh (lambda (x) (fresh x* . fm*))))))
 
 (define-syntax conde
-  (syntax-rules ()
+  (syntax-rules-simple
     ((_ fm*)        (fresh () . fm*))
     ((_ fm* . fm**) (disj (fresh () . fm*) (conde . fm**)))))
 
 (define-syntax test
-  (syntax-rules ()
+  (syntax-rules-simple
     ((_)              (void))
     ((_ expr . expr*) (begin (pretty-write 'expr)
                              (pretty-write (with-milliseconds displayln (lambda () expr)))

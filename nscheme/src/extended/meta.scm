@@ -324,7 +324,7 @@
 
 (define-syntax-rule (define-vocabulary-syntax-binder name bind-in-vocabulary vocabulary-name vocabulary-parser)
   (define-syntax name
-    (syntax-rules ()
+    (syntax-rules-simple
       ((_ (lhs . param*) . rhs*) (name lhs (lambda param* . rhs*)))
       ((_ lhs rhs)               (bind-in-vocabulary lhs vocabulary-name
                                                      ((make-macro-parser vocabulary-parser)
@@ -334,7 +334,7 @@
 (define-vocabulary-syntax-binder define-expression-syntax define-in-vocabulary vocab.expression parse-expression)
 
 (define-syntax define-identifier-syntax
-  (syntax-rules ()
+  (syntax-rules-simple
     ((_ (name . param*) . rhs) (define-identifier-syntax name (lambda param* . rhs)))
     ((_ name rhs)              (define-syntax name (identifier-syntax rhs)))))
 

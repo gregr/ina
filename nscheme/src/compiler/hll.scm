@@ -228,16 +228,16 @@
        ((_ note (rator . rand*))                (HLL:-unrecognized (rator . rand*)))
        ((_ note stx)                            (Atom note stx))))
    (define-syntax CL-clause
-     (syntax-rules ()
+     (syntax-rules-simple
        ((_ p*~ e0 e1 . e*) (CL-clause p*~ (begin e0 e1 . e*)))
        ((_ p*~ body)       (let ((p p*~)) (cl-clause (param->arity p) p (Expr body))))))
    (define-syntax Param*~
-     (syntax-rules ()
+     (syntax-rules-simple
        ((_ ())        '())
        ((_ (p . p*~)) (cons p (Param*~ p*~)))
        ((_ p)         p)))
    (define-syntax Begin
-     (syntax-rules ()
+     (syntax-rules-simple
        ((_ note e^ (e))      (HLL:begin note e^ e))
        ((_ note e^ (e . e*)) (Begin note (cons e^ e) e*))))
    (define-syntax (Atom stx)
