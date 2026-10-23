@@ -286,11 +286,9 @@
   (syntax-case stx ()
     ((_ ((pattern rhs) ...) . body)
      #'(syntax-case (list rhs ...) () ((pattern ...) (let () . body))))))
-
-(define-syntax-rule (syntax-case-simple stx . clause)
-  ((syntax-case stx () . clause) #f))
-(define-syntax-rule (syntax-rules-simple . clause)
-  ((syntax-rules () . clause) #f))
+(define-syntax-rule (syntax-case-simple stx . clause*) ((syntax-case stx () . clause*) #f))
+(define-syntax-rule (syntax-rules-simple . clause*)
+  (lambda (stx) (((syntax-rules () . clause*) stx) #f)))
 
 (begin-meta
   (define (generate-temporaries x*)
