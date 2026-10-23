@@ -1,5 +1,5 @@
 #lang racket/base
-(provide case mlet mdefine aquote)
+(provide case mlet mdefine aquote syntax-case-simple syntax-rules-simple)
 (require "primitive.rkt" (prefix-in rkt: racket/base) (prefix-in rkt: racket/pretty))
 
 (read-decimal-as-inexact #f)
@@ -25,3 +25,6 @@
 (define-syntax-rule (mdefine . body) (define . body))
 
 (define-syntax-rule (aquote expr ...) (list (cons 'expr expr) ...))
+
+(define-syntax-rule (syntax-case-simple stx . clause*) (syntax-case stx () . clause*))
+(define-syntax-rule (syntax-rules-simple    . clause*) (syntax-rules    () . clause*))
