@@ -164,12 +164,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Expression construction ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define ($annotate E note)        (E-annotate E note))
-(define ($quote    value)         (E:quote        value))
-(define ($ref      addr)          (E:ref          addr))
-(define ($if       c t f)         (E:if           c t f))
-(define ($call*    rator rand*)   (E:call         rator rand*))
-(define ($call     rator . rand*) ($call* rator rand*))
+(define ($annotate E note)     (E-annotate E note))
+(define ($quote value)         (E:quote value))
+(define ($ref   addr)          (E:ref   addr))
+(define ($if    c t f)         (E:if    c t f))
+(define ($call* rator rand*)   (E:call  rator rand*))
+(define ($call  rator . rand*) ($call* rator rand*))
 
 (splicing-local
   ((define (param->address stx)
