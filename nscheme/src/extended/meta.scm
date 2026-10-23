@@ -9,7 +9,7 @@
   (define vocab.syntax-template/... 'syntax-template/...)
   (define vocab.quasisyntax         'quasisyntax)
   (define vocab.quasiquote-syntax   'quasiquote-syntax)
-  (define (parse-quote-syntax env stx) ($quote (syntax-prune-level stx (current-mark-level))))
+  (define (parse-quote-syntax env stx) ($quote (syntax-prune-level stx (current-syntax-level))))
   (define parse-quasiquote-syntax
     (make-parse-quasi vocab.quasiquote-syntax 'quasiquote-syntax 'unsyntax 'unsyntax-splicing #f
                       parse-expression parse-quote-syntax $cons $list->vector $append #f))
@@ -244,12 +244,12 @@
     (define parse-syntax-template/...
       (let ((parse-ST (make-parse-quasi vocab.syntax-template/... #f #f #f '...
                                         #f parse-syntax-template ST:cons ST:list->vector #f ST:map)))
-        (lambda (env stx) (ST-compile (parse-ST env (syntax-prune-level stx (current-mark-level)))))))
+        (lambda (env stx) (ST-compile (parse-ST env (syntax-prune-level stx (current-syntax-level)))))))
     (define parse-quasisyntax
       (let ((parse-ST (make-parse-quasi vocab.quasisyntax 'quasisyntax 'unsyntax 'unsyntax-splicing '...
                                         (lambda (env stx) (ST:unquote (parse-expression env stx)))
                                         parse-syntax-template ST:cons ST:list->vector ST:append ST:map)))
-        (lambda (env stx) (ST-compile (parse-ST env (syntax-prune-level stx (current-mark-level)))))))))
+        (lambda (env stx) (ST-compile (parse-ST env (syntax-prune-level stx (current-syntax-level)))))))))
 
 (define-in-vocabulary quote-syntax vocab.expression (operator-parser parse-quote-syntax        1 1))
 (define-in-vocabulary syntax       vocab.expression (operator-parser parse-syntax-template/... 1 1))

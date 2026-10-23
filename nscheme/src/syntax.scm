@@ -1,14 +1,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Syntax with lazy mark propagation ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define current-mark-level (make-parameter 0))
+(define current-syntax-level (make-parameter 0))
 
 (splicing-local
   ((define rtd.mark    (make-rtd 'mark '#(#f) 'mark))
    (define make-mark   (rtd-constructor rtd.mark))
    (define mark?       (rtd-predicate   rtd.mark))
    (define access-mark (rtd-accessor    rtd.mark))
-   (define (fresh-mark) (make-mark (current-mark-level)))
+   (define (fresh-mark) (make-mark (current-syntax-level)))
    (define (mark-level m) (access-mark m 0))
    (define mark=? eqv?)
    (define (mark*=? a* b*)

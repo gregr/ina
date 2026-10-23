@@ -1,13 +1,13 @@
-(define (with-higher-mark-level thunk) (current-mark-level (+ (current-mark-level) 1) thunk))
+(define (with-higher-syntax-level thunk) (current-syntax-level (+ (current-syntax-level) 1) thunk))
 
 (define (parse-begin-meta-definition* env stx*)
-  (let ((E ($quote (with-higher-mark-level
+  (let ((E ($quote (with-higher-syntax-level
                      (lambda () (E-eval (D->E/publish (parse-begin-definition* env stx*))))))))
     ($d:expression (lambda () E))))
 (define (parse-begin-meta-definition env . stx*) (parse-begin-meta-definition* env stx*))
 
 (define (parse-begin-meta-expression* env stx*)
-  ($quote (with-higher-mark-level
+  ($quote (with-higher-syntax-level
             (lambda () (E-eval ((operator-parser parse-begin-expression 1 #f) env stx*))))))
 (define (parse-begin-meta-expression env . stx*) (parse-begin-meta-expression* env stx*))
 
@@ -16,7 +16,7 @@
   (unless (even? (length stx*))
     (raise-parse-error "not a list of alternating vocabularies and values" stx*))
   (env-vocabulary-modify!*
-    env id.lhs (with-higher-mark-level (lambda () (map E-eval (parse-expression* env stx*)))))
+    env id.lhs (with-higher-syntax-level (lambda () (map E-eval (parse-expression* env stx*)))))
   ($d:begin))
 (define parse-define-in-vocabulary (parse-modify-in-vocabulary env-vocabulary-bind!*))
 (define parse-add-in-vocabulary    (parse-modify-in-vocabulary env-vocabulary-add!*))
@@ -25,7 +25,7 @@
   (define (finish id.lhs ^rhs)
     (parse-identifier id.lhs)
     (let* ((env.op (env-read-only env))
-           (op     (with-higher-mark-level (lambda () (E-eval (^rhs env.op))))))
+           (op     (with-higher-syntax-level (lambda () (E-eval (^rhs env.op))))))
       (env-vocabulary-bind!
         env id.lhs
         vocab.expression
@@ -38,7 +38,7 @@
 (define env.syntax
   (value-alist->env
     (aquote
-      current-mark-level syntax-prune-level syntax-transcribe
+      current-syntax-level syntax-prune-level syntax-transcribe
       syntax-note syntax-note-set syntax-note-add syntax-unwrap syntax->datum datum->syntax
       identifier? identifier?! identifier=? env-identifier=?
       env.empty make-env env-read-only env-read-and-write env-conjoin env-remove env:ref
