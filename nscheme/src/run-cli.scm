@@ -174,6 +174,7 @@
                                        (lambda () (eval-def* env (cdr path&def*))))
                                      env)))))))
             (when interact?
+              (define read-syntax (read-syntax-annotated/source 'run-cli))
               (unless quiet?
                 (displayln "Entering interactive evaluator.  (exit) or Ctrl-d to exit."))
               (let ((ch.command (make-channel)))
@@ -191,7 +192,7 @@
                           (unless quiet? (displayln ";; Evaluate:"))
                           (thread
                             (lambda ()
-                              (let ((stx (read)))
+                              (let ((stx (read-syntax)))
                                 (if (void? stx)
                                     (exit)
                                     (let ((env.new (eval-def* env (list stx))))

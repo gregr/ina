@@ -71,13 +71,14 @@
 (define env.nano  (env-conjoin env.minimal env.common))
 (define env.micro (env-conjoin env.nano env.control))
 
-(define read*-syntax (read*/reader:data ((reader:data-track-line/start 0) reader:data)))
-(define (read*-syntax-annotated/source source)
-  (read*/reader:data
-    ((reader:data-track-line/start 0)
-     (reader:data/annotate
-       (lambda (x loc text loc.end text.end)
-         (syntax-note-set x (vector source loc text loc.end text.end)))))))
+(define read*-syntax read*)
+(define (reader:data/source-line source)
+  ((reader:data-track-line/start 0)
+   (reader:data/annotate
+     (lambda (x loc text loc.end text.end)
+       (syntax-note-set x (vector source loc text loc.end text.end))))))
+(define (read-syntax-annotated/source source) (read/reader:data (reader:data/source-line source)))
+(define (read*-syntax-annotated/source source) (read*/reader:data (reader:data/source-line source)))
 (define ((text->definition*/read* read*) text) (read* (iport:bytes text)))
 
 (define ((posix-read-file/annotate? annotate?) path)
